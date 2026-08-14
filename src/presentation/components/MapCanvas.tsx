@@ -287,5 +287,5 @@ export function MapCanvas({
     }
   }, [selectedSiteId, sites]);
 
-  return <div ref={containerRef} className="absolute inset-0" aria-label="Mapa de sedes diagnosticadas" />;
+  return <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Mapa de sedes diagnosticadas" />;
 }
