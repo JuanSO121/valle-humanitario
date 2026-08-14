@@ -71,6 +71,8 @@ export function MapCanvas({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(containerRef.current);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
     const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
@@ -202,6 +204,7 @@ export function MapCanvas({
     });
 
     return () => {
+      resizeObserver.disconnect();
       pendingRef.current = [];
       map.remove();
       mapRef.current = null;

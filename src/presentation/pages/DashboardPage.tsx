@@ -65,7 +65,7 @@ export function DashboardPage() {
           </footer>
         </aside>
 
-        <main className="relative min-w-0 flex-1">
+        <main className="relative h-full min-w-0 flex-1">
           <MapCanvas
             sites={data?.sites ?? []}
             municipalities={data?.municipalities ?? []}
