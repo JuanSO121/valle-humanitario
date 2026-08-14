@@ -72,6 +72,8 @@ export function MapCanvas({
     });
     mapRef.current = map;
     const resizeObserver = new ResizeObserver(() => map.resize());
+    requestAnimationFrame(() => map.resize());
+    setTimeout(() => map.resize(), 400);
     resizeObserver.observe(containerRef.current);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
