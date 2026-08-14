@@ -1,7 +1,11 @@
 import { useEffect, useRef } from "react";
-import * as maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl/dist/maplibre-gl-csp";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 import type { Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+
+// CSP build + explicit worker URL: keeps the worker resolvable through Vite.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
