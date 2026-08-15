@@ -104,22 +104,38 @@ export function MapCanvas({
         clusterProperties: { rojo: ["+", ["case", ["==", ["get", "criticality"], "ROJO"], 1, 0]] },
       });
 
+      // Heatmaps need the individual features. A clustered source replaces
+      // them with aggregate features at low zoom and loses `criticality`.
+      map.addSource("sedes-heat-source", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+
       map.addLayer({
         id: "sedes-heat",
         type: "heatmap",
-        source: "sedes",
+        source: "sedes-heat-source",
         layout: { visibility: "none" },
         paint: {
-          "heatmap-weight": ["case", ["==", ["get", "criticality"], "ROJO"], 1, 0.4],
-          "heatmap-radius": 34,
-          "heatmap-opacity": 0.75,
+          "heatmap-weight": [
+            "match",
+            ["get", "criticality"],
+            "ROJO", 1,
+            "AMARILLO", 0.7,
+            "VERDE", 0.38,
+            0.2,
+          ],
+          "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 1.25, 11, 2.2],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 6, 24, 11, 48],
+          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.82, 12, 0.42],
           "heatmap-color": [
             "interpolate",
             ["linear"],
             ["heatmap-density"],
             0, "rgba(0,0,0,0)",
-            0.3, "#2f6f5e",
-            0.6, "#e6b23c",
+            0.18, "#3fbf87",
+            0.48, "#e6b23c",
+            0.72, "#ef7b45",
             1, "#e05545",
           ],
         },
@@ -164,6 +180,20 @@ export function MapCanvas({
           "circle-stroke-width": ["case", ["==", ["get", "review"], true], 2.5, 1.2],
           "circle-stroke-color": ["case", ["==", ["get", "review"], true], "#f2f4f7", "#12161c"],
           "circle-stroke-opacity": 0.9,
+        },
+      });
+      map.addLayer({
+        id: "selected-site-halo",
+        type: "circle",
+        source: "sedes",
+        filter: ["==", ["get", "id"], ""],
+        paint: {
+          "circle-color": "#ffffff",
+          "circle-radius": 15,
+          "circle-opacity": 0.24,
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-opacity": 0.95,
         },
       });
 
@@ -221,7 +251,7 @@ export function MapCanvas({
     const apply = () => {
       const source = map.getSource("sedes") as maplibregl.GeoJSONSource | undefined;
       if (!source) return;
-      source.setData({
+      const collection = {
         type: "FeatureCollection",
         features: sites
           .filter((s) => s.position)
@@ -237,10 +267,13 @@ export function MapCanvas({
             },
             geometry: {
               type: "Point" as const,
-              coordinates: [s.position!.longitude, s.position!.latitude],
+              coordinates: [s.position?.longitude ?? 0, s.position?.latitude ?? 0],
             },
           })),
-      });
+      } as const;
+      source.setData(collection);
+      const heatSource = map.getSource("sedes-heat-source") as maplibregl.GeoJSONSource | undefined;
+      heatSource?.setData(collection);
     };
     whenReady(apply);
   }, [sites]);
@@ -278,15 +311,22 @@ export function MapCanvas({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !selectedSiteId) return;
-    const target = sites.find((s) => s.diagnostic.id === selectedSiteId);
-    if (target?.position) {
-      map.easeTo({
-        center: [target.position.longitude, target.position.latitude],
-        zoom: Math.max(map.getZoom(), 11.5),
-        duration: 700,
-      });
-    }
+    if (!map) return;
+    const apply = () => {
+      if (map.getLayer("selected-site-halo")) {
+        map.setFilter("selected-site-halo", ["==", ["get", "id"], selectedSiteId ?? ""]);
+      }
+      if (!selectedSiteId) return;
+      const target = sites.find((s) => s.diagnostic.id === selectedSiteId);
+      if (target?.position) {
+        map.easeTo({
+          center: [target.position.longitude, target.position.latitude],
+          zoom: Math.max(map.getZoom(), 12),
+          duration: 700,
+        });
+      }
+    };
+    whenReady(apply);
   }, [selectedSiteId, sites]);
 
   return <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Mapa de sedes diagnosticadas" />;

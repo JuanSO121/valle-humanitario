@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export function DashboardPage() {
   const [filters, setFilters] = useState<DiagnosticFilters>({});
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [showHeatmap, setShowHeatmap] = useState(true);
   const [mobileTab, setMobileTab] = useState<"map" | "list">("map");
   const isMobile = useIsMobile();
 
