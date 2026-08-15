@@ -13,7 +13,7 @@ export function SiteDetailPanel({ view, onClose }: Props) {
   const { data: affectations = [] } = useSiteAffectations(siteId);
 
   return (
-    <aside className="pointer-events-auto absolute right-4 top-4 z-10 flex max-h-[calc(100%-2rem)] w-[22rem] flex-col overflow-hidden panel shadow-2xl">
+    <aside className="pointer-events-auto absolute inset-x-3 top-3 z-10 flex max-h-[calc(100%-1.5rem)] flex-col overflow-hidden panel shadow-2xl md:inset-x-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[22rem]">
       <header className="flex items-start gap-3 border-b border-border p-4">
         <div className="min-w-0 flex-1">
           <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${CRITICALITY_CLASS[diagnostic.criticality]}`}>
