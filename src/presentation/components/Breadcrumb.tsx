@@ -35,7 +35,19 @@ export function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, o
   );
 }
 
-function Crumb({ label, active, onClick }: { label: string; active: boolean; onClick?: () => void }) {
+function Crumb({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  /** Explicit `| undefined` (not just `?:`) because this project has
+   *  `exactOptionalPropertyTypes: true` — an omitted prop and a prop
+   *  explicitly passed as `undefined` are different types under that
+   *  flag, and callers here do the latter (conditional ternaries). */
+  onClick?: (() => void) | undefined;
+}) {
   const clickable = Boolean(onClick);
   return (
     <button
