@@ -2,8 +2,8 @@ import { n as __exportAll, r as __toESM } from "../_runtime.mjs";
 import { i as require_react, n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, g as useRouter, h as Link, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-C89hfLlT.js
-var router_C89hfLlT_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BpPITkxW.js
+var router_BpPITkxW_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-_yRDJRso.css";
@@ -152,7 +152,7 @@ var Route$1 = createRootRouteWithContext()({
 			},
 			{
 				rel: "icon",
-				href: "/favicon.ico",
+				href: "/icon.png",
 				type: "image/x-icon"
 			}
 		]
@@ -217,4 +217,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_C89hfLlT_exports as t };
+export { getRouter, router_BpPITkxW_exports as t };
