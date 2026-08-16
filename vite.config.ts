@@ -11,6 +11,10 @@ export default defineConfig({
   vite: {
     // maplibre-gl ships its own web worker; prebundling breaks the worker URL in dev.
     optimizeDeps: { exclude: ["maplibre-gl"] },
+    // Required for SSR (TanStack Start): without this, Vite may resolve
+    // maplibre-gl's CommonJS entry on the server instead of the ESM one,
+    // breaking the worker bundling above.
+    ssr: { noExternal: ["maplibre-gl"] },
     plugins: [
       // Override the default Cloudflare Nitro preset with the Vercel one.
       // Without this, the build output isn't in the format Vercel Functions

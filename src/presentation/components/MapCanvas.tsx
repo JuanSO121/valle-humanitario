@@ -2,6 +2,16 @@ import { useEffect, useRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre GL JS v6 is ESM-only and loads its web worker from a separate
+// file at runtime. Bundlers can't rewrite that URL on their own, so it must
+// be pointed at the bundled, hashed asset explicitly — otherwise the worker
+// request 404s in production (it works in `vite dev` only because dev serves
+// node_modules unbundled). `?worker&url` (not plain `?url`) is required：the
+// worker file imports a sibling `maplibre-gl-shared.mjs`, and only
+// `?worker&url` routes it through Vite's worker pipeline to emit a
+// self-contained chunk with that sibling included.
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
