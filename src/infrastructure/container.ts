@@ -2,7 +2,7 @@ import { DiagnosticsUseCases } from "@/application/useCases";
 import type { EducationalDataRepository } from "@/domain/repositories/EducationalDataRepository";
 import type { GeocodingService } from "@/domain/services/GeocodingService";
 import { MunicipalCentroidGeocodingService } from "./geocoding/MunicipalCentroidGeocodingService";
-import { LocalDataRepository, fetchDatasetLoader } from "./local/LocalDataRepository";
+import { LocalDataRepository, bundledDatasetLoader } from "./local/LocalDataRepository";
 
 /**
  * Composition root — the ONLY place that knows which implementation is used.
@@ -19,7 +19,7 @@ let container: Container | null = null;
 
 export function getContainer(): Container {
   if (!container) {
-    const repository = new LocalDataRepository(fetchDatasetLoader());
+    const repository = new LocalDataRepository(bundledDatasetLoader());
     const geocoder = new MunicipalCentroidGeocodingService();
     container = { repository, geocoder, useCases: new DiagnosticsUseCases(repository, geocoder) };
   }
