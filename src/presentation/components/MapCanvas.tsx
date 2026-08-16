@@ -93,6 +93,10 @@ export function MapCanvas({
     });
     mapRef.current = map;
     dlog("maplibregl.Map constructed");
+    // TEMP DEBUG — exposes the live map instance so it can be inspected
+    // from the browser console: window.__debugMap.getZoom(), etc.
+    // Remove this line together with the rest of the dlog/debug block.
+    (window as unknown as Record<string, unknown>)["__debugMap"] = map;
 
     map.on("error", (e) => dlog("MAP ERROR EVENT", e.error?.message ?? e));
 
@@ -385,6 +389,9 @@ export function MapCanvas({
           })),
       } as const;
       dlog("sites effect: calling source.setData with", collection.features.length, "features");
+      // TEMP DEBUG — log the first feature's actual coordinates, to rule out
+      // NaN/undefined lat-lng silently producing zero visible geometry.
+      dlog("sites effect: first feature coords sample", collection.features[0]?.geometry.coordinates);
       source.setData(collection);
       const heatSource = map.getSource("sedes-heat-source") as maplibregl.GeoJSONSource | undefined;
       heatSource?.setData(collection);
