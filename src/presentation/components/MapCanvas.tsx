@@ -6,6 +6,9 @@ type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
 import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
+// Bundled at build time by Vite — no runtime HTTP route, so the boundaries load
+// identically on any host (Cloudflare, Vercel, Netlify) and during SSR.
+import municipalBoundaries from "@/data/valle-municipios.json";
 
 // --- TEMP DEBUG -------------------------------------------------------
 // Remove this whole block (and every dlog(...) call below) once the
@@ -106,18 +109,14 @@ export function MapCanvas({
     const clusterPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 14, maxWidth: "220px" });
 
     map.on("load", async () => {
-      dlog("map 'load' event fired — entering async handler");
-
+      // --- Municipal boundaries (optional layer) -------------------------
+      // Still isolated in its own try/catch so a style/layer failure here can
+      // never abort the "sedes" source/layers created below.
       try {
-        dlog("fetching boundaries geojson…");
-        const res = await fetch("/data/valle-municipios.geojson");
-        dlog("boundaries fetch response", res.status, res.ok);
-        if (!res.ok) throw new Error(`No se pudo cargar valle-municipios.geojson: HTTP ${res.status}`);
-        const boundaries = await res.json();
-        dlog("boundaries parsed, feature count:", boundaries?.features?.length);
-
-        map.addSource("municipios", { type: "geojson", data: boundaries });
-        dlog("municipios source added");
+        map.addSource("municipios", {
+          type: "geojson",
+          data: municipalBoundaries as unknown as maplibregl.GeoJSONSourceSpecification["data"],
+        });
 
         map.addLayer({
           id: "municipios-fill",
@@ -147,7 +146,12 @@ export function MapCanvas({
         });
         dlog("municipios-fill/line/label layers added OK");
       } catch (err) {
-        dlog("BOUNDARIES BLOCK FAILED (caught, continuing to sedes):", err);
+        // eslint-disable-next-line no-console
+        console.error(
+          "No se pudieron cargar los límites municipales (valle-municipios.json). " +
+            "El mapa seguirá mostrando las sedes sin el choropleth/etiquetas de municipio.",
+          err,
+        );
       }
 
       dlog("about to add sedes source/layers");
