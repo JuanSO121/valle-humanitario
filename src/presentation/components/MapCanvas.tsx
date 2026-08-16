@@ -10,15 +10,16 @@ import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
 // identically on any host (Cloudflare, Vercel, Netlify) and during SSR.
 import municipalBoundaries from "@/data/valle-municipios.json";
 
+// --- TEMP DEBUG -------------------------------------------------------
+// Remove this whole block (and every dlog(...) call below) once the
+// production rendering issue is diagnosed.
+const dlog = (...args: unknown[]) => console.log("[MapCanvas]", ...args);
+// ------------------------------------------------------------------------
+
 const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
 const MUNICIPALITY_ZOOM = 9.8;
 
-/**
- * Presentation-only map — but now also the app's primary controller: clicks
- * here drive navigation state in DashboardPage rather than the other way
- * around ("el mapa controla el estado de la interfaz").
- */
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -46,11 +47,9 @@ interface Props {
   municipalities: MunicipalitySummary[];
   showHeatmap: boolean;
   selectedSiteId: string | null;
-  /** Currently focused municipality (MUNICIPALITY or SITE level). Null = ALL. */
   focusMunicipalityId: string | null;
   onSelectSite: (id: string) => void;
   onSelectMunicipality: (id: string) => void;
-  /** Fired when the user clicks empty map area — parent decides this means "back to ALL". */
   onReset: () => void;
 }
 
@@ -76,7 +75,15 @@ export function MapCanvas({
   handlersRef.current = { onSelectSite, onSelectMunicipality, onReset };
 
   useEffect(() => {
+    dlog("mount effect running", {
+      hasContainer: Boolean(containerRef.current),
+      hasExistingMap: Boolean(mapRef.current),
+    });
     if (!containerRef.current || mapRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    dlog("container size at construction", rect.width, rect.height);
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASE_STYLE,
@@ -85,7 +92,14 @@ export function MapCanvas({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    const resizeObserver = new ResizeObserver(() => map.resize());
+    dlog("maplibregl.Map constructed");
+
+    map.on("error", (e) => dlog("MAP ERROR EVENT", e.error?.message ?? e));
+
+    const resizeObserver = new ResizeObserver(() => {
+      dlog("resize observer fired, calling map.resize()");
+      map.resize();
+    });
     requestAnimationFrame(() => map.resize());
     setTimeout(() => map.resize(), 400);
     resizeObserver.observe(containerRef.current);
@@ -130,6 +144,7 @@ export function MapCanvas({
           },
           paint: { "text-color": "#4a5568", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
         });
+        dlog("municipios-fill/line/label layers added OK");
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(
@@ -139,8 +154,7 @@ export function MapCanvas({
         );
       }
 
-      // --- Sedes (points/clusters/heatmap) — must run regardless of ------
-      // whether the boundaries above loaded successfully.
+      dlog("about to add sedes source/layers");
       map.addSource("sedes", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -153,6 +167,7 @@ export function MapCanvas({
           verde: ["+", ["case", ["==", ["get", "criticality"], "VERDE"], 1, 0]],
         },
       });
+      dlog("sedes source added");
 
       map.addSource("sedes-heat-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
@@ -171,6 +186,7 @@ export function MapCanvas({
           ],
         },
       });
+      dlog("sedes-heat layer added");
 
       map.addLayer({
         id: "clusters",
@@ -211,6 +227,11 @@ export function MapCanvas({
           "circle-opacity": 1,
         },
       });
+      dlog("clusters/cluster-count/sedes-point layers added OK", {
+        hasClusters: Boolean(map.getLayer("clusters")),
+        hasSedesPoint: Boolean(map.getLayer("sedes-point")),
+      });
+
       map.addLayer({
         id: "selected-site-halo",
         type: "circle",
@@ -276,8 +297,6 @@ export function MapCanvas({
         );
       });
 
-      // Only wired when the boundaries layer actually exists — clicking
-      // municipal polygons is meaningless if they never loaded.
       if (map.getLayer("municipios-fill")) {
         map.on("click", "municipios-fill", (e: MapLayerMouseEvent) => {
           const f = e.features?.[0];
@@ -287,8 +306,6 @@ export function MapCanvas({
         map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
       }
 
-      // Background click -> ALL. Only fires when the click hit none of the
-      // interactive layers (their own handlers above already ran otherwise).
       map.on("click", (e: MapLayerMouseEvent) => {
         const layers = ["sedes-point", "clusters", ...(map.getLayer("municipios-fill") ? ["municipios-fill"] : [])];
         const hits = map.queryRenderedFeatures(e.point, { layers });
@@ -317,11 +334,14 @@ export function MapCanvas({
       map.on("mouseleave", "clusters", () => (map.getCanvas().style.cursor = ""));
 
       readyRef.current = true;
+      dlog("readyRef = true — flushing", pendingRef.current.length, "pending callback(s)");
       pendingRef.current.forEach((fn) => fn());
       pendingRef.current = [];
+      dlog("load handler fully completed");
     });
 
     return () => {
+      dlog("cleanup: removing map");
       resizeObserver.disconnect();
       pendingRef.current = [];
       map.remove();
@@ -330,13 +350,19 @@ export function MapCanvas({
     };
   }, []);
 
-  // sites -> GeoJSON (municipalityId included so we can dim non-focused sites)
   useEffect(() => {
+    dlog("sites prop changed, length =", sites.length, "with position:", sites.filter((s) => s.position).length);
     const map = mapRef.current;
-    if (!map) return;
+    if (!map) {
+      dlog("sites effect: no map instance yet, skipping");
+      return;
+    }
     const apply = () => {
       const source = map.getSource("sedes") as maplibregl.GeoJSONSource | undefined;
-      if (!source) return;
+      if (!source) {
+        dlog("sites effect: 'sedes' source not found on map — this is the bug if you see this");
+        return;
+      }
       const collection = {
         type: "FeatureCollection",
         features: sites
@@ -358,6 +384,7 @@ export function MapCanvas({
             },
           })),
       } as const;
+      dlog("sites effect: calling source.setData with", collection.features.length, "features");
       source.setData(collection);
       const heatSource = map.getSource("sedes-heat-source") as maplibregl.GeoJSONSource | undefined;
       heatSource?.setData(collection);
@@ -365,7 +392,6 @@ export function MapCanvas({
     whenReady(apply);
   }, [sites]);
 
-  // municipal choropleth by criticality
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -383,9 +409,6 @@ export function MapCanvas({
     whenReady(apply);
   }, [municipalities]);
 
-  // Focus emphasis: dim everything not belonging to the focused municipality,
-  // and re-center/zoom the map. This is what makes "las sedes relacionadas
-  // adquieren protagonismo, los demás elementos reducen su peso" real.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
