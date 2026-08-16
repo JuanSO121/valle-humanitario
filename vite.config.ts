@@ -5,11 +5,19 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { nitro } from "nitro/vite";
 
 export default defineConfig({
   vite: {
     // maplibre-gl ships its own web worker; prebundling breaks the worker URL in dev.
     optimizeDeps: { exclude: ["maplibre-gl"] },
+    plugins: [
+      // Override the default Cloudflare Nitro preset with the Vercel one.
+      // Without this, the build output isn't in the format Vercel Functions
+      // expects, SSR routes 404/hang, and client-side data loading (dataset
+      // json, hydration) breaks — which is why the map points never render.
+      nitro({ preset: "vercel" }),
+    ],
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
