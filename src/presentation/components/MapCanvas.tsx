@@ -5,11 +5,16 @@ import "maplibre-gl/dist/maplibre-gl.css";
 type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
-import { CRITICALITY_HEX } from "./criticality";
+import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
+
+const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
+const OVERVIEW_ZOOM = 7.1;
+const MUNICIPALITY_ZOOM = 9.8;
 
 /**
- * Presentation-only map. The domain never learns about MapLibre or tiles;
- * swapping the tile/geocoding provider only touches this file.
+ * Presentation-only map — but now also the app's primary controller: clicks
+ * here drive navigation state in DashboardPage rather than the other way
+ * around ("el mapa controla el estado de la interfaz").
  */
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -23,12 +28,12 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
     },
   },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#12161c" } },
+    { id: "bg", type: "background", paint: { "background-color": "#eef1f5" } },
     {
       id: "osm",
       type: "raster",
       source: "osm",
-      paint: { "raster-opacity": 0.42, "raster-saturation": -0.85, "raster-contrast": 0.1 },
+      paint: { "raster-opacity": 0.65, "raster-saturation": -0.3, "raster-contrast": 0 },
     },
   ],
 };
@@ -38,8 +43,12 @@ interface Props {
   municipalities: MunicipalitySummary[];
   showHeatmap: boolean;
   selectedSiteId: string | null;
-  onSelectSite: (id: string | null) => void;
+  /** Currently focused municipality (MUNICIPALITY or SITE level). Null = ALL. */
+  focusMunicipalityId: string | null;
+  onSelectSite: (id: string) => void;
   onSelectMunicipality: (id: string) => void;
+  /** Fired when the user clicks empty map area — parent decides this means "back to ALL". */
+  onReset: () => void;
 }
 
 export function MapCanvas({
@@ -47,8 +56,10 @@ export function MapCanvas({
   municipalities,
   showHeatmap,
   selectedSiteId,
+  focusMunicipalityId,
   onSelectSite,
   onSelectMunicipality,
+  onReset,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -58,16 +69,16 @@ export function MapCanvas({
     if (readyRef.current) fn();
     else pendingRef.current.push(fn);
   };
-  const handlersRef = useRef({ onSelectSite, onSelectMunicipality });
-  handlersRef.current = { onSelectSite, onSelectMunicipality };
+  const handlersRef = useRef({ onSelectSite, onSelectMunicipality, onReset });
+  handlersRef.current = { onSelectSite, onSelectMunicipality, onReset };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASE_STYLE,
-      center: [-76.35, 3.95],
-      zoom: 7.1,
+      center: OVERVIEW_CENTER,
+      zoom: OVERVIEW_ZOOM,
       attributionControl: { compact: true },
     });
     mapRef.current = map;
@@ -77,22 +88,38 @@ export function MapCanvas({
     resizeObserver.observe(containerRef.current);
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
+    const sitePopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
+    const clusterPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 14, maxWidth: "220px" });
 
     map.on("load", async () => {
       const boundaries = await fetch("/data/valle-municipios.geojson").then((r) => r.json());
       map.addSource("municipios", { type: "geojson", data: boundaries });
+
       map.addLayer({
         id: "municipios-fill",
         type: "fill",
         source: "municipios",
-        paint: { "fill-color": "#5b6472", "fill-opacity": 0.18 },
+        paint: { "fill-color": "#2f6fed", "fill-opacity": 0.08 },
       });
       map.addLayer({
         id: "municipios-line",
         type: "line",
         source: "municipios",
-        paint: { "line-color": "#6c7787", "line-width": 0.7, "line-opacity": 0.8 },
+        paint: { "line-color": "#2f6fed", "line-width": 0.9, "line-opacity": 0.55 },
+      });
+      map.addLayer({
+        id: "municipios-label",
+        type: "symbol",
+        source: "municipios",
+        minzoom: 7.6,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 11,
+          "text-transform": "uppercase",
+          "text-letter-spacing": 0.05,
+        },
+        paint: { "text-color": "#4a5568", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
       });
 
       map.addSource("sedes", {
@@ -101,42 +128,27 @@ export function MapCanvas({
         cluster: true,
         clusterRadius: 46,
         clusterMaxZoom: 11,
-        clusterProperties: { rojo: ["+", ["case", ["==", ["get", "criticality"], "ROJO"], 1, 0]] },
+        clusterProperties: {
+          rojo: ["+", ["case", ["==", ["get", "criticality"], "ROJO"], 1, 0]],
+          amarillo: ["+", ["case", ["==", ["get", "criticality"], "AMARILLO"], 1, 0]],
+          verde: ["+", ["case", ["==", ["get", "criticality"], "VERDE"], 1, 0]],
+        },
       });
 
-      // Heatmaps need the individual features. A clustered source replaces
-      // them with aggregate features at low zoom and loses `criticality`.
-      map.addSource("sedes-heat-source", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-
+      map.addSource("sedes-heat-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
         id: "sedes-heat",
         type: "heatmap",
         source: "sedes-heat-source",
         layout: { visibility: "none" },
         paint: {
-          "heatmap-weight": [
-            "match",
-            ["get", "criticality"],
-            "ROJO", 1,
-            "AMARILLO", 0.7,
-            "VERDE", 0.38,
-            0.2,
-          ],
+          "heatmap-weight": ["match", ["get", "criticality"], "ROJO", 1, "AMARILLO", 0.7, "VERDE", 0.38, 0.2],
           "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 1.25, 11, 2.2],
           "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 6, 24, 11, 48],
-          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.82, 12, 0.42],
+          "heatmap-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.75, 12, 0.35],
           "heatmap-color": [
-            "interpolate",
-            ["linear"],
-            ["heatmap-density"],
-            0, "rgba(0,0,0,0)",
-            0.18, "#3fbf87",
-            0.48, "#e6b23c",
-            0.72, "#ef7b45",
-            1, "#e05545",
+            "interpolate", ["linear"], ["heatmap-density"],
+            0, "rgba(0,0,0,0)", 0.18, "#3fbf87", 0.48, "#e6b23c", 0.72, "#ef7b45", 1, "#c2352a",
           ],
         },
       });
@@ -147,11 +159,11 @@ export function MapCanvas({
         source: "sedes",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": ["case", [">", ["get", "rojo"], 0], CRITICALITY_HEX.ROJO, "#4a5464"],
-          "circle-opacity": 0.85,
-          "circle-radius": ["step", ["get", "point_count"], 15, 5, 20, 15, 26],
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#12161c",
+          "circle-color": CLUSTER_COLOR,
+          "circle-opacity": 0.92,
+          "circle-radius": ["step", ["get", "point_count"], 16, 5, 22, 15, 28],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": CLUSTER_STROKE,
         },
       });
       map.addLayer({
@@ -159,7 +171,7 @@ export function MapCanvas({
         type: "symbol",
         source: "sedes",
         filter: ["has", "point_count"],
-        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12 },
+        layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12, "text-font": ["Noto Sans Bold"] },
         paint: { "text-color": "#ffffff" },
       });
       map.addLayer({
@@ -169,17 +181,15 @@ export function MapCanvas({
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
-            "match",
-            ["get", "criticality"],
-            "ROJO", CRITICALITY_HEX.ROJO,
-            "AMARILLO", CRITICALITY_HEX.AMARILLO,
-            "VERDE", CRITICALITY_HEX.VERDE,
+            "match", ["get", "criticality"],
+            "ROJO", CRITICALITY_HEX.ROJO, "AMARILLO", CRITICALITY_HEX.AMARILLO, "VERDE", CRITICALITY_HEX.VERDE,
             CRITICALITY_HEX.SIN_DETALLE,
           ],
           "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 11, 7],
-          "circle-stroke-width": ["case", ["==", ["get", "review"], true], 2.5, 1.2],
-          "circle-stroke-color": ["case", ["==", ["get", "review"], true], "#f2f4f7", "#12161c"],
-          "circle-stroke-opacity": 0.9,
+          "circle-stroke-width": ["case", ["==", ["get", "review"], true], 2.5, 1.4],
+          "circle-stroke-color": ["case", ["==", ["get", "review"], true], "#12161c", "#ffffff"],
+          "circle-stroke-opacity": 0.95,
+          "circle-opacity": 1,
         },
       });
       map.addLayer({
@@ -188,12 +198,12 @@ export function MapCanvas({
         source: "sedes",
         filter: ["==", ["get", "id"], ""],
         paint: {
-          "circle-color": "#ffffff",
+          "circle-color": "#2f6fed",
           "circle-radius": 15,
-          "circle-opacity": 0.24,
+          "circle-opacity": 0.16,
           "circle-stroke-width": 3,
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-opacity": 0.95,
+          "circle-stroke-color": "#2f6fed",
+          "circle-stroke-opacity": 0.9,
         },
       });
 
@@ -201,34 +211,86 @@ export function MapCanvas({
         const f = e.features?.[0];
         if (f) handlersRef.current.onSelectSite(String(f.properties?.["id"]));
       });
-      map.on("click", "clusters", async (e: MapLayerMouseEvent) => {
+
+      map.on("click", "clusters", (e: MapLayerMouseEvent) => {
         const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
         if (!f) return;
-        const source = map.getSource("sedes") as maplibregl.GeoJSONSource;
-        const zoom = await source.getClusterExpansionZoom(f.properties?.["cluster_id"] as number);
-        map.easeTo({ center: (f.geometry as GeoJSON_Point).coordinates as [number, number], zoom });
+        const props = f.properties ?? {};
+        const coords = (f.geometry as GeoJSON_Point).coordinates as [number, number];
+        const count = props["point_count"] ?? 0;
+        const rojo = props["rojo"] ?? 0;
+        const amarillo = props["amarillo"] ?? 0;
+        const verde = props["verde"] ?? 0;
+
+        clusterPopup
+          .setLngLat(coords)
+          .setHTML(
+            `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c;min-width:168px">
+               <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                 <span style="display:inline-block;width:9px;height:9px;border-radius:999px;background:${CLUSTER_COLOR}"></span>
+                 <strong>${count} sedes agrupadas</strong>
+               </div>
+               <p style="margin:0 0 8px 0;color:#5b6472;line-height:1.4">
+                 Este punto no indica un estado de riesgo: agrupa varias sedes cercanas.
+               </p>
+               <div style="display:flex;gap:10px;font-size:11px;margin-bottom:10px">
+                 <span>🔴 ${rojo}</span><span>🟡 ${amarillo}</span><span>🟢 ${verde}</span>
+               </div>
+               <button id="expand-cluster-btn" type="button"
+                 style="width:100%;padding:6px 8px;border-radius:6px;border:1px solid #dfe3e8;
+                        background:#f6f7f9;color:#12161c;font-size:12px;cursor:pointer">
+                 Ver sedes de este grupo
+               </button>
+             </div>`,
+          )
+          .addTo(map);
+
+        document.getElementById("expand-cluster-btn")?.addEventListener(
+          "click",
+          async () => {
+            const source = map.getSource("sedes") as maplibregl.GeoJSONSource;
+            const zoom = await source.getClusterExpansionZoom(props["cluster_id"] as number);
+            map.easeTo({ center: coords, zoom });
+            clusterPopup.remove();
+          },
+          { once: true },
+        );
       });
+
       map.on("click", "municipios-fill", (e: MapLayerMouseEvent) => {
         const f = e.features?.[0];
         if (f) handlersRef.current.onSelectMunicipality(String(f.properties?.["municipalityCode"]));
       });
+
+      // Background click -> ALL. Only fires when the click hit none of the
+      // interactive layers (their own handlers above already ran otherwise).
+      map.on("click", (e: MapLayerMouseEvent) => {
+        const hits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill", "sedes-point", "clusters"] });
+        if (hits.length === 0) handlersRef.current.onReset();
+      });
+
       map.on("mouseenter", "sedes-point", (e: MapLayerMouseEvent) => {
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
-        popup
+        sitePopup
           .setLngLat((f.geometry as GeoJSON_Point).coordinates as [number, number])
           .setHTML(
-            `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#0f1319">
-               <strong>${f.properties?.["name"] ?? ""}</strong><br/>${f.properties?.["institution"] ?? ""}
+            `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c">
+               <strong>${f.properties?.["name"] ?? ""}</strong><br/>
+               <span style="color:#5b6472">${f.properties?.["institution"] ?? ""}</span>
              </div>`,
           )
           .addTo(map);
       });
       map.on("mouseleave", "sedes-point", () => {
         map.getCanvas().style.cursor = "";
-        popup.remove();
+        sitePopup.remove();
       });
+      map.on("mouseenter", "clusters", () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", "clusters", () => (map.getCanvas().style.cursor = ""));
+      map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
+      map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
 
       readyRef.current = true;
       pendingRef.current.forEach((fn) => fn());
@@ -244,7 +306,7 @@ export function MapCanvas({
     };
   }, []);
 
-  // sites -> GeoJSON
+  // sites -> GeoJSON (municipalityId included so we can dim non-focused sites)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -264,6 +326,7 @@ export function MapCanvas({
               institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
               criticality: s.diagnostic.criticality,
               review: s.diagnostic.resolution.status !== "RESOLVED",
+              municipalityId: s.municipality?.id ?? null,
             },
             geometry: {
               type: "Point" as const,
@@ -284,20 +347,63 @@ export function MapCanvas({
     if (!map) return;
     const apply = () => {
       if (!map.getLayer("municipios-fill")) return;
-      const matcher: (string | string[])[] = ["match", ["get", "municipalityCode"]];
-      for (const summary of municipalities) {
-        matcher.push(summary.municipality.id, CRITICALITY_HEX[summary.criticality]);
+      if (!municipalities.length) {
+        map.setPaintProperty("municipios-fill", "fill-color", "#2f6fed");
+      } else {
+        const matcher: (string | string[])[] = ["match", ["get", "municipalityCode"]];
+        for (const summary of municipalities) matcher.push(summary.municipality.id, CRITICALITY_HEX[summary.criticality]);
+        matcher.push("#2f6fed");
+        map.setPaintProperty("municipios-fill", "fill-color", matcher as unknown as maplibregl.ExpressionSpecification);
       }
-      matcher.push("#4b5462");
-      map.setPaintProperty(
-        "municipios-fill",
-        "fill-color",
-        municipalities.length ? (matcher as unknown as maplibregl.ExpressionSpecification) : "#4b5462",
-      );
-      map.setPaintProperty("municipios-fill", "fill-opacity", 0.22);
     };
     whenReady(apply);
   }, [municipalities]);
+
+  // Focus emphasis: dim everything not belonging to the focused municipality,
+  // and re-center/zoom the map. This is what makes "las sedes relacionadas
+  // adquieren protagonismo, los demás elementos reducen su peso" real.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const apply = () => {
+      if (!map.getLayer("sedes-point") || !map.getLayer("municipios-fill")) return;
+
+      if (!focusMunicipalityId) {
+        map.setPaintProperty("sedes-point", "circle-opacity", 1);
+        map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? 0.22 : 0.08);
+        map.setPaintProperty("municipios-line", "line-opacity", 0.55);
+        map.easeTo({ center: OVERVIEW_CENTER, zoom: OVERVIEW_ZOOM, duration: 700 });
+        return;
+      }
+
+      map.setPaintProperty("sedes-point", "circle-opacity", [
+        "case",
+        ["==", ["get", "municipalityId"], focusMunicipalityId],
+        1,
+        0.22,
+      ]);
+      map.setPaintProperty("municipios-fill", "fill-opacity", [
+        "case",
+        ["==", ["get", "municipalityCode"], focusMunicipalityId],
+        0.32,
+        0.05,
+      ]);
+      map.setPaintProperty("municipios-line", "line-opacity", [
+        "case",
+        ["==", ["get", "municipalityCode"], focusMunicipalityId],
+        0.9,
+        0.2,
+      ]);
+
+      const summary = municipalities.find((m) => m.municipality.id === focusMunicipalityId);
+      const lat = summary?.municipality.latitude;
+      const lng = summary?.municipality.longitude;
+      if (lat != null && lng != null) {
+        map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), MUNICIPALITY_ZOOM), duration: 700 });
+      }
+    };
+    whenReady(apply);
+  }, [focusMunicipalityId, municipalities]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -321,7 +427,7 @@ export function MapCanvas({
       if (target?.position) {
         map.easeTo({
           center: [target.position.longitude, target.position.latitude],
-          zoom: Math.max(map.getZoom(), 12),
+          zoom: Math.max(map.getZoom(), 13),
           duration: 700,
         });
       }

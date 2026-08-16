@@ -6,22 +6,13 @@
 
 /*
  * Diagnóstico Sísmico — Infraestructura Educativa Valle del Cauca
- * Situation-room design system: deep slate surfaces, amber institutional
- * accent, traffic-light criticality scale. All colors are tokens.
- */
-
-/*
- * Design system definition.
  *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
+ * Light, institutional design system: clear surfaces, blue territorial
+ * accent (Valle del Cauca), traffic-light criticality scale reserved
+ * exclusively for risk states. Clusters/agrupaciones use a separate
+ * "informational" token so they can never be misread as an alert.
+ * All colors use oklch. Contrast targets: AA (4.5:1) for body text,
+ * AA-large (3:1) for large text / UI components.
  */
 
 @theme inline {
@@ -72,6 +63,8 @@
   --color-safe: var(--safe);
   --color-safe-foreground: var(--safe-foreground);
   --color-unknown: var(--unknown);
+  --color-cluster: var(--cluster);
+  --color-cluster-foreground: var(--cluster-foreground);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -81,49 +74,73 @@
 
 :root {
   --radius: 0.375rem;
-  --background: oklch(0.17 0.014 250);
-  --foreground: oklch(0.95 0.006 250);
-  --surface: oklch(0.21 0.016 250);
-  --surface-raised: oklch(0.25 0.018 250);
-  --card: oklch(0.21 0.016 250);
-  --card-foreground: oklch(0.95 0.006 250);
-  --popover: oklch(0.21 0.016 250);
-  --popover-foreground: oklch(0.95 0.006 250);
-  --primary: oklch(0.78 0.15 72);
-  --primary-foreground: oklch(0.19 0.02 60);
-  --secondary: oklch(0.28 0.02 250);
-  --secondary-foreground: oklch(0.95 0.006 250);
-  --muted: oklch(0.26 0.017 250);
-  --muted-foreground: oklch(0.68 0.014 250);
-  --accent: oklch(0.3 0.03 230);
-  --accent-foreground: oklch(0.95 0.006 250);
-  --destructive: oklch(0.6 0.21 25);
-  --destructive-foreground: oklch(0.97 0.01 25);
-  --border: oklch(0.3 0.018 250);
-  --input: oklch(0.3 0.018 250);
-  --ring: oklch(0.78 0.15 72);
-  --critical: oklch(0.62 0.22 27);
+
+  /* Surfaces — clear, low-saturation neutrals instead of the previous slate-black scale */
+  --background: oklch(0.97 0.004 250);
+  --foreground: oklch(0.19 0.014 250);
+  --surface: oklch(1 0 0);
+  --surface-raised: oklch(0.955 0.006 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.014 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.014 250);
+
+  /* Primary = institutional / territorial blue. Doubles as the "Valle del
+     Cauca" base color referenced in the brief (territory -> municipio -> sede). */
+  --primary: oklch(0.52 0.18 258);
+  --primary-foreground: oklch(0.98 0.006 250);
+
+  --secondary: oklch(0.93 0.008 250);
+  --secondary-foreground: oklch(0.19 0.014 250);
+  --muted: oklch(0.94 0.006 250);
+  --muted-foreground: oklch(0.46 0.014 250);
+  --accent: oklch(0.93 0.03 258);
+  --accent-foreground: oklch(0.3 0.05 258);
+  --destructive: oklch(0.55 0.21 27);
+  --destructive-foreground: oklch(0.98 0.01 27);
+
+  --border: oklch(0.89 0.008 250);
+  --input: oklch(0.89 0.008 250);
+  --ring: oklch(0.52 0.18 258);
+
+  /* Criticality — reserved exclusively for risk state. Darkened/desaturated
+     just enough from the old dark-mode values to clear AA on a white surface. */
+  --critical: oklch(0.5 0.19 27);
   --critical-foreground: oklch(0.98 0.01 27);
-  --warning: oklch(0.82 0.16 82);
-  --warning-foreground: oklch(0.22 0.03 82);
-  --safe: oklch(0.72 0.16 152);
-  --safe-foreground: oklch(0.2 0.03 152);
-  --unknown: oklch(0.6 0.012 250);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.19 0.015 250);
-  --sidebar-foreground: oklch(0.95 0.006 250);
-  --sidebar-primary: oklch(0.78 0.15 72);
-  --sidebar-primary-foreground: oklch(0.19 0.02 60);
-  --sidebar-accent: oklch(0.26 0.017 250);
-  --sidebar-accent-foreground: oklch(0.95 0.006 250);
-  --sidebar-border: oklch(0.3 0.018 250);
-  --sidebar-ring: oklch(0.78 0.15 72);
+  --warning: oklch(0.55 0.14 75);
+  --warning-foreground: oklch(0.98 0.02 75);
+  --safe: oklch(0.5 0.13 152);
+  --safe-foreground: oklch(0.98 0.02 152);
+  --unknown: oklch(0.55 0.01 250);
+
+  /* Cluster/agrupación — deliberately OUTSIDE the red/amber/green semantics
+     so a grouped point can never be read as an alert. Same hue family as
+     primary (territorial blue) but distinct lightness/chroma so it still
+     reads as its own category next to the criticality dots. */
+  --cluster: oklch(0.58 0.16 235);
+  --cluster-foreground: oklch(0.98 0.01 235);
+
+  --chart-1: oklch(0.52 0.18 258);
+  --chart-2: oklch(0.5 0.13 152);
+  --chart-3: oklch(0.55 0.14 75);
+  --chart-4: oklch(0.58 0.16 235);
+  --chart-5: oklch(0.5 0.19 27);
+
+  --sidebar: oklch(0.99 0.002 250);
+  --sidebar-foreground: oklch(0.19 0.014 250);
+  --sidebar-primary: oklch(0.52 0.18 258);
+  --sidebar-primary-foreground: oklch(0.98 0.006 250);
+  --sidebar-accent: oklch(0.94 0.006 250);
+  --sidebar-accent-foreground: oklch(0.19 0.014 250);
+  --sidebar-border: oklch(0.89 0.008 250);
+  --sidebar-ring: oklch(0.52 0.18 258);
 }
 
+/*
+ * .dark kept as an optional future toggle. Not wired to a switch today —
+ * :root is what renders. Left intentionally close to the previous default
+ * dark palette in case a "modo oscuro" option is added later.
+ */
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
@@ -131,8 +148,8 @@
   --card-foreground: oklch(0.984 0.003 247.858);
   --popover: oklch(0.208 0.042 265.755);
   --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
+  --primary: oklch(0.65 0.16 258);
+  --primary-foreground: oklch(0.129 0.042 264.695);
   --secondary: oklch(0.279 0.041 260.031);
   --secondary-foreground: oklch(0.984 0.003 247.858);
   --muted: oklch(0.279 0.041 260.031);
@@ -144,6 +161,15 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
+  --critical: oklch(0.62 0.22 27);
+  --critical-foreground: oklch(0.98 0.01 27);
+  --warning: oklch(0.82 0.16 82);
+  --warning-foreground: oklch(0.22 0.03 82);
+  --safe: oklch(0.72 0.16 152);
+  --safe-foreground: oklch(0.2 0.03 152);
+  --unknown: oklch(0.6 0.012 250);
+  --cluster: oklch(0.68 0.14 235);
+  --cluster-foreground: oklch(0.15 0.02 235);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -151,8 +177,8 @@
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
+  --sidebar-primary: oklch(0.65 0.16 258);
+  --sidebar-primary-foreground: oklch(0.129 0.042 264.695);
   --sidebar-accent: oklch(0.279 0.041 260.031);
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -183,6 +209,7 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px oklch(0.19 0.014 250 / 6%);
 }
 
 @utility label-caps {
@@ -193,17 +220,22 @@
   color: var(--muted-foreground);
 }
 
-/* MapLibre chrome adopts the design system */
+/* Focus visibility — WCAG 2.4.7. Previously relied on browser default only. */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* MapLibre chrome adopts the light design system */
 .maplibregl-ctrl-group {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
+  box-shadow: 0 1px 3px oklch(0.19 0.014 250 / 10%) !important;
 }
 .maplibregl-ctrl-group button + button {
   border-top-color: var(--border) !important;
 }
-.maplibregl-ctrl-icon {
-  filter: invert(1) hue-rotate(180deg);
-}
+/* Icons are authored for dark chrome; no invert filter needed on light chrome. */
 .maplibregl-ctrl-attrib {
   background: color-mix(in oklch, var(--surface) 85%, transparent) !important;
   color: var(--muted-foreground) !important;
@@ -211,4 +243,16 @@
 }
 .maplibregl-ctrl-attrib a {
   color: var(--muted-foreground) !important;
+}
+
+.maplibregl-popup-content {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 16px oklch(0.19 0.014 250 / 14%) !important;
+  padding: 12px !important;
+}
+.maplibregl-popup-tip {
+  border-top-color: var(--surface) !important;
+  border-bottom-color: var(--surface) !important;
 }
