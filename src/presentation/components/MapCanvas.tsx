@@ -92,36 +92,58 @@ export function MapCanvas({
     const clusterPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 14, maxWidth: "220px" });
 
     map.on("load", async () => {
-      const boundaries = await fetch("/data/valle-municipios.geojson").then((r) => r.json());
-      map.addSource("municipios", { type: "geojson", data: boundaries });
+      // --- Municipal boundaries (optional layer) -------------------------
+      // Isolated in its own try/catch: if this fetch 404s (e.g. filename
+      // case mismatch between local FS and Vercel's case-sensitive Linux
+      // FS, or the file wasn't included in the build output), it must NOT
+      // prevent the "sedes" source/layers below from being created. Before
+      // this fix, an unhandled rejection here aborted the rest of the
+      // async "load" callback silently, so points never rendered in prod.
+      try {
+        const res = await fetch("/data/valle-municipios.geojson");
+        if (!res.ok) {
+          throw new Error(`No se pudo cargar valle-municipios.geojson: HTTP ${res.status}`);
+        }
+        const boundaries = await res.json();
+        map.addSource("municipios", { type: "geojson", data: boundaries });
 
-      map.addLayer({
-        id: "municipios-fill",
-        type: "fill",
-        source: "municipios",
-        paint: { "fill-color": "#2f6fed", "fill-opacity": 0.08 },
-      });
-      map.addLayer({
-        id: "municipios-line",
-        type: "line",
-        source: "municipios",
-        paint: { "line-color": "#2f6fed", "line-width": 0.9, "line-opacity": 0.55 },
-      });
-      map.addLayer({
-        id: "municipios-label",
-        type: "symbol",
-        source: "municipios",
-        minzoom: 7.6,
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Regular"],
-          "text-size": 11,
-          "text-transform": "uppercase",
-          "text-letter-spacing": 0.05,
-        },
-        paint: { "text-color": "#4a5568", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
-      });
+        map.addLayer({
+          id: "municipios-fill",
+          type: "fill",
+          source: "municipios",
+          paint: { "fill-color": "#2f6fed", "fill-opacity": 0.08 },
+        });
+        map.addLayer({
+          id: "municipios-line",
+          type: "line",
+          source: "municipios",
+          paint: { "line-color": "#2f6fed", "line-width": 0.9, "line-opacity": 0.55 },
+        });
+        map.addLayer({
+          id: "municipios-label",
+          type: "symbol",
+          source: "municipios",
+          minzoom: 7.6,
+          layout: {
+            "text-field": ["get", "name"],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": 11,
+            "text-transform": "uppercase",
+            "text-letter-spacing": 0.05,
+          },
+          paint: { "text-color": "#4a5568", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(
+          "No se pudieron cargar los límites municipales (valle-municipios.geojson). " +
+            "El mapa seguirá mostrando las sedes sin el choropleth/etiquetas de municipio.",
+          err,
+        );
+      }
 
+      // --- Sedes (points/clusters/heatmap) — must run regardless of ------
+      // whether the boundaries above loaded successfully.
       map.addSource("sedes", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -257,15 +279,22 @@ export function MapCanvas({
         );
       });
 
-      map.on("click", "municipios-fill", (e: MapLayerMouseEvent) => {
-        const f = e.features?.[0];
-        if (f) handlersRef.current.onSelectMunicipality(String(f.properties?.["municipalityCode"]));
-      });
+      // Only wired when the boundaries layer actually exists — clicking
+      // municipal polygons is meaningless if they never loaded.
+      if (map.getLayer("municipios-fill")) {
+        map.on("click", "municipios-fill", (e: MapLayerMouseEvent) => {
+          const f = e.features?.[0];
+          if (f) handlersRef.current.onSelectMunicipality(String(f.properties?.["municipalityCode"]));
+        });
+        map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
+      }
 
       // Background click -> ALL. Only fires when the click hit none of the
       // interactive layers (their own handlers above already ran otherwise).
       map.on("click", (e: MapLayerMouseEvent) => {
-        const hits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill", "sedes-point", "clusters"] });
+        const layers = ["sedes-point", "clusters", ...(map.getLayer("municipios-fill") ? ["municipios-fill"] : [])];
+        const hits = map.queryRenderedFeatures(e.point, { layers });
         if (hits.length === 0) handlersRef.current.onReset();
       });
 
@@ -289,8 +318,6 @@ export function MapCanvas({
       });
       map.on("mouseenter", "clusters", () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", "clusters", () => (map.getCanvas().style.cursor = ""));
-      map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
 
       readyRef.current = true;
       pendingRef.current.forEach((fn) => fn());
@@ -366,12 +393,16 @@ export function MapCanvas({
     const map = mapRef.current;
     if (!map) return;
     const apply = () => {
-      if (!map.getLayer("sedes-point") || !map.getLayer("municipios-fill")) return;
+      if (!map.getLayer("sedes-point")) return;
 
       if (!focusMunicipalityId) {
         map.setPaintProperty("sedes-point", "circle-opacity", 1);
-        map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? 0.22 : 0.08);
-        map.setPaintProperty("municipios-line", "line-opacity", 0.55);
+        if (map.getLayer("municipios-fill")) {
+          map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? 0.22 : 0.08);
+        }
+        if (map.getLayer("municipios-line")) {
+          map.setPaintProperty("municipios-line", "line-opacity", 0.55);
+        }
         map.easeTo({ center: OVERVIEW_CENTER, zoom: OVERVIEW_ZOOM, duration: 700 });
         return;
       }
@@ -382,18 +413,22 @@ export function MapCanvas({
         1,
         0.22,
       ]);
-      map.setPaintProperty("municipios-fill", "fill-opacity", [
-        "case",
-        ["==", ["get", "municipalityCode"], focusMunicipalityId],
-        0.32,
-        0.05,
-      ]);
-      map.setPaintProperty("municipios-line", "line-opacity", [
-        "case",
-        ["==", ["get", "municipalityCode"], focusMunicipalityId],
-        0.9,
-        0.2,
-      ]);
+      if (map.getLayer("municipios-fill")) {
+        map.setPaintProperty("municipios-fill", "fill-opacity", [
+          "case",
+          ["==", ["get", "municipalityCode"], focusMunicipalityId],
+          0.32,
+          0.05,
+        ]);
+      }
+      if (map.getLayer("municipios-line")) {
+        map.setPaintProperty("municipios-line", "line-opacity", [
+          "case",
+          ["==", ["get", "municipalityCode"], focusMunicipalityId],
+          0.9,
+          0.2,
+        ]);
+      }
 
       const summary = municipalities.find((m) => m.municipality.id === focusMunicipalityId);
       const lat = summary?.municipality.latitude;
