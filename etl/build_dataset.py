@@ -1,7 +1,7 @@
 """ETL: three source workbooks -> canonical JSON dataset consumed by LocalDataRepository.
 
 Run:  python3 etl/build_dataset.py <sources_dir> 
-Outputs src/data/dataset.json and public/data/valle-municipios.geojson
+Outputs src/data/dataset.json and src/data/valle-municipios.json (bundled by Vite)
 """
 import json, re, sys, unicodedata, difflib, warnings
 from pathlib import Path
@@ -11,9 +11,9 @@ warnings.filterwarnings("ignore")
 
 SRC = Path(sys.argv[1] if len(sys.argv) > 1 else "/mnt/user-uploads")
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "public/data/dataset.json"
+OUT = ROOT / "src/data/dataset.json"
 GEO_IN = Path("/tmp/col.json")
-GEO_OUT = ROOT / "public/data/valle-municipios.geojson"
+GEO_OUT = ROOT / "src/data/valle-municipios.json"
 
 FUZZY_THRESHOLD = 0.85
 INSTITUTION_PREFIXES = [
