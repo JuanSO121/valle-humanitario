@@ -101,7 +101,7 @@ export function MapCanvas({
       try {
         map.addSource("municipios", {
           type: "geojson",
-          data: municipalBoundaries as unknown as GeoJSON.FeatureCollection,
+          data: municipalBoundaries as unknown as maplibregl.GeoJSONSourceSpecification["data"],
         });
 
         map.addLayer({
