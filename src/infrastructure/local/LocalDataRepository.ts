@@ -23,8 +23,20 @@ export interface CanonicalDataset {
 /** Loads the ETL output. Swappable for an HTTP/PostGIS source later. */
 export type DatasetLoader = () => Promise<CanonicalDataset>;
 
+/**
+ * Build-time loader: the ETL output is bundled by Vite as a module, so there is
+ * no runtime HTTP route to depend on. This behaves identically on Cloudflare,
+ * Vercel, Netlify or any static host, and also during SSR/prerender.
+ * A future ApiDataRepository simply provides a different DatasetLoader.
+ */
+export const bundledDatasetLoader = (): DatasetLoader => async () => {
+  const module = await import("@/data/dataset.json");
+  return (module.default ?? module) as unknown as CanonicalDataset;
+};
+
+/** Kept for a future API/PostGIS source served over HTTP. */
 export const fetchDatasetLoader =
-  (url = "/data/dataset.json"): DatasetLoader =>
+  (url: string): DatasetLoader =>
   async () => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`No se pudo cargar el dataset (${response.status})`);

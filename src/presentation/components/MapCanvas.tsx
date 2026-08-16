@@ -6,6 +6,9 @@ type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
 import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
+// Bundled at build time by Vite — no runtime HTTP route, so the boundaries load
+// identically on any host (Cloudflare, Vercel, Netlify) and during SSR.
+import municipalBoundaries from "@/data/valle-municipios.json";
 
 const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
@@ -93,19 +96,13 @@ export function MapCanvas({
 
     map.on("load", async () => {
       // --- Municipal boundaries (optional layer) -------------------------
-      // Isolated in its own try/catch: if this fetch 404s (e.g. filename
-      // case mismatch between local FS and Vercel's case-sensitive Linux
-      // FS, or the file wasn't included in the build output), it must NOT
-      // prevent the "sedes" source/layers below from being created. Before
-      // this fix, an unhandled rejection here aborted the rest of the
-      // async "load" callback silently, so points never rendered in prod.
+      // Still isolated in its own try/catch so a style/layer failure here can
+      // never abort the "sedes" source/layers created below.
       try {
-        const res = await fetch("/data/valle-municipios.geojson");
-        if (!res.ok) {
-          throw new Error(`No se pudo cargar valle-municipios.geojson: HTTP ${res.status}`);
-        }
-        const boundaries = await res.json();
-        map.addSource("municipios", { type: "geojson", data: boundaries });
+        map.addSource("municipios", {
+          type: "geojson",
+          data: municipalBoundaries as unknown as maplibregl.GeoJSONSourceSpecification["data"],
+        });
 
         map.addLayer({
           id: "municipios-fill",
@@ -136,7 +133,7 @@ export function MapCanvas({
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(
-          "No se pudieron cargar los límites municipales (valle-municipios.geojson). " +
+          "No se pudieron cargar los límites municipales (valle-municipios.json). " +
             "El mapa seguirá mostrando las sedes sin el choropleth/etiquetas de municipio.",
           err,
         );
