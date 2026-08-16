@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BTJbFOAw.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-lKslu0xH.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34876,9 +34876,48 @@ function useSiteAffectations(siteId) {
 		staleTime: Infinity
 	});
 }
+function OpenInMapsLink({ position, siteName }) {
+	if (!position) return null;
+	const url = "https://www.google.com/maps/search/?api=1&query=" + position.latitude + "," + position.longitude;
+	const approximate = position.precision === "APPROXIMATE";
+	const label = "Ver " + siteName + " en Google Maps";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex flex-col gap-1",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+			href: url,
+			target: "_blank",
+			rel: "noopener noreferrer",
+			"aria-label": label,
+			className: "inline-flex w-fit items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition hover:bg-surface-raised",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+				width: "14",
+				height: "14",
+				viewBox: "0 0 24 24",
+				fill: "none",
+				"aria-hidden": "true",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+					d: "M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z",
+					stroke: "currentColor",
+					strokeWidth: "1.8",
+					strokeLinejoin: "round"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+					cx: "12",
+					cy: "9",
+					r: "2.4",
+					stroke: "currentColor",
+					strokeWidth: "1.8"
+				})]
+			}), "Ver en Maps"]
+		}), approximate ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "text-[11px] text-muted-foreground",
+			children: "Ubicación aproximada (centroide municipal)"
+		}) : null]
+	});
+}
 function SiteDetailPanel({ view }) {
 	const { diagnostic, site, institution, municipality, position } = view;
 	const { data: affectations = [] } = useSiteAffectations(diagnostic.siteId ?? diagnostic.candidateSiteId);
+	const siteName = site?.name ?? diagnostic.sourceSite ?? "Sede sin nombre";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex h-full flex-col",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
@@ -34890,7 +34929,7 @@ function SiteDetailPanel({ view }) {
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "mt-2 text-base leading-tight font-semibold",
-					children: site?.name ?? diagnostic.sourceSite ?? "Sede sin nombre"
+					children: siteName
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-1 text-xs text-muted-foreground",
@@ -35026,6 +35065,13 @@ function SiteDetailPanel({ view }) {
 								" ",
 								position ? `${position.source} (${position.precision === "EXACT" ? "exacta" : "aproximada, centroide municipal"})` : "sin coordenadas"
 							]
+						}),
+						position && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-2",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OpenInMapsLink, {
+								position,
+								siteName
+							})
 						})
 					]
 				})
@@ -35153,7 +35199,7 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
 			onBack,
 			onClose
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "min-h-0 flex-1",
+			className: "min-h-0 flex-1 overflow-y-auto",
 			children
 		})]
 	});
@@ -35192,40 +35238,127 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 		]
 	});
 }
-var activeFilterCount$1 = (f) => (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
-function FilterPopover({ filters, showHeatmap, onToggleHeatmap, onChange }) {
-	const [open, setOpen] = (0, import_react.useState)(false);
-	const containerRef = (0, import_react.useRef)(null);
-	const count = activeFilterCount$1(filters);
-	(0, import_react.useEffect)(() => {
-		if (!open) return;
-		const onOutside = (e) => {
-			if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
-		};
-		const onEscape = (e) => e.key === "Escape" && setOpen(false);
-		document.addEventListener("mousedown", onOutside);
-		document.addEventListener("keydown", onEscape);
-		return () => {
-			document.removeEventListener("mousedown", onOutside);
-			document.removeEventListener("keydown", onEscape);
-		};
-	}, [open]);
-	const selectedCriticality = filters.criticality ?? [];
-	const toggleCriticality = (value) => {
-		const next = selectedCriticality.includes(value) ? selectedCriticality.filter((c) => c !== value) : [...selectedCriticality, value];
+var ITEMS = [
+	{
+		key: "ROJO",
+		label: "Rojo"
+	},
+	{
+		key: "AMARILLO",
+		label: "Amarillo"
+	},
+	{
+		key: "VERDE",
+		label: "Verde"
+	}
+];
+/**
+* Reemplaza el antiguo <Stat> de solo-lectura. Cada pill de color ahora es
+* un botón que hace toggle sobre filters.criticality — el filtro queda
+* implícito en el mismo número que el usuario ya está mirando, en vez de
+* duplicar Rojo/Amarillo/Verde otra vez dentro del popover de Filtros.
+* "Sedes" (el total) no filtra nada: limpia la selección de criticidad.
+*/
+function CriticalityStatsBar({ filters, onChange, total, red, yellow, green }) {
+	const selected = filters.criticality ?? [];
+	const counts = {
+		ROJO: red,
+		AMARILLO: yellow,
+		VERDE: green,
+		SIN_DETALLE: 0
+	};
+	const toggle = (key) => {
+		const next = selected.includes(key) ? selected.filter((c) => c !== key) : [...selected, key];
 		onChange({
 			...filters,
 			criticality: next.length ? next : void 0
 		});
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		ref: containerRef,
-		className: "pointer-events-auto relative",
+		className: "pointer-events-auto flex w-fit flex-wrap items-center gap-1 rounded-full border border-border bg-surface/95 p-1 text-xs shadow-sm backdrop-blur md:gap-1.5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+			type: "button",
+			onClick: () => onChange({
+				...filters,
+				criticality: void 0
+			}),
+			className: `flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium transition ${selected.length === 0 ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"}`,
+			"aria-pressed": selected.length === 0,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "font-display font-semibold tabular-nums",
+				children: total
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "label-caps",
+				children: "Sedes"
+			})]
+		}), ITEMS.map(({ key, label }) => {
+			const active = selected.includes(key);
+			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: () => toggle(key),
+				"aria-pressed": active,
+				className: `flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium transition ${active ? "ring-1 ring-inset" : "opacity-70 hover:opacity-100"}`,
+				style: active ? {
+					backgroundColor: `color-mix(in oklch, ${CRITICALITY_HEX[key]} 16%, transparent)`,
+					color: CRITICALITY_HEX[key]
+				} : void 0,
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "size-2 rounded-full",
+						style: { backgroundColor: CRITICALITY_HEX[key] }
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "font-display font-semibold tabular-nums",
+						children: counts[key]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "label-caps",
+						children: label
+					})
+				]
+			}, key);
+		})]
+	});
+}
+/**
+* Ya NO incluye los botones de criticidad (Rojo/Amarillo/Verde): esos ahora
+* viven en la barra de stats (ver CriticalityStatsBar), donde además cumplen
+* doble función de mostrar el conteo y servir de filtro — sin duplicar UI.
+*
+* Fix de layout: el panel es `absolute` respecto al wrapper `relative` del
+* propio botón, en vez de ser un hijo más de la fila flex de arriba. Antes,
+* al no estar fuera del flujo, su ancho real empujaba la fila entera más
+* allá del viewport → scroll horizontal → toda la página se corría a la
+* izquierda (por eso "ROJO" se veía cortado como "OJO"). Además se clampea
+* el ancho a `calc(100vw - 1.5rem)` para que en pantallas angostas nunca
+* se salga, y se cierra con click-afuera + Escape.
+*/
+function FilterPopover({ filters, showHeatmap, onToggleHeatmap, onChange }) {
+	const [open, setOpen] = (0, import_react.useState)(false);
+	const rootRef = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		if (!open) return;
+		const onPointerDown = (e) => {
+			if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+		};
+		const onEscape = (e) => e.key === "Escape" && setOpen(false);
+		document.addEventListener("pointerdown", onPointerDown);
+		document.addEventListener("keydown", onEscape);
+		return () => {
+			document.removeEventListener("pointerdown", onPointerDown);
+			document.removeEventListener("keydown", onEscape);
+		};
+	}, [open]);
+	const badgeCount = (filters.onlyReviewRequired ? 1 : 0) + (filters.search ? 1 : 0);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		ref: rootRef,
+		className: "pointer-events-auto relative shrink-0",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 			type: "button",
 			onClick: () => setOpen((v) => !v),
 			"aria-expanded": open,
-			className: "flex items-center gap-2 rounded-full border border-border bg-surface/95 px-3.5 py-2 text-sm font-medium shadow-sm backdrop-blur transition-colors hover:bg-surface-raised",
+			"aria-haspopup": "true",
+			className: "flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-medium shadow-sm backdrop-blur",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 					width: "15",
@@ -35240,22 +35373,23 @@ function FilterPopover({ filters, showHeatmap, onToggleHeatmap, onChange }) {
 						strokeLinecap: "round"
 					})
 				}),
-				"Filtros",
-				count > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				"Busqueda",
+				badgeCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground",
-					children: count
+					children: badgeCount
 				})
 			]
 		}), open && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "absolute left-0 top-[calc(100%+8px)] z-20 w-72 space-y-4 rounded-xl border border-border bg-surface p-4 shadow-lg",
+			role: "dialog",
+			"aria-label": "Filtros",
+			className: "absolute right-0 top-full z-20 mt-2 w-[20rem] max-w-[calc(100vw-1.5rem)] rounded-lg border border-border bg-surface p-4 shadow-lg",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
 					className: "label-caps",
-					htmlFor: "search",
+					htmlFor: "filter-search",
 					children: "Buscar sede / institución"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-					id: "search",
-					autoFocus: true,
+					id: "filter-search",
 					value: filters.search ?? "",
 					onChange: (e) => onChange({
 						...filters,
@@ -35264,56 +35398,48 @@ function FilterPopover({ filters, showHeatmap, onToggleHeatmap, onChange }) {
 					placeholder: "Ej. Simón Bolívar",
 					className: "mt-1.5 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
 				})] }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "label-caps",
-					children: "Criticidad"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-1.5 flex flex-wrap gap-1.5",
-					children: CRITICALITY_ORDER$1.map((c) => {
-						const active = selectedCriticality.includes(c);
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-							type: "button",
-							onClick: () => toggleCriticality(c),
-							className: `rounded-full px-2.5 py-1 text-xs font-medium transition ${active ? CRITICALITY_CLASS[c] : "border border-border bg-surface-raised text-muted-foreground hover:text-foreground"}`,
-							children: CRITICALITY_LABEL[c]
-						}, c);
-					})
-				})] }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex flex-col gap-2 border-t border-border pt-3",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-						className: "flex cursor-pointer items-center gap-2 text-sm",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-								type: "checkbox",
-								checked: Boolean(filters.onlyReviewRequired),
-								onChange: (e) => onChange({
-									...filters,
-									onlyReviewRequired: e.target.checked || void 0
-								}),
-								className: "size-4 accent-primary"
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4 border-t border-border pt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "flex cursor-pointer items-start gap-2.5 text-sm",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "checkbox",
+							checked: Boolean(filters.onlyReviewRequired),
+							onChange: (e) => onChange({
+								...filters,
+								onlyReviewRequired: e.target.checked || void 0
 							}),
-							"Solo ",
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "font-mono text-xs text-primary",
-								children: "MATCH_REVIEW_REQUIRED"
-							})
-						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-						className: "flex cursor-pointer items-center gap-2 text-sm",
+							className: "mt-0.5 size-4 accent-primary"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block font-medium",
+							children: "Solo pendientes de revisión"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block text-xs text-muted-foreground",
+							children: "Oculta las sedes ya resueltas o validadas."
+						})] })]
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4 border-t border-border pt-4",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "flex cursor-pointer items-center gap-2.5 text-sm",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 							type: "checkbox",
 							checked: showHeatmap,
 							onChange: onToggleHeatmap,
 							className: "size-4 accent-primary"
-						}), "Mapa de calor"]
-					})]
+						}), "Mostrar mapa de calor"]
+					})
 				}),
-				count > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				(filters.search || filters.onlyReviewRequired) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 					type: "button",
-					onClick: () => onChange({}),
-					className: "w-full rounded-md border border-border py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground",
-					children: "Limpiar filtros"
+					onClick: () => onChange({
+						...filters,
+						search: void 0,
+						onlyReviewRequired: void 0
+					}),
+					className: "mt-4 w-full rounded-md border border-border py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground",
+					children: "Limpiar estos filtros"
 				})
 			]
 		})]
@@ -35678,19 +35804,30 @@ function MiniStat({ label, value, color }) {
 	})] });
 }
 var activeFilterCount = (f) => (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
+var HINT_AUTOHIDE_MS = 4500;
 function DashboardPage() {
 	const [filters, setFilters] = (0, import_react.useState)({});
 	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
 	const [showHeatmap, setShowHeatmap] = (0, import_react.useState)(true);
 	const [mobileMenuOpen, setMobileMenuOpen] = (0, import_react.useState)(false);
+	const [hintDismissed, setHintDismissed] = (0, import_react.useState)(false);
+	const [overlayCollapsed, setOverlayCollapsed] = (0, import_react.useState)(false);
 	const isMobile = useIsMobile();
 	const { data, isLoading, error } = useMapView(filters);
 	const { data: meta } = useDatasetMeta();
+	(0, import_react.useEffect)(() => {
+		const timer = setTimeout(() => setHintDismissed(true), HINT_AUTOHIDE_MS);
+		return () => clearTimeout(timer);
+	}, []);
 	const selectedMunicipality = (0, import_react.useMemo)(() => data?.municipalities.find((m) => m.municipality.id === viewState.municipalityId) ?? null, [data, viewState.municipalityId]);
 	const selectedSite = (0, import_react.useMemo)(() => data?.sites.find((s) => s.diagnostic.id === viewState.siteId) ?? null, [data, viewState.siteId]);
 	const municipalitySites = (0, import_react.useMemo)(() => viewState.municipalityId ? data?.sites.filter((s) => s.municipality?.id === viewState.municipalityId) ?? [] : [], [data, viewState.municipalityId]);
-	const selectMunicipality = (id) => setViewState((prev) => viewTransitions.toMunicipality(id, prev));
+	const selectMunicipality = (id) => {
+		setHintDismissed(true);
+		setViewState((prev) => viewTransitions.toMunicipality(id, prev));
+	};
 	const selectSite = (id) => {
+		setHintDismissed(true);
 		const view = data?.sites.find((s) => s.diagnostic.id === id);
 		setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.id ?? null, prev));
 	};
@@ -35698,6 +35835,8 @@ function DashboardPage() {
 	const goToMunicipality = () => setViewState((prev) => viewTransitions.toMunicipalityFromSite(prev));
 	const panelOpen = viewState.level !== "ALL";
 	const filterCount = activeFilterCount(filters);
+	const showHint = viewState.level === "ALL" && !isLoading && !hintDismissed && !overlayCollapsed;
+	const overlayExpanded = isMobile || !overlayCollapsed;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "relative h-[100dvh] w-full overflow-hidden bg-background text-foreground",
 		children: [
@@ -35716,85 +35855,106 @@ function DashboardPage() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3 md:p-4",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex flex-wrap items-center justify-between gap-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-wrap items-center justify-between gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "pointer-events-auto flex min-w-0 items-center gap-1.5",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "pointer-events-auto min-w-0 flex-1 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 shadow-sm backdrop-blur md:flex-initial",
+							className: `min-w-0 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 shadow-sm backdrop-blur ${isMobile ? "max-w-[60%]" : "flex-1 md:flex-initial"}`,
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 								className: "truncate text-sm font-semibold leading-tight md:text-[15px]",
 								children: "Criticidad Sísmica Escolar"
 							})
-						}), isMobile ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						}), !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 							type: "button",
-							onClick: () => setMobileMenuOpen(true),
-							"aria-label": "Abrir menú de filtros y leyenda",
-							className: "pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+							onClick: () => setOverlayCollapsed((v) => !v),
+							"aria-expanded": overlayExpanded,
+							"aria-label": overlayExpanded ? "Ocultar panel de resumen" : "Mostrar panel de resumen",
+							title: overlayExpanded ? "Ocultar panel" : "Mostrar panel",
+							className: "flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface/95 text-muted-foreground shadow-sm backdrop-blur hover:text-foreground",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 								width: "16",
 								height: "16",
 								viewBox: "0 0 24 24",
 								fill: "none",
 								"aria-hidden": true,
+								className: `transition-transform duration-200 ${overlayExpanded ? "rotate-0" : "-rotate-90"}`,
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
-									d: "M4 6h16M4 12h16M4 18h16",
+									d: "M6 9l6 6 6-6",
 									stroke: "currentColor",
 									strokeWidth: "2",
-									strokeLinecap: "round"
+									strokeLinecap: "round",
+									strokeLinejoin: "round"
 								})
-							}), filterCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground",
-								children: filterCount
-							})]
-						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FilterPopover, {
-							filters,
-							showHeatmap,
-							onToggleHeatmap: () => setShowHeatmap((v) => !v),
-							onChange: setFilters
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "flex items-center gap-2",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Breadcrumb, {
-							viewState,
-							municipalityName: selectedMunicipality?.municipality.name ?? null,
-							siteName: selectedSite ? selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? null : null,
-							onGoToAll: goToAll,
-							onGoToMunicipality: goToMunicipality
-						})
-					}),
-					!isMobile && viewState.level === "ALL" && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "pointer-events-auto flex w-fit flex-wrap items-center gap-3 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-xs shadow-sm backdrop-blur md:gap-4",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stat, {
-								label: "Sedes",
-								value: data?.totals.total ?? 0
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stat, {
-								label: "Rojo",
-								value: data?.totals.red ?? 0,
-								color: CRITICALITY_HEX.ROJO
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stat, {
-								label: "Amarillo",
-								value: data?.totals.yellow ?? 0,
-								color: CRITICALITY_HEX.AMARILLO
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stat, {
-								label: "Verde",
-								value: data?.totals.green ?? 0,
-								color: CRITICALITY_HEX.VERDE
 							})
-						]
+						})]
+					}), !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FilterPopover, {
+						filters,
+						showHeatmap,
+						onToggleHeatmap: () => setShowHeatmap((v) => !v),
+						onChange: setFilters
+					})]
+				}), overlayExpanded && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex items-center gap-2",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Breadcrumb, {
+						viewState,
+						municipalityName: selectedMunicipality?.municipality.name ?? null,
+						siteName: selectedSite ? selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? null : null,
+						onGoToAll: goToAll,
+						onGoToMunicipality: goToMunicipality
 					})
-				]
+				}), !isMobile && data && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CriticalityStatsBar, {
+					filters,
+					onChange: setFilters,
+					total: data.totals.total,
+					red: data.totals.red,
+					yellow: data.totals.yellow,
+					green: data.totals.green
+				})] })]
 			}),
-			viewState.level === "ALL" && !isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center md:top-20",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "pointer-events-auto max-w-[85vw] rounded-full border border-border bg-surface/90 px-4 py-1.5 text-center text-xs text-muted-foreground shadow-sm backdrop-blur",
-					children: "Explora el mapa para consultar municipios y sedes"
+			showHint && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "pointer-events-none absolute inset-x-0 top-16 z-10 flex justify-center px-3 transition-opacity duration-300 md:top-24",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: () => setHintDismissed(true),
+					className: "pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-surface/90 px-4 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-foreground",
+					children: ["Explora el mapa para consultar municipios y sedes", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+						width: "12",
+						height: "12",
+						viewBox: "0 0 24 24",
+						fill: "none",
+						"aria-hidden": true,
+						className: "shrink-0",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+							d: "M6 6l12 12M18 6L6 18",
+							stroke: "currentColor",
+							strokeWidth: "2",
+							strokeLinecap: "round"
+						})
+					})]
 				})
+			}),
+			isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: () => setMobileMenuOpen(true),
+				"aria-label": "Abrir menú de filtros y leyenda",
+				className: "pointer-events-auto fixed right-3 top-24 z-20 flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+					width: "16",
+					height: "16",
+					viewBox: "0 0 24 24",
+					fill: "none",
+					"aria-hidden": true,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+						d: "M4 6h16M4 12h16M4 18h16",
+						stroke: "currentColor",
+						strokeWidth: "2",
+						strokeLinecap: "round"
+					})
+				}), filterCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground",
+					children: filterCount
+				})]
 			}),
 			isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm",
@@ -35803,7 +35963,7 @@ function DashboardPage() {
 					children: "Cargando dataset…"
 				})
 			}),
-			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			!isMobile && overlayExpanded && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "pointer-events-none absolute bottom-4 left-3 z-10 md:bottom-6 md:left-4",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "pointer-events-auto rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur",
@@ -35881,25 +36041,6 @@ function DashboardPage() {
 			meta && !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "pointer-events-none absolute bottom-2 right-3 z-10 font-mono text-[10px] text-muted-foreground/70",
 				children: ["ETL ", new Date(meta.generatedAt).toLocaleDateString("es-CO")]
-			})
-		]
-	});
-}
-function Stat({ label, value, color }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex items-center gap-1.5",
-		children: [
-			color && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "size-2 rounded-full",
-				style: { backgroundColor: color }
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "font-display font-semibold tabular-nums",
-				children: value
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "label-caps",
-				children: label
 			})
 		]
 	});

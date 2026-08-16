@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+// DashboardPage.tsx
+import { useEffect, useMemo, useState } from "react";
 import type { DiagnosticFilters } from "@/domain/entities";
 import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 
 import { MapCanvas } from "@/presentation/components/MapCanvas";
 import { SiteDetailPanel } from "@/presentation/components/SiteDetailPanel";
-import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_LABEL } from "@/presentation/components/criticality";
+import { CLUSTER_COLOR, CLUSTER_LABEL, CRITICALITY_HEX } from "@/presentation/components/criticality";
 import { useDatasetMeta, useMapView } from "@/presentation/hooks/useDiagnostics";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ContextualPanel } from "../components/ContextualPanel";
+import { CriticalityStatsBar } from "../components/CriticalityStatsBar";
 import { FilterPopover } from "../components/FilterPopover";
 import { MunicipalityPanel } from "../components/MunicipalityPanel";
 import { INITIAL_VIEW_STATE, viewTransitions } from "../state/viewState";
@@ -16,15 +18,24 @@ import { MobileMenu } from "../components/Mobilemenu";
 const activeFilterCount = (f: DiagnosticFilters) =>
   (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
 
+const HINT_AUTOHIDE_MS = 4500;
+
 export function DashboardPage() {
   const [filters, setFilters] = useState<DiagnosticFilters>({});
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const [overlayCollapsed, setOverlayCollapsed] = useState(false);
   const isMobile = useIsMobile();
 
   const { data, isLoading, error } = useMapView(filters);
   const { data: meta } = useDatasetMeta();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setHintDismissed(true), HINT_AUTOHIDE_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
   const selectedMunicipality = useMemo(
     () => data?.municipalities.find((m) => m.municipality.id === viewState.municipalityId) ?? null,
@@ -39,8 +50,12 @@ export function DashboardPage() {
     [data, viewState.municipalityId],
   );
 
-  const selectMunicipality = (id: string) => setViewState((prev) => viewTransitions.toMunicipality(id, prev));
+  const selectMunicipality = (id: string) => {
+    setHintDismissed(true);
+    setViewState((prev) => viewTransitions.toMunicipality(id, prev));
+  };
   const selectSite = (id: string) => {
+    setHintDismissed(true);
     const view = data?.sites.find((s) => s.diagnostic.id === id);
     setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.id ?? null, prev));
   };
@@ -49,10 +64,11 @@ export function DashboardPage() {
 
   const panelOpen = viewState.level !== "ALL";
   const filterCount = activeFilterCount(filters);
+  const showHint = viewState.level === "ALL" && !isLoading && !hintDismissed && !overlayCollapsed;
+  const overlayExpanded = isMobile || !overlayCollapsed;
 
   return (
     <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">
-      {/* Map is the entire canvas — everything else is an overlay on top of it. */}
       {error ? (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-critical">
           No fue posible cargar el dataset local.
@@ -70,33 +86,41 @@ export function DashboardPage() {
         />
       )}
 
-      {/* Top overlay: compact title + breadcrumb + filters trigger, never a
-          fixed block competing with the map. On mobile this collapses to
-          title + a single ☰ button — filters/stats/legend move into
-          MobileMenu so they don't stack up and eat the screen. */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3 md:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="pointer-events-auto min-w-0 flex-1 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 shadow-sm backdrop-blur md:flex-initial">
-            <h1 className="truncate text-sm font-semibold leading-tight md:text-[15px]">Criticidad Sísmica Escolar</h1>
+          <div className="pointer-events-auto flex min-w-0 items-center gap-1.5">
+            <div
+              className={`min-w-0 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 shadow-sm backdrop-blur ${
+                isMobile ? "max-w-[60%]" : "flex-1 md:flex-initial"
+              }`}
+            >
+              <h1 className="truncate text-sm font-semibold leading-tight md:text-[15px]">Criticidad Sísmica Escolar</h1>
+            </div>
+
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={() => setOverlayCollapsed((v) => !v)}
+                aria-expanded={overlayExpanded}
+                aria-label={overlayExpanded ? "Ocultar panel de resumen" : "Mostrar panel de resumen"}
+                title={overlayExpanded ? "Ocultar panel" : "Mostrar panel"}
+                className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface/95 text-muted-foreground shadow-sm backdrop-blur hover:text-foreground"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden
+                  className={`transition-transform duration-200 ${overlayExpanded ? "rotate-0" : "-rotate-90"}`}
+                >
+                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
           </div>
 
-          {isMobile ? (
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Abrir menú de filtros y leyenda"
-              className="pointer-events-auto flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              {filterCount > 0 && (
-                <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-                  {filterCount}
-                </span>
-              )}
-            </button>
-          ) : (
+          {!isMobile && (
             <FilterPopover
               filters={filters}
               showHeatmap={showHeatmap}
@@ -106,36 +130,63 @@ export function DashboardPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Breadcrumb
-            viewState={viewState}
-            municipalityName={selectedMunicipality?.municipality.name ?? null}
-            siteName={selectedSite ? (selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? null) : null}
-            onGoToAll={goToAll}
-            onGoToMunicipality={goToMunicipality}
-          />
-        </div>
+        {overlayExpanded && (
+          <>
+            <div className="flex items-center gap-2">
+              <Breadcrumb
+                viewState={viewState}
+                municipalityName={selectedMunicipality?.municipality.name ?? null}
+                siteName={selectedSite ? (selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? null) : null}
+                onGoToAll={goToAll}
+                onGoToMunicipality={goToMunicipality}
+              />
+            </div>
 
-        {/* Stats — visible only at TODOS, and only on desktop; on mobile they
-            live inside MobileMenu so they don't add another floating pill. */}
-        {!isMobile && viewState.level === "ALL" && (
-          <div className="pointer-events-auto flex w-fit flex-wrap items-center gap-3 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-xs shadow-sm backdrop-blur md:gap-4">
-            <Stat label="Sedes" value={data?.totals.total ?? 0} />
-            <Stat label="Rojo" value={data?.totals.red ?? 0} color={CRITICALITY_HEX.ROJO} />
-            <Stat label="Amarillo" value={data?.totals.yellow ?? 0} color={CRITICALITY_HEX.AMARILLO} />
-            <Stat label="Verde" value={data?.totals.green ?? 0} color={CRITICALITY_HEX.VERDE} />
-          </div>
+            {!isMobile && data && (
+              <CriticalityStatsBar
+                filters={filters}
+                onChange={setFilters}
+                total={data.totals.total}
+                red={data.totals.red}
+                yellow={data.totals.yellow}
+                green={data.totals.green}
+              />
+            )}
+          </>
         )}
       </div>
 
-      {/* Exploration hint — only shown at TODOS with nothing selected, tells
-          a first-time user what to do without a permanent instructional block. */}
-      {viewState.level === "ALL" && !isLoading && (
-        <div className="pointer-events-none absolute inset-x-0 top-14 z-10 flex justify-center md:top-20">
-          <p className="pointer-events-auto max-w-[85vw] rounded-full border border-border bg-surface/90 px-4 py-1.5 text-center text-xs text-muted-foreground shadow-sm backdrop-blur">
+      {showHint && (
+        <div className="pointer-events-none absolute inset-x-0 top-16 z-10 flex justify-center px-3 transition-opacity duration-300 md:top-24">
+          <button
+            type="button"
+            onClick={() => setHintDismissed(true)}
+            className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-surface/90 px-4 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-foreground"
+          >
             Explora el mapa para consultar municipios y sedes
-          </p>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
         </div>
+      )}
+
+      {isMobile && (
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Abrir menú de filtros y leyenda"
+          className="pointer-events-auto fixed right-3 top-24 z-20 flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          {filterCount > 0 && (
+            <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+              {filterCount}
+            </span>
+          )}
+        </button>
       )}
 
       {isLoading && (
@@ -144,10 +195,12 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Legend — always visible on desktop; on mobile it moves into
-          MobileMenu so it doesn't sit permanently over the map on a small
-          viewport. */}
-      {!isMobile && (
+      {/* Leyenda — antes solo dependía de "!isMobile", por lo que se quedaba
+          visible aunque el usuario colapsara el resto del panel superior.
+          Ahora también depende de "overlayExpanded": al colapsar el título,
+          la leyenda se oculta junto con breadcrumb y stats, como un solo
+          panel coherente; al expandir, vuelve a aparecer. */}
+      {!isMobile && overlayExpanded && (
         <div className="pointer-events-none absolute bottom-4 left-3 z-10 md:bottom-6 md:left-4">
           <div className="pointer-events-auto rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur">
             <span className="label-caps">Criticidad</span>
@@ -172,8 +225,6 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Mobile drawer — filters, resumen and leyenda consolidated behind
-          the ☰ button so they never stack on top of the map at once. */}
       {isMobile && (
         <MobileMenu
           open={mobileMenuOpen}
@@ -190,8 +241,6 @@ export function DashboardPage() {
         />
       )}
 
-      {/* Contextual panel — only exists when the user has drilled into a
-          municipality or a site. Nothing permanent competes with the map. */}
       {panelOpen && viewState.level === "MUNICIPALITY" && selectedMunicipality && (
         <ContextualPanel
           isMobile={isMobile}
@@ -217,23 +266,11 @@ export function DashboardPage() {
         </ContextualPanel>
       )}
 
-      {/* ETL footnote — hidden on mobile (bottom-right collides with the
-          bottom sheet's drag handle there); still shown on desktop. */}
       {meta && !isMobile && (
         <p className="pointer-events-none absolute bottom-2 right-3 z-10 font-mono text-[10px] text-muted-foreground/70">
           ETL {new Date(meta.generatedAt).toLocaleDateString("es-CO")}
         </p>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {color && <span className="size-2 rounded-full" style={{ backgroundColor: color }} />}
-      <span className="font-display font-semibold tabular-nums">{value}</span>
-      <span className="label-caps">{label}</span>
     </div>
   );
 }

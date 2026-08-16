@@ -256,3 +256,19 @@
   border-top-color: var(--surface) !important;
   border-bottom-color: var(--surface) !important;
 }
+
+/*
+ * Desktop: los controles +/- de zoom de MapLibre viven por defecto en la
+ * esquina superior derecha con solo ~10px de margen (top-right), justo
+ * donde también vive el botón de búsqueda/filtros de la barra superior
+ * (título + botón, en esa misma esquina). Se empuja el control de zoom
+ * hacia abajo lo suficiente para que quede libre bajo esa fila.
+ * Solo aplica desde md: en mobile el botón ☰ ya no vive en esa esquina —
+ * se reposicionó aparte con position: fixed más abajo (top-24) — así que
+ * el control de zoom en mobile puede quedarse en su lugar por defecto.
+ */
+@media (min-width: 768px) {
+  .maplibregl-ctrl-top-right {
+    margin-top: 60px;
+  }
+}

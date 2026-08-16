@@ -1,6 +1,8 @@
+// SiteDetailPanel.tsx
 import type { DiagnosedSiteView } from "@/domain/entities";
 import { useSiteAffectations } from "@/presentation/hooks/useDiagnostics";
 import { CRITICALITY_CLASS, CRITICALITY_LABEL, CRITICALITY_HEX } from "./criticality";
+import { OpenInMapsLink } from "./OpenInMapsLink";
 
 interface Props {
   view: DiagnosedSiteView;
@@ -10,6 +12,7 @@ export function SiteDetailPanel({ view }: Props) {
   const { diagnostic, site, institution, municipality, position } = view;
   const siteId = diagnostic.siteId ?? diagnostic.candidateSiteId;
   const { data: affectations = [] } = useSiteAffectations(siteId);
+  const siteName = site?.name ?? diagnostic.sourceSite ?? "Sede sin nombre";
 
   return (
     <div className="flex h-full flex-col">
@@ -17,9 +20,7 @@ export function SiteDetailPanel({ view }: Props) {
         <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${CRITICALITY_CLASS[diagnostic.criticality]}`}>
           {CRITICALITY_LABEL[diagnostic.criticality]}
         </span>
-        <h2 className="mt-2 text-base leading-tight font-semibold">
-          {site?.name ?? diagnostic.sourceSite ?? "Sede sin nombre"}
-        </h2>
+        <h2 className="mt-2 text-base leading-tight font-semibold">{siteName}</h2>
         <p className="mt-1 text-xs text-muted-foreground">{institution?.name ?? diagnostic.sourceInstitution ?? "—"}</p>
       </header>
 
@@ -87,6 +88,16 @@ export function SiteDetailPanel({ view }: Props) {
               ? `${position.source} (${position.precision === "EXACT" ? "exacta" : "aproximada, centroide municipal"})`
               : "sin coordenadas"}
           </p>
+          {/* "Ver en Maps": vive justo debajo de la descripción de la
+              posición, así queda contextualizado con el mismo dato del que
+              habla (fuente + precisión) en vez de aparecer suelto en otra
+              parte del panel. Si no hay coordenadas, OpenInMapsLink
+              simplemente no renderiza nada. */}
+          {position && (
+            <div className="mt-2">
+              <OpenInMapsLink position={position} siteName={siteName} />
+            </div>
+          )}
         </div>
       </div>
     </div>

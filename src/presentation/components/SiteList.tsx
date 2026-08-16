@@ -22,12 +22,12 @@ export function SiteList({ sites, selectedId, onSelect }: Props) {
             <button
               type="button"
               onClick={() => onSelect(diagnostic.id)}
-              className={`flex w-full gap-3 px-4 py-3 text-left transition hover:bg-surface-raised ${
+              className={`group flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left transition hover:bg-surface-raised active:bg-surface-raised ${
                 active ? "bg-surface-raised" : ""
               }`}
             >
               <span
-                className="mt-1.5 size-2.5 shrink-0 rounded-full"
+                className="mt-0.5 size-2.5 shrink-0 self-start rounded-full"
                 style={{ backgroundColor: CRITICALITY_HEX[diagnostic.criticality] }}
                 aria-hidden
               />
@@ -49,6 +49,19 @@ export function SiteList({ sites, selectedId, onSelect }: Props) {
                   )}
                 </span>
               </span>
+              {/* Chevron: la señal visual de "esto abre algo más" que faltaba.
+                  Se desplaza levemente al hover/active para reforzar la
+                  intención de navegación sin depender solo del color de fondo. */}
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+                className="shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+              >
+                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </li>
         );

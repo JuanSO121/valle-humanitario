@@ -1,3 +1,4 @@
+// ContextualPanel.tsx
 import { useEffect, useRef, useState } from "react";
 
 interface Props {
@@ -89,7 +90,18 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
       }}
     >
       <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
-      <div className="min-h-0 flex-1">{children}</div>
+      {/* Antes: solo "min-h-0 flex-1", delegando el scroll al hijo
+          (MunicipalityPanel/SiteDetailPanel), que a su vez depende de que
+          su propio "h-full" resuelva correctamente contra la altura ya
+          calculada de ESTE wrapper — dos niveles de flex anidados
+          propagando un porcentaje de altura. En algunos navegadores esa
+          cadena no termina de resolverse y el contenido se corta contra el
+          "overflow-hidden" del contenedor exterior en vez de activar
+          scroll (el síntoma de "panel fijo").
+          Ahora: el wrapper controla el scroll directamente. Es un solo
+          nivel de flex (DesktopCard → este div), mucho más fiable, y no
+          depende de que el hijo resuelva nada por su cuenta. */}
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }
@@ -99,8 +111,6 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
   const sheetRef = useRef<HTMLDivElement>(null);
   const entered = useEnterTransition(transitionKey);
 
-  // Reset to expanded whenever a new selection arrives, so the user sees
-  // the content immediately rather than a collapsed handle.
   useEffect(() => setExpanded(true), [transitionKey]);
 
   return (
@@ -122,6 +132,10 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
         <span className="h-1 w-9 rounded-full bg-border" />
       </button>
       <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
+      {/* Mismo ajuste aquí por consistencia y para no depender del "h-full"
+          interno del hijo — la altura ya viene fijada explícitamente vía
+          "height: 70vh" en el sheet, así que este es el nivel correcto
+          para controlar el scroll. */}
       <div className={`min-h-0 flex-1 ${expanded ? "overflow-y-auto" : "hidden"}`}>{children}</div>
     </div>
   );
