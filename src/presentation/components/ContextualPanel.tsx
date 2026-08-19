@@ -35,6 +35,35 @@ function useEnterTransition(transitionKey: string) {
   return entered;
 }
 
+/**
+ * Cierra el panel al hacer click/tap fuera de él — pero SOLO cuando el
+ * clic cae fuera del mapa también. El mapa ocupa toda la pantalla y ya
+ * tiene su propia lógica de clic (sede > cluster > municipio > reset, ver
+ * MapCanvas), así que un clic ahí para abrir OTRO municipio o sede no debe
+ * competir con este listener genérico — si lo hiciera, el "cerrar" y el
+ * "abrir lo nuevo" se disparan por el mismo clic y pelean entre sí. Este
+ * listener solo actúa sobre clics en zonas realmente ajenas a ambos (por
+ * ejemplo, la barra superior de filtros).
+ */
+function useCloseOnOutsideClick<T extends HTMLElement>(onClose: () => void) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (ref.current?.contains(target)) return;
+      if ((target as HTMLElement)?.closest?.("[data-map-root]")) return;
+      onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [onClose]);
+  return ref;
+}
+
 function PanelHeader({
   title,
   subtitle,
@@ -80,8 +109,10 @@ function PanelHeader({
 
 function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey }: Omit<Props, "isMobile">) {
   const entered = useEnterTransition(transitionKey);
+  const ref = useCloseOnOutsideClick<HTMLDivElement>(onClose);
   return (
     <div
+      ref={ref}
       className="pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-200 ease-out"
       style={{
         maxHeight: "calc(100% - 6rem)",
@@ -108,14 +139,14 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
 
 function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey }: Omit<Props, "isMobile">) {
   const [expanded, setExpanded] = useState(true);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const entered = useEnterTransition(transitionKey);
+  const ref = useCloseOnOutsideClick<HTMLDivElement>(onClose);
 
   useEffect(() => setExpanded(true), [transitionKey]);
 
   return (
     <div
-      ref={sheetRef}
+      ref={ref}
       className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out"
       style={{
         height: expanded ? "70vh" : "auto",

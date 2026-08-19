@@ -14,7 +14,13 @@ function hash(value: string): number {
 /**
  * MVP geocoder: deterministic municipal-centroid placement with a small,
  * clearly-labelled offset so overlapping sites remain distinguishable.
- * Always reports precision APPROXIMATE — no invented street-level accuracy.
+ * Always reports precision APPROXIMATE for centroid fallback — no invented
+ * street-level accuracy.
+ *
+ * `address` (the official "Dirección" from the source Excel) rides along on
+ * every returned point when the site has one, EXACT or APPROXIMATE alike,
+ * so consumers like "Ver en Maps" can search the real address instead of
+ * an approximate lat/long — without changing where the pin sits on the map.
  */
 export class MunicipalCentroidGeocodingService implements GeocodingService {
   readonly id = "municipal-centroid";
@@ -26,6 +32,7 @@ export class MunicipalCentroidGeocodingService implements GeocodingService {
       return {
         latitude: site.latitude,
         longitude: site.longitude,
+        address: site.address,
         source: site.coordinateSource ?? "OFFICIAL",
         precision: "EXACT",
       };
@@ -38,6 +45,7 @@ export class MunicipalCentroidGeocodingService implements GeocodingService {
     return {
       latitude: municipality.latitude + Math.sin(angle) * distance,
       longitude: municipality.longitude + Math.cos(angle) * distance,
+      address: site.address,
       source: "MUNICIPAL_CENTROID",
       precision: "APPROXIMATE",
     };
@@ -52,6 +60,7 @@ export class NullGeocodingService implements GeocodingService {
     return {
       latitude: site.latitude,
       longitude: site.longitude,
+      address: site.address,
       source: site.coordinateSource ?? "OFFICIAL",
       precision: "EXACT",
     };

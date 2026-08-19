@@ -15,14 +15,50 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl);
 type GeoJSON_Point = { type: "Point"; coordinates: number[] };
 
 import type { DiagnosedSiteView, MunicipalitySummary } from "@/domain/entities";
+import { normId } from "@/lib/id";
 import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
 // Bundled at build time by Vite — no runtime HTTP route, so the boundaries load
 // identically on any host (Cloudflare, Vercel, Netlify) and during SSR.
-import municipalBoundaries from "@/data/valle-municipios.json";
+import municipalBoundariesRaw from "@/data/valle-municipios.json";
 
 const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
 const MUNICIPALITY_ZOOM = 9.8;
+
+// El GeoJSON de límites y el dataset de sedes (Excel/ETL) no siempre
+// traen `municipalityCode` en el mismo formato exacto (ceros a la
+// izquierda, string vs number). Se normaliza UNA sola vez acá, a la hora
+// de importar el archivo, en vez de intentar normalizar dentro de una
+// expresión de estilo de MapLibre (que no puede correr JS arbitrario por
+// feature). A partir de acá, todo el resto del componente puede asumir
+// que `municipalityCode` ya viene en el mismo formato que
+// `summary.municipality.id`, siempre que ese id también pase por normId().
+//
+// También se le asigna acá el `id` de feature a nivel raíz (no dentro de
+// `properties`): MapLibre solo soporta feature-state (usado para el hover)
+// sobre features con `id`, y el GeoJSON de límites no traía ninguno.
+function normalizeBoundaries(
+  geojson: unknown,
+): maplibregl.GeoJSONSourceSpecification["data"] {
+  const collection = geojson as { features?: Array<{ properties?: Record<string, unknown> }> };
+  if (!collection?.features) return geojson as maplibregl.GeoJSONSourceSpecification["data"];
+  return {
+    ...(collection as object),
+    features: collection.features.map((f) => {
+      const code = normId((f.properties as Record<string, unknown> | undefined)?.["municipalityCode"]);
+      return {
+        ...f,
+        id: code,
+        properties: {
+          ...f.properties,
+          municipalityCode: code,
+        },
+      };
+    }),
+  } as unknown as maplibregl.GeoJSONSourceSpecification["data"];
+}
+
+const municipalBoundaries = normalizeBoundaries(municipalBoundariesRaw);
 
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
@@ -108,7 +144,7 @@ export function MapCanvas({
       try {
         map.addSource("municipios", {
           type: "geojson",
-          data: municipalBoundaries as unknown as maplibregl.GeoJSONSourceSpecification["data"],
+          data: municipalBoundaries,
         });
 
         map.addLayer({
@@ -232,9 +268,35 @@ export function MapCanvas({
         },
       });
 
+      // Hover de municipio: se trackea con feature-state (no con React
+      // state) porque feature-state es lo que MapLibre está optimizado
+      // para actualizar en cada frame de mousemove sin recalcular toda la
+      // expresión de estilo cada vez — solo repinta esa feature. La capa
+      // de relleno referencia ["feature-state","hovered"] en su
+      // "fill-opacity" (ver el efecto de `municipalities`/`focusMunicipalityId`
+      // más abajo), así que no hace falta llamar setPaintProperty acá.
+      let hoveredMunicipalityId: string | null = null;
       if (map.getLayer("municipios-fill")) {
-        map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
-        map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
+        map.on("mousemove", "municipios-fill", (e: MapLayerMouseEvent) => {
+          map.getCanvas().style.cursor = "pointer";
+          const feature = e.features?.[0];
+          const nextId = feature?.id != null ? String(feature.id) : null;
+          if (nextId === hoveredMunicipalityId) return;
+          if (hoveredMunicipalityId != null) {
+            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
+          }
+          if (nextId != null) {
+            map.setFeatureState({ source: "municipios", id: nextId }, { hovered: true });
+          }
+          hoveredMunicipalityId = nextId;
+        });
+        map.on("mouseleave", "municipios-fill", () => {
+          map.getCanvas().style.cursor = "";
+          if (hoveredMunicipalityId != null) {
+            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
+            hoveredMunicipalityId = null;
+          }
+        });
       }
 
       const openClusterPopup = (f: maplibregl.MapGeoJSONFeature) => {
@@ -310,8 +372,13 @@ export function MapCanvas({
         if (map.getLayer("municipios-fill")) {
           const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
           if (municipalityHits.length > 0) {
+            // municipalBoundaries ya viene normalizado (ver
+            // normalizeBoundaries arriba), así que esto ya está en el
+            // mismo formato que summary.municipality.id normalizado.
+            // Igual pasamos por normId() acá por si en el futuro se
+            // cambia la fuente de datos y deja de venir pre-normalizada.
             const code = municipalityHits[0]?.properties?.["municipalityCode"];
-            if (code != null) handlersRef.current.onSelectMunicipality(String(code));
+            if (code != null) handlersRef.current.onSelectMunicipality(normId(code));
             return;
           }
         }
@@ -373,7 +440,7 @@ export function MapCanvas({
               institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
               criticality: s.diagnostic.criticality,
               review: s.diagnostic.resolution.status !== "RESOLVED",
-              municipalityId: s.municipality?.id ?? null,
+              municipalityId: s.municipality?.id ? normId(s.municipality.id) : null,
             },
             geometry: {
               type: "Point" as const,
@@ -396,8 +463,17 @@ export function MapCanvas({
       if (!municipalities.length) {
         map.setPaintProperty("municipios-fill", "fill-color", "#2f6fed");
       } else {
+        // Comparamos siempre contra el mismo formato normalizado que
+        // trae municipalBoundaries (ver normalizeBoundaries arriba) —
+        // esto es lo que estaba roto antes: acá se empujaban los ids
+        // "crudos" del dataset, que no necesariamente coincidían con el
+        // `municipalityCode` del GeoJSON (ceros a la izquierda, string
+        // vs number), así que ningún municipio hacía match y todos
+        // caían en el color de respaldo (#2f6fed) al final del "match".
         const matcher: (string | string[])[] = ["match", ["get", "municipalityCode"]];
-        for (const summary of municipalities) matcher.push(summary.municipality.id, CRITICALITY_HEX[summary.criticality]);
+        for (const summary of municipalities) {
+          matcher.push(normId(summary.municipality.id), CRITICALITY_HEX[summary.criticality]);
+        }
         matcher.push("#2f6fed");
         map.setPaintProperty("municipios-fill", "fill-color", matcher as unknown as maplibregl.ExpressionSpecification);
       }
@@ -417,36 +493,58 @@ export function MapCanvas({
           map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? 0.22 : 0.08);
         }
         if (map.getLayer("municipios-line")) {
+          map.setPaintProperty("municipios-line", "line-color", "#2f6fed");
+          map.setPaintProperty("municipios-line", "line-width", 0.9);
           map.setPaintProperty("municipios-line", "line-opacity", 0.55);
         }
         map.easeTo({ center: OVERVIEW_CENTER, zoom: OVERVIEW_ZOOM, duration: 700 });
         return;
       }
 
+      const focusId = normId(focusMunicipalityId);
+
       map.setPaintProperty("sedes-point", "circle-opacity", [
         "case",
-        ["==", ["get", "municipalityId"], focusMunicipalityId],
+        ["==", ["get", "municipalityId"], focusId],
         1,
         0.22,
       ]);
       if (map.getLayer("municipios-fill")) {
         map.setPaintProperty("municipios-fill", "fill-opacity", [
           "case",
-          ["==", ["get", "municipalityCode"], focusMunicipalityId],
+          ["==", ["get", "municipalityCode"], focusId],
           0.32,
           0.05,
         ]);
       }
       if (map.getLayer("municipios-line")) {
+        // Antes solo cambiaba la opacidad de la línea, que sobre un
+        // relleno ya coloreado por criticidad puede pasar casi
+        // desapercibido. Ahora también engrosa el borde y lo pone en un
+        // color de "selección" fijo (no depende de la criticidad), para
+        // que el clic tenga una respuesta visual inmediata y clara antes
+        // de que el panel termine de abrir.
+        map.setPaintProperty("municipios-line", "line-color", [
+          "case",
+          ["==", ["get", "municipalityCode"], focusId],
+          "#12161c",
+          "#2f6fed",
+        ]);
+        map.setPaintProperty("municipios-line", "line-width", [
+          "case",
+          ["==", ["get", "municipalityCode"], focusId],
+          2.5,
+          0.9,
+        ]);
         map.setPaintProperty("municipios-line", "line-opacity", [
           "case",
-          ["==", ["get", "municipalityCode"], focusMunicipalityId],
+          ["==", ["get", "municipalityCode"], focusId],
           0.9,
           0.2,
         ]);
       }
 
-      const summary = municipalities.find((m) => m.municipality.id === focusMunicipalityId);
+      const summary = municipalities.find((m) => normId(m.municipality.id) === focusId);
       const lat = summary?.municipality.latitude;
       const lng = summary?.municipality.longitude;
       if (lat != null && lng != null) {
@@ -486,5 +584,12 @@ export function MapCanvas({
     whenReady(apply);
   }, [selectedSiteId, sites]);
 
-  return <div ref={containerRef} className="absolute inset-0 h-full w-full" aria-label="Mapa de sedes diagnosticadas" />;
+  return (
+    <div
+      ref={containerRef}
+      data-map-root=""
+      className="absolute inset-0 h-full w-full"
+      aria-label="Mapa de sedes diagnosticadas"
+    />
+  );
 }

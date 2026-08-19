@@ -9,8 +9,13 @@ interface Props {
 export function OpenInMapsLink({ position, siteName }: Props) {
   if (!position) return null;
 
-  const url = "https://www.google.com/maps/search/?api=1&query=" + position.latitude + "," + position.longitude;
-  const approximate = position.precision === "APPROXIMATE";
+  // Prefiere la dirección oficial del Excel sobre lat/long: resuelve al
+  // sitio real en vez del centroide municipal aproximado. El pin del mapa
+  // no cambia — esto solo afecta a dónde apunta el link externo.
+  const query = position.address ?? `${position.latitude},${position.longitude}`;
+  const usingAddress = position.address != null;
+  const url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
+  const approximate = !usingAddress && position.precision === "APPROXIMATE";
   const label = "Ver " + siteName + " en Google Maps";
 
   return (

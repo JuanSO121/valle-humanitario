@@ -31,10 +31,23 @@ export interface EntityResolution {
   site: MatchStep;
 }
 
-/** Optional geographic position. Never invented at render time. */
+/**
+ * Optional geographic position. Never invented at render time.
+ *
+ * `latitude`/`longitude` always describe where the pin sits on the map
+ * (exact if official, otherwise a deterministic municipal-centroid
+ * approximation) — MapCanvas depends on this always being a real point.
+ *
+ * `address` is a separate, optional passenger: the official "Dirección"
+ * text from the source Excel (IE_Y_SEDES). When present, external links
+ * (e.g. "Ver en Maps") should prefer it over lat/long, since it resolves
+ * to the real site instead of an approximate centroid — but it never
+ * replaces latitude/longitude for map rendering.
+ */
 export interface GeoPoint {
   latitude: number;
   longitude: number;
+  address: string | null;
   /** Provenance so the UI can label approximate positions honestly. */
   source: "OFFICIAL" | "GEOCODED" | "MUNICIPAL_CENTROID";
   precision: "EXACT" | "APPROXIMATE";

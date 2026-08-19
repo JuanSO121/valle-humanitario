@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BpB0GDWZ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BlJwzDFD.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -33038,6 +33038,18 @@ function dm(e) {
 	Cn.WORKER_URL = e;
 }
 var maplibre_gl_worker_default = "/assets/maplibre-gl-worker-DZ7nj4vd.js";
+/**
+* Normaliza identificadores que pueden venir en formatos ligeramente
+* distintos entre fuentes de datos (ej. GeoJSON de límites municipales vs.
+* el dataset/Excel de sedes): string vs number, ceros a la izquierda,
+* espacios. Es el único punto de comparación para IDs de municipio en
+* todo el visor — nunca comparar `===` directamente entre esas dos
+* fuentes sin pasar por acá.
+*
+* Idempotente: normId(normId(x)) === normId(x), así que es seguro
+* aplicarlo aunque el valor ya venga normalizado desde otro lado.
+*/
+var normId = (value) => String(value ?? "").trim().replace(/^0+(?=\d)/, "");
 var CRITICALITY_LABEL = {
 	ROJO: "Rojo",
 	AMARILLO: "Amarillo",
@@ -34049,6 +34061,25 @@ dm(maplibre_gl_worker_default);
 var OVERVIEW_CENTER = [-76.35, 3.95];
 var OVERVIEW_ZOOM = 7.1;
 var MUNICIPALITY_ZOOM = 9.8;
+function normalizeBoundaries(geojson) {
+	const collection = geojson;
+	if (!collection?.features) return geojson;
+	return {
+		...collection,
+		features: collection.features.map((f) => {
+			const code = normId(f.properties?.["municipalityCode"]);
+			return {
+				...f,
+				id: code,
+				properties: {
+					...f.properties,
+					municipalityCode: code
+				}
+			};
+		})
+	};
+}
+var municipalBoundaries = normalizeBoundaries(valle_municipios_default);
 var BASE_STYLE = {
 	version: 8,
 	glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -34124,7 +34155,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			try {
 				map.addSource("municipios", {
 					type: "geojson",
-					data: valle_municipios_default
+					data: municipalBoundaries
 				});
 				map.addLayer({
 					id: "municipios-fill",
@@ -34378,9 +34409,33 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					"circle-stroke-opacity": .9
 				}
 			});
+			let hoveredMunicipalityId = null;
 			if (map.getLayer("municipios-fill")) {
-				map.on("mouseenter", "municipios-fill", () => map.getCanvas().style.cursor = "pointer");
-				map.on("mouseleave", "municipios-fill", () => map.getCanvas().style.cursor = "");
+				map.on("mousemove", "municipios-fill", (e) => {
+					map.getCanvas().style.cursor = "pointer";
+					const feature = e.features?.[0];
+					const nextId = feature?.id != null ? String(feature.id) : null;
+					if (nextId === hoveredMunicipalityId) return;
+					if (hoveredMunicipalityId != null) map.setFeatureState({
+						source: "municipios",
+						id: hoveredMunicipalityId
+					}, { hovered: false });
+					if (nextId != null) map.setFeatureState({
+						source: "municipios",
+						id: nextId
+					}, { hovered: true });
+					hoveredMunicipalityId = nextId;
+				});
+				map.on("mouseleave", "municipios-fill", () => {
+					map.getCanvas().style.cursor = "";
+					if (hoveredMunicipalityId != null) {
+						map.setFeatureState({
+							source: "municipios",
+							id: hoveredMunicipalityId
+						}, { hovered: false });
+						hoveredMunicipalityId = null;
+					}
+				});
 			}
 			const openClusterPopup = (f) => {
 				const props = f.properties ?? {};
@@ -34431,7 +34486,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
 					if (municipalityHits.length > 0) {
 						const code = municipalityHits[0]?.properties?.["municipalityCode"];
-						if (code != null) handlersRef.current.onSelectMunicipality(String(code));
+						if (code != null) handlersRef.current.onSelectMunicipality(normId(code));
 						return;
 					}
 				}
@@ -34481,7 +34536,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
 						criticality: s.diagnostic.criticality,
 						review: s.diagnostic.resolution.status !== "RESOLVED",
-						municipalityId: s.municipality?.id ?? null
+						municipalityId: s.municipality?.id ? normId(s.municipality.id) : null
 					},
 					geometry: {
 						type: "Point",
@@ -34502,7 +34557,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			if (!municipalities.length) map.setPaintProperty("municipios-fill", "fill-color", "#2f6fed");
 			else {
 				const matcher = ["match", ["get", "municipalityCode"]];
-				for (const summary of municipalities) matcher.push(summary.municipality.id, CRITICALITY_HEX[summary.criticality]);
+				for (const summary of municipalities) matcher.push(normId(summary.municipality.id), CRITICALITY_HEX[summary.criticality]);
 				matcher.push("#2f6fed");
 				map.setPaintProperty("municipios-fill", "fill-color", matcher);
 			}
@@ -34517,7 +34572,11 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			if (!focusMunicipalityId) {
 				map.setPaintProperty("sedes-point", "circle-opacity", 1);
 				if (map.getLayer("municipios-fill")) map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? .22 : .08);
-				if (map.getLayer("municipios-line")) map.setPaintProperty("municipios-line", "line-opacity", .55);
+				if (map.getLayer("municipios-line")) {
+					map.setPaintProperty("municipios-line", "line-color", "#2f6fed");
+					map.setPaintProperty("municipios-line", "line-width", .9);
+					map.setPaintProperty("municipios-line", "line-opacity", .55);
+				}
 				map.easeTo({
 					center: OVERVIEW_CENTER,
 					zoom: OVERVIEW_ZOOM,
@@ -34525,12 +34584,13 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				});
 				return;
 			}
+			const focusId = normId(focusMunicipalityId);
 			map.setPaintProperty("sedes-point", "circle-opacity", [
 				"case",
 				[
 					"==",
 					["get", "municipalityId"],
-					focusMunicipalityId
+					focusId
 				],
 				1,
 				.22
@@ -34540,22 +34600,44 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				[
 					"==",
 					["get", "municipalityCode"],
-					focusMunicipalityId
+					focusId
 				],
 				.32,
 				.05
 			]);
-			if (map.getLayer("municipios-line")) map.setPaintProperty("municipios-line", "line-opacity", [
-				"case",
-				[
-					"==",
-					["get", "municipalityCode"],
-					focusMunicipalityId
-				],
-				.9,
-				.2
-			]);
-			const summary = municipalities.find((m) => m.municipality.id === focusMunicipalityId);
+			if (map.getLayer("municipios-line")) {
+				map.setPaintProperty("municipios-line", "line-color", [
+					"case",
+					[
+						"==",
+						["get", "municipalityCode"],
+						focusId
+					],
+					"#12161c",
+					"#2f6fed"
+				]);
+				map.setPaintProperty("municipios-line", "line-width", [
+					"case",
+					[
+						"==",
+						["get", "municipalityCode"],
+						focusId
+					],
+					2.5,
+					.9
+				]);
+				map.setPaintProperty("municipios-line", "line-opacity", [
+					"case",
+					[
+						"==",
+						["get", "municipalityCode"],
+						focusId
+					],
+					.9,
+					.2
+				]);
+			}
+			const summary = municipalities.find((m) => normId(m.municipality.id) === focusId);
 			const lat = summary?.municipality.latitude;
 			const lng = summary?.municipality.longitude;
 			if (lat != null && lng != null) map.easeTo({
@@ -34596,6 +34678,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 	}, [selectedSiteId, sites]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		ref: containerRef,
+		"data-map-root": "",
 		className: "absolute inset-0 h-full w-full",
 		"aria-label": "Mapa de sedes diagnosticadas"
 	});
@@ -34707,7 +34790,13 @@ function hash(value) {
 /**
 * MVP geocoder: deterministic municipal-centroid placement with a small,
 * clearly-labelled offset so overlapping sites remain distinguishable.
-* Always reports precision APPROXIMATE — no invented street-level accuracy.
+* Always reports precision APPROXIMATE for centroid fallback — no invented
+* street-level accuracy.
+*
+* `address` (the official "Dirección" from the source Excel) rides along on
+* every returned point when the site has one, EXACT or APPROXIMATE alike,
+* so consumers like "Ver en Maps" can search the real address instead of
+* an approximate lat/long — without changing where the pin sits on the map.
 */
 var MunicipalCentroidGeocodingService = class {
 	radiusDegrees;
@@ -34719,6 +34808,7 @@ var MunicipalCentroidGeocodingService = class {
 		if (site.latitude != null && site.longitude != null) return {
 			latitude: site.latitude,
 			longitude: site.longitude,
+			address: site.address,
 			source: site.coordinateSource ?? "OFFICIAL",
 			precision: "EXACT"
 		};
@@ -34728,6 +34818,7 @@ var MunicipalCentroidGeocodingService = class {
 		return {
 			latitude: municipality.latitude + Math.sin(angle) * distance,
 			longitude: municipality.longitude + Math.cos(angle) * distance,
+			address: site.address,
 			source: "MUNICIPAL_CENTROID",
 			precision: "APPROXIMATE"
 		};
@@ -34872,8 +34963,10 @@ function useSiteAffectations(siteId) {
 }
 function OpenInMapsLink({ position, siteName }) {
 	if (!position) return null;
-	const url = "https://www.google.com/maps/search/?api=1&query=" + position.latitude + "," + position.longitude;
-	const approximate = position.precision === "APPROXIMATE";
+	const query = position.address ?? `${position.latitude},${position.longitude}`;
+	const usingAddress = position.address != null;
+	const url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(query);
+	const approximate = !usingAddress && position.precision === "APPROXIMATE";
 	const label = "Ver " + siteName + " en Google Maps";
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex flex-col gap-1",
@@ -34908,179 +35001,426 @@ function OpenInMapsLink({ position, siteName }) {
 		}) : null]
 	});
 }
+/**
+* Explicación en lenguaje simple de cada nivel de criticidad, para mostrar
+* junto al color/etiqueta en cualquier panel (leyenda, detalle de sede,
+* tarjetas de municipio). Única fuente para no repetir el texto en cada
+* componente.
+*
+* Redactado a propósito para describir lo que el Excel realmente reporta
+* (afectaciones clasificadas por criticidad, con acción recomendada) y no
+* afirmar un diagnóstico estructural que aún no se ha hecho — la columna
+* "Criticidad" viene definida así en la fuente, la app solo la muestra.
+*/
+var CRITICALITY_DESCRIPTION = {
+	ROJO: "Riesgo alto: se identificaron afectaciones clasificadas como críticas. Se recomienda restringir el acceso a la zona y solicitar evaluación urgente de un ingeniero estructural.",
+	AMARILLO: "Riesgo medio: se identificaron afectaciones que requieren seguimiento y reparación, sin necesidad de restringir el acceso de inmediato.",
+	VERDE: "Riesgo bajo: no se identificaron afectaciones clasificadas como críticas o de seguimiento en esta sede.",
+	SIN_DETALLE: "Sin información suficiente para clasificar el riesgo todavía."
+};
+var CRITICALITY_SHORT_LABEL = {
+	ROJO: "Riesgo alto",
+	AMARILLO: "Riesgo medio",
+	VERDE: "Riesgo bajo",
+	SIN_DETALLE: "Sin evaluar"
+};
+var ZONE_LABEL = {
+	URBANA: "Zona urbana",
+	RURAL: "Zona rural",
+	DESCONOCIDA: "Zona sin especificar"
+};
 function SiteDetailPanel({ view }) {
 	const { diagnostic, site, institution, municipality, position } = view;
 	const { data: affectations = [] } = useSiteAffectations(diagnostic.siteId ?? diagnostic.candidateSiteId);
 	const siteName = site?.name ?? diagnostic.sourceSite ?? "Sede sin nombre";
+	const color = CRITICALITY_HEX[diagnostic.criticality];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "flex h-full flex-col",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
-			className: "border-b border-border p-4",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: `inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${CRITICALITY_CLASS[diagnostic.criticality]}`,
-					children: CRITICALITY_LABEL[diagnostic.criticality]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					className: "mt-2 text-base leading-tight font-semibold",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "p-4 pb-0",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RiskBanner, {
+					criticality: diagnostic.criticality,
+					color
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "p-4 pt-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "text-base leading-tight font-semibold",
 					children: siteName
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-1 text-xs text-muted-foreground",
 					children: institution?.name ?? diagnostic.sourceInstitution ?? "—"
-				})
-			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "min-h-0 flex-1 space-y-4 overflow-y-auto p-4 text-sm",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
-					className: "grid grid-cols-2 gap-3",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Municipio",
-							value: municipality?.name ?? diagnostic.sourceMunicipality
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Código sede",
-							value: site?.officialSiteCode,
-							mono: true
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Zona",
-							value: site?.zone
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Estado oficial",
-							value: site?.officialStatus
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Rector",
-							value: institution?.rector ?? diagnostic.rector
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
-							label: "Teléfono",
-							value: institution?.phone ?? diagnostic.phone,
-							mono: true
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "label-caps",
-						children: "Zonas evaluadas"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-2 flex h-2 overflow-hidden rounded-full bg-muted",
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-h-0 flex-1 space-y-5 overflow-y-auto px-4 pb-4 text-sm",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+						title: "Dónde queda",
 						children: [
-							"ROJO",
-							"AMARILLO",
-							"VERDE"
-						].map((c) => {
-							const value = c === "ROJO" ? diagnostic.redZones : c === "AMARILLO" ? diagnostic.yellowZones : diagnostic.greenZones;
-							const pct = diagnostic.totalZones ? value / diagnostic.totalZones * 100 : 0;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: {
-								width: `${pct}%`,
-								backgroundColor: CRITICALITY_HEX[c]
-							} }, c);
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { children: [municipality?.name ?? diagnostic.sourceMunicipality ?? "Municipio sin identificar", site?.zone && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [" · ", ZONE_LABEL[site.zone] ?? site.zone] })] }),
+							site?.address && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-1 text-muted-foreground",
+								children: site.address
+							}),
+							position && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-2",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OpenInMapsLink, {
+									position,
+									siteName
+								})
+							})
+						]
+					}),
+					diagnostic.recommendedAction && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+						title: "Qué se recomienda hacer",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "rounded-md border p-3 leading-relaxed",
+							style: {
+								borderColor: `${color}55`,
+								backgroundColor: `${color}0f`
+							},
+							children: diagnostic.recommendedAction
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1.5 text-xs text-muted-foreground",
+					affectations.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Section, {
+						title: `Qué se encontró (${affectations.length})`,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "space-y-2",
+							children: affectations.map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								className: "rounded-md border border-border bg-surface-raised p-2.5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-center gap-2",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "size-2 shrink-0 rounded-full",
+										style: { backgroundColor: CRITICALITY_HEX[a.criticality] }
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "text-xs font-medium",
+										children: a.zoneElement ?? "Elemento sin clasificar"
+									})]
+								}), a.description && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-1 text-xs text-muted-foreground",
+									children: a.description
+								})]
+							}, a.id))
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+						title: "Resultado de la revisión",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "flex h-2 overflow-hidden rounded-full bg-muted",
+							children: [
+								"ROJO",
+								"AMARILLO",
+								"VERDE"
+							].map((c) => {
+								const value = c === "ROJO" ? diagnostic.redZones : c === "AMARILLO" ? diagnostic.yellowZones : diagnostic.greenZones;
+								const pct = diagnostic.totalZones ? value / diagnostic.totalZones * 100 : 0;
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { style: {
+									width: `${pct}%`,
+									backgroundColor: CRITICALITY_HEX[c]
+								} }, c);
+							})
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-1.5 text-xs text-muted-foreground",
+							children: [
+								"De las zonas revisadas: ",
+								diagnostic.redZones,
+								" con daño grave, ",
+								diagnostic.yellowZones,
+								" necesitan seguimiento,",
+								" ",
+								diagnostic.greenZones,
+								" sin problemas."
+							]
+						})]
+					}),
+					(() => {
+						const rector = institution?.rector ?? diagnostic.rector;
+						const primaryPhone = institution?.mobile ?? diagnostic.phone ?? institution?.phone ?? null;
+						const landline = institution?.phone && institution.phone !== primaryPhone ? institution.phone : null;
+						if (!rector && !primaryPhone) return null;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Section, {
+							title: "Contacto",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: rector ?? "Rector no registrado" }),
+								primaryPhone && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-0.5 text-muted-foreground",
+									children: primaryPhone
+								}),
+								landline && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+									className: "mt-0.5 text-xs text-muted-foreground",
+									children: ["Fijo: ", landline]
+								})
+							]
+						});
+					})(),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", {
+						className: "rounded-md border border-border bg-surface-raised p-3 text-xs text-muted-foreground",
 						children: [
-							diagnostic.redZones,
-							" rojas · ",
-							diagnostic.yellowZones,
-							" amarillas · ",
-							diagnostic.greenZones,
-							" verdes"
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", {
+								className: "cursor-pointer label-caps",
+								children: "Más información"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
+								className: "mt-2 grid grid-cols-2 gap-2.5",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+									label: "Código sede",
+									value: site?.officialSiteCode,
+									mono: true
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Field, {
+									label: "Estado oficial",
+									value: site?.officialStatus
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-2.5",
+								children: [
+									"Coincidencia de datos:",
+									" ",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: diagnostic.resolution.status === "RESOLVED" ? "text-safe" : "text-primary",
+										children: diagnostic.resolution.status === "RESOLVED" ? "confirmada" : "requiere revisión"
+									}),
+									" ",
+									"(método: ",
+									diagnostic.resolution.matchMethod,
+									", confianza ",
+									diagnostic.resolution.confidence.toFixed(2),
+									")"
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-1",
+								children: [
+									"Precisión de la posición en el mapa:",
+									" ",
+									position ? position.precision === "EXACT" ? "coordenadas oficiales" : "aproximada (centroide del municipio)" : "sin coordenadas"
+								]
+							})
 						]
 					})
-				] }),
-				diagnostic.recommendedAction && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "label-caps",
-					children: "Acción recomendada"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-1 leading-relaxed",
-					children: diagnostic.recommendedAction
-				})] }),
-				affectations.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-					className: "label-caps",
-					children: [
-						"Afectaciones (",
-						affectations.length,
-						")"
-					]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-					className: "mt-2 space-y-2",
-					children: affectations.map((a) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						className: "rounded-md border border-border bg-surface-raised p-2.5",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center gap-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "size-2 rounded-full",
-								style: { backgroundColor: CRITICALITY_HEX[a.criticality] }
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "text-xs font-medium",
-								children: a.zoneElement ?? "Elemento sin clasificar"
-							})]
-						}), a.description && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-1 text-xs text-muted-foreground",
-							children: a.description
-						})]
-					}, a.id))
-				})] }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "rounded-md border border-border bg-surface-raised p-3 text-xs text-muted-foreground",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "label-caps",
-							children: "Trazabilidad"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-1.5",
-							children: [
-								"Resolución:",
-								" ",
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: diagnostic.resolution.status === "RESOLVED" ? "text-safe" : "text-primary",
-									children: diagnostic.resolution.status
-								}),
-								" ",
-								"· ",
-								diagnostic.resolution.matchMethod,
-								" · confianza ",
-								diagnostic.resolution.confidence.toFixed(2)
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-1",
-							children: [
-								"Posición:",
-								" ",
-								position ? `${position.source} (${position.precision === "EXACT" ? "exacta" : "aproximada, centroide municipal"})` : "sin coordenadas"
-							]
-						}),
-						position && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-2",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OpenInMapsLink, {
-								position,
-								siteName
-							})
-						})
-					]
-				})
-			]
+				]
+			})
+		]
+	});
+}
+function RiskBanner({ criticality, color }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex items-start gap-2.5 rounded-md border p-3",
+		style: {
+			borderColor: `${color}55`,
+			backgroundColor: `${color}14`
+		},
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RiskIcon, {
+			criticality,
+			color
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "text-sm font-semibold",
+			style: { color },
+			children: CRITICALITY_SHORT_LABEL[criticality]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-0.5 text-xs leading-relaxed text-foreground",
+			children: CRITICALITY_DESCRIPTION[criticality]
+		})] })]
+	});
+}
+function RiskIcon({ criticality, color }) {
+	if (criticality === "VERDE") return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+		width: "18",
+		height: "18",
+		viewBox: "0 0 24 24",
+		fill: "none",
+		className: "mt-0.5 shrink-0",
+		"aria-hidden": true,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+			d: "M20 6L9 17l-5-5",
+			stroke: color,
+			strokeWidth: "2.2",
+			strokeLinecap: "round",
+			strokeLinejoin: "round"
+		})
+	});
+	if (criticality === "SIN_DETALLE") return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+		width: "18",
+		height: "18",
+		viewBox: "0 0 24 24",
+		fill: "none",
+		className: "mt-0.5 shrink-0",
+		"aria-hidden": true,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+			cx: "12",
+			cy: "12",
+			r: "9",
+			stroke: color,
+			strokeWidth: "2"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+			d: "M12 16v.01M12 8a2.5 2.5 0 012.5 2.5c0 1.5-2.5 1.5-2.5 4",
+			stroke: color,
+			strokeWidth: "2",
+			strokeLinecap: "round"
+		})]
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+		width: "18",
+		height: "18",
+		viewBox: "0 0 24 24",
+		fill: "none",
+		className: "mt-0.5 shrink-0",
+		"aria-hidden": true,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+			d: "M12 3.5L22 20.5H2L12 3.5z",
+			stroke: color,
+			strokeWidth: "2",
+			strokeLinejoin: "round"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
+			d: "M12 10v4.5M12 17.5v.01",
+			stroke: color,
+			strokeWidth: "2.2",
+			strokeLinecap: "round"
 		})]
 	});
 }
-function Field({ label, value, mono }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
+function Section({ title, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 		className: "label-caps",
-		children: label
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
-		className: `mt-0.5 text-xs ${mono ? "font-mono" : ""}`,
+		children: title
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "mt-1.5",
+		children
+	})] });
+}
+function Field({ label, value, mono }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", { children: label }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+		className: mono ? "font-mono" : "",
 		children: value || "—"
 	})] });
+}
+function CriticalityLegend() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "rounded-md border border-border bg-surface-raised p-3",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "label-caps",
+			children: "¿Qué significa cada color?"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+			className: "mt-2 space-y-2",
+			children: [CRITICALITY_ORDER$1.map((level) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+				className: "flex items-start gap-2.5",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-1 size-2.5 shrink-0 rounded-full",
+					style: { backgroundColor: CRITICALITY_HEX[level] },
+					"aria-hidden": true
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block text-xs font-semibold",
+					children: CRITICALITY_SHORT_LABEL[level]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block text-xs text-muted-foreground",
+					children: CRITICALITY_DESCRIPTION[level]
+				})] })]
+			}, level)), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+				className: "flex items-start gap-2.5 border-t border-border pt-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-1 size-2.5 shrink-0 rounded-full",
+					style: { backgroundColor: CLUSTER_COLOR },
+					"aria-hidden": true
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block text-xs font-semibold",
+					children: CLUSTER_LABEL
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block text-xs text-muted-foreground",
+					children: "Varias sedes cercanas agrupadas en el mapa — no indica un nivel de riesgo. Acércate (zoom) para separarlas."
+				})] })]
+			})]
+		})]
+	});
+}
+/**
+* Modal de bienvenida para quien entra por primera vez al visor. Se
+* muestra una sola vez por navegador (ver useFirstVisit) y explica lo
+* mínimo necesario para interpretar el mapa: qué son los colores, qué es
+* un cluster, y cómo navegar entre municipio y sede.
+*
+* Se cierra con click/tap fuera del contenido (en el fondo oscuro) o con
+* Escape, como cualquier modal actual — no solo con el botón "Entendido".
+*/
+function WelcomeModal({ onClose }) {
+	(0, import_react.useEffect)(() => {
+		const onKeyDown = (e) => {
+			if (e.key === "Escape") onClose();
+		};
+		document.addEventListener("keydown", onKeyDown);
+		return () => document.removeEventListener("keydown", onKeyDown);
+	}, [onClose]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4",
+		role: "dialog",
+		"aria-modal": "true",
+		"aria-labelledby": "welcome-modal-title",
+		onClick: onClose,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-xl",
+			onClick: (e) => e.stopPropagation(),
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					id: "welcome-modal-title",
+					className: "text-base font-semibold",
+					children: "Criticidad Sísmica Escolar"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-2 text-sm text-muted-foreground",
+					children: "Este mapa muestra sedes educativas del Valle del Cauca diagnosticadas por criticidad sísmica, a partir del reporte de afectaciones."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "mt-4 space-y-2.5 text-xs",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "size-2.5 shrink-0 rounded-full",
+								style: { backgroundColor: CRITICALITY_HEX.ROJO }
+							}), "Riesgo alto — se recomienda evaluación urgente"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "size-2.5 shrink-0 rounded-full",
+								style: { backgroundColor: CRITICALITY_HEX.AMARILLO }
+							}), "Riesgo medio — requiere seguimiento"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "size-2.5 shrink-0 rounded-full",
+								style: { backgroundColor: CRITICALITY_HEX.VERDE }
+							}), "Riesgo bajo — sin afectaciones críticas"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-start gap-2 border-t border-border pt-2.5",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-0.5 size-2.5 shrink-0 rounded-full border border-white shadow-sm",
+								style: { backgroundColor: CLUSTER_COLOR }
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+								className: "font-medium text-foreground",
+								children: "Círculo grande con número:"
+							}), " varias sedes agrupadas — no indica riesgo. Haz clic o acércate (zoom) para separarlas."] })]
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-4 text-xs text-muted-foreground",
+					children: "Haz clic en un municipio para ver su resumen, o en un punto para ver el detalle de esa sede."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: onClose,
+					className: "mt-4 w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground hover:opacity-90",
+					children: "Entendido"
+				})
+			]
+		})
+	});
 }
 var MOBILE_BREAKPOINT = 768;
 function useIsMobile() {
@@ -35095,6 +35435,30 @@ function useIsMobile() {
 		return () => mql.removeEventListener("change", onChange);
 	}, []);
 	return !!isMobile;
+}
+/**
+* Detecta si es la primera vez que este navegador visita la app (según
+* localStorage) y expone una función para marcarla como vista. Es
+* puramente local al navegador — no sincroniza entre dispositivos, y eso
+* está bien para un modal de "cómo leer el mapa" que no necesita más.
+*/
+function useFirstVisit(key) {
+	const [show, setShow] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		try {
+			if (!localStorage.getItem(key)) setShow(true);
+		} catch {}
+	}, [key]);
+	const dismiss = () => {
+		try {
+			localStorage.setItem(key, "1");
+		} catch {}
+		setShow(false);
+	};
+	return {
+		show,
+		dismiss
+	};
 }
 function ContextualPanel({ isMobile, title, subtitle, onBack, onClose, children, transitionKey }) {
 	return isMobile ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MobileSheet, {
@@ -35121,6 +35485,34 @@ function useEnterTransition(transitionKey) {
 		return () => cancelAnimationFrame(id);
 	}, [transitionKey]);
 	return entered;
+}
+/**
+* Cierra el panel al hacer click/tap fuera de él — pero SOLO cuando el
+* clic cae fuera del mapa también. El mapa ocupa toda la pantalla y ya
+* tiene su propia lógica de clic (sede > cluster > municipio > reset, ver
+* MapCanvas), así que un clic ahí para abrir OTRO municipio o sede no debe
+* competir con este listener genérico — si lo hiciera, el "cerrar" y el
+* "abrir lo nuevo" se disparan por el mismo clic y pelean entre sí. Este
+* listener solo actúa sobre clics en zonas realmente ajenas a ambos (por
+* ejemplo, la barra superior de filtros).
+*/
+function useCloseOnOutsideClick(onClose) {
+	const ref = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		const handler = (e) => {
+			const target = e.target;
+			if (ref.current?.contains(target)) return;
+			if (target?.closest?.("[data-map-root]")) return;
+			onClose();
+		};
+		document.addEventListener("mousedown", handler);
+		document.addEventListener("touchstart", handler);
+		return () => {
+			document.removeEventListener("mousedown", handler);
+			document.removeEventListener("touchstart", handler);
+		};
+	}, [onClose]);
+	return ref;
 }
 function PanelHeader({ title, subtitle, onBack, onClose }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -35180,7 +35572,9 @@ function PanelHeader({ title, subtitle, onBack, onClose }) {
 }
 function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey }) {
 	const entered = useEnterTransition(transitionKey);
+	const ref = useCloseOnOutsideClick(onClose);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		ref,
 		className: "pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-200 ease-out",
 		style: {
 			maxHeight: "calc(100% - 6rem)",
@@ -35200,11 +35594,11 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
 }
 function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey }) {
 	const [expanded, setExpanded] = (0, import_react.useState)(true);
-	const sheetRef = (0, import_react.useRef)(null);
 	const entered = useEnterTransition(transitionKey);
+	const ref = useCloseOnOutsideClick(onClose);
 	(0, import_react.useEffect)(() => setExpanded(true), [transitionKey]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		ref: sheetRef,
+		ref,
 		className: "pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out",
 		style: {
 			height: expanded ? "70vh" : "auto",
@@ -35799,6 +36193,7 @@ function MiniStat({ label, value, color }) {
 }
 var activeFilterCount = (f) => (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
 var HINT_AUTOHIDE_MS = 4500;
+var WELCOME_MODAL_KEY = "criticidad-sismica-welcome-seen-v1";
 function DashboardPage() {
 	const [filters, setFilters] = (0, import_react.useState)({});
 	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
@@ -35807,17 +36202,22 @@ function DashboardPage() {
 	const [hintDismissed, setHintDismissed] = (0, import_react.useState)(false);
 	const [overlayCollapsed, setOverlayCollapsed] = (0, import_react.useState)(false);
 	const isMobile = useIsMobile();
+	const { show: showWelcome, dismiss: dismissWelcome } = useFirstVisit(WELCOME_MODAL_KEY);
 	const { data, isLoading, error } = useMapView(filters);
 	const { data: meta } = useDatasetMeta();
 	(0, import_react.useEffect)(() => {
 		const timer = setTimeout(() => setHintDismissed(true), HINT_AUTOHIDE_MS);
 		return () => clearTimeout(timer);
 	}, []);
-	const selectedMunicipality = (0, import_react.useMemo)(() => data?.municipalities.find((m) => m.municipality.id === viewState.municipalityId) ?? null, [data, viewState.municipalityId]);
+	const selectedMunicipality = (0, import_react.useMemo)(() => data?.municipalities.find((m) => normId(m.municipality.id) === normId(viewState.municipalityId)) ?? null, [data, viewState.municipalityId]);
 	const selectedSite = (0, import_react.useMemo)(() => data?.sites.find((s) => s.diagnostic.id === viewState.siteId) ?? null, [data, viewState.siteId]);
-	const municipalitySites = (0, import_react.useMemo)(() => viewState.municipalityId ? data?.sites.filter((s) => s.municipality?.id === viewState.municipalityId) ?? [] : [], [data, viewState.municipalityId]);
+	const municipalitySites = (0, import_react.useMemo)(() => viewState.municipalityId ? data?.sites.filter((s) => normId(s.municipality?.id) === normId(viewState.municipalityId)) ?? [] : [], [data, viewState.municipalityId]);
 	const selectMunicipality = (id) => {
 		setHintDismissed(true);
+		if (!data?.municipalities.some((m) => normId(m.municipality.id) === normId(id))) {
+			console.warn(`Se hizo clic en un municipio con código "${id}" que no está en el dataset actual. Revisa que valle-municipios.json y el ETL de sedes usen el mismo formato de código de municipio.`);
+			return;
+		}
 		setViewState((prev) => viewTransitions.toMunicipality(id, prev));
 	};
 	const selectSite = (id) => {
@@ -35958,43 +36358,10 @@ function DashboardPage() {
 				})
 			}),
 			!isMobile && overlayExpanded && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-none absolute bottom-4 left-3 z-10 md:bottom-6 md:left-4",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "pointer-events-auto rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "label-caps",
-							children: "Criticidad"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							className: "mt-1.5 space-y-1 text-xs",
-							children: [
-								"ROJO",
-								"AMARILLO",
-								"VERDE",
-								"SIN_DETALLE"
-							].map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-								className: "flex items-center gap-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "size-2.5 rounded-full",
-									style: { backgroundColor: CRITICALITY_HEX[c] }
-								}), c.replace("_", " ").toLowerCase()]
-							}, c))
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "mt-2.5 border-t border-border pt-2.5",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "flex items-center gap-2 text-xs font-medium",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "size-3 rounded-full border-2 border-white shadow-sm",
-									style: { backgroundColor: "#2f6fed" }
-								}), "Agrupación de sedes"]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-1 max-w-[13rem] text-[11px] leading-snug text-muted-foreground",
-								children: "Un punto grande no indica alerta: agrupa varias sedes cercanas. Haz clic para ver cuáles."
-							})]
-						})
-					]
+				className: "pointer-events-none absolute bottom-4 left-3 z-10 max-w-[15rem] md:bottom-6 md:left-4",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "pointer-events-auto",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CriticalityLegend, {})
 				})
 			}),
 			isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MobileMenu, {
@@ -36035,7 +36402,8 @@ function DashboardPage() {
 			meta && !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "pointer-events-none absolute bottom-2 right-3 z-10 font-mono text-[10px] text-muted-foreground/70",
 				children: ["ETL ", new Date(meta.generatedAt).toLocaleDateString("es-CO")]
-			})
+			}),
+			showWelcome && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(WelcomeModal, { onClose: dismissWelcome })
 		]
 	});
 }

@@ -5,9 +5,12 @@ import { Breadcrumb } from "@/presentation/components/Breadcrumb";
 
 import { MapCanvas } from "@/presentation/components/MapCanvas";
 import { SiteDetailPanel } from "@/presentation/components/SiteDetailPanel";
-import { CLUSTER_COLOR, CLUSTER_LABEL, CRITICALITY_HEX } from "@/presentation/components/criticality";
+import { CriticalityLegend } from "@/presentation/components/CriticalityLegend";
+import { WelcomeModal } from "@/presentation/components/WelcomeModal";
 import { useDatasetMeta, useMapView } from "@/presentation/hooks/useDiagnostics";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useFirstVisit } from "@/hooks/use-first-visit";
+import { normId } from "@/lib/id";
 import { ContextualPanel } from "../components/ContextualPanel";
 import { CriticalityStatsBar } from "../components/CriticalityStatsBar";
 import { FilterPopover } from "../components/FilterPopover";
@@ -19,6 +22,7 @@ const activeFilterCount = (f: DiagnosticFilters) =>
   (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
 
 const HINT_AUTOHIDE_MS = 4500;
+const WELCOME_MODAL_KEY = "criticidad-sismica-welcome-seen-v1";
 
 export function DashboardPage() {
   const [filters, setFilters] = useState<DiagnosticFilters>({});
@@ -28,6 +32,7 @@ export function DashboardPage() {
   const [hintDismissed, setHintDismissed] = useState(false);
   const [overlayCollapsed, setOverlayCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const { show: showWelcome, dismiss: dismissWelcome } = useFirstVisit(WELCOME_MODAL_KEY);
 
   const { data, isLoading, error } = useMapView(filters);
   const { data: meta } = useDatasetMeta();
@@ -38,7 +43,8 @@ export function DashboardPage() {
   }, []);
 
   const selectedMunicipality = useMemo(
-    () => data?.municipalities.find((m) => m.municipality.id === viewState.municipalityId) ?? null,
+    () =>
+      data?.municipalities.find((m) => normId(m.municipality.id) === normId(viewState.municipalityId)) ?? null,
     [data, viewState.municipalityId],
   );
   const selectedSite = useMemo(
@@ -46,12 +52,30 @@ export function DashboardPage() {
     [data, viewState.siteId],
   );
   const municipalitySites = useMemo(
-    () => (viewState.municipalityId ? (data?.sites.filter((s) => s.municipality?.id === viewState.municipalityId) ?? []) : []),
+    () =>
+      viewState.municipalityId
+        ? (data?.sites.filter((s) => normId(s.municipality?.id) === normId(viewState.municipalityId)) ?? [])
+        : [],
     [data, viewState.municipalityId],
   );
 
   const selectMunicipality = (id: string) => {
     setHintDismissed(true);
+    // Si el polígono clickeado no tiene un municipio correspondiente en el
+    // dataset (mismatch de IDs entre el GeoJSON de límites y el Excel/ETL),
+    // antes esto cambiaba viewState igual y el panel simplemente no
+    // aparecía — sin ningún indicio de qué había pasado. Ahora se detecta
+    // acá mismo y queda registrado en consola en vez de fallar en
+    // silencio.
+    const exists = data?.municipalities.some((m) => normId(m.municipality.id) === normId(id));
+    if (!exists) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `Se hizo clic en un municipio con código "${id}" que no está en el dataset actual. ` +
+          "Revisa que valle-municipios.json y el ETL de sedes usen el mismo formato de código de municipio.",
+      );
+      return;
+    }
     setViewState((prev) => viewTransitions.toMunicipality(id, prev));
   };
   const selectSite = (id: string) => {
@@ -195,32 +219,18 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Leyenda — antes solo dependía de "!isMobile", por lo que se quedaba
-          visible aunque el usuario colapsara el resto del panel superior.
-          Ahora también depende de "overlayExpanded": al colapsar el título,
-          la leyenda se oculta junto con breadcrumb y stats, como un solo
-          panel coherente; al expandir, vuelve a aparecer. */}
+      {/* Leyenda — antes había un bloque inline duplicado (colores +
+          clusters escritos a mano acá) que repetía, con menos detalle, lo
+          que ya vive en CriticalityLegend.tsx. Se reemplaza por ese
+          componente para tener una sola fuente de verdad del texto
+          explicativo, y porque ya incluye la descripción en lenguaje
+          simple de cada nivel (CRITICALITY_DESCRIPTION), no solo el
+          nombre del color. Sigue dependiendo de "overlayExpanded" para
+          ocultarse junto con el resto del panel superior al colapsarlo. */}
       {!isMobile && overlayExpanded && (
-        <div className="pointer-events-none absolute bottom-4 left-3 z-10 md:bottom-6 md:left-4">
-          <div className="pointer-events-auto rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur">
-            <span className="label-caps">Criticidad</span>
-            <ul className="mt-1.5 space-y-1 text-xs">
-              {(["ROJO", "AMARILLO", "VERDE", "SIN_DETALLE"] as const).map((c) => (
-                <li key={c} className="flex items-center gap-2">
-                  <span className="size-2.5 rounded-full" style={{ backgroundColor: CRITICALITY_HEX[c] }} />
-                  {c.replace("_", " ").toLowerCase()}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-2.5 border-t border-border pt-2.5">
-              <span className="flex items-center gap-2 text-xs font-medium">
-                <span className="size-3 rounded-full border-2 border-white shadow-sm" style={{ backgroundColor: CLUSTER_COLOR }} />
-                {CLUSTER_LABEL}
-              </span>
-              <p className="mt-1 max-w-[13rem] text-[11px] leading-snug text-muted-foreground">
-                Un punto grande no indica alerta: agrupa varias sedes cercanas. Haz clic para ver cuáles.
-              </p>
-            </div>
+        <div className="pointer-events-none absolute bottom-4 left-3 z-10 max-w-[15rem] md:bottom-6 md:left-4">
+          <div className="pointer-events-auto">
+            <CriticalityLegend />
           </div>
         </div>
       )}
@@ -271,6 +281,13 @@ export function DashboardPage() {
           ETL {new Date(meta.generatedAt).toLocaleDateString("es-CO")}
         </p>
       )}
+
+      {/* Modal de bienvenida — se muestra una sola vez por navegador
+          (useFirstVisit) para que alguien nuevo sepa qué está viendo antes
+          de tocar nada: qué significan los colores, qué es un cluster, y
+          cómo navegar entre municipio y sede. Va al final para quedar por
+          encima de todo lo demás (z-30 vs z-10/z-20 del resto de overlays). */}
+      {showWelcome && <WelcomeModal onClose={dismissWelcome} />}
     </div>
   );
 }
