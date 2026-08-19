@@ -232,25 +232,12 @@ export function MapCanvas({
         },
       });
 
-      map.on("click", "sedes-point", (e: MapLayerMouseEvent) => {
-        // FIX: sin esto, el mismo clic también intersecta "municipios-fill"
-        // (el polígono cubre casi toda el área) y su handler se dispara
-        // justo después, pisando el estado que acabamos de fijar con
-        // onSelectSite() y dejando siteId en null. preventDefault() detiene
-        // la propagación del clic a las capas de abajo y al handler
-        // genérico del mapa. Por eso las sedes fuera del polígono del Valle
-        // sí funcionaban: nunca intersectaban municipios-fill.
-        e.preventDefault();
-        const f = e.features?.[0];
-        if (f) handlersRef.current.onSelectSite(String(f.properties?.["id"]));
-      });
+      if (map.getLayer("municipios-fill")) {
+        map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
+        map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
+      }
 
-      map.on("click", "clusters", (e: MapLayerMouseEvent) => {
-        // Mismo motivo: un cluster también puede caer dentro de
-        // municipios-fill y no debe además disparar onSelectMunicipality.
-        e.preventDefault();
-        const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
-        if (!f) return;
+      const openClusterPopup = (f: maplibregl.MapGeoJSONFeature) => {
         const props = f.properties ?? {};
         const coords = (f.geometry as GeoJSON_Point).coordinates as [number, number];
         const count = props["point_count"] ?? 0;
@@ -291,26 +278,45 @@ export function MapCanvas({
           },
           { once: true },
         );
-      });
+      };
 
-      if (map.getLayer("municipios-fill")) {
-        map.on("click", "municipios-fill", (e: MapLayerMouseEvent) => {
-          const f = e.features?.[0];
-          if (f) handlersRef.current.onSelectMunicipality(String(f.properties?.["municipalityCode"]));
-        });
-        map.on("mouseenter", "municipios-fill", () => (map.getCanvas().style.cursor = "pointer"));
-        map.on("mouseleave", "municipios-fill", () => (map.getCanvas().style.cursor = ""));
-      }
-
+      // Un único handler de clic con prioridad explícita, en vez de varios
+      // "map.on('click', 'layerId', ...)" delegados compitiendo entre sí.
+      // FIX del bug real: MapLibre/Mapbox dispara TODOS los listeners de
+      // capa cuyo feature intersecta el punto de clic, sin importar cuál
+      // está visualmente encima — y `event.preventDefault()` NO detiene esa
+      // propagación entre capas (solo bloquea gestos por defecto del mapa
+      // como drag/box-zoom). Como "municipios-fill" es un polígono enorme,
+      // casi cualquier clic sobre una sede también caía dentro de él, y su
+      // handler llamaba a onSelectMunicipality() pisando el onSelectSite()
+      // que se acababa de disparar. Por eso las sedes fuera del polígono
+      // del Valle sí funcionaban: nunca intersectaban municipios-fill.
+      // Consultando las capas manualmente y devolviendo en el primer match
+      // (sede > cluster > municipio > nada) queda sin ambigüedad.
       map.on("click", (e: MapLayerMouseEvent) => {
-        // defaultPrevented viene en true si el clic ya fue manejado por
-        // "sedes-point" o "clusters" arriba — en ese caso no hacemos nada
-        // más aquí (ni siquiera queryRenderedFeatures), porque el clic ya
-        // tuvo un destino claro.
-        if (e.defaultPrevented) return;
-        const layers = ["sedes-point", "clusters", ...(map.getLayer("municipios-fill") ? ["municipios-fill"] : [])];
-        const hits = map.queryRenderedFeatures(e.point, { layers });
-        if (hits.length === 0) handlersRef.current.onReset();
+        const siteHits = map.queryRenderedFeatures(e.point, { layers: ["sedes-point"] });
+        if (siteHits.length > 0) {
+          const id = siteHits[0]?.properties?.["id"];
+          if (id != null) handlersRef.current.onSelectSite(String(id));
+          return;
+        }
+
+        const clusterHits = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+        if (clusterHits.length > 0 && clusterHits[0]) {
+          openClusterPopup(clusterHits[0]);
+          return;
+        }
+
+        if (map.getLayer("municipios-fill")) {
+          const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
+          if (municipalityHits.length > 0) {
+            const code = municipalityHits[0]?.properties?.["municipalityCode"];
+            if (code != null) handlersRef.current.onSelectMunicipality(String(code));
+            return;
+          }
+        }
+
+        handlersRef.current.onReset();
       });
 
       map.on("mouseenter", "sedes-point", (e: MapLayerMouseEvent) => {

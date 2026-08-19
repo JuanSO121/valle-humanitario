@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BL2k7uNc.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BpB0GDWZ.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34378,15 +34378,11 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					"circle-stroke-opacity": .9
 				}
 			});
-			map.on("click", "sedes-point", (e) => {
-				e.preventDefault();
-				const f = e.features?.[0];
-				if (f) handlersRef.current.onSelectSite(String(f.properties?.["id"]));
-			});
-			map.on("click", "clusters", (e) => {
-				e.preventDefault();
-				const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
-				if (!f) return;
+			if (map.getLayer("municipios-fill")) {
+				map.on("mouseenter", "municipios-fill", () => map.getCanvas().style.cursor = "pointer");
+				map.on("mouseleave", "municipios-fill", () => map.getCanvas().style.cursor = "");
+			}
+			const openClusterPopup = (f) => {
 				const props = f.properties ?? {};
 				const coords = f.geometry.coordinates;
 				const count = props["point_count"] ?? 0;
@@ -34418,23 +34414,28 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					});
 					clusterPopup.remove();
 				}, { once: true });
-			});
-			if (map.getLayer("municipios-fill")) {
-				map.on("click", "municipios-fill", (e) => {
-					const f = e.features?.[0];
-					if (f) handlersRef.current.onSelectMunicipality(String(f.properties?.["municipalityCode"]));
-				});
-				map.on("mouseenter", "municipios-fill", () => map.getCanvas().style.cursor = "pointer");
-				map.on("mouseleave", "municipios-fill", () => map.getCanvas().style.cursor = "");
-			}
+			};
 			map.on("click", (e) => {
-				if (e.defaultPrevented) return;
-				const layers = [
-					"sedes-point",
-					"clusters",
-					...map.getLayer("municipios-fill") ? ["municipios-fill"] : []
-				];
-				if (map.queryRenderedFeatures(e.point, { layers }).length === 0) handlersRef.current.onReset();
+				const siteHits = map.queryRenderedFeatures(e.point, { layers: ["sedes-point"] });
+				if (siteHits.length > 0) {
+					const id = siteHits[0]?.properties?.["id"];
+					if (id != null) handlersRef.current.onSelectSite(String(id));
+					return;
+				}
+				const clusterHits = map.queryRenderedFeatures(e.point, { layers: ["clusters"] });
+				if (clusterHits.length > 0 && clusterHits[0]) {
+					openClusterPopup(clusterHits[0]);
+					return;
+				}
+				if (map.getLayer("municipios-fill")) {
+					const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
+					if (municipalityHits.length > 0) {
+						const code = municipalityHits[0]?.properties?.["municipalityCode"];
+						if (code != null) handlersRef.current.onSelectMunicipality(String(code));
+						return;
+					}
+				}
+				handlersRef.current.onReset();
 			});
 			map.on("mouseenter", "sedes-point", (e) => {
 				map.getCanvas().style.cursor = "pointer";

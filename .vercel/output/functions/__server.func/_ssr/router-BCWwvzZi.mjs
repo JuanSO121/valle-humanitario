@@ -2,8 +2,8 @@ import { n as __exportAll, r as __toESM } from "../_runtime.mjs";
 import { i as require_react, n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, g as useRouter, h as Link, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-CNg5_XsX.js
-var router_CNg5_XsX_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BCWwvzZi.js
+var router_BCWwvzZi_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var styles_default = "/assets/styles-CZUbuvW0.css";
@@ -175,7 +175,7 @@ function RootComponent() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Outlet, {})
 	});
 }
-var $$splitComponentImporter = () => import("./routes-BL2k7uNc.mjs");
+var $$splitComponentImporter = () => import("./routes-BpB0GDWZ.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	head: () => ({ meta: [
 		{ title: "Criticidad Sísmica Escolar | Valle del Cauca" },
@@ -217,4 +217,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_CNg5_XsX_exports as t };
+export { getRouter, router_BCWwvzZi_exports as t };
