@@ -28,7 +28,7 @@ export interface Container {
  * `.env` (o `.env.local`):
  *   VITE_APPS_SCRIPT_DATASET_URL=https://script.google.com/macros/s/XXX/exec
  */
-const APPS_SCRIPT_DATASET_URL = import.meta.env.VITE_APPS_SCRIPT_DATASET_URL as string | undefined;
+const APPS_SCRIPT_DATASET_URL = import.meta.env["VITE_APPS_SCRIPT_DATASET_URL"] as string | undefined;
 
 let container: Container | null = null;
 
