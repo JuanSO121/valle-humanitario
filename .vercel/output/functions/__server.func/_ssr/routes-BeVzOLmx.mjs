@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DcWqpq0S.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BeVzOLmx.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -33062,7 +33062,7 @@ var CRITICALITY_CLASS = {
 	VERDE: "bg-safe text-safe-foreground",
 	SIN_DETALLE: "bg-muted text-muted-foreground"
 };
-var CRITICALITY_ORDER = [
+var CRITICALITY_ORDER$1 = [
 	"ROJO",
 	"AMARILLO",
 	"VERDE",
@@ -34627,9 +34627,249 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 		"aria-label": "Mapa de sedes diagnosticadas"
 	});
 }
+var CRITICALITY_ORDER = [
+	"ROJO",
+	"AMARILLO",
+	"VERDE",
+	"SIN_DETALLE"
+];
+/** Application layer: orchestrates repository + geocoding, no UI knowledge. */
+var DiagnosticsUseCases = class {
+	repository;
+	geocoder;
+	constructor(repository, geocoder) {
+		this.repository = repository;
+		this.geocoder = geocoder;
+	}
+	async buildMapView(filters = {}) {
+		const [diagnostics, municipalities, institutions, sites, affectations] = await Promise.all([
+			this.repository.listDiagnostics(filters),
+			this.repository.listMunicipalities(),
+			this.repository.listInstitutions(),
+			this.repository.listSites(),
+			this.repository.listAffectations()
+		]);
+		const municipalityById = new Map(municipalities.map((m) => [m.id, m]));
+		const institutionById = new Map(institutions.map((i) => [i.id, i]));
+		const siteById = new Map(sites.map((s) => [s.id, s]));
+		const affectationsBySite = /* @__PURE__ */ new Map();
+		for (const a of affectations) {
+			const key = a.siteId ?? a.candidateSiteId;
+			if (key) affectationsBySite.set(key, (affectationsBySite.get(key) ?? 0) + 1);
+		}
+		const views = diagnostics.map((diagnostic) => {
+			const siteId = diagnostic.siteId ?? diagnostic.candidateSiteId;
+			const site = siteId ? siteById.get(siteId) ?? null : null;
+			const municipality = diagnostic.municipalityId ? municipalityById.get(diagnostic.municipalityId) ?? null : null;
+			return {
+				diagnostic,
+				site,
+				institution: diagnostic.institutionId ? institutionById.get(diagnostic.institutionId) ?? null : null,
+				municipality,
+				position: site ? this.geocoder.resolve(site, municipality) : null,
+				affectationCount: siteId ? affectationsBySite.get(siteId) ?? 0 : 0
+			};
+		});
+		const totals = {
+			red: 0,
+			yellow: 0,
+			green: 0,
+			noDetail: 0,
+			total: views.length
+		};
+		const byMunicipality = /* @__PURE__ */ new Map();
+		for (const view of views) {
+			const c = view.diagnostic.criticality;
+			if (c === "ROJO") totals.red += 1;
+			else if (c === "AMARILLO") totals.yellow += 1;
+			else if (c === "VERDE") totals.green += 1;
+			else totals.noDetail += 1;
+			const municipality = view.municipality;
+			if (!municipality) continue;
+			let summary = byMunicipality.get(municipality.id);
+			if (!summary) {
+				summary = {
+					municipality,
+					affectedSites: 0,
+					red: 0,
+					yellow: 0,
+					green: 0,
+					noDetail: 0,
+					criticality: "SIN_DETALLE",
+					redShare: 0
+				};
+				byMunicipality.set(municipality.id, summary);
+			}
+			summary.affectedSites += 1;
+			if (c === "ROJO") summary.red += 1;
+			else if (c === "AMARILLO") summary.yellow += 1;
+			else if (c === "VERDE") summary.green += 1;
+			else summary.noDetail += 1;
+		}
+		for (const summary of byMunicipality.values()) {
+			summary.redShare = summary.affectedSites ? summary.red / summary.affectedSites : 0;
+			summary.criticality = summary.red ? "ROJO" : summary.yellow ? "AMARILLO" : summary.green ? "VERDE" : "SIN_DETALLE";
+		}
+		return {
+			sites: views.sort((a, b) => CRITICALITY_ORDER.indexOf(a.diagnostic.criticality) - CRITICALITY_ORDER.indexOf(b.diagnostic.criticality) || a.diagnostic.rank - b.diagnostic.rank),
+			municipalities: [...byMunicipality.values()].sort((a, b) => b.red - a.red || b.affectedSites - a.affectedSites),
+			totals,
+			reviewRequired: views.filter((v) => v.diagnostic.resolution.status !== "RESOLVED").length,
+			approximatePositions: views.filter((v) => v.position?.precision === "APPROXIMATE").length
+		};
+	}
+	async getSiteAffectations(siteId) {
+		return this.repository.listAffectations(siteId);
+	}
+};
+/** Stable hash so a site always lands on the same approximate spot. */
+function hash(value) {
+	let h = 2166136261;
+	for (let i = 0; i < value.length; i += 1) {
+		h ^= value.charCodeAt(i);
+		h = Math.imul(h, 16777619);
+	}
+	return (h >>> 0) / 4294967295;
+}
+/**
+* MVP geocoder: deterministic municipal-centroid placement with a small,
+* clearly-labelled offset so overlapping sites remain distinguishable.
+* Always reports precision APPROXIMATE — no invented street-level accuracy.
+*/
+var MunicipalCentroidGeocodingService = class {
+	radiusDegrees;
+	id = "municipal-centroid";
+	constructor(radiusDegrees = .028) {
+		this.radiusDegrees = radiusDegrees;
+	}
+	resolve(site, municipality) {
+		if (site.latitude != null && site.longitude != null) return {
+			latitude: site.latitude,
+			longitude: site.longitude,
+			source: site.coordinateSource ?? "OFFICIAL",
+			precision: "EXACT"
+		};
+		if (!municipality || municipality.latitude == null || municipality.longitude == null) return null;
+		const angle = hash(site.id) * Math.PI * 2;
+		const distance = Math.sqrt(hash(`${site.id}#r`)) * this.radiusDegrees;
+		return {
+			latitude: municipality.latitude + Math.sin(angle) * distance,
+			longitude: municipality.longitude + Math.cos(angle) * distance,
+			source: "MUNICIPAL_CENTROID",
+			precision: "APPROXIMATE"
+		};
+	}
+};
+/** Kept for a future API/PostGIS source served over HTTP. */
+var fetchDatasetLoader = (url) => async () => {
+	const response = await fetch(url);
+	if (!response.ok) throw new Error(`No se pudo cargar el dataset (${response.status})`);
+	return await response.json();
+};
+function normalize(value) {
+	return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+}
+/**
+* MVP implementation of the repository contract, backed by the local
+* ETL-generated canonical dataset. Async on purpose so the API/PostGIS
+* implementations are drop-in replacements.
+*/
+var LocalDataRepository = class {
+	loader;
+	cache = null;
+	constructor(loader) {
+		this.loader = loader;
+	}
+	load() {
+		if (!this.cache) this.cache = this.loader();
+		return this.cache;
+	}
+	async getMeta() {
+		return (await this.load()).meta;
+	}
+	async listMunicipalities() {
+		return [...(await this.load()).municipalities].sort((a, b) => a.name.localeCompare(b.name, "es"));
+	}
+	async listInstitutions(municipalityId) {
+		const data = await this.load();
+		return [...municipalityId ? data.institutions.filter((i) => i.municipalityId === municipalityId) : data.institutions].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "", "es"));
+	}
+	async listSites(institutionId) {
+		const data = await this.load();
+		return institutionId ? data.sites.filter((s) => s.institutionId === institutionId) : data.sites;
+	}
+	async getSite(siteId) {
+		return (await this.load()).sites.find((s) => s.id === siteId) ?? null;
+	}
+	async listDiagnostics(filters = {}) {
+		const data = await this.load();
+		const sitesById = new Map(data.sites.map((s) => [s.id, s]));
+		const term = filters.search ? normalize(filters.search) : null;
+		return data.diagnostics.filter((d) => {
+			if (filters.criticality?.length && !filters.criticality.includes(d.criticality)) return false;
+			if (filters.municipalityIds?.length && !filters.municipalityIds.includes(d.municipalityId ?? "")) return false;
+			if (filters.institutionIds?.length && !filters.institutionIds.includes(d.institutionId ?? "")) return false;
+			if (filters.onlyReviewRequired && d.resolution.status === "RESOLVED") return false;
+			if (filters.zones?.length) {
+				const site = d.siteId ? sitesById.get(d.siteId) : void 0;
+				if (!site || !filters.zones.includes(site.zone)) return false;
+			}
+			if (term) {
+				if (!normalize([
+					d.sourceSite,
+					d.sourceInstitution,
+					d.sourceMunicipality,
+					d.rector
+				].filter(Boolean).join(" ")).includes(term)) return false;
+			}
+			return true;
+		});
+	}
+	async listAffectations(siteId) {
+		const data = await this.load();
+		if (!siteId) return data.affectations;
+		return data.affectations.filter((a) => a.siteId === siteId || a.candidateSiteId === siteId);
+	}
+	async listEntityMappings() {
+		return (await this.load()).entityMappings;
+	}
+};
+/**
+* URL de despliegue del Web App de Apps Script (Implementar > Nueva
+* implementación > Aplicación web). Debe terminar en /exec.
+*
+* Se toma de una variable de entorno de Vite para no *hardcodear* la URL
+* ni tener que tocar este archivo cuando cambie el despliegue. Defínela en
+* `.env` (o `.env.local`):
+*   VITE_APPS_SCRIPT_DATASET_URL=https://script.google.com/macros/s/XXX/exec
+*/
+var APPS_SCRIPT_DATASET_URL = {
+	"BASE_URL": "/",
+	"DEV": false,
+	"MODE": "production",
+	"PROD": true,
+	"SSR": true,
+	"TSS_DEV_SERVER": "false",
+	"TSS_DEV_SSR_STYLES_BASEPATH": "/",
+	"TSS_DEV_SSR_STYLES_ENABLED": "true",
+	"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
+	"TSS_INLINE_CSS_ENABLED": "false",
+	"TSS_ROUTER_BASEPATH": "",
+	"TSS_SERVER_FN_BASE": "/_serverFn/",
+	"VITE_APPS_SCRIPT_DATASET_URL": "https://script.google.com/macros/s/AKfycbzGpGSaHJyN7JExtv31YWcBRYznMICjpXPZTw5s9m3inLSbs8kj1Eq3ovrZ7r_17274iA/exec"
+}["VITE_APPS_SCRIPT_DATASET_URL"];
 var container = null;
 function getContainer() {
-	if (!container) throw new Error("Falta VITE_APPS_SCRIPT_DATASET_URL en el entorno: define la URL /exec del Web App de Apps Script.");
+	if (!container) {
+		if (!APPS_SCRIPT_DATASET_URL) throw new Error("Falta VITE_APPS_SCRIPT_DATASET_URL en el entorno: define la URL /exec del Web App de Apps Script.");
+		const repository = new LocalDataRepository(fetchDatasetLoader(APPS_SCRIPT_DATASET_URL));
+		const geocoder = new MunicipalCentroidGeocodingService();
+		container = {
+			repository,
+			geocoder,
+			useCases: new DiagnosticsUseCases(repository, geocoder)
+		};
+	}
 	return container;
 }
 function useMapView(filters) {
@@ -35492,7 +35732,7 @@ function MobileMenu({ open, onClose, filters, onChange, showHeatmap, onToggleHea
 								children: "Criticidad"
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "mt-1.5 flex flex-wrap gap-1.5",
-								children: CRITICALITY_ORDER.map((c) => {
+								children: CRITICALITY_ORDER$1.map((c) => {
 									const active = selectedCriticality.includes(c);
 									return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 										type: "button",
@@ -35541,7 +35781,7 @@ function MobileMenu({ open, onClose, filters, onChange, showHeatmap, onToggleHea
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 								className: "mt-2 space-y-1.5 text-xs",
-								children: CRITICALITY_ORDER.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								children: CRITICALITY_ORDER$1.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
 									className: "flex items-center gap-2",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "size-2.5 rounded-full",
