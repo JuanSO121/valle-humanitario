@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BeVzOLmx.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BL2k7uNc.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34046,7 +34046,6 @@ var valle_municipios_default = {
 	]
 };
 dm(maplibre_gl_worker_default);
-var dlog = (...args) => console.log("[MapCanvas]", ...args);
 var OVERVIEW_CENTER = [-76.35, 3.95];
 var OVERVIEW_ZOOM = 7.1;
 var MUNICIPALITY_ZOOM = 9.8;
@@ -34094,13 +34093,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 		onReset
 	};
 	(0, import_react.useEffect)(() => {
-		dlog("mount effect running", {
-			hasContainer: Boolean(containerRef.current),
-			hasExistingMap: Boolean(mapRef.current)
-		});
 		if (!containerRef.current || mapRef.current) return;
-		const rect = containerRef.current.getBoundingClientRect();
-		dlog("container size at construction", rect.width, rect.height);
 		const map = new xp({
 			container: containerRef.current,
 			style: BASE_STYLE,
@@ -34109,11 +34102,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			attributionControl: { compact: true }
 		});
 		mapRef.current = map;
-		dlog("maplibregl.Map constructed");
-		window["__debugMap"] = map;
-		map.on("error", (e) => dlog("MAP ERROR EVENT", e.error?.message ?? e));
 		const resizeObserver = new ResizeObserver(() => {
-			dlog("resize observer fired, calling map.resize()");
 			map.resize();
 		});
 		requestAnimationFrame(() => map.resize());
@@ -34174,11 +34163,9 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						"text-halo-width": 1.4
 					}
 				});
-				dlog("municipios-fill/line/label layers added OK");
 			} catch (err) {
 				console.error("No se pudieron cargar los límites municipales (valle-municipios.json). El mapa seguirá mostrando las sedes sin el choropleth/etiquetas de municipio.", err);
 			}
-			dlog("about to add sedes source/layers");
 			map.addSource("sedes", {
 				type: "geojson",
 				data: {
@@ -34221,7 +34208,6 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					]]
 				}
 			});
-			dlog("sedes source added");
 			map.addSource("sedes-heat-source", {
 				type: "geojson",
 				data: {
@@ -34290,7 +34276,6 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					]
 				}
 			});
-			dlog("sedes-heat layer added");
 			map.addLayer({
 				id: "clusters",
 				type: "circle",
@@ -34375,10 +34360,6 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					"circle-opacity": 1
 				}
 			});
-			dlog("clusters/cluster-count/sedes-point layers added OK", {
-				hasClusters: Boolean(map.getLayer("clusters")),
-				hasSedesPoint: Boolean(map.getLayer("sedes-point"))
-			});
 			map.addLayer({
 				id: "selected-site-halo",
 				type: "circle",
@@ -34398,10 +34379,12 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				}
 			});
 			map.on("click", "sedes-point", (e) => {
+				e.preventDefault();
 				const f = e.features?.[0];
 				if (f) handlersRef.current.onSelectSite(String(f.properties?.["id"]));
 			});
 			map.on("click", "clusters", (e) => {
+				e.preventDefault();
 				const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
 				if (!f) return;
 				const props = f.properties ?? {};
@@ -34445,6 +34428,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				map.on("mouseleave", "municipios-fill", () => map.getCanvas().style.cursor = "");
 			}
 			map.on("click", (e) => {
+				if (e.defaultPrevented) return;
 				const layers = [
 					"sedes-point",
 					"clusters",
@@ -34468,13 +34452,10 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			map.on("mouseenter", "clusters", () => map.getCanvas().style.cursor = "pointer");
 			map.on("mouseleave", "clusters", () => map.getCanvas().style.cursor = "");
 			readyRef.current = true;
-			dlog("readyRef = true — flushing", pendingRef.current.length, "pending callback(s)");
 			pendingRef.current.forEach((fn) => fn());
 			pendingRef.current = [];
-			dlog("load handler fully completed");
 		});
 		return () => {
-			dlog("cleanup: removing map");
 			resizeObserver.disconnect();
 			pendingRef.current = [];
 			map.remove();
@@ -34483,18 +34464,11 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 		};
 	}, []);
 	(0, import_react.useEffect)(() => {
-		dlog("sites prop changed, length =", sites.length, "with position:", sites.filter((s) => s.position).length);
 		const map = mapRef.current;
-		if (!map) {
-			dlog("sites effect: no map instance yet, skipping");
-			return;
-		}
+		if (!map) return;
 		const apply = () => {
 			const source = map.getSource("sedes");
-			if (!source) {
-				dlog("sites effect: 'sedes' source not found on map — this is the bug if you see this");
-				return;
-			}
+			if (!source) return;
 			const collection = {
 				type: "FeatureCollection",
 				features: sites.filter((s) => s.position).map((s) => ({
@@ -34514,8 +34488,6 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					}
 				}))
 			};
-			dlog("sites effect: calling source.setData with", collection.features.length, "features");
-			dlog("sites effect: first feature coords sample", collection.features[0]?.geometry.coordinates);
 			source.setData(collection);
 			map.getSource("sedes-heat-source")?.setData(collection);
 		};

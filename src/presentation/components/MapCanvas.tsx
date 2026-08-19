@@ -20,12 +20,6 @@ import { CRITICALITY_HEX, CLUSTER_COLOR, CLUSTER_STROKE } from "./criticality";
 // identically on any host (Cloudflare, Vercel, Netlify) and during SSR.
 import municipalBoundaries from "@/data/valle-municipios.json";
 
-// --- TEMP DEBUG -------------------------------------------------------
-// Remove this whole block (and every dlog(...) call below) once the
-// production rendering issue is diagnosed.
-const dlog = (...args: unknown[]) => console.log("[MapCanvas]", ...args);
-// ------------------------------------------------------------------------
-
 const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
 const MUNICIPALITY_ZOOM = 9.8;
@@ -85,14 +79,7 @@ export function MapCanvas({
   handlersRef.current = { onSelectSite, onSelectMunicipality, onReset };
 
   useEffect(() => {
-    dlog("mount effect running", {
-      hasContainer: Boolean(containerRef.current),
-      hasExistingMap: Boolean(mapRef.current),
-    });
     if (!containerRef.current || mapRef.current) return;
-
-    const rect = containerRef.current.getBoundingClientRect();
-    dlog("container size at construction", rect.width, rect.height);
 
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -102,16 +89,8 @@ export function MapCanvas({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    dlog("maplibregl.Map constructed");
-    // TEMP DEBUG — exposes the live map instance so it can be inspected
-    // from the browser console: window.__debugMap.getZoom(), etc.
-    // Remove this line together with the rest of the dlog/debug block.
-    (window as unknown as Record<string, unknown>)["__debugMap"] = map;
-
-    map.on("error", (e) => dlog("MAP ERROR EVENT", e.error?.message ?? e));
 
     const resizeObserver = new ResizeObserver(() => {
-      dlog("resize observer fired, calling map.resize()");
       map.resize();
     });
     requestAnimationFrame(() => map.resize());
@@ -124,7 +103,7 @@ export function MapCanvas({
 
     map.on("load", async () => {
       // --- Municipal boundaries (optional layer) -------------------------
-      // Still isolated in its own try/catch so a style/layer failure here can
+      // Isolated in its own try/catch so a style/layer failure here can
       // never abort the "sedes" source/layers created below.
       try {
         map.addSource("municipios", {
@@ -158,7 +137,6 @@ export function MapCanvas({
           },
           paint: { "text-color": "#4a5568", "text-halo-color": "#ffffff", "text-halo-width": 1.4 },
         });
-        dlog("municipios-fill/line/label layers added OK");
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(
@@ -168,7 +146,6 @@ export function MapCanvas({
         );
       }
 
-      dlog("about to add sedes source/layers");
       map.addSource("sedes", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -181,7 +158,6 @@ export function MapCanvas({
           verde: ["+", ["case", ["==", ["get", "criticality"], "VERDE"], 1, 0]],
         },
       });
-      dlog("sedes source added");
 
       map.addSource("sedes-heat-source", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addLayer({
@@ -200,7 +176,6 @@ export function MapCanvas({
           ],
         },
       });
-      dlog("sedes-heat layer added");
 
       map.addLayer({
         id: "clusters",
@@ -241,10 +216,6 @@ export function MapCanvas({
           "circle-opacity": 1,
         },
       });
-      dlog("clusters/cluster-count/sedes-point layers added OK", {
-        hasClusters: Boolean(map.getLayer("clusters")),
-        hasSedesPoint: Boolean(map.getLayer("sedes-point")),
-      });
 
       map.addLayer({
         id: "selected-site-halo",
@@ -262,11 +233,22 @@ export function MapCanvas({
       });
 
       map.on("click", "sedes-point", (e: MapLayerMouseEvent) => {
+        // FIX: sin esto, el mismo clic también intersecta "municipios-fill"
+        // (el polígono cubre casi toda el área) y su handler se dispara
+        // justo después, pisando el estado que acabamos de fijar con
+        // onSelectSite() y dejando siteId en null. preventDefault() detiene
+        // la propagación del clic a las capas de abajo y al handler
+        // genérico del mapa. Por eso las sedes fuera del polígono del Valle
+        // sí funcionaban: nunca intersectaban municipios-fill.
+        e.preventDefault();
         const f = e.features?.[0];
         if (f) handlersRef.current.onSelectSite(String(f.properties?.["id"]));
       });
 
       map.on("click", "clusters", (e: MapLayerMouseEvent) => {
+        // Mismo motivo: un cluster también puede caer dentro de
+        // municipios-fill y no debe además disparar onSelectMunicipality.
+        e.preventDefault();
         const f = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
         if (!f) return;
         const props = f.properties ?? {};
@@ -321,6 +303,11 @@ export function MapCanvas({
       }
 
       map.on("click", (e: MapLayerMouseEvent) => {
+        // defaultPrevented viene en true si el clic ya fue manejado por
+        // "sedes-point" o "clusters" arriba — en ese caso no hacemos nada
+        // más aquí (ni siquiera queryRenderedFeatures), porque el clic ya
+        // tuvo un destino claro.
+        if (e.defaultPrevented) return;
         const layers = ["sedes-point", "clusters", ...(map.getLayer("municipios-fill") ? ["municipios-fill"] : [])];
         const hits = map.queryRenderedFeatures(e.point, { layers });
         if (hits.length === 0) handlersRef.current.onReset();
@@ -348,14 +335,11 @@ export function MapCanvas({
       map.on("mouseleave", "clusters", () => (map.getCanvas().style.cursor = ""));
 
       readyRef.current = true;
-      dlog("readyRef = true — flushing", pendingRef.current.length, "pending callback(s)");
       pendingRef.current.forEach((fn) => fn());
       pendingRef.current = [];
-      dlog("load handler fully completed");
     });
 
     return () => {
-      dlog("cleanup: removing map");
       resizeObserver.disconnect();
       pendingRef.current = [];
       map.remove();
@@ -365,18 +349,11 @@ export function MapCanvas({
   }, []);
 
   useEffect(() => {
-    dlog("sites prop changed, length =", sites.length, "with position:", sites.filter((s) => s.position).length);
     const map = mapRef.current;
-    if (!map) {
-      dlog("sites effect: no map instance yet, skipping");
-      return;
-    }
+    if (!map) return;
     const apply = () => {
       const source = map.getSource("sedes") as maplibregl.GeoJSONSource | undefined;
-      if (!source) {
-        dlog("sites effect: 'sedes' source not found on map — this is the bug if you see this");
-        return;
-      }
+      if (!source) return;
       const collection = {
         type: "FeatureCollection",
         features: sites
@@ -398,10 +375,6 @@ export function MapCanvas({
             },
           })),
       } as const;
-      dlog("sites effect: calling source.setData with", collection.features.length, "features");
-      // TEMP DEBUG — log the first feature's actual coordinates, to rule out
-      // NaN/undefined lat-lng silently producing zero visible geometry.
-      dlog("sites effect: first feature coords sample", collection.features[0]?.geometry.coordinates);
       source.setData(collection);
       const heatSource = map.getSource("sedes-heat-source") as maplibregl.GeoJSONSource | undefined;
       heatSource?.setData(collection);
