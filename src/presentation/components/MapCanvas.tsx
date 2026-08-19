@@ -370,15 +370,19 @@ export function MapCanvas({
         }
 
         if (map.getLayer("municipios-fill")) {
-          const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
+          const municipalityHits = map.queryRenderedFeatures(e.point, {
+            layers: ["municipios-fill"],
+          });
+
           if (municipalityHits.length > 0) {
-            // municipalBoundaries ya viene normalizado (ver
-            // normalizeBoundaries arriba), así que esto ya está en el
-            // mismo formato que summary.municipality.id normalizado.
-            // Igual pasamos por normId() acá por si en el futuro se
-            // cambia la fuente de datos y deja de venir pre-normalizada.
             const code = municipalityHits[0]?.properties?.["municipalityCode"];
-            if (code != null) handlersRef.current.onSelectMunicipality(normId(code));
+
+            console.log("Municipio detectado:", code, municipalityHits[0]?.properties);
+
+            if (code != null) {
+              handlersRef.current.onSelectMunicipality(normId(code));
+            }
+
             return;
           }
         }
@@ -440,7 +444,7 @@ export function MapCanvas({
               institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
               criticality: s.diagnostic.criticality,
               review: s.diagnostic.resolution.status !== "RESOLVED",
-              municipalityId: s.municipality?.id ? normId(s.municipality.id) : null,
+              municipalityId: s.municipality?.officialCode ? normId(s.municipality.officialCode) : null,
             },
             geometry: {
               type: "Point" as const,
@@ -472,7 +476,7 @@ export function MapCanvas({
         // caían en el color de respaldo (#2f6fed) al final del "match".
         const matcher: (string | string[])[] = ["match", ["get", "municipalityCode"]];
         for (const summary of municipalities) {
-          matcher.push(normId(summary.municipality.id), CRITICALITY_HEX[summary.criticality]);
+          matcher.push(normId(summary.municipality.officialCode), CRITICALITY_HEX[summary.criticality]);
         }
         matcher.push("#2f6fed");
         map.setPaintProperty("municipios-fill", "fill-color", matcher as unknown as maplibregl.ExpressionSpecification);
@@ -544,7 +548,7 @@ export function MapCanvas({
         ]);
       }
 
-      const summary = municipalities.find((m) => normId(m.municipality.id) === focusId);
+      const summary = municipalities.find((m) => normId(m.municipality.officialCode) === focusId);
       const lat = summary?.municipality.latitude;
       const lng = summary?.municipality.longitude;
       if (lat != null && lng != null) {

@@ -44,7 +44,7 @@ export function DashboardPage() {
 
   const selectedMunicipality = useMemo(
     () =>
-      data?.municipalities.find((m) => normId(m.municipality.id) === normId(viewState.municipalityId)) ?? null,
+      data?.municipalities.find((m) => normId(m.municipality.officialCode) === normId(viewState.municipalityId)) ?? null,
     [data, viewState.municipalityId],
   );
   const selectedSite = useMemo(
@@ -54,26 +54,22 @@ export function DashboardPage() {
   const municipalitySites = useMemo(
     () =>
       viewState.municipalityId
-        ? (data?.sites.filter((s) => normId(s.municipality?.id) === normId(viewState.municipalityId)) ?? [])
+        ? (data?.sites.filter((s) => normId(s.municipality?.officialCode) === normId(viewState.municipalityId)) ?? [])
         : [],
     [data, viewState.municipalityId],
   );
 
-  const selectMunicipality = (id: string) => {
+   const selectMunicipality = (id: string) => {
     setHintDismissed(true);
-    // Si el polígono clickeado no tiene un municipio correspondiente en el
-    // dataset (mismatch de IDs entre el GeoJSON de límites y el Excel/ETL),
-    // antes esto cambiaba viewState igual y el panel simplemente no
-    // aparecía — sin ningún indicio de qué había pasado. Ahora se detecta
-    // acá mismo y queda registrado en consola en vez de fallar en
-    // silencio.
-    const exists = data?.municipalities.some((m) => normId(m.municipality.id) === normId(id));
+    const exists = data?.municipalities.some((m) => normId(m.municipality.officialCode) === normId(id));
     if (!exists) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `Se hizo clic en un municipio con código "${id}" que no está en el dataset actual. ` +
-          "Revisa que valle-municipios.json y el ETL de sedes usen el mismo formato de código de municipio.",
-      );
+
+     const CERTIFIED_CODES = new Set(["76001", "76109", "76111", "76147", "76520", "76834", "76892"]);
+     if (!CERTIFIED_CODES.has(normId(id))) {
+       console.warn(`Municipio "${id}" no está en el dataset — revisar ETL/GeoJSON.`);
+     }
+     // TODO: mostrar mensaje al usuario ("municipio certificado, sin datos
+     // de la Gobernación" vs "sin diagnósticos aún") en vez de solo loguear.
       return;
     }
     setViewState((prev) => viewTransitions.toMunicipality(id, prev));
@@ -81,7 +77,7 @@ export function DashboardPage() {
   const selectSite = (id: string) => {
     setHintDismissed(true);
     const view = data?.sites.find((s) => s.diagnostic.id === id);
-    setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.id ?? null, prev));
+    setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.officialCode ?? null, prev));
   };
   const goToAll = () => setViewState(viewTransitions.toAll());
   const goToMunicipality = () => setViewState((prev) => viewTransitions.toMunicipalityFromSite(prev));

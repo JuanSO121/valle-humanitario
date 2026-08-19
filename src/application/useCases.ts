@@ -64,8 +64,30 @@ export class DiagnosticsUseCases {
       };
     });
 
-    const totals: CriticalityTotals = { red: 0, yellow: 0, green: 0, noDetail: 0, total: views.length };
-    const byMunicipality = new Map<string, MunicipalitySummary>();
+const totals: CriticalityTotals = {
+  red: 0,
+  yellow: 0,
+  green: 0,
+  noDetail: 0,
+  total: views.length,
+};
+
+const byMunicipality = new Map<string, MunicipalitySummary>();
+
+    // Incluir todos los municipios del dataset, incluso aquellos
+    // que actualmente no tienen sedes diagnosticadas.
+    for (const municipality of municipalities) {
+      byMunicipality.set(municipality.id, {
+        municipality,
+        affectedSites: 0,
+        red: 0,
+        yellow: 0,
+        green: 0,
+        noDetail: 0,
+        criticality: "SIN_DETALLE",
+        redShare: 0,
+      });
+    }
 
     for (const view of views) {
       const c = view.diagnostic.criticality;

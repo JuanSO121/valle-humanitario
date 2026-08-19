@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BlJwzDFD.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Sw288mQl.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34486,6 +34486,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					const municipalityHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
 					if (municipalityHits.length > 0) {
 						const code = municipalityHits[0]?.properties?.["municipalityCode"];
+						console.log("Municipio detectado:", code, municipalityHits[0]?.properties);
 						if (code != null) handlersRef.current.onSelectMunicipality(normId(code));
 						return;
 					}
@@ -34536,7 +34537,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
 						criticality: s.diagnostic.criticality,
 						review: s.diagnostic.resolution.status !== "RESOLVED",
-						municipalityId: s.municipality?.id ? normId(s.municipality.id) : null
+						municipalityId: s.municipality?.officialCode ? normId(s.municipality.officialCode) : null
 					},
 					geometry: {
 						type: "Point",
@@ -34557,7 +34558,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			if (!municipalities.length) map.setPaintProperty("municipios-fill", "fill-color", "#2f6fed");
 			else {
 				const matcher = ["match", ["get", "municipalityCode"]];
-				for (const summary of municipalities) matcher.push(normId(summary.municipality.id), CRITICALITY_HEX[summary.criticality]);
+				for (const summary of municipalities) matcher.push(normId(summary.municipality.officialCode), CRITICALITY_HEX[summary.criticality]);
 				matcher.push("#2f6fed");
 				map.setPaintProperty("municipios-fill", "fill-color", matcher);
 			}
@@ -34637,7 +34638,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					.2
 				]);
 			}
-			const summary = municipalities.find((m) => normId(m.municipality.id) === focusId);
+			const summary = municipalities.find((m) => normId(m.municipality.officialCode) === focusId);
 			const lat = summary?.municipality.latitude;
 			const lng = summary?.municipality.longitude;
 			if (lat != null && lng != null) map.easeTo({
@@ -34734,6 +34735,16 @@ var DiagnosticsUseCases = class {
 			total: views.length
 		};
 		const byMunicipality = /* @__PURE__ */ new Map();
+		for (const municipality of municipalities) byMunicipality.set(municipality.id, {
+			municipality,
+			affectedSites: 0,
+			red: 0,
+			yellow: 0,
+			green: 0,
+			noDetail: 0,
+			criticality: "SIN_DETALLE",
+			redShare: 0
+		});
 		for (const view of views) {
 			const c = view.diagnostic.criticality;
 			if (c === "ROJO") totals.red += 1;
@@ -36209,13 +36220,21 @@ function DashboardPage() {
 		const timer = setTimeout(() => setHintDismissed(true), HINT_AUTOHIDE_MS);
 		return () => clearTimeout(timer);
 	}, []);
-	const selectedMunicipality = (0, import_react.useMemo)(() => data?.municipalities.find((m) => normId(m.municipality.id) === normId(viewState.municipalityId)) ?? null, [data, viewState.municipalityId]);
+	const selectedMunicipality = (0, import_react.useMemo)(() => data?.municipalities.find((m) => normId(m.municipality.officialCode) === normId(viewState.municipalityId)) ?? null, [data, viewState.municipalityId]);
 	const selectedSite = (0, import_react.useMemo)(() => data?.sites.find((s) => s.diagnostic.id === viewState.siteId) ?? null, [data, viewState.siteId]);
-	const municipalitySites = (0, import_react.useMemo)(() => viewState.municipalityId ? data?.sites.filter((s) => normId(s.municipality?.id) === normId(viewState.municipalityId)) ?? [] : [], [data, viewState.municipalityId]);
+	const municipalitySites = (0, import_react.useMemo)(() => viewState.municipalityId ? data?.sites.filter((s) => normId(s.municipality?.officialCode) === normId(viewState.municipalityId)) ?? [] : [], [data, viewState.municipalityId]);
 	const selectMunicipality = (id) => {
 		setHintDismissed(true);
-		if (!data?.municipalities.some((m) => normId(m.municipality.id) === normId(id))) {
-			console.warn(`Se hizo clic en un municipio con código "${id}" que no está en el dataset actual. Revisa que valle-municipios.json y el ETL de sedes usen el mismo formato de código de municipio.`);
+		if (!data?.municipalities.some((m) => normId(m.municipality.officialCode) === normId(id))) {
+			if (!(/* @__PURE__ */ new Set([
+				"76001",
+				"76109",
+				"76111",
+				"76147",
+				"76520",
+				"76834",
+				"76892"
+			])).has(normId(id))) console.warn(`Municipio "${id}" no está en el dataset — revisar ETL/GeoJSON.`);
 			return;
 		}
 		setViewState((prev) => viewTransitions.toMunicipality(id, prev));
@@ -36223,7 +36242,7 @@ function DashboardPage() {
 	const selectSite = (id) => {
 		setHintDismissed(true);
 		const view = data?.sites.find((s) => s.diagnostic.id === id);
-		setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.id ?? null, prev));
+		setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.officialCode ?? null, prev));
 	};
 	const goToAll = () => setViewState(viewTransitions.toAll());
 	const goToMunicipality = () => setViewState((prev) => viewTransitions.toMunicipalityFromSite(prev));
