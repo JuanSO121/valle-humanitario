@@ -25,6 +25,28 @@ const OVERVIEW_CENTER: [number, number] = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
 const MUNICIPALITY_ZOOM = 9.8;
 
+// --- Pulso "sonar" -----------------------------------------------------
+// Solo las sedes ROJO/AMARILLO emiten el anillo: es una señal de atención,
+// no decoración — las VERDE no necesitan reclamar la mirada. El ciclo y la
+// lista de criticidades quedan como constantes para poder ajustarlas sin
+// tocar la lógica de animación.
+//
+// El mismo criterio se extiende a los CLUSTERS: si un grupo contiene al
+// menos una sede ROJO o AMARILLO, sigue siendo una señal de atención — de
+// hecho más urgente que una sede suelta, porque agrupa varias. Antes el
+// filtro de "sedes-pulse-ring" excluía explícitamente los clusters
+// (["!", ["has","point_count"]]), así que apenas dos sedes críticas
+// quedaban cerca perdían el anillo justo cuando más falta hacía.
+const PULSE_CYCLE_MS = 2600;
+const PULSE_CRITICALITIES = ["ROJO", "AMARILLO"] as const;
+// Mismo "step" que ya define el radio del círculo de cluster (ver capa
+// "clusters" más abajo) — así el anillo de pulso de un cluster arranca
+// siempre desde el borde real del círculo que agranda, no desde un radio
+// genérico que no coincide visualmente con clusters grandes.
+const CLUSTER_RADIUS_STEP = ["step", ["get", "point_count"], 16, 5, 22, 15, 28] as const;
+const prefersReducedMotion =
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 // El GeoJSON de límites y el dataset de sedes (Excel/ETL) no siempre
 // traen `municipalityCode` en el mismo formato exacto (ceros a la
 // izquierda, string vs number). Se normaliza UNA sola vez acá, a la hora
@@ -32,7 +54,8 @@ const MUNICIPALITY_ZOOM = 9.8;
 // expresión de estilo de MapLibre (que no puede correr JS arbitrario por
 // feature). A partir de acá, todo el resto del componente puede asumir
 // que `municipalityCode` ya viene en el mismo formato que
-// `summary.municipality.id`, siempre que ese id también pase por normId().
+// `summary.municipality.officialCode`, siempre que ese código también
+// pase por normId().
 //
 // También se le asigna acá el `id` de feature a nivel raíz (no dentro de
 // `properties`): MapLibre solo soporta feature-state (usado para el hover)
@@ -113,6 +136,12 @@ export function MapCanvas({
   };
   const handlersRef = useRef({ onSelectSite, onSelectMunicipality, onReset });
   handlersRef.current = { onSelectSite, onSelectMunicipality, onReset };
+  // rAF id del driver del pulso, y el handler de visibilitychange que lo
+  // pausa/reanuda — ambos viven en refs porque se crean adentro de
+  // `map.on("load", ...)` pero se limpian en el cleanup del useEffect de
+  // arriba, que corre en un closure distinto.
+  const pulseFrameRef = useRef<number | null>(null);
+  const pulseVisibilityHandlerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -136,6 +165,9 @@ export function MapCanvas({
 
     const sitePopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
     const clusterPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 14, maxWidth: "220px" });
+    // Tooltip liviano al pasar el mouse sobre un municipio (solo nombre —
+    // no reemplaza al ContextualPanel que abre el clic).
+    const municipalityPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
 
     map.on("load", async () => {
       // --- Municipal boundaries (optional layer) -------------------------
@@ -192,6 +224,13 @@ export function MapCanvas({
           rojo: ["+", ["case", ["==", ["get", "criticality"], "ROJO"], 1, 0]],
           amarillo: ["+", ["case", ["==", ["get", "criticality"], "AMARILLO"], 1, 0]],
           verde: ["+", ["case", ["==", ["get", "criticality"], "VERDE"], 1, 0]],
+          // Le da al cluster una "phase" propia, heredada de una de sus
+          // sedes componentes (agregación "max" sobre la misma propiedad
+          // "phase" que ya trae cada sede — ver el efecto de `sites` más
+          // abajo). Es lo que permite que el anillo de un cluster arranque
+          // en un punto distinto del ciclo que el de otro cluster vecino,
+          // sin tener que inventar una segunda fuente de aleatoriedad.
+          phase: ["max", ["get", "phase"]],
         },
       });
 
@@ -213,6 +252,36 @@ export function MapCanvas({
         },
       });
 
+      // Anillo tipo sonar PARA CLUSTERS: va antes que "clusters" para
+      // quedar debajo del círculo sólido, igual que "sedes-pulse-ring"
+      // queda debajo de "sedes-point". Solo pulsa si el cluster agrupa al
+      // menos una sede ROJO o AMARILLO (usa los conteos ya calculados en
+      // clusterProperties, no necesita recorrer las sedes componentes).
+      // El color prioriza severidad: si hay al menos una ROJO, el anillo
+      // es ROJO aunque haya más AMARILLO que ROJO en el grupo.
+      map.addLayer({
+        id: "clusters-pulse-ring",
+        type: "circle",
+        source: "sedes",
+        filter: [
+          "all",
+          ["has", "point_count"],
+          ["any", [">", ["get", "rojo"], 0], [">", ["get", "amarillo"], 0]],
+        ],
+        layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+        paint: {
+          "circle-radius": CLUSTER_RADIUS_STEP as unknown as maplibregl.ExpressionSpecification,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-width": 2.5,
+          "circle-stroke-color": [
+            "case",
+            [">", ["get", "rojo"], 0], CRITICALITY_HEX.ROJO,
+            CRITICALITY_HEX.AMARILLO,
+          ],
+          "circle-stroke-opacity": 0,
+        },
+      });
+
       map.addLayer({
         id: "clusters",
         type: "circle",
@@ -221,7 +290,7 @@ export function MapCanvas({
         paint: {
           "circle-color": CLUSTER_COLOR,
           "circle-opacity": 0.92,
-          "circle-radius": ["step", ["get", "point_count"], 16, 5, 22, 15, 28],
+          "circle-radius": CLUSTER_RADIUS_STEP as unknown as maplibregl.ExpressionSpecification,
           "circle-stroke-width": 2,
           "circle-stroke-color": CLUSTER_STROKE,
         },
@@ -234,6 +303,37 @@ export function MapCanvas({
         layout: { "text-field": ["get", "point_count_abbreviated"], "text-size": 12, "text-font": ["Noto Sans Bold"] },
         paint: { "text-color": "#ffffff" },
       });
+
+      // Anillo tipo sonar: una sola capa cuyo radio/opacidad se anima
+      // reescribiendo la expresión de paint en cada frame (ver el driver
+      // más abajo). No usa feature-state porque necesitamos tocar TODAS
+      // las sedes ROJO/AMARILLO en cada frame, y un solo setPaintProperty
+      // por frame es mucho más barato que N llamadas a setFeatureState.
+      // Va antes que "sedes-point" para quedar debajo del punto sólido.
+      map.addLayer({
+        id: "sedes-pulse-ring",
+        type: "circle",
+        source: "sedes",
+        filter: [
+          "all",
+          ["!", ["has", "point_count"]],
+          ["in", ["get", "criticality"], ["literal", PULSE_CRITICALITIES]],
+        ],
+        layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+        paint: {
+          "circle-radius": 6,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-width": 2,
+          "circle-stroke-color": [
+            "match", ["get", "criticality"],
+            "ROJO", CRITICALITY_HEX.ROJO,
+            "AMARILLO", CRITICALITY_HEX.AMARILLO,
+            CRITICALITY_HEX.SIN_DETALLE,
+          ],
+          "circle-stroke-opacity": 0,
+        },
+      });
+
       map.addLayer({
         id: "sedes-point",
         type: "circle",
@@ -274,19 +374,36 @@ export function MapCanvas({
       // expresión de estilo cada vez — solo repinta esa feature. La capa
       // de relleno referencia ["feature-state","hovered"] en su
       // "fill-opacity" (ver el efecto de `municipalities`/`focusMunicipalityId`
-      // más abajo), así que no hace falta llamar setPaintProperty acá.
+      // más abajo, y el paint inicial de "municipios-fill" arriba), así
+      // que MapLibre re-evalúa esa expresión solo con el setFeatureState,
+      // sin necesidad de otro setPaintProperty. Además de la feature-state,
+      // se abre un popup liviano con el nombre del municipio.
       let hoveredMunicipalityId: string | null = null;
       if (map.getLayer("municipios-fill")) {
         map.on("mousemove", "municipios-fill", (e: MapLayerMouseEvent) => {
           map.getCanvas().style.cursor = "pointer";
           const feature = e.features?.[0];
           const nextId = feature?.id != null ? String(feature.id) : null;
-          if (nextId === hoveredMunicipalityId) return;
+          if (nextId === hoveredMunicipalityId) {
+            if (nextId != null) {
+              municipalityPopup.setLngLat(e.lngLat);
+            }
+            return;
+          }
           if (hoveredMunicipalityId != null) {
             map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
           }
           if (nextId != null) {
             map.setFeatureState({ source: "municipios", id: nextId }, { hovered: true });
+            const name = feature?.properties?.["name"] ?? "";
+            municipalityPopup
+              .setLngLat(e.lngLat)
+              .setHTML(
+                `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c">
+                   <strong>${name}</strong>
+                 </div>`,
+              )
+              .addTo(map);
           }
           hoveredMunicipalityId = nextId;
         });
@@ -296,6 +413,7 @@ export function MapCanvas({
             map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
             hoveredMunicipalityId = null;
           }
+          municipalityPopup.remove();
         });
       }
 
@@ -411,6 +529,68 @@ export function MapCanvas({
       map.on("mouseenter", "clusters", () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", "clusters", () => (map.getCanvas().style.cursor = ""));
 
+      // --- Driver del pulso ------------------------------------------
+      // Los estilos de MapLibre no tienen noción de "tiempo": el truco es
+      // recalcular la expresión en JS en cada frame y empujarla con
+      // setPaintProperty. Un solo setPaintProperty + triggerRepaint
+      // implícito por frame es barato aunque haya cientos de sedes, porque
+      // es un recálculo de estilo, no uno por feature. Cada sede trae su
+      // propia "phase" (ver el efecto de `sites` más abajo) para que los
+      // anillos no destellen todos sincronizados; los clusters heredan una
+      // "phase" análoga vía clusterProperties (ver "sedes" source arriba).
+      if (!prefersReducedMotion) {
+        const startTime = performance.now();
+        const animatePulse = (now: number) => {
+          const t = (now - startTime) % PULSE_CYCLE_MS;
+          const progressExpr = [
+            "%",
+            ["+", ["*", ["get", "phase"], PULSE_CYCLE_MS], t],
+            PULSE_CYCLE_MS,
+          ];
+          const progress01 = ["/", progressExpr, PULSE_CYCLE_MS] as unknown as maplibregl.ExpressionSpecification;
+
+          if (map.getLayer("sedes-pulse-ring")) {
+            map.setPaintProperty("sedes-pulse-ring", "circle-radius", [
+              "+", 6, ["*", 20, progress01],
+            ] as unknown as maplibregl.ExpressionSpecification);
+            map.setPaintProperty("sedes-pulse-ring", "circle-stroke-opacity", [
+              "*", 0.65, ["-", 1, progress01],
+            ] as unknown as maplibregl.ExpressionSpecification);
+          }
+          // Mismo reloj y misma curva de opacidad que "sedes-pulse-ring",
+          // pero el radio de arranque sigue el "step" del propio círculo
+          // de cluster (CLUSTER_RADIUS_STEP) en vez de un valor fijo, para
+          // que un cluster grande (28px) no tenga un anillo que empieza
+          // "adentro" del círculo como pasaría con un radio base de 6.
+          if (map.getLayer("clusters-pulse-ring")) {
+            map.setPaintProperty("clusters-pulse-ring", "circle-radius", [
+              "+", CLUSTER_RADIUS_STEP, ["*", 20, progress01],
+            ] as unknown as maplibregl.ExpressionSpecification);
+            map.setPaintProperty("clusters-pulse-ring", "circle-stroke-opacity", [
+              "*", 0.65, ["-", 1, progress01],
+            ] as unknown as maplibregl.ExpressionSpecification);
+          }
+          // El halo de la sede seleccionada también respira un poco, en
+          // vez de quedarse fijo — mismo reloj, radio más chico.
+          if (map.getLayer("selected-site-halo")) {
+            map.setPaintProperty("selected-site-halo", "circle-radius", [
+              "+", 13, ["*", 4, progress01],
+            ] as unknown as maplibregl.ExpressionSpecification);
+          }
+
+          pulseFrameRef.current =
+            document.visibilityState !== "hidden" ? requestAnimationFrame(animatePulse) : null;
+        };
+        pulseFrameRef.current = requestAnimationFrame(animatePulse);
+
+        pulseVisibilityHandlerRef.current = () => {
+          if (document.visibilityState === "visible" && pulseFrameRef.current == null) {
+            pulseFrameRef.current = requestAnimationFrame(animatePulse);
+          }
+        };
+        document.addEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+      }
+
       readyRef.current = true;
       pendingRef.current.forEach((fn) => fn());
       pendingRef.current = [];
@@ -419,6 +599,13 @@ export function MapCanvas({
     return () => {
       resizeObserver.disconnect();
       pendingRef.current = [];
+      if (pulseFrameRef.current != null) cancelAnimationFrame(pulseFrameRef.current);
+      if (pulseVisibilityHandlerRef.current) {
+        document.removeEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+      }
+      sitePopup.remove();
+      clusterPopup.remove();
+      municipalityPopup.remove();
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
@@ -444,7 +631,20 @@ export function MapCanvas({
               institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
               criticality: s.diagnostic.criticality,
               review: s.diagnostic.resolution.status !== "RESOLVED",
+              // Cruce contra el GeoJSON de límites: `officialCode` es el
+              // código DANE (ej. "76233"), consistente con
+              // `municipalityCode` en valle-municipios.json. `municipality.id`
+              // (ej. "M-DAGUA") es solo la clave sintética interna del
+              // catálogo y nunca calza contra el GeoJSON — no usar acá.
               municipalityId: s.municipality?.officialCode ? normId(s.municipality.officialCode) : null,
+              // Fase determinística (0–1) por sede, derivada del mismo
+              // `rank` que ya se usa como feature id, con la constante
+              // multiplicativa de Knuth para repartirla bien en el rango.
+              // Cada anillo arranca en un punto distinto del ciclo, así el
+              // mapa "burbujea" en vez de destellar todo sincronizado. Los
+              // clusters heredan esta misma "phase" vía clusterProperties
+              // ("max") en la definición del source "sedes" arriba.
+              phase: ((Number(s.diagnostic.rank) * 2654435761) % 1000) / 1000,
             },
             geometry: {
               type: "Point" as const,
@@ -468,12 +668,11 @@ export function MapCanvas({
         map.setPaintProperty("municipios-fill", "fill-color", "#2f6fed");
       } else {
         // Comparamos siempre contra el mismo formato normalizado que
-        // trae municipalBoundaries (ver normalizeBoundaries arriba) —
-        // esto es lo que estaba roto antes: acá se empujaban los ids
-        // "crudos" del dataset, que no necesariamente coincidían con el
-        // `municipalityCode` del GeoJSON (ceros a la izquierda, string
-        // vs number), así que ningún municipio hacía match y todos
-        // caían en el color de respaldo (#2f6fed) al final del "match".
+        // trae municipalBoundaries (ver normalizeBoundaries arriba), y
+        // contra el código DANE real (`officialCode`), no contra el `id`
+        // sintético del catálogo (`M-DAGUA`) — ese `id` nunca va a
+        // coincidir con `municipalityCode` del GeoJSON, sin importar el
+        // formato/normalización, porque no es el mismo dato.
         const matcher: (string | string[])[] = ["match", ["get", "municipalityCode"]];
         for (const summary of municipalities) {
           matcher.push(normId(summary.municipality.officialCode), CRITICALITY_HEX[summary.criticality]);
@@ -494,7 +693,16 @@ export function MapCanvas({
       if (!focusMunicipalityId) {
         map.setPaintProperty("sedes-point", "circle-opacity", 1);
         if (map.getLayer("municipios-fill")) {
-          map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? 0.22 : 0.08);
+          // El hover (feature-state "hovered") se evalúa primero para que
+          // siga funcionando también en la vista general (sin municipio
+          // enfocado) — antes este branch pisaba el fill-opacity con un
+          // número fijo y el hover quedaba sin efecto visible acá.
+          map.setPaintProperty("municipios-fill", "fill-opacity", [
+            "case",
+            ["boolean", ["feature-state", "hovered"], false],
+            0.4,
+            municipalities.length ? 0.22 : 0.08,
+          ]);
         }
         if (map.getLayer("municipios-line")) {
           map.setPaintProperty("municipios-line", "line-color", "#2f6fed");
@@ -516,6 +724,8 @@ export function MapCanvas({
       if (map.getLayer("municipios-fill")) {
         map.setPaintProperty("municipios-fill", "fill-opacity", [
           "case",
+          ["boolean", ["feature-state", "hovered"], false],
+          0.4,
           ["==", ["get", "municipalityCode"], focusId],
           0.32,
           0.05,
@@ -548,6 +758,8 @@ export function MapCanvas({
         ]);
       }
 
+      // Cruce por officialCode (código DANE) — ver nota arriba sobre
+      // por qué `.id` no sirve para esto.
       const summary = municipalities.find((m) => normId(m.municipality.officialCode) === focusId);
       const lat = summary?.municipality.latitude;
       const lng = summary?.municipality.longitude;

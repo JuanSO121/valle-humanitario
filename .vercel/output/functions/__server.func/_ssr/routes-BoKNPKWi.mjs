@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Sw288mQl.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BoKNPKWi.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34061,6 +34061,18 @@ dm(maplibre_gl_worker_default);
 var OVERVIEW_CENTER = [-76.35, 3.95];
 var OVERVIEW_ZOOM = 7.1;
 var MUNICIPALITY_ZOOM = 9.8;
+var PULSE_CYCLE_MS = 2600;
+var PULSE_CRITICALITIES = ["ROJO", "AMARILLO"];
+var CLUSTER_RADIUS_STEP = [
+	"step",
+	["get", "point_count"],
+	16,
+	5,
+	22,
+	15,
+	28
+];
+var prefersReducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function normalizeBoundaries(geojson) {
 	const collection = geojson;
 	if (!collection?.features) return geojson;
@@ -34123,6 +34135,8 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 		onSelectMunicipality,
 		onReset
 	};
+	const pulseFrameRef = (0, import_react.useRef)(null);
+	const pulseVisibilityHandlerRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
 		if (!containerRef.current || mapRef.current) return;
 		const map = new xp({
@@ -34150,6 +34164,11 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			closeOnClick: true,
 			offset: 14,
 			maxWidth: "220px"
+		});
+		const municipalityPopup = new $p({
+			closeButton: false,
+			closeOnClick: false,
+			offset: 8
 		});
 		map.on("load", async () => {
 			try {
@@ -34236,7 +34255,8 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						],
 						1,
 						0
-					]]
+					]],
+					phase: ["max", ["get", "phase"]]
 				}
 			});
 			map.addSource("sedes-heat-source", {
@@ -34308,6 +34328,45 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				}
 			});
 			map.addLayer({
+				id: "clusters-pulse-ring",
+				type: "circle",
+				source: "sedes",
+				filter: [
+					"all",
+					["has", "point_count"],
+					[
+						"any",
+						[
+							">",
+							["get", "rojo"],
+							0
+						],
+						[
+							">",
+							["get", "amarillo"],
+							0
+						]
+					]
+				],
+				layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+				paint: {
+					"circle-radius": CLUSTER_RADIUS_STEP,
+					"circle-color": "rgba(0,0,0,0)",
+					"circle-stroke-width": 2.5,
+					"circle-stroke-color": [
+						"case",
+						[
+							">",
+							["get", "rojo"],
+							0
+						],
+						CRITICALITY_HEX.ROJO,
+						CRITICALITY_HEX.AMARILLO
+					],
+					"circle-stroke-opacity": 0
+				}
+			});
+			map.addLayer({
 				id: "clusters",
 				type: "circle",
 				source: "sedes",
@@ -34315,15 +34374,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 				paint: {
 					"circle-color": CLUSTER_COLOR,
 					"circle-opacity": .92,
-					"circle-radius": [
-						"step",
-						["get", "point_count"],
-						16,
-						5,
-						22,
-						15,
-						28
-					],
+					"circle-radius": CLUSTER_RADIUS_STEP,
 					"circle-stroke-width": 2,
 					"circle-stroke-color": CLUSTER_STROKE
 				}
@@ -34339,6 +34390,36 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					"text-font": ["Noto Sans Bold"]
 				},
 				paint: { "text-color": "#ffffff" }
+			});
+			map.addLayer({
+				id: "sedes-pulse-ring",
+				type: "circle",
+				source: "sedes",
+				filter: [
+					"all",
+					["!", ["has", "point_count"]],
+					[
+						"in",
+						["get", "criticality"],
+						["literal", PULSE_CRITICALITIES]
+					]
+				],
+				layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+				paint: {
+					"circle-radius": 6,
+					"circle-color": "rgba(0,0,0,0)",
+					"circle-stroke-width": 2,
+					"circle-stroke-color": [
+						"match",
+						["get", "criticality"],
+						"ROJO",
+						CRITICALITY_HEX.ROJO,
+						"AMARILLO",
+						CRITICALITY_HEX.AMARILLO,
+						CRITICALITY_HEX.SIN_DETALLE
+					],
+					"circle-stroke-opacity": 0
+				}
 			});
 			map.addLayer({
 				id: "sedes-point",
@@ -34415,15 +34496,24 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					map.getCanvas().style.cursor = "pointer";
 					const feature = e.features?.[0];
 					const nextId = feature?.id != null ? String(feature.id) : null;
-					if (nextId === hoveredMunicipalityId) return;
+					if (nextId === hoveredMunicipalityId) {
+						if (nextId != null) municipalityPopup.setLngLat(e.lngLat);
+						return;
+					}
 					if (hoveredMunicipalityId != null) map.setFeatureState({
 						source: "municipios",
 						id: hoveredMunicipalityId
 					}, { hovered: false });
-					if (nextId != null) map.setFeatureState({
-						source: "municipios",
-						id: nextId
-					}, { hovered: true });
+					if (nextId != null) {
+						map.setFeatureState({
+							source: "municipios",
+							id: nextId
+						}, { hovered: true });
+						const name = feature?.properties?.["name"] ?? "";
+						municipalityPopup.setLngLat(e.lngLat).setHTML(`<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c">
+                   <strong>${name}</strong>
+                 </div>`).addTo(map);
+					}
 					hoveredMunicipalityId = nextId;
 				});
 				map.on("mouseleave", "municipios-fill", () => {
@@ -34435,6 +34525,7 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						}, { hovered: false });
 						hoveredMunicipalityId = null;
 					}
+					municipalityPopup.remove();
 				});
 			}
 			const openClusterPopup = (f) => {
@@ -34508,6 +34599,84 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			});
 			map.on("mouseenter", "clusters", () => map.getCanvas().style.cursor = "pointer");
 			map.on("mouseleave", "clusters", () => map.getCanvas().style.cursor = "");
+			if (!prefersReducedMotion) {
+				const startTime = performance_default.now();
+				const animatePulse = (now) => {
+					const t = (now - startTime) % PULSE_CYCLE_MS;
+					const progress01 = [
+						"/",
+						[
+							"%",
+							[
+								"+",
+								[
+									"*",
+									["get", "phase"],
+									PULSE_CYCLE_MS
+								],
+								t
+							],
+							PULSE_CYCLE_MS
+						],
+						PULSE_CYCLE_MS
+					];
+					if (map.getLayer("sedes-pulse-ring")) {
+						map.setPaintProperty("sedes-pulse-ring", "circle-radius", [
+							"+",
+							6,
+							[
+								"*",
+								20,
+								progress01
+							]
+						]);
+						map.setPaintProperty("sedes-pulse-ring", "circle-stroke-opacity", [
+							"*",
+							.65,
+							[
+								"-",
+								1,
+								progress01
+							]
+						]);
+					}
+					if (map.getLayer("clusters-pulse-ring")) {
+						map.setPaintProperty("clusters-pulse-ring", "circle-radius", [
+							"+",
+							CLUSTER_RADIUS_STEP,
+							[
+								"*",
+								20,
+								progress01
+							]
+						]);
+						map.setPaintProperty("clusters-pulse-ring", "circle-stroke-opacity", [
+							"*",
+							.65,
+							[
+								"-",
+								1,
+								progress01
+							]
+						]);
+					}
+					if (map.getLayer("selected-site-halo")) map.setPaintProperty("selected-site-halo", "circle-radius", [
+						"+",
+						13,
+						[
+							"*",
+							4,
+							progress01
+						]
+					]);
+					pulseFrameRef.current = document.visibilityState !== "hidden" ? requestAnimationFrame(animatePulse) : null;
+				};
+				pulseFrameRef.current = requestAnimationFrame(animatePulse);
+				pulseVisibilityHandlerRef.current = () => {
+					if (document.visibilityState === "visible" && pulseFrameRef.current == null) pulseFrameRef.current = requestAnimationFrame(animatePulse);
+				};
+				document.addEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+			}
 			readyRef.current = true;
 			pendingRef.current.forEach((fn) => fn());
 			pendingRef.current = [];
@@ -34515,6 +34684,11 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 		return () => {
 			resizeObserver.disconnect();
 			pendingRef.current = [];
+			if (pulseFrameRef.current != null) cancelAnimationFrame(pulseFrameRef.current);
+			if (pulseVisibilityHandlerRef.current) document.removeEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+			sitePopup.remove();
+			clusterPopup.remove();
+			municipalityPopup.remove();
 			map.remove();
 			mapRef.current = null;
 			readyRef.current = false;
@@ -34537,7 +34711,8 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 						institution: s.institution?.name ?? s.diagnostic.sourceInstitution ?? "",
 						criticality: s.diagnostic.criticality,
 						review: s.diagnostic.resolution.status !== "RESOLVED",
-						municipalityId: s.municipality?.officialCode ? normId(s.municipality.officialCode) : null
+						municipalityId: s.municipality?.officialCode ? normId(s.municipality.officialCode) : null,
+						phase: Number(s.diagnostic.rank) * 2654435761 % 1e3 / 1e3
 					},
 					geometry: {
 						type: "Point",
@@ -34572,7 +34747,16 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			if (!map.getLayer("sedes-point")) return;
 			if (!focusMunicipalityId) {
 				map.setPaintProperty("sedes-point", "circle-opacity", 1);
-				if (map.getLayer("municipios-fill")) map.setPaintProperty("municipios-fill", "fill-opacity", municipalities.length ? .22 : .08);
+				if (map.getLayer("municipios-fill")) map.setPaintProperty("municipios-fill", "fill-opacity", [
+					"case",
+					[
+						"boolean",
+						["feature-state", "hovered"],
+						false
+					],
+					.4,
+					municipalities.length ? .22 : .08
+				]);
 				if (map.getLayer("municipios-line")) {
 					map.setPaintProperty("municipios-line", "line-color", "#2f6fed");
 					map.setPaintProperty("municipios-line", "line-width", .9);
@@ -34598,6 +34782,12 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			]);
 			if (map.getLayer("municipios-fill")) map.setPaintProperty("municipios-fill", "fill-opacity", [
 				"case",
+				[
+					"boolean",
+					["feature-state", "hovered"],
+					false
+				],
+				.4,
 				[
 					"==",
 					["get", "municipalityCode"],
