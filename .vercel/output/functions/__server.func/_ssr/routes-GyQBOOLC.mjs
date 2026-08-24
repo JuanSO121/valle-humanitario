@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BoKNPKWi.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-GyQBOOLC.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -34073,6 +34073,9 @@ var CLUSTER_RADIUS_STEP = [
 	28
 ];
 var prefersReducedMotion = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+var SHOCKWAVE_INTERVAL_MS = 6e3;
+var SHOCKWAVE_DURATION_MS = 1500;
+var SHOCKWAVE_MAX_RADIUS = 240;
 function normalizeBoundaries(geojson) {
 	const collection = geojson;
 	if (!collection?.features) return geojson;
@@ -34116,6 +34119,25 @@ var BASE_STYLE = {
 		}
 	}]
 };
+function pickShockwaveTarget(map) {
+	const clusters = map.queryRenderedFeatures(void 0, { layers: ["clusters"] });
+	let best = null;
+	for (const f of clusters) {
+		const props = f.properties ?? {};
+		const rojo = Number(props["rojo"] ?? 0);
+		const amarillo = Number(props["amarillo"] ?? 0);
+		if (rojo === 0 && amarillo === 0) continue;
+		const severity = rojo > 0 ? "ROJO" : "AMARILLO";
+		const count = Number(props["point_count"] ?? 0);
+		if (!best || severity === "ROJO" && best.severity === "AMARILLO" || severity === best.severity && rojo > best.rojo || severity === best.severity && rojo === best.rojo && count > best.count) best = {
+			coords: f.geometry.coordinates,
+			severity,
+			rojo,
+			count
+		};
+	}
+	return best;
+}
 function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMunicipalityId, onSelectSite, onSelectMunicipality, onReset }) {
 	const containerRef = (0, import_react.useRef)(null);
 	const mapRef = (0, import_react.useRef)(null);
@@ -34137,6 +34159,8 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 	};
 	const pulseFrameRef = (0, import_react.useRef)(null);
 	const pulseVisibilityHandlerRef = (0, import_react.useRef)(null);
+	const shockwaveTimerRef = (0, import_react.useRef)(null);
+	const shockwaveFrameRef = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
 		if (!containerRef.current || mapRef.current) return;
 		const map = new xp({
@@ -34490,6 +34514,26 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					"circle-stroke-opacity": .9
 				}
 			});
+			map.addSource("shockwave-source", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "cluster-shockwave",
+				type: "circle",
+				source: "shockwave-source",
+				layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+				paint: {
+					"circle-radius": 0,
+					"circle-color": "rgba(0,0,0,0)",
+					"circle-stroke-width": 2.5,
+					"circle-stroke-color": CRITICALITY_HEX.ROJO,
+					"circle-stroke-opacity": 0
+				}
+			});
 			let hoveredMunicipalityId = null;
 			if (map.getLayer("municipios-fill")) {
 				map.on("mousemove", "municipios-fill", (e) => {
@@ -34676,6 +34720,36 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 					if (document.visibilityState === "visible" && pulseFrameRef.current == null) pulseFrameRef.current = requestAnimationFrame(animatePulse);
 				};
 				document.addEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+				const fireShockwave = () => {
+					if (document.visibilityState === "hidden") return;
+					const target = pickShockwaveTarget(map);
+					const source = map.getSource("shockwave-source");
+					if (!target || !source || !map.getLayer("cluster-shockwave")) return;
+					source.setData({
+						type: "FeatureCollection",
+						features: [{
+							type: "Feature",
+							properties: {},
+							geometry: {
+								type: "Point",
+								coordinates: target.coords
+							}
+						}]
+					});
+					map.setPaintProperty("cluster-shockwave", "circle-stroke-color", CRITICALITY_HEX[target.severity]);
+					if (shockwaveFrameRef.current != null) cancelAnimationFrame(shockwaveFrameRef.current);
+					const start = performance_default.now();
+					const step = (now) => {
+						const t = Math.min((now - start) / SHOCKWAVE_DURATION_MS, 1);
+						const eased = 1 - Math.pow(1 - t, 3);
+						map.setPaintProperty("cluster-shockwave", "circle-radius", eased * SHOCKWAVE_MAX_RADIUS);
+						map.setPaintProperty("cluster-shockwave", "circle-stroke-opacity", .5 * (1 - eased));
+						shockwaveFrameRef.current = t < 1 ? requestAnimationFrame(step) : null;
+					};
+					shockwaveFrameRef.current = requestAnimationFrame(step);
+				};
+				shockwaveTimerRef.current = setInterval(fireShockwave, SHOCKWAVE_INTERVAL_MS);
+				setTimeout(fireShockwave, 1200);
 			}
 			readyRef.current = true;
 			pendingRef.current.forEach((fn) => fn());
@@ -34686,6 +34760,8 @@ function MapCanvas({ sites, municipalities, showHeatmap, selectedSiteId, focusMu
 			pendingRef.current = [];
 			if (pulseFrameRef.current != null) cancelAnimationFrame(pulseFrameRef.current);
 			if (pulseVisibilityHandlerRef.current) document.removeEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+			if (shockwaveTimerRef.current != null) clearInterval(shockwaveTimerRef.current);
+			if (shockwaveFrameRef.current != null) cancelAnimationFrame(shockwaveFrameRef.current);
 			sitePopup.remove();
 			clusterPopup.remove();
 			municipalityPopup.remove();
@@ -36563,7 +36639,7 @@ function DashboardPage() {
 				className: "absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "text-sm text-muted-foreground",
-					children: "Cargando dataset…"
+					children: "Cargando Datos…"
 				})
 			}),
 			!isMobile && overlayExpanded && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {

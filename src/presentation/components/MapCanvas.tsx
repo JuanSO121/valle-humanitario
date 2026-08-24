@@ -47,6 +47,19 @@ const CLUSTER_RADIUS_STEP = ["step", ["get", "point_count"], 16, 5, 22, 15, 28] 
 const prefersReducedMotion =
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+// --- Onda expansiva (shockwave) -----------------------------------------
+// Señal puntual y jerárquica que el pulso ambiental (arriba) no puede dar
+// por sí solo: todos los clusters críticos "respiran" al mismo volumen, así
+// que el ojo no tiene dónde aterrizar primero. Cada SHOCKWAVE_INTERVAL_MS
+// se recalcula cuál es el cluster más crítico ACTUALMENTE VISIBLE (no uno
+// fijo) y solo ese suelta una onda grande. Usa ease-out cúbico (arranca
+// rápido, desacelera) a propósito — distinto del pulso lineal — para que el
+// ojo distinga instintivamente "esto es ambiental" vs "esto es una alerta
+// puntual", sin necesidad de leer nada.
+const SHOCKWAVE_INTERVAL_MS = 6000;
+const SHOCKWAVE_DURATION_MS = 1500;
+const SHOCKWAVE_MAX_RADIUS = 240; // px en pantalla
+
 // El GeoJSON de límites y el dataset de sedes (Excel/ETL) no siempre
 // traen `municipalityCode` en el mismo formato exacto (ceros a la
 // izquierda, string vs number). Se normaliza UNA sola vez acá, a la hora
@@ -116,6 +129,43 @@ interface Props {
   onReset: () => void;
 }
 
+// Recorre los clusters actualmente renderizados y elige el "objetivo" de la
+// próxima onda: prioriza severidad (una sola sede ROJO le gana a un cluster
+// con 20 AMARILLO) y, como desempate dentro de la misma severidad, el
+// tamaño del grupo. Usa los conteos ya calculados en clusterProperties
+// (rojo/amarillo/point_count), no recorre sedes componentes.
+function pickShockwaveTarget(
+  map: MapLibreMap,
+): { coords: [number, number]; severity: "ROJO" | "AMARILLO"; rojo: number; count: number } | null {
+  const clusters = map.queryRenderedFeatures(undefined, { layers: ["clusters"] });
+  let best: { coords: [number, number]; severity: "ROJO" | "AMARILLO"; rojo: number; count: number } | null = null;
+
+  for (const f of clusters) {
+    const props = f.properties ?? {};
+    const rojo = Number(props["rojo"] ?? 0);
+    const amarillo = Number(props["amarillo"] ?? 0);
+    if (rojo === 0 && amarillo === 0) continue;
+
+    const severity: "ROJO" | "AMARILLO" = rojo > 0 ? "ROJO" : "AMARILLO";
+    const count = Number(props["point_count"] ?? 0);
+    const better =
+      !best ||
+      (severity === "ROJO" && best.severity === "AMARILLO") ||
+      (severity === best.severity && rojo > best.rojo) ||
+      (severity === best.severity && rojo === best.rojo && count > best.count);
+
+    if (better) {
+      best = {
+        coords: (f.geometry as GeoJSON_Point).coordinates as [number, number],
+        severity,
+        rojo,
+        count,
+      };
+    }
+  }
+  return best;
+}
+
 export function MapCanvas({
   sites,
   municipalities,
@@ -142,6 +192,10 @@ export function MapCanvas({
   // arriba, que corre en un closure distinto.
   const pulseFrameRef = useRef<number | null>(null);
   const pulseVisibilityHandlerRef = useRef<(() => void) | null>(null);
+  // Timer del intervalo de la onda expansiva + rAF id de su propia
+  // animación de expansión/desvanecido. Se limpian igual que el pulso.
+  const shockwaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const shockwaveFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -368,6 +422,33 @@ export function MapCanvas({
         },
       });
 
+      // --- Onda expansiva (shockwave) -------------------------------
+      // Source y layer independientes de "sedes": la data se recalcula en
+      // cada disparo (ver el driver más abajo) con las coordenadas del
+      // cluster objetivo del momento, no con un filtro contra "cluster_id"
+      // (que no es estable entre reclusters al hacer zoom/pan). Al ser una
+      // capa de circle sin listeners de click/mouseenter registrados,
+      // nunca interfiere con el handler de clic único de más abajo, que
+      // consulta explícitamente por capa ("sedes-point", "clusters",
+      // "municipios-fill").
+      map.addSource("shockwave-source", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "cluster-shockwave",
+        type: "circle",
+        source: "shockwave-source",
+        layout: { visibility: prefersReducedMotion ? "none" : "visible" },
+        paint: {
+          "circle-radius": 0,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-width": 2.5,
+          "circle-stroke-color": CRITICALITY_HEX.ROJO,
+          "circle-stroke-opacity": 0,
+        },
+      });
+
       // Hover de municipio: se trackea con feature-state (no con React
       // state) porque feature-state es lo que MapLibre está optimizado
       // para actualizar en cada frame de mousemove sin recalcular toda la
@@ -589,6 +670,57 @@ export function MapCanvas({
           }
         };
         document.addEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
+
+        // --- Driver de la onda expansiva ------------------------------
+        // Un `setInterval` (no un rAF recursivo como el pulso ambiental)
+        // porque acá no importa el drift de precisión — el pulso sí
+        // necesita ser un reloj continuo para que la "phase" de cada sede
+        // no salte, pero la onda solo necesita dispararse "más o menos"
+        // cada SHOCKWAVE_INTERVAL_MS. Cada disparo relee el cluster más
+        // crítico VISIBLE en ese instante (pickShockwaveTarget), así que
+        // si el usuario cambió de zoom/pan y apareció un cluster peor, el
+        // próximo tick ya apunta ahí — no hace falta invalidar nada.
+        const fireShockwave = () => {
+          if (document.visibilityState === "hidden") return;
+          const target = pickShockwaveTarget(map);
+          const source = map.getSource("shockwave-source") as maplibregl.GeoJSONSource | undefined;
+          if (!target || !source || !map.getLayer("cluster-shockwave")) return;
+
+          source.setData({
+            type: "FeatureCollection",
+            features: [
+              { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: target.coords } },
+            ],
+          });
+          map.setPaintProperty("cluster-shockwave", "circle-stroke-color", CRITICALITY_HEX[target.severity]);
+
+          // Si ya había una onda en curso (disparo previo aún animando),
+          // se corta acá: la nueva data ya movió el punto, seguir ese rAF
+          // viejo solo pisaría la animación nueva con radios del target
+          // anterior.
+          if (shockwaveFrameRef.current != null) {
+            cancelAnimationFrame(shockwaveFrameRef.current);
+          }
+
+          const start = performance.now();
+          const step = (now: number) => {
+            const t = Math.min((now - start) / SHOCKWAVE_DURATION_MS, 1);
+            // ease-out cúbico: arranca rápido, desacelera — como una onda
+            // expansiva real. Curva deliberadamente distinta al pulso
+            // lineal de arriba, para que el evento puntual se lea como tal.
+            const eased = 1 - Math.pow(1 - t, 3);
+            map.setPaintProperty("cluster-shockwave", "circle-radius", eased * SHOCKWAVE_MAX_RADIUS);
+            map.setPaintProperty("cluster-shockwave", "circle-stroke-opacity", 0.5 * (1 - eased));
+            shockwaveFrameRef.current = t < 1 ? requestAnimationFrame(step) : null;
+          };
+          shockwaveFrameRef.current = requestAnimationFrame(step);
+        };
+
+        shockwaveTimerRef.current = setInterval(fireShockwave, SHOCKWAVE_INTERVAL_MS);
+        // Primer disparo temprano (no espera el intervalo completo) para
+        // que la onda aparezca poco después de que el mapa termine de
+        // cargar sus clusters, en vez de recién a los 6s.
+        setTimeout(fireShockwave, 1200);
       }
 
       readyRef.current = true;
@@ -603,6 +735,8 @@ export function MapCanvas({
       if (pulseVisibilityHandlerRef.current) {
         document.removeEventListener("visibilitychange", pulseVisibilityHandlerRef.current);
       }
+      if (shockwaveTimerRef.current != null) clearInterval(shockwaveTimerRef.current);
+      if (shockwaveFrameRef.current != null) cancelAnimationFrame(shockwaveFrameRef.current);
       sitePopup.remove();
       clusterPopup.remove();
       municipalityPopup.remove();

@@ -1,20 +1,20 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-BwRZAZjs.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-WWiDAuYD.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "C:/Users/JJSO/Documents/Sec_General/HAROLD/VALLE-GEO/vallegeo-explorer/src/routes/__root.tsx",
 		children: ["/"],
-		preloads: ["/assets/index-BOUN3NVr.js"],
+		preloads: ["/assets/index-O6LBvB-r.js"],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-BOUN3NVr.js"
+			src: "/assets/index-O6LBvB-r.js"
 		} }]
 	},
 	"/": {
 		filePath: "C:/Users/JJSO/Documents/Sec_General/HAROLD/VALLE-GEO/vallegeo-explorer/src/routes/index.tsx",
 		children: void 0,
 		css: ["/assets/routes-CKRTiAqP.css"],
-		preloads: ["/assets/routes-5ZN2Egtw.js"]
+		preloads: ["/assets/routes-B17exAgy.js"]
 	}
 } });
 //#endregion
