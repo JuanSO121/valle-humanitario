@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-GyQBOOLC.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DjG2sGRo.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 function Breadcrumb({ viewState, municipalityName, siteName, onGoToAll, onGoToMunicipality }) {
@@ -35296,9 +35296,9 @@ var CRITICALITY_DESCRIPTION = {
 	SIN_DETALLE: "Sin información suficiente para clasificar el riesgo todavía."
 };
 var CRITICALITY_SHORT_LABEL = {
-	ROJO: "Riesgo alto",
-	AMARILLO: "Riesgo medio",
-	VERDE: "Riesgo bajo",
+	ROJO: "Grave",
+	AMARILLO: "Moderado",
+	VERDE: "Leve",
 	SIN_DETALLE: "Sin evaluar"
 };
 var ZONE_LABEL = {

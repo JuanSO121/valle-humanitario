@@ -19,8 +19,8 @@ export const CRITICALITY_DESCRIPTION: Record<Criticality, string> = {
 };
 
 export const CRITICALITY_SHORT_LABEL: Record<Criticality, string> = {
-  ROJO: "Riesgo alto",
-  AMARILLO: "Riesgo medio",
-  VERDE: "Riesgo bajo",
+  ROJO: "Grave",
+  AMARILLO: "Moderado",
+  VERDE: "Leve",
   SIN_DETALLE: "Sin evaluar",
 };
