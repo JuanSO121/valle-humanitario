@@ -1,6 +1,6 @@
 globalThis.__nitro_main__ = import.meta.url;
 globalThis.__nitro_main__ = import.meta.url;
-import { n as HTTPError, r as defineLazyEventHandler, t as H3Core } from "./_libs/h3+rou3+srvx+unenv.mjs";
+import { n as HTTPError, r as defineLazyEventHandler, t as H3Core } from "./_libs/h3+rou3+srvx.mjs";
 import { r as FastResponse } from "./_libs/h3-v2+rou3+srvx.mjs";
 //#region #nitro-vite-setup
 function lazyService(loader) {
@@ -18,11 +18,11 @@ globalThis.__nitro_vite_envs__ = services;
 var findRouteRules = (m, p) => {
 	return [];
 };
-var _lazy_o9BW0a = defineLazyEventHandler(() => import("./_chunks/ssr-renderer.mjs"));
+var _lazy_I0BTTN = defineLazyEventHandler(() => import("./_chunks/ssr-renderer.mjs"));
 var findRoute = /* @__PURE__ */ (() => {
 	const data = {
 		route: "/**",
-		handler: _lazy_o9BW0a
+		handler: _lazy_I0BTTN
 	};
 	return ((_m, p) => {
 		return {

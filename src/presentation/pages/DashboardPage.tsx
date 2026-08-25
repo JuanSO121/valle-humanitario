@@ -1,289 +1,165 @@
-// DashboardPage.tsx
+/**
+ * DashboardPage.tsx
+ * -----------------------------------------------------------------------
+ * Junta todo: catálogos (useCatalogQueries), estado de navegación
+ * (viewState.ts), el mapa (MapCanvas), el timeline (Timeline) y el panel
+ * de destino (DestinoPanel). Es el único componente que conoce todas las
+ * piezas a la vez — cada hook/componente que ensambla ya es independiente
+ * y no sabe de los demás (MapCanvas no sabe de Timeline, Timeline no sabe
+ * de destinos, DestinoPanel no sabe del timeline). Mantener ese
+ * desacoplamiento es la razón de que este archivo exista en vez de que
+ * cada pieza se importe entre sí.
+ * -----------------------------------------------------------------------
+ */
 import { useEffect, useMemo, useState } from "react";
-import type { DiagnosticFilters } from "@/domain/entities";
-import { Breadcrumb } from "@/presentation/components/Breadcrumb";
-
+import { ClientOnly } from "@tanstack/react-router";
+import {
+  useOrigenes,
+  useDestinos,
+  useFlujos,
+} from "@/application/hooks/useCatalogQueries";
+import { useFlujosAsOf } from "@/application/hooks/useFlujosAsOf";
+import { INITIAL_VIEW_STATE, viewTransitions, type ViewState } from "@/presentation/state/viewState";
 import { MapCanvas } from "@/presentation/components/MapCanvas";
-import { SiteDetailPanel } from "@/presentation/components/SiteDetailPanel";
-import { CriticalityLegend } from "@/presentation/components/CriticalityLegend";
-import { WelcomeModal } from "@/presentation/components/WelcomeModal";
-import { useDatasetMeta, useMapView } from "@/presentation/hooks/useDiagnostics";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useFirstVisit } from "@/hooks/use-first-visit";
-import { normId } from "@/lib/id";
-import { ContextualPanel } from "../components/ContextualPanel";
-import { CriticalityStatsBar } from "../components/CriticalityStatsBar";
-import { FilterPopover } from "../components/FilterPopover";
-import { MunicipalityPanel } from "../components/MunicipalityPanel";
-import { INITIAL_VIEW_STATE, viewTransitions } from "../state/viewState";
-import { MobileMenu } from "../components/Mobilemenu";
+import { Timeline } from "@/presentation/components/Timeline";
+import { FlujosLegend } from "@/presentation/components/FlujosLegend";
+import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 
-const activeFilterCount = (f: DiagnosticFilters) =>
-  (f.search ? 1 : 0) + (f.criticality?.length ?? 0) + (f.onlyReviewRequired ? 1 : 0);
-
-const HINT_AUTOHIDE_MS = 4500;
-const WELCOME_MODAL_KEY = "criticidad-sismica-welcome-seen-v1";
+// Breakpoint único compartido con el CSS (md: en Tailwind = 768px) — no
+// existía un hook de este tipo en el proyecto viejo (ContextualPanel
+// recibía `isMobile` desde afuera, pero nunca se vio de dónde lo sacaba
+// en los archivos compartidos), así que se resuelve acá con la forma más
+// simple posible: sin librería, sin debounce, matchMedia + un listener.
+//
+// El estado inicial es SIEMPRE `false`, nunca `window.innerWidth` — esto
+// es TanStack Start con SSR real (ver router.tsx/server-entry.ts), así
+// que el primer render del cliente tiene que coincidir exactamente con
+// el HTML que ya mandó el servidor (que no tiene `window`) o React tira
+// un hydration mismatch. El valor real se aplica recién en el
+// `useEffect`, que solo corre en el cliente después de hidratar.
+function useIsMobile(breakpointPx = 768): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [breakpointPx]);
+  return isMobile;
+}
 
 export function DashboardPage() {
-  const [filters, setFilters] = useState<DiagnosticFilters>({});
-  const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
-  const [showHeatmap, setShowHeatmap] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [hintDismissed, setHintDismissed] = useState(false);
-  const [overlayCollapsed, setOverlayCollapsed] = useState(false);
+  const [viewState, setViewState] = useState<ViewState>(INITIAL_VIEW_STATE);
   const isMobile = useIsMobile();
-  const { show: showWelcome, dismiss: dismissWelcome } = useFirstVisit(WELCOME_MODAL_KEY);
 
-  const { data, isLoading, error } = useMapView(filters);
-  const { data: meta } = useDatasetMeta();
+  const { data: origenes } = useOrigenes();
+  const { data: destinos } = useDestinos();
+  const { data: flujosResponse } = useFlujos();
 
+  // Fechas únicas para el Timeline, derivadas de flujos[].porFecha — el
+  // backend no expone una ruta de "fechas disponibles" aparte porque
+  // sería puramente derivable de un dato que ya viaja en /flujos; agregar
+  // una ruta solo para esto duplicaría una fuente de verdad sin necesidad.
+  const timelineDates = useMemo(() => {
+    if (!flujosResponse?.flujos) return [];
+    const set = new Set<string>();
+    flujosResponse.flujos.forEach((f) => f.porFecha.forEach((p) => set.add(p.fecha)));
+    return [...set].sort();
+  }, [flujosResponse]);
+
+  const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
+
+  // MapCanvas consume `instantTransition` en el mismo commit en que
+  // cambian los `flujos` (su useEffect corre sobre las props ya
+  // actualizadas). Una vez consumido, hay que bajar la bandera para que
+  // el SIGUIENTE cambio (un "advance" del Timeline) vuelva a animar —
+  // si no se resetea acá, todo avance posterior a un seek quedaría
+  // congelado en modo instantáneo. clearInstantFlag ya es un no-op si la
+  // bandera está en false, así que este efecto es seguro de dejar
+  // corriendo en cada render.
   useEffect(() => {
-    const timer = setTimeout(() => setHintDismissed(true), HINT_AUTOHIDE_MS);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const selectedMunicipality = useMemo(
-    () =>
-      data?.municipalities.find((m) => normId(m.municipality.officialCode) === normId(viewState.municipalityId)) ?? null,
-    [data, viewState.municipalityId],
-  );
-  const selectedSite = useMemo(
-    () => data?.sites.find((s) => s.diagnostic.id === viewState.siteId) ?? null,
-    [data, viewState.siteId],
-  );
-  const municipalitySites = useMemo(
-    () =>
-      viewState.municipalityId
-        ? (data?.sites.filter((s) => normId(s.municipality?.officialCode) === normId(viewState.municipalityId)) ?? [])
-        : [],
-    [data, viewState.municipalityId],
-  );
-
-   const selectMunicipality = (id: string) => {
-    setHintDismissed(true);
-    const exists = data?.municipalities.some((m) => normId(m.municipality.officialCode) === normId(id));
-    if (!exists) {
-
-     const CERTIFIED_CODES = new Set(["76001", "76109", "76111", "76147", "76520", "76834", "76892"]);
-     if (!CERTIFIED_CODES.has(normId(id))) {
-       console.warn(`Municipio "${id}" no está en el dataset — revisar ETL/GeoJSON.`);
-     }
-     // TODO: mostrar mensaje al usuario ("municipio certificado, sin datos
-     // de la Gobernación" vs "sin diagnósticos aún") en vez de solo loguear.
-      return;
-    }
-    setViewState((prev) => viewTransitions.toMunicipality(id, prev));
-  };
-  const selectSite = (id: string) => {
-    setHintDismissed(true);
-    const view = data?.sites.find((s) => s.diagnostic.id === id);
-    setViewState((prev) => viewTransitions.toSite(id, view?.municipality?.officialCode ?? null, prev));
-  };
-  const goToAll = () => setViewState(viewTransitions.toAll());
-  const goToMunicipality = () => setViewState((prev) => viewTransitions.toMunicipalityFromSite(prev));
-
-  const panelOpen = viewState.level !== "ALL";
-  const filterCount = activeFilterCount(filters);
-  const showHint = viewState.level === "ALL" && !isLoading && !hintDismissed && !overlayCollapsed;
-  const overlayExpanded = isMobile || !overlayCollapsed;
+    if (!viewState.timelineInstant) return;
+    setViewState((prev) => viewTransitions.clearInstantFlag(prev));
+  }, [viewState.timelineInstant, viewState.timelineDate]);
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-background text-foreground">
-      {error ? (
-        <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-critical">
-          No fue posible cargar el dataset local.
-        </div>
-      ) : (
+    // `theme-ayudas`: activa el scope de custom properties definido en
+    // theme-ayudas.css (pegado al final de src/styles.css) — ver ese
+    // archivo para el razonamiento de por qué es un tema con scope y no
+    // un :root global.
+    <div className="theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background">
+      {/*
+        ClientOnly (no un simple `useEffect` + "mounted" flag casero):
+        maplibre-gl toca `document`/`window` apenas se IMPORTA el módulo
+        (MapCanvas.tsx llama `maplibregl.setWorkerUrl(...)` a nivel de
+        módulo, fuera de cualquier componente), así que ni siquiera puede
+        evaluarse ese `import` durante el render en el servidor — no es
+        solo un problema de qué se pinta, sino de qué se carga. ClientOnly
+        de TanStack Router existe exactamente para este caso: el bundle
+        del fallback se manda en el HTML servido, y el del `children`
+        (con MapCanvas y su import de maplibre-gl adentro) recién se
+        resuelve en el cliente.
+      */}
+      <ClientOnly
+        fallback={
+          <div className="absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground">
+            Cargando mapa…
+          </div>
+        }
+      >
         <MapCanvas
-          sites={data?.sites ?? []}
-          municipalities={data?.municipalities ?? []}
-          showHeatmap={showHeatmap}
-          selectedSiteId={viewState.siteId}
-          focusMunicipalityId={viewState.municipalityId}
-          onSelectSite={selectSite}
-          onSelectMunicipality={selectMunicipality}
-          onReset={goToAll}
+          origenes={origenes ?? []}
+          destinos={destinos ?? []}
+          flujos={flujosParaMapa}
+          instantTransition={viewState.timelineInstant}
+          selectedDestinoId={viewState.destinoId}
+          onSelectDestino={(id) => setViewState((prev) => viewTransitions.toDestino(id, prev))}
+          onReset={() => setViewState((prev) => viewTransitions.toAll(prev))}
+        />
+      </ClientOnly>
+
+      {/*
+        Legend: card fija en desktop, botón+popover en mobile — ver
+        razonamiento en FlujosLegend.tsx. Se oculta con destino abierto en
+        AMBOS casos (ya lo hacía antes de este cambio): con el panel
+        abierto no aporta nada que el panel mismo no explique mejor.
+      */}
+      {!viewState.destinoId && <FlujosLegend compact={isMobile} />}
+
+      {viewState.level === "DESTINO" && viewState.destinoId && (
+        <DestinoPanel
+          destinoId={viewState.destinoId}
+          isMobile={isMobile}
+          onClose={() => setViewState((prev) => viewTransitions.toAll(prev))}
         />
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-col gap-2 p-3 md:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="pointer-events-auto flex min-w-0 items-center gap-1.5">
-            <div
-              className={`min-w-0 rounded-full border border-border bg-surface/95 px-3.5 py-1.5 shadow-sm backdrop-blur ${
-                isMobile ? "max-w-[60%]" : "flex-1 md:flex-initial"
-              }`}
-            >
-              <h1 className="truncate text-sm font-semibold leading-tight md:text-[15px]">Criticidad Sísmica Escolar</h1>
-            </div>
-
-            {!isMobile && (
-              <button
-                type="button"
-                onClick={() => setOverlayCollapsed((v) => !v)}
-                aria-expanded={overlayExpanded}
-                aria-label={overlayExpanded ? "Ocultar panel de resumen" : "Mostrar panel de resumen"}
-                title={overlayExpanded ? "Ocultar panel" : "Mostrar panel"}
-                className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface/95 text-muted-foreground shadow-sm backdrop-blur hover:text-foreground"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden
-                  className={`transition-transform duration-200 ${overlayExpanded ? "rotate-0" : "-rotate-90"}`}
-                >
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {!isMobile && (
-            <FilterPopover
-              filters={filters}
-              showHeatmap={showHeatmap}
-              onToggleHeatmap={() => setShowHeatmap((v) => !v)}
-              onChange={setFilters}
-            />
-          )}
-        </div>
-
-        {overlayExpanded && (
-          <>
-            <div className="flex items-center gap-2">
-              <Breadcrumb
-                viewState={viewState}
-                municipalityName={selectedMunicipality?.municipality.name ?? null}
-                siteName={selectedSite ? (selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? null) : null}
-                onGoToAll={goToAll}
-                onGoToMunicipality={goToMunicipality}
-              />
-            </div>
-
-            {!isMobile && data && (
-              <CriticalityStatsBar
-                filters={filters}
-                onChange={setFilters}
-                total={data.totals.total}
-                red={data.totals.red}
-                yellow={data.totals.yellow}
-                green={data.totals.green}
-              />
-            )}
-          </>
-        )}
-      </div>
-
-      {showHint && (
-        <div className="pointer-events-none absolute inset-x-0 top-16 z-10 flex justify-center px-3 transition-opacity duration-300 md:top-24">
-          <button
-            type="button"
-            onClick={() => setHintDismissed(true)}
-            className="pointer-events-auto flex items-center gap-2 rounded-full border border-border bg-surface/90 px-4 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur hover:text-foreground"
-          >
-            Explora el mapa para consultar municipios y sedes
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
-              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
+      {/*
+        En desktop el panel de destino es una card lateral (top-right, ver
+        DesktopCard en ContextualPanel.tsx) que nunca toca la franja de
+        abajo — el Timeline puede quedarse visible siempre.
+        En mobile el panel es un MobileSheet anclado abajo (70vh) — mismo
+        borde de pantalla que el Timeline. Mostrar los dos a la vez los
+        hace pelear por el mismo espacio (y ambos en z-10, sin orden de
+        apilado garantizado). Se oculta el Timeline mientras haya un
+        destino abierto en mobile: es la solución más simple que no
+        requiere que DashboardPage conozca el estado interno
+        expanded/collapsed del sheet (eso vive dentro de ContextualPanel,
+        a propósito, para no acoplar los dos componentes).
+      */}
+      {!(isMobile && viewState.destinoId) && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4">
+          <Timeline
+            dates={timelineDates}
+            currentDate={viewState.timelineDate}
+            onActivate={(first) => setViewState((prev) => viewTransitions.startTimeline(first, prev))}
+            onSeek={(date) => setViewState((prev) => viewTransitions.seekTimeline(date, prev))}
+            onAdvance={(date) => setViewState((prev) => viewTransitions.advanceTimeline(date, prev))}
+            onExit={() => setViewState((prev) => viewTransitions.exitTimeline(prev))}
+          />
         </div>
       )}
-
-      {isMobile && (
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(true)}
-          aria-label="Abrir menú de filtros y leyenda"
-          className="pointer-events-auto fixed right-3 top-24 z-20 flex items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          {filterCount > 0 && (
-            <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
-              {filterCount}
-            </span>
-          )}
-        </button>
-      )}
-
-      {isLoading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground">Cargando Datos…</p>
-        </div>
-      )}
-
-      {/* Leyenda — antes había un bloque inline duplicado (colores +
-          clusters escritos a mano acá) que repetía, con menos detalle, lo
-          que ya vive en CriticalityLegend.tsx. Se reemplaza por ese
-          componente para tener una sola fuente de verdad del texto
-          explicativo, y porque ya incluye la descripción en lenguaje
-          simple de cada nivel (CRITICALITY_DESCRIPTION), no solo el
-          nombre del color. Sigue dependiendo de "overlayExpanded" para
-          ocultarse junto con el resto del panel superior al colapsarlo. */}
-      {!isMobile && overlayExpanded && (
-        <div className="pointer-events-none absolute bottom-4 left-3 z-10 max-w-[15rem] md:bottom-6 md:left-4">
-          <div className="pointer-events-auto">
-            <CriticalityLegend />
-          </div>
-        </div>
-      )}
-
-      {isMobile && (
-        <MobileMenu
-          open={mobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
-          filters={filters}
-          onChange={setFilters}
-          showHeatmap={showHeatmap}
-          onToggleHeatmap={() => setShowHeatmap((v) => !v)}
-          totals={
-            data
-              ? { total: data.totals.total, red: data.totals.red, yellow: data.totals.yellow, green: data.totals.green }
-              : undefined
-          }
-        />
-      )}
-
-      {panelOpen && viewState.level === "MUNICIPALITY" && selectedMunicipality && (
-        <ContextualPanel
-          isMobile={isMobile}
-          title={selectedMunicipality.municipality.name}
-          subtitle={`${selectedMunicipality.affectedSites} sedes`}
-          onClose={goToAll}
-          transitionKey={`municipality-${selectedMunicipality.municipality.id}`}
-        >
-          <MunicipalityPanel summary={selectedMunicipality} sites={municipalitySites} onSelectSite={selectSite} />
-        </ContextualPanel>
-      )}
-
-      {panelOpen && viewState.level === "SITE" && selectedSite && (
-        <ContextualPanel
-          isMobile={isMobile}
-          title={selectedSite.site?.name ?? selectedSite.diagnostic.sourceSite ?? "Sede"}
-          subtitle={selectedSite.institution?.name ?? selectedSite.diagnostic.sourceInstitution ?? undefined}
-          onBack={goToMunicipality}
-          onClose={goToAll}
-          transitionKey={`site-${selectedSite.diagnostic.id}`}
-        >
-          <SiteDetailPanel view={selectedSite} />
-        </ContextualPanel>
-      )}
-
-      {meta && !isMobile && (
-        <p className="pointer-events-none absolute bottom-2 right-3 z-10 font-mono text-[10px] text-muted-foreground/70">
-          ETL {new Date(meta.generatedAt).toLocaleDateString("es-CO")}
-        </p>
-      )}
-
-      {/* Modal de bienvenida — se muestra una sola vez por navegador
-          (useFirstVisit) para que alguien nuevo sepa qué está viendo antes
-          de tocar nada: qué significan los colores, qué es un cluster, y
-          cómo navegar entre municipio y sede. Va al final para quedar por
-          encima de todo lo demás (z-30 vs z-10/z-20 del resto de overlays). */}
-      {showWelcome && <WelcomeModal onClose={dismissWelcome} />}
     </div>
   );
 }

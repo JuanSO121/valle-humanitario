@@ -272,3 +272,113 @@
     margin-top: 60px;
   }
 }
+
+/*
+ * Tema "Ayudas Humanitarias" — scoped a `.theme-ayudas`, NO toca :root.
+ * -----------------------------------------------------------------------
+ * Deliberadamente no es una variante de `.dark`: `.dark` en este archivo
+ * trae consigo semántica de --critical/--warning/--safe/--cluster (estados
+ * de riesgo sísmico) que no existe en este dominio, y está pensado como
+ * modo oscuro OPCIONAL del tema claro institucional. Este es un tema
+ * propio, con su propio acento (azul Cali / naranja Cartago en vez del
+ * azul territorial de criticidad sísmica), que convive con `:root` y
+ * `.dark` sin pisarlos — cualquier otra pantalla del repo que use este
+ * mismo styles.css sigue exactamente igual.
+ *
+ * Uso: agregar la clase `theme-ayudas` al contenedor raíz de
+ * DashboardPage.tsx (ver comentario en ese archivo). Todo lo que ya
+ * escribimos usa utilidades Tailwind estándar (bg-background, bg-surface,
+ * border-border, text-muted-foreground, bg-primary, text-primary) — nada
+ * de eso cambia, solo el VALOR que esas utilidades resuelven dentro de
+ * este scope.
+ * -----------------------------------------------------------------------
+ */
+
+.theme-ayudas {
+  /* Radio un poco más generoso que el institucional (0.375rem) — más
+     cerca de Linear/Arc/Vercel, coherente con el look inmersivo/moderno
+     acordado. Afecta rounded-md/rounded-lg/rounded-xl vía @theme inline
+     de arriba; rounded-full (botones circulares, dots) no se ve afectado. */
+  --radius: 0.625rem;
+
+  /* Fondo casi negro con matiz azul frío — mismo tono que ya está
+     hardcodeado en MapCanvas.tsx (`background-color: "#0b0e14"` del
+     estilo base de MapLibre), para que el chrome de React y el canvas del
+     mapa no se noten como dos fondos distintos empalmados. */
+  --background: oklch(0.16 0.018 258);
+  --foreground: oklch(0.94 0.006 255);
+
+  /* Surfaces: un escalón y dos por encima del fondo, no blancos — los
+     paneles flotantes (FlujosLegend, DestinoPanel, Timeline) tienen que
+     leerse como "vidrio oscuro sobre el mapa", no como tarjetas claras
+     flotando en un fondo oscuro (que es lo que pasaría heredando
+     --surface: oklch(1 0 0) del :root institucional sin este override). */
+  --surface: oklch(0.225 0.02 258);
+  --surface-raised: oklch(0.28 0.022 258);
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--foreground);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+
+  /* Primary = azul del origen Cali (#2f6fed en MapCanvas.ORIGEN_COLOR),
+     no el azul territorial de criticidad sísmica — mismo criterio de "un
+     solo color fuente de verdad" que ya se usó ahí: si el día de mañana
+     alguien cambia ORIGEN_COLOR también hay que tocar esta línea. */
+  --primary: oklch(0.58 0.19 258);
+  --primary-foreground: oklch(0.98 0.01 258);
+  --ring: var(--primary);
+
+  --secondary: oklch(0.28 0.018 258);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.24 0.016 258);
+  --muted-foreground: oklch(0.68 0.02 255);
+
+  /* Accent = naranja Cartago (#e6883c) — el segundo origen animable.
+     Reservado para resaltar ese origen puntualmente, no para uso general
+     de UI (evita competir visualmente con el azul de Cali como color
+     "primario de facto" en botones/enlaces). */
+  --accent: oklch(0.72 0.14 58);
+  --accent-foreground: oklch(0.18 0.02 58);
+
+  --destructive: oklch(0.62 0.21 25);
+  --destructive-foreground: oklch(0.98 0.01 25);
+}
+
+/* MapLibre chrome: mismo criterio que el bloque original del archivo,
+   pero re-tematizado a superficies oscuras. Con scope a `.theme-ayudas`
+   para no afectar el mapa (si lo hay) de otras pantallas del repo. */
+.theme-ayudas .maplibregl-ctrl-group {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 1px 3px oklch(0 0 0 / 35%) !important;
+}
+.theme-ayudas .maplibregl-ctrl-group button + button {
+  border-top-color: var(--border) !important;
+}
+.theme-ayudas .maplibregl-ctrl-group button {
+  /* Los íconos +/- de MapLibre vienen dibujados para chrome claro
+     (trazo oscuro) — sobre --surface oscuro quedan invisibles sin esto. */
+  filter: invert(1) brightness(1.15);
+}
+.theme-ayudas .maplibregl-ctrl-attrib {
+  background: color-mix(in oklch, var(--surface) 85%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 10px;
+}
+.theme-ayudas .maplibregl-ctrl-attrib a {
+  color: var(--muted-foreground) !important;
+}
+.theme-ayudas .maplibregl-popup-content {
+  background: var(--surface) !important;
+  color: var(--foreground) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 20px oklch(0 0 0 / 45%) !important;
+  padding: 12px !important;
+}
+.theme-ayudas .maplibregl-popup-tip {
+  border-top-color: var(--surface) !important;
+  border-bottom-color: var(--surface) !important;
+}
