@@ -226,6 +226,24 @@
   outline-offset: 2px;
 }
 
+/*
+ * NUEVO: usado por TimelineStatsHUD para el "+N" que aparece un instante
+ * cuando el timeline avanza (nunca en un seek — ver el prop `instant` del
+ * componente). Mismo timing feel (cubic-bezier 0.16,1,0.3,1) que
+ * `bar-grow` ya usa en OrigenPanel/DestinoPanel para las barras de
+ * porcentaje, para no introducir una tercera curva de easing al sistema.
+ */
+@keyframes toast-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* MapLibre chrome adopts the light design system */
 .maplibregl-ctrl-group {
   background: var(--surface) !important;
@@ -338,10 +356,11 @@
   color: var(--foreground);
 
   /* Surfaces: un escalón y dos por encima del fondo, no blancos — los
-     paneles flotantes (FlujosLegend, DestinoPanel, Timeline) tienen que
-     leerse como "vidrio oscuro sobre el mapa", no como tarjetas claras
-     flotando en un fondo oscuro (que es lo que pasaría heredando
-     --surface: oklch(1 0 0) del :root institucional sin este override). */
+     paneles flotantes (FlujosLegend, DestinoPanel, Timeline,
+     TimelineStatsHUD) tienen que leerse como "vidrio oscuro sobre el
+     mapa", no como tarjetas claras flotando en un fondo oscuro (que es
+     lo que pasaría heredando --surface: oklch(1 0 0) del :root
+     institucional sin este override). */
   --surface: oklch(0.225 0.02 258);
   --surface-raised: oklch(0.28 0.022 258);
   --card: var(--surface);

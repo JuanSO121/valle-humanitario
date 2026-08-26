@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DHkWf3QO.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-kaJ05xsw.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -247,12 +247,35 @@ var viewTransitions = {
 * onSeek(), el intervalo de reproducción automática llama onAdvance().
 * Mismo principio que MapCanvas/arcAnimationEngine: la lógica de tiempo
 * vive en un solo lugar (el intervalo de abajo), el resto es traducción.
+*
+* FIX (bug "el timeline se queda pegado en la segunda fecha"): el efecto
+* que arma el `setInterval` depende solo de `[playing]` a propósito —
+* cada play/pause reinicia el conteo desde cero, en vez de reiniciar el
+* intervalo (y por lo tanto el conteo de 650ms) en CADA cambio de fecha,
+* lo que se vería entrecortado. Pero eso significa que la función que
+* corre en el intervalo se crea UNA sola vez por cada play, y JavaScript
+* la deja con el `dates`/`currentDate` de ESE momento capturados por
+* closure — no se actualizan solos aunque lleguen props nuevas en cada
+* render. El código anterior leía `dates`/`currentDate` directo de los
+* props dentro del callback del intervalo, así que en cada tick seguía
+* viendo la fecha con la que arrancó la reproducción, nunca la fecha a
+* la que ya se había avanzado — el resultado observable era "avanza una
+* vez y después se traba", porque cada tick volvía a calcular el mismo
+* "siguiente" de la fecha original. La solución estándar de React para
+* esto es leer los valores desde un `ref` que se actualiza en cada
+* render (sin pasar por el ciclo de efectos): el intervalo sigue
+* viviendo el mismo tiempo total, pero en cada tick lee el valor de
+* verdad más reciente, no el que tenía al nacer.
 * -----------------------------------------------------------------------
 */
 var PLAYBACK_STEP_MS = 650;
 function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
 	const [playing, setPlaying] = (0, import_react.useState)(false);
 	const intervalRef = (0, import_react.useRef)(null);
+	const datesRef = (0, import_react.useRef)(dates);
+	datesRef.current = dates;
+	const currentDateRef = (0, import_react.useRef)(currentDate);
+	currentDateRef.current = currentDate;
 	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
 	const atEnd = currentIndex >= 0 && currentIndex === dates.length - 1;
 	(0, import_react.useEffect)(() => {
@@ -262,7 +285,9 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 			return;
 		}
 		intervalRef.current = setInterval(() => {
-			const next = dates[(currentDate ? dates.indexOf(currentDate) : -1) + 1];
+			const freshDates = datesRef.current;
+			const freshCurrent = currentDateRef.current;
+			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
 			if (next === void 0) {
 				setPlaying(false);
 				return;
@@ -349,6 +374,70 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 				children: "Ver todo"
 			})
 		]
+	});
+}
+/**
+* TimelineStatsHUD.tsx
+* -----------------------------------------------------------------------
+* El número "primera plana" del timeline: total acumulado de despachos a
+* la fecha actual, con un "+N" que aparece un instante cuando avanza. El
+* delta NO se muestra en un seek/salto (prop `instant`) — mismo criterio
+* que ya usa viewState.timelineInstant y que usan las notificaciones por
+* destino en MapCanvas: un salto no es un evento nuevo que anunciar.
+*
+* Las burbujas de MapCanvas (dispatchToastEngine) cubren el "a dónde
+* llegó"; este HUD cubre el "cuánto en total", que no tiene una ubicación
+* geográfica natural para anclar en el mapa.
+* -----------------------------------------------------------------------
+*/
+var DELTA_VISIBLE_MS = 1800;
+function TimelineStatsHUD({ totalDespachos, currentDate, instant }) {
+	const prevTotalRef = (0, import_react.useRef)(null);
+	const [delta, setDelta] = (0, import_react.useState)(0);
+	(0, import_react.useEffect)(() => {
+		const prev = prevTotalRef.current;
+		prevTotalRef.current = totalDespachos;
+		if (prev === null || instant) {
+			setDelta(0);
+			return;
+		}
+		const diff = totalDespachos - prev;
+		if (diff <= 0) {
+			setDelta(0);
+			return;
+		}
+		setDelta(diff);
+		const timeout = setTimeout(() => setDelta(0), DELTA_VISIBLE_MS);
+		return () => clearTimeout(timeout);
+	}, [totalDespachos]);
+	(0, import_react.useEffect)(() => {
+		if (currentDate === null) {
+			prevTotalRef.current = null;
+			setDelta(0);
+		}
+	}, [currentDate]);
+	if (!currentDate) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex justify-center px-4",
+		"aria-live": "polite",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-baseline gap-2 rounded-full border border-border bg-surface/95 px-4 py-1.5 shadow-sm backdrop-blur",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "font-display text-xl font-semibold tabular-nums text-foreground",
+					children: totalDespachos.toLocaleString("es-CO")
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "label-caps text-[10px]",
+					children: ["despachos al ", currentDate]
+				}),
+				delta > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "ml-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-primary",
+					style: { animation: "toast-pop 260ms cubic-bezier(0.16,1,0.3,1) both" },
+					children: ["+", delta.toLocaleString("es-CO")]
+				}, `${currentDate}-${delta}`)
+			]
+		})
 	});
 }
 /**
@@ -1049,10 +1138,27 @@ function DashboardPage() {
 		return [...set].sort();
 	}, [flujosResponse]);
 	const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
+	const totalDespachosAsOf = (0, import_react.useMemo)(() => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0), [flujosParaMapa]);
+	/**
+	* FIX (bug "el timeline no muestra animación de líneas"): la rama sin
+	* selección (nivel ALL) devolvía `[]` en vez de `flujosParaMapa`. Este
+	* mismo array es el que se le pasa a MapCanvas como `flujos` — los
+	* arcos que efectivamente dibuja y anima. Reproducir el timeline NO
+	* requiere tener un origen/destino seleccionado (de hecho el caso
+	* típico es justo ALL: "ver por días hacia dónde se despachó" en toda
+	* la red), así que con el `[]` de antes, el mapa se quedaba sin ningún
+	* arco que animar apenas no había selección — la fecha del timeline
+	* cambiaba (el estado sí avanzaba) pero no había nada dibujado para
+	* mostrar ese avance, y se leía como "no funciona". Ahora, sin
+	* selección, se devuelven TODOS los flujos vigentes a la fecha actual.
+	* El comportamiento con un origen/destino seleccionado no cambia: sigue
+	* filtrando exactamente igual que antes (y sigue siendo lo que reciben
+	* OrigenPanel/DestinoPanel para sus propios totales).
+	*/
 	const flujosFiltrados = (0, import_react.useMemo)(() => {
 		if (viewState.origenId) return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
 		if (viewState.destinoId) return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
-		return [];
+		return flujosParaMapa;
 	}, [
 		flujosParaMapa,
 		viewState.origenId,
@@ -1073,6 +1179,11 @@ function DashboardPage() {
 				className: "absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground",
 				children: "Cargando mapa…"
 			}) }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TimelineStatsHUD, {
+				totalDespachos: totalDespachosAsOf,
+				currentDate: viewState.timelineDate,
+				instant: viewState.timelineInstant
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
 				viewState,
 				seleccionNombre,

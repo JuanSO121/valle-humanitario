@@ -6,6 +6,13 @@
  * inyectado (ver arcAnimationEngine.test.ts), sin navegador. MapCanvas.tsx
  * solo llama tick() y traduce el resultado a llamadas de MapLibre; nunca
  * decide fases ahí.
+ *
+ * NUEVO: EngineFrame.justSettled — los arcos que TERMINARON de crecer en
+ * este tick puntual (evento de "acaba de llegar", no estado acumulado).
+ * Lo agrega dispatchToastEngine/MapCanvas para disparar la notificación
+ * de despacho exactamente cuando el arco toca visualmente el destino, en
+ * vez de cuando cambian los props de flujos (que es antes de que se vea
+ * nada, dado el delay de stagger + los 900ms de crecimiento).
  * -----------------------------------------------------------------------
  */
 import { easeOutCubic } from "./arcGeometry";
@@ -33,6 +40,15 @@ export interface ArcFrame {
 export interface EngineFrame {
   growing: ArcFrame[];
   settled: ArcFrame[];
+  /**
+   * Arcos que TERMINARON de crecer justo en este tick — evento puntual,
+   * no acumulado (a diferencia de `settled`, que siempre trae TODOS los
+   * arcos ya asentados). Un arco aparece acá una única vez, en el frame
+   * exacto en que su `sampleFraction` llega a 1. `snapTo()` (seek del
+   * timeline) nunca lo puebla: un salto no tiene "llegada" visible que
+   * notificar, igual que tampoco anima el crecimiento.
+   */
+  justSettled: ArcFrame[];
   pulseLoopT: number; // 0..1, reloj compartido de pulso — ver nota de diseño en la conversación:
   // todos los arcos asentados comparten el mismo reloj a propósito, para leerse
   // como un único impulso recorriendo la red, no como parpadeos independientes.
@@ -88,7 +104,9 @@ export function createArcAnimationEngine() {
    * fecha destino pasa directo a "settled", sin transición. Nunca se
    * anima un salto — ni hacia adelante ni hacia atrás (ver razonamiento
    * en la conversación: encoger una línea ya dibujada se lee como un
-   * error visual, no como "retrocedió en el tiempo").
+   * error visual, no como "retrocedió en el tiempo"). Por la misma razón
+   * no puebla `justSettled` en el siguiente tick: un salto no tiene una
+   * "llegada" que notificar.
    */
   function snapTo(liveKeys: string[], weights: Record<string, number>, now: number) {
     sync(liveKeys, weights);
@@ -108,6 +126,7 @@ export function createArcAnimationEngine() {
   function tick(now: number): EngineFrame {
     const growing: ArcFrame[] = [];
     const settled: ArcFrame[] = [];
+    const justSettled: ArcFrame[] = [];
 
     for (const record of registry.values()) {
       if (record.phase === "growing" && record.enteredAt !== null) {
@@ -116,7 +135,9 @@ export function createArcAnimationEngine() {
         const eased = easeOutCubic(t);
         if (eased >= 1) {
           record.phase = "settled";
-          settled.push({ key: record.key, phase: "settled", sampleFraction: 1, weight: record.weight });
+          const frame: ArcFrame = { key: record.key, phase: "settled", sampleFraction: 1, weight: record.weight };
+          settled.push(frame);
+          justSettled.push(frame);
         } else {
           growing.push({ key: record.key, phase: "growing", sampleFraction: eased, weight: record.weight });
         }
@@ -126,7 +147,7 @@ export function createArcAnimationEngine() {
     }
 
     const pulseLoopT = (now % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;
-    return { growing, settled, pulseLoopT };
+    return { growing, settled, justSettled, pulseLoopT };
   }
 
   return { sync, enter, snapTo, bumpWeight, tick };

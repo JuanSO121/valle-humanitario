@@ -8,6 +8,7 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl);
 import type { Origen, Flujo, DestinoResumenLista } from "@/domain/entities";
 import { buildArcCoordinates, buildPulseGradient, easeOutCubic, type LngLat } from "./arcGeometry";
 import { createArcAnimationEngine } from "./arcAnimationEngine";
+import { createDispatchToastEngine, type ToastFrame } from "./dispatchToastEngine";
 import { normId } from "@/lib/id";
 import municipalBoundariesRaw from "@/data/valle-municipios.json";
 
@@ -89,6 +90,14 @@ interface Props {
   destinos: DestinoResumenLista[];
   flujos: Flujo[];
   instantTransition: boolean;
+  /**
+   * true cuando viewState.timelineDate !== null en DashboardPage. Gatea
+   * las notificaciones de despacho: solo tienen sentido narrativo durante
+   * la reproducción del timeline. Con el timeline apagado, seleccionar un
+   * origen/destino filtra `flujos` igual que siempre, pero no dispara un
+   * aluvión de burbujas para arcos que ya estaban ahí desde siempre.
+   */
+  timelineActive: boolean;
   selectedDestinoId: string | null;
   selectedOrigenId: string | null;
   onSelectDestino: (id: string) => void;
@@ -104,11 +113,71 @@ function popupHtml(label: string): string {
            </div>`;
 }
 
+/**
+ * Pinta las notificaciones de despacho como <div>s imperativos posicionados
+ * con map.project(), en vez de vía React state: son efímeras (~2.6s, ver
+ * dispatchToastEngine) y se reposicionan en cada frame del mismo rAF que ya
+ * mueve los arcos y el pulso de origen — llevarlas por React forzaría un
+ * re-render por notificación por frame, mismo motivo por el que los arcos
+ * tampoco pasan por React state acá.
+ */
+function renderToastFrames(
+  map: MapLibreMap,
+  layer: HTMLDivElement,
+  frames: ToastFrame[],
+  nodes: Map<string, HTMLDivElement>,
+  coordsById: Map<string, LngLat>,
+) {
+  const seen = new Set<string>();
+
+  for (const frame of frames) {
+    seen.add(frame.id);
+    const coords = coordsById.get(frame.destinoId);
+    if (!coords) continue;
+
+    let node = nodes.get(frame.id);
+    if (!node) {
+      node = document.createElement("div");
+      node.className =
+        "pointer-events-none absolute left-0 top-0 flex items-center gap-1.5 whitespace-nowrap rounded-full " +
+        "border border-border bg-surface/95 px-2.5 py-1 text-[11px] font-medium text-foreground shadow-lg " +
+        "backdrop-blur will-change-transform";
+      node.innerHTML =
+        '<span class="inline-block size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true"></span><span></span>';
+      layer.appendChild(node);
+      nodes.set(frame.id, node);
+    }
+
+    const label = node.querySelector("span:last-child");
+    if (label) label.textContent = `+${frame.count.toLocaleString("es-CO")} · ${frame.destinoNombre}`;
+
+    const point = map.project(coords);
+    const stackOffset = frame.stackIndex * 26;
+    const enterOffset = frame.phase === "entering" ? (1 - frame.progress) * 8 : 0;
+    const exitOffset = frame.phase === "exiting" ? (1 - frame.progress) * -6 : 0;
+    const opacity = frame.phase === "holding" ? 1 : frame.progress;
+    const scale = frame.phase === "entering" ? 0.85 + frame.progress * 0.15 : 1;
+
+    // +14/-34 en x/y: burbuja arriba-a-la-derecha del punto, como una
+    // etiqueta de mapa, sin taparlo.
+    node.style.transform = `translate3d(${point.x + 14}px, ${point.y - 34 - stackOffset + enterOffset + exitOffset}px, 0) scale(${scale})`;
+    node.style.opacity = String(opacity);
+  }
+
+  for (const [id, node] of nodes) {
+    if (!seen.has(id)) {
+      node.remove();
+      nodes.delete(id);
+    }
+  }
+}
+
 export function MapCanvas({
   origenes,
   destinos,
   flujos,
   instantTransition,
+  timelineActive,
   selectedDestinoId,
   selectedOrigenId,
   onSelectDestino,
@@ -116,16 +185,25 @@ export function MapCanvas({
   onReset,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const toastLayerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const readyRef = useRef(false);
   const pendingRef = useRef<Array<() => void>>([]);
   const whenReady = (fn: () => void) => (readyRef.current ? fn() : pendingRef.current.push(fn));
 
   const engineRef = useRef(createArcAnimationEngine());
+  const toastEngineRef = useRef(createDispatchToastEngine());
+  const toastNodesRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const rafRef = useRef<number | null>(null);
   const coordsCacheRef = useRef<Map<string, LngLat[]>>(new Map());
   const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset });
   handlersRef.current = { onSelectDestino, onSelectOrigen, onReset };
+
+  // Igual que handlersRef: timelineActive puede cambiar mientras el rAF
+  // loop (armado una sola vez en el efecto de montaje) sigue vivo, así
+  // que se lee vía ref dentro de animate(), no capturado por closure.
+  const timelineActiveRef = useRef(timelineActive);
+  timelineActiveRef.current = timelineActive;
 
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
@@ -139,6 +217,20 @@ export function MapCanvas({
   // source de MapLibre) porque el click handler necesita leerlo de forma
   // síncrona, no vía queryRenderedFeatures.
   const destinoIdByNormNameRef = useRef<Map<string, string>>(new Map());
+
+  // Nombre a mostrar y coordenada donde anclar la burbuja de "llegó un
+  // despacho" — se reconstruyen junto con destinoIdByNormNameRef, en el
+  // mismo efecto que ya depende de `destinos`, en vez de agregar un
+  // tercer efecto por cada índice derivado.
+  const destinoNombreByIdRef = useRef<Map<string, string>>(new Map());
+  const destinoCoordsByIdRef = useRef<Map<string, LngLat>>(new Map());
+
+  // Peso previo por arco `key`, para detectar "este arco ya existía y su
+  // despachosCount subió" (weight bump) al avanzar el timeline. El caso
+  // de un arco NUEVO no se lee acá: se notifica en animate(), vía
+  // engine.tick().justSettled, en el frame exacto en que la línea termina
+  // de crecer y toca el destino.
+  const prevWeightsRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -402,6 +494,32 @@ export function MapCanvas({
 
           const frame = engineRef.current.tick(now);
 
+          // Notificaciones de "acaba de llegar": se disparan acá, no en
+          // el efecto que sincroniza `flujos`, porque acá es donde el
+          // motor de arcos reporta el frame exacto en que la línea
+          // terminó de crecer y tocó el destino — coincide con lo que la
+          // persona ve, no con cuándo llegaron los props nuevos. Gateado
+          // por timelineActiveRef: fuera del modo timeline no tiene
+          // sentido narrativo notificar "llegadas".
+          if (timelineActiveRef.current) {
+            frame.justSettled.forEach((arc) => {
+              const destinoId = arc.key.split("::")[1] ?? "";
+              const nombre = destinoNombreByIdRef.current.get(destinoId) ?? destinoId;
+              toastEngineRef.current.spawn(destinoId, nombre, arc.weight, now);
+            });
+          }
+
+          const toastLayer = toastLayerRef.current;
+          if (toastLayer) {
+            renderToastFrames(
+              map,
+              toastLayer,
+              toastEngineRef.current.tick(now),
+              toastNodesRef.current,
+              destinoCoordsByIdRef.current,
+            );
+          }
+
           const growingCollection = {
             type: "FeatureCollection" as const,
             features: frame.growing.flatMap((arc) => {
@@ -461,6 +579,9 @@ export function MapCanvas({
       destinoPopup.remove();
       origenPopup.remove();
       municipalityPopup.remove();
+      toastEngineRef.current.clear();
+      toastNodesRef.current.forEach((node) => node.remove());
+      toastNodesRef.current.clear();
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
@@ -507,6 +628,16 @@ export function MapCanvas({
     // junto con el setData de arriba para no tener un tercer efecto que
     // dependa de `destinos` por separado.
     destinoIdByNormNameRef.current = new Map(destinos.map((d) => [normId(d.nombre), d.id]));
+
+    // Nombre e id -> coordenada para las notificaciones de despacho (ver
+    // renderToastFrames). Mismo criterio que el índice de arriba: un solo
+    // efecto disparado por `destinos`, no uno nuevo por índice derivado.
+    destinoNombreByIdRef.current = new Map(destinos.map((d) => [d.id, d.nombre]));
+    destinoCoordsByIdRef.current = new Map(
+      destinos
+        .filter((d): d is DestinoResumenLista & { latitud: number; longitud: number } => d.latitud != null && d.longitud != null)
+        .map((d) => [d.id, [d.longitud, d.latitud] as LngLat]),
+    );
   }, [destinos]);
 
   useEffect(() => {
@@ -530,6 +661,7 @@ export function MapCanvas({
   useEffect(() => {
     whenReady(() => {
       const engine = engineRef.current;
+      const toastEngine = toastEngineRef.current;
       const weights: Record<string, number> = {};
       const origenesPorId = new Map(origenes.map((o) => [normId(o.id), o]));
       const validKeys: string[] = [];
@@ -560,16 +692,54 @@ export function MapCanvas({
         engine.sync(validKeys, weights);
         validKeys.forEach((key) => engine.enter(key, performance.now()));
       }
+
+      // Notificaciones de "despacho engordó": un arco que YA estaba
+      // asentado (existía en el tick anterior) y cuyo peso subió al
+      // avanzar el timeline — no pasa por `justSettled` porque no vuelve
+      // a crecer (ver arcAnimationEngine.bumpWeight). El caso de un arco
+      // NUEVO se maneja en animate(), vía justSettled, para que la
+      // burbuja aparezca cuando la línea visiblemente toca el destino, no
+      // antes de que se vea nada. Nunca en un seek (instantTransition) —
+      // mismo criterio que el motor de arcos usa para no animar saltos.
+      if (timelineActive && !instantTransition) {
+        const now = performance.now();
+        validKeys.forEach((key) => {
+          const prev = prevWeightsRef.current.get(key);
+          if (prev === undefined) return; // arco nuevo, lo maneja justSettled en animate()
+          const delta = (weights[key] ?? 0) - prev;
+          if (delta > 0) {
+            const destinoId = key.split("::")[1] ?? "";
+            const nombre = destinoNombreByIdRef.current.get(destinoId) ?? destinoId;
+            toastEngine.spawn(destinoId, nombre, delta, now);
+          }
+        });
+      }
+      prevWeightsRef.current = new Map(Object.entries(weights));
+
+      // Si el timeline se apagó (timelineActive=false) o se hizo un seek,
+      // no tiene sentido dejar notificaciones de un estado anterior
+      // colgando en pantalla — limpiar de una en vez de esperar a que
+      // cada una venza sola por su cuenta.
+      if (!timelineActive || instantTransition) {
+        toastEngine.clear();
+      }
     });
-  }, [flujos, instantTransition, origenes]);
+  }, [flujos, instantTransition, origenes, timelineActive]);
 
   return (
-    <div
-      ref={containerRef}
-      data-map-root=""
-      className="absolute inset-0 h-full w-full"
-      aria-label="Mapa de ayudas humanitarias — Valle del Cauca"
-    />
+    <div className="absolute inset-0 h-full w-full">
+      <div
+        ref={containerRef}
+        data-map-root=""
+        className="absolute inset-0 h-full w-full"
+        aria-label="Mapa de ayudas humanitarias — Valle del Cauca"
+      />
+      <div
+        ref={toastLayerRef}
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-live="polite"
+      />
+    </div>
   );
 }
 

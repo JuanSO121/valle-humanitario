@@ -9,6 +9,25 @@
  * onSeek(), el intervalo de reproducción automática llama onAdvance().
  * Mismo principio que MapCanvas/arcAnimationEngine: la lógica de tiempo
  * vive en un solo lugar (el intervalo de abajo), el resto es traducción.
+ *
+ * FIX (bug "el timeline se queda pegado en la segunda fecha"): el efecto
+ * que arma el `setInterval` depende solo de `[playing]` a propósito —
+ * cada play/pause reinicia el conteo desde cero, en vez de reiniciar el
+ * intervalo (y por lo tanto el conteo de 650ms) en CADA cambio de fecha,
+ * lo que se vería entrecortado. Pero eso significa que la función que
+ * corre en el intervalo se crea UNA sola vez por cada play, y JavaScript
+ * la deja con el `dates`/`currentDate` de ESE momento capturados por
+ * closure — no se actualizan solos aunque lleguen props nuevas en cada
+ * render. El código anterior leía `dates`/`currentDate` directo de los
+ * props dentro del callback del intervalo, así que en cada tick seguía
+ * viendo la fecha con la que arrancó la reproducción, nunca la fecha a
+ * la que ya se había avanzado — el resultado observable era "avanza una
+ * vez y después se traba", porque cada tick volvía a calcular el mismo
+ * "siguiente" de la fecha original. La solución estándar de React para
+ * esto es leer los valores desde un `ref` que se actualiza en cada
+ * render (sin pasar por el ciclo de efectos): el intervalo sigue
+ * viviendo el mismo tiempo total, pero en cada tick lee el valor de
+ * verdad más reciente, no el que tenía al nacer.
  * -----------------------------------------------------------------------
  */
 import { useEffect, useRef, useState } from "react";
@@ -31,6 +50,17 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
   const [playing, setPlaying] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Espejo por ref de los props que el intervalo necesita leer FRESCOS en
+  // cada tick, sin que su valor quede fijo al closure del momento en que
+  // arrancó `setInterval` (ver comentario largo arriba). Se actualizan en
+  // cada render, de forma síncrona — no hace falta un useEffect para
+  // esto, es más barato que agregar dates/currentDate a las deps del
+  // efecto de abajo (eso reiniciaría el conteo de 650ms en cada avance).
+  const datesRef = useRef(dates);
+  datesRef.current = dates;
+  const currentDateRef = useRef(currentDate);
+  currentDateRef.current = currentDate;
+
   const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
   const atEnd = currentIndex >= 0 && currentIndex === dates.length - 1;
 
@@ -45,8 +75,13 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
       return;
     }
     intervalRef.current = setInterval(() => {
-      const idx = currentDate ? dates.indexOf(currentDate) : -1;
-      const next = dates[idx + 1];
+      // Frescos en cada tick vía ref — ver comentario de arriba. Esto es
+      // lo que faltaba: antes se leía `dates`/`currentDate` de los props
+      // capturados al armar el intervalo, y quedaban congelados ahí.
+      const freshDates = datesRef.current;
+      const freshCurrent = currentDateRef.current;
+      const idx = freshCurrent ? freshDates.indexOf(freshCurrent) : -1;
+      const next = freshDates[idx + 1];
       if (next === undefined) {
         setPlaying(false);
         return;
@@ -56,7 +91,7 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
     return () => {
       if (intervalRef.current !== null) clearInterval(intervalRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates/currentDate se leen frescos dentro del tick, no hace falta reiniciar el interval por cada cambio de fecha.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates/currentDate se leen frescos vía ref dentro del tick (ver arriba); no hace falta reiniciar el interval por cada cambio de fecha.
   }, [playing]);
 
   const handleTogglePlay = () => {
