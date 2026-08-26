@@ -1,21 +1,21 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-iRknDCiZ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-CezKyCbg.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "C:/Users/JJSO/Documents/Sec_General/AYUDAS HUMANITARIAS/valle-humanitario/src/routes/__root.tsx",
 		children: ["/"],
-		css: ["/assets/index-BSjmJPj8.css"],
-		preloads: ["/assets/index-IoKFgNEx.js"],
+		css: ["/assets/index-BZyNpkkk.css"],
+		preloads: ["/assets/index-DWzwG1qd.js"],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-IoKFgNEx.js"
+			src: "/assets/index-DWzwG1qd.js"
 		} }]
 	},
 	"/": {
 		filePath: "C:/Users/JJSO/Documents/Sec_General/AYUDAS HUMANITARIAS/valle-humanitario/src/routes/index.tsx",
 		children: void 0,
 		css: ["/assets/routes-CKRTiAqP.css"],
-		preloads: ["/assets/routes-C6z-CP1g.js"]
+		preloads: ["/assets/routes-CEaSe5lC.js"]
 	}
 } });
 //#endregion
