@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dq4D-5NL.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CRUS8jp7.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -447,16 +447,6 @@ function useEnterTransition(transitionKey) {
 	}, [transitionKey]);
 	return entered;
 }
-/**
-* Cierra el panel al hacer click/tap fuera de él — pero SOLO cuando el
-* clic cae fuera del mapa también. El mapa ocupa toda la pantalla y ya
-* tiene su propia lógica de clic (sede > cluster > municipio > reset, ver
-* MapCanvas), así que un clic ahí para abrir OTRO municipio o sede no debe
-* competir con este listener genérico — si lo hiciera, el "cerrar" y el
-* "abrir lo nuevo" se disparan por el mismo clic y pelean entre sí. Este
-* listener solo actúa sobre clics en zonas realmente ajenas a ambos (por
-* ejemplo, la barra superior de filtros).
-*/
 function useCloseOnOutsideClick(onClose) {
 	const ref = (0, import_react.useRef)(null);
 	(0, import_react.useEffect)(() => {
@@ -483,7 +473,7 @@ function PanelHeader({ title, subtitle, onBack, onClose }) {
 				type: "button",
 				onClick: onBack,
 				"aria-label": "Volver",
-				className: "mt-0.5 rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
+				className: "tap-target mt-0.5 rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 					width: "16",
 					height: "16",
@@ -502,7 +492,7 @@ function PanelHeader({ title, subtitle, onBack, onClose }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "min-w-0 flex-1",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-					className: "truncate text-sm font-semibold",
+					className: "truncate text-sm font-semibold text-foreground",
 					children: title
 				}), subtitle && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "truncate text-xs text-muted-foreground",
@@ -513,7 +503,7 @@ function PanelHeader({ title, subtitle, onBack, onClose }) {
 				type: "button",
 				onClick: onClose,
 				"aria-label": "Volver a Valle del Cauca",
-				className: "rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
+				className: "tap-target rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
 					width: "16",
 					height: "16",
@@ -536,11 +526,12 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
 	const ref = useCloseOnOutsideClick(onClose);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		ref,
-		className: "pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-200 ease-out",
+		className: "pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-300",
 		style: {
 			maxHeight: "calc(100% - 6rem)",
 			opacity: entered ? 1 : 0,
-			transform: entered ? "translateX(0)" : "translateX(12px)"
+			transform: entered ? "translateX(0) scale(1)" : "translateX(12px) scale(0.97)",
+			transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)"
 		},
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelHeader, {
 			title,
@@ -558,20 +549,25 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 	const entered = useEnterTransition(transitionKey);
 	const ref = useCloseOnOutsideClick(onClose);
 	(0, import_react.useEffect)(() => setExpanded(true), [transitionKey]);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-0 z-[9] bg-black/40",
+		style: { animation: "scrim-in 200ms ease-out" },
+		"aria-hidden": true
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		ref,
-		className: "pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out",
+		className: "pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.35)] transition-all duration-300",
 		style: {
 			height: expanded ? "70vh" : "auto",
 			transform: entered ? "translateY(0)" : "translateY(16px)",
-			opacity: entered ? 1 : 0
+			opacity: entered ? 1 : 0,
+			transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)"
 		},
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 				type: "button",
 				onClick: () => setExpanded((v) => !v),
 				"aria-label": expanded ? "Contraer panel" : "Expandir panel",
-				className: "flex w-full justify-center py-2",
+				className: "tap-target flex w-full justify-center py-2",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "h-1 w-9 rounded-full bg-border" })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelHeader, {
@@ -585,7 +581,7 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 				children
 			})
 		]
-	});
+	})] });
 }
 /**
 * useDestinoLogistica.ts

@@ -324,18 +324,18 @@
  */
 
 .theme-ayudas {
-  /* Radio un poco más generoso que el institucional (0.375rem) — más
-     cerca de Linear/Arc/Vercel, coherente con el look inmersivo/moderno
-     acordado. Afecta rounded-md/rounded-lg/rounded-xl vía @theme inline
-     de arriba; rounded-full (botones circulares, dots) no se ve afectado. */
   --radius: 0.625rem;
-
-  /* Fondo casi negro con matiz azul frío — mismo tono que ya está
-     hardcodeado en MapCanvas.tsx (`background-color: "#0b0e14"` del
-     estilo base de MapLibre), para que el chrome de React y el canvas del
-     mapa no se noten como dos fondos distintos empalmados. */
   --background: oklch(0.16 0.018 258);
   --foreground: oklch(0.94 0.006 255);
+  /* FIX raíz del bug de contraste: `body` (fuera de .theme-ayudas)
+     resuelve `color: var(--color-foreground)` contra :root ANTES de
+     entrar a este scope, y ese color ya calculado se hereda hacia
+     abajo. Cualquier texto sin clase de color explícita (títulos de
+     panel, el número de "Total recibido", etc.) se quedaba con el
+     navy institucional oscuro sobre este fondo oscuro. Fijando `color`
+     acá mismo, el recálculo ocurre ya dentro del scope oscuro y se
+     hereda correctamente. */
+  color: var(--foreground);
 
   /* Surfaces: un escalón y dos por encima del fondo, no blancos — los
      paneles flotantes (FlujosLegend, DestinoPanel, Timeline) tienen que

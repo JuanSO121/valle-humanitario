@@ -1,4 +1,3 @@
-// ContextualPanel.tsx
 import { useEffect, useRef, useState } from "react";
 
 interface Props {
@@ -8,8 +7,6 @@ interface Props {
   onBack?: (() => void) | undefined;
   onClose: () => void;
   children: React.ReactNode;
-  /** Changing this remounts the panel, replaying its entrance transition —
-   *  pass something like `${level}-${municipalityId}-${siteId}`. */
   transitionKey: string;
 }
 
@@ -35,16 +32,6 @@ function useEnterTransition(transitionKey: string) {
   return entered;
 }
 
-/**
- * Cierra el panel al hacer click/tap fuera de él — pero SOLO cuando el
- * clic cae fuera del mapa también. El mapa ocupa toda la pantalla y ya
- * tiene su propia lógica de clic (sede > cluster > municipio > reset, ver
- * MapCanvas), así que un clic ahí para abrir OTRO municipio o sede no debe
- * competir con este listener genérico — si lo hiciera, el "cerrar" y el
- * "abrir lo nuevo" se disparan por el mismo clic y pelean entre sí. Este
- * listener solo actúa sobre clics en zonas realmente ajenas a ambos (por
- * ejemplo, la barra superior de filtros).
- */
 function useCloseOnOutsideClick<T extends HTMLElement>(onClose: () => void) {
   const ref = useRef<T>(null);
   useEffect(() => {
@@ -82,7 +69,7 @@ function PanelHeader({
           type="button"
           onClick={onBack}
           aria-label="Volver"
-          className="mt-0.5 rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
+          className="tap-target mt-0.5 rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -90,14 +77,16 @@ function PanelHeader({
         </button>
       )}
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold">{title}</h3>
+        {/* FIX: text-foreground explícito — no depender de herencia de body
+            para el título, que es el elemento con más peso visual del panel. */}
+        <h3 className="truncate text-sm font-semibold text-foreground">{title}</h3>
         {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
       </div>
       <button
         type="button"
         onClick={onClose}
         aria-label="Volver a Valle del Cauca"
-        className="rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
+        className="tap-target rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -113,25 +102,18 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
   return (
     <div
       ref={ref}
-      className="pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-200 ease-out"
+      className="pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-300"
       style={{
         maxHeight: "calc(100% - 6rem)",
         opacity: entered ? 1 : 0,
-        transform: entered ? "translateX(0)" : "translateX(12px)",
+        // Se agrega un leve scale además del translateX que ya había —
+        // el translate solo se lee como "desliza"; el scale de 0.97→1
+        // le da la sensación de que el panel "aterriza", no solo entra.
+        transform: entered ? "translateX(0) scale(1)" : "translateX(12px) scale(0.97)",
+        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
       <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
-      {/* Antes: solo "min-h-0 flex-1", delegando el scroll al hijo
-          (MunicipalityPanel/SiteDetailPanel), que a su vez depende de que
-          su propio "h-full" resuelva correctamente contra la altura ya
-          calculada de ESTE wrapper — dos niveles de flex anidados
-          propagando un porcentaje de altura. En algunos navegadores esa
-          cadena no termina de resolverse y el contenido se corta contra el
-          "overflow-hidden" del contenedor exterior en vez de activar
-          scroll (el síntoma de "panel fijo").
-          Ahora: el wrapper controla el scroll directamente. Es un solo
-          nivel de flex (DesktopCard → este div), mucho más fiable, y no
-          depende de que el hijo resuelva nada por su cuenta. */}
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
     </div>
   );
@@ -145,29 +127,38 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
   useEffect(() => setExpanded(true), [transitionKey]);
 
   return (
-    <div
-      ref={ref}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.12)] transition-all duration-200 ease-out"
-      style={{
-        height: expanded ? "70vh" : "auto",
-        transform: entered ? "translateY(0)" : "translateY(16px)",
-        opacity: entered ? 1 : 0,
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-label={expanded ? "Contraer panel" : "Expandir panel"}
-        className="flex w-full justify-center py-2"
+    <>
+      {/* Scrim: antes el sheet no tenía ningún velo detrás — sobre un
+          mapa oscuro con puntos brillantes, el borde del panel se perdía
+          y "cerrar tocando afuera" no tenía ninguna señal visual de que
+          era posible. Fade-in propio, no ligado a `entered` del sheet
+          (así el velo no se mueve, solo aparece/desaparece). */}
+      <div
+        className="pointer-events-none absolute inset-0 z-[9] bg-black/40"
+        style={{ animation: "scrim-in 200ms ease-out" }}
+        aria-hidden
+      />
+      <div
+        ref={ref}
+        className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.35)] transition-all duration-300"
+        style={{
+          height: expanded ? "70vh" : "auto",
+          transform: entered ? "translateY(0)" : "translateY(16px)",
+          opacity: entered ? 1 : 0,
+          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
       >
-        <span className="h-1 w-9 rounded-full bg-border" />
-      </button>
-      <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
-      {/* Mismo ajuste aquí por consistencia y para no depender del "h-full"
-          interno del hijo — la altura ya viene fijada explícitamente vía
-          "height: 70vh" en el sheet, así que este es el nivel correcto
-          para controlar el scroll. */}
-      <div className={`min-h-0 flex-1 ${expanded ? "overflow-y-auto" : "hidden"}`}>{children}</div>
-    </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-label={expanded ? "Contraer panel" : "Expandir panel"}
+          className="tap-target flex w-full justify-center py-2"
+        >
+          <span className="h-1 w-9 rounded-full bg-border" />
+        </button>
+        <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
+        <div className={`min-h-0 flex-1 ${expanded ? "overflow-y-auto" : "hidden"}`}>{children}</div>
+      </div>
+    </>
   );
 }
