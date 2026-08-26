@@ -1,5 +1,5 @@
 /**
- * AyudaSection.tsx — Nivel 4, "¿Qué se está movilizando?"
+ * AyudaSection.tsx, Nivel 4, "¿Qué se está movilizando?"
  * -----------------------------------------------------------------------
  * La cinta es la composición real de la ayuda. Al elegir una categoría,
  * la lista de la derecha cambia a los productos que la componen; al
@@ -13,13 +13,13 @@ import {
   familiasDeAyuda,
   poblacionesFocalizadas,
   productosMasRepartidos,
-  TOTAL_RENGLONES,
   TOTAL_UNIDADES,
 } from "@/presentation/data/ayudaData";
+import { TOTAL_TONELADAS } from "@/presentation/data/movimientoData";
 import { Aviso, Bar, Card, MiniList, SectionLabel, SectionTitle } from "./storyPrimitives";
 
-/** Una casilla del waffle equivale a esto. Redondeado para que la glosa sea legible. */
-const UNIDADES_POR_BLOQUE = 1700;
+/** Cada bloque del waffle vale 1 por ciento del total entregado. */
+const UNIDADES_POR_BLOQUE = Math.round(TOTAL_UNIDADES / 100);
 
 export function AyudaSection() {
   const [activa, setActiva] = useState<string | null>(null);
@@ -44,34 +44,32 @@ export function AyudaSection() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionLabel>Qué se mueve</SectionLabel>
-      <SectionTitle>Dos de cada tres unidades son higiene, comida o agua</SectionTitle>
-      <p className="mt-4 max-w-2xl text-[15.5px] leading-7 text-[#4E6B7C]">
-        Cada renglón manuscrito se transcribió y se clasificó. Elegí una categoría para ver qué
-        producto la compone.
+      <SectionLabel>Qué se entregó</SectionLabel>
+      <SectionTitle>La mayor parte de la ayuda es aseo, comida y agua</SectionTitle>
+      <p className="mt-4 max-w-2xl text-lg leading-8 text-[#4E6B7C]">
+        Toca una categoría y ves qué artículos incluyó.
       </p>
 
       {/* Cifra total + composición */}
       <div className="mt-10 grid gap-8 rounded-xl border border-[#00578C]/12 bg-white p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center">
         <div className="text-center">
-          <b className="block font-serif text-[58px] leading-none tracking-[-0.02em] text-[#00578C]">
-            {TOTAL_UNIDADES.toLocaleString("es-CO")}
+          <b className="block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#00578C]">
+            {TOTAL_TONELADAS}
           </b>
-          <span className="mt-2.5 block text-[12.5px] leading-5 text-[#6E8B9E]">
-            unidades registradas en {TOTAL_RENGLONES.toLocaleString("es-CO")} renglones
-            <br />
-            transcritos de los formatos
+          <span className="mt-3 block text-lg text-[#4E6B7C]">toneladas de ayuda</span>
+          <span className="mt-2 block text-base leading-6 text-[#6E8B9E]">
+            entregadas en todo el departamento
           </span>
         </div>
 
         <div>
-          <h3 className="text-[17px] font-semibold text-[#0B2233]">De qué está hecha esa ayuda</h3>
+          <h3 className="text-xl font-semibold text-[#0B2233]">De qué está hecha esa ayuda</h3>
 
           <div className="mt-4 flex h-9 overflow-hidden rounded-md">
             {categoriasAyuda.map((c) => (
               <i
                 key={c.nombre}
-                title={`${c.nombre} · ${c.unidades.toLocaleString("es-CO")} unidades (${pct(c.unidades)}%)`}
+                title={`${c.nombre}: ${pct(c.unidades)} por ciento de la ayuda`}
                 className="block transition-opacity"
                 style={{
                   flex: c.unidades,
@@ -92,16 +90,15 @@ export function AyudaSection() {
               />
             ))}
           </div>
-          <p className="mt-2.5 text-xs text-[#6E8B9E]">
-            Cada bloque equivale a{" "}
-            <b className="text-[#0B2233]">{UNIDADES_POR_BLOQUE.toLocaleString("es-CO")} unidades</b>.
-            El color dice a qué necesidad responde la categoría, no en qué puesto va.
+          <p className="mt-3 text-base text-[#6E8B9E]">
+            Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde
+            cada categoría.
           </p>
         </div>
       </div>
 
       {/* Familias */}
-      <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[11.6px] text-[#4E6B7C]">
+      <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#4E6B7C]">
         {familiasDeAyuda.map((f) => {
           // El type guard en el filter (en vez de `as string[]`) hace que
           // colores[0] siga siendo `string | undefined` bajo
@@ -154,15 +151,15 @@ export function AyudaSection() {
                         />
                         <span className="truncate">{c.nombre}</span>
                       </span>
-                      <span className="shrink-0 font-serif text-base text-[#00578C]">
-                        {c.unidades.toLocaleString("es-CO")}
+                      <span className="shrink-0 font-serif text-xl text-[#00578C]">
+                        {pct(c.unidades)}%
                       </span>
                     </span>
                     <span className="mt-2 block">
                       <Bar ratio={c.unidades / maxUnidades} color={c.color} />
                     </span>
-                    <span className="mt-1.5 block text-[11.4px] text-[#6E8B9E]">
-                      {pct(c.unidades)}% · {c.destinos} destinos
+                    <span className="mt-2 block text-[15px] text-[#6E8B9E]">
+                      Llegó a {c.destinos} municipios
                     </span>
                   </button>
                 </li>
@@ -174,7 +171,7 @@ export function AyudaSection() {
         <div className="flex flex-col gap-5">
           <Card>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]">
-              {categoria ? `${categoria.nombre} · qué la compone` : "Productos más repartidos"}
+              {categoria ? `${categoria.nombre}` : "Lo más entregado"}
             </p>
             <div className="mt-4">
               <MiniList rows={productos} />
@@ -183,7 +180,7 @@ export function AyudaSection() {
 
           <Card>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]">
-              Poblaciones focalizadas
+              Grupos atendidos
             </p>
             <div className="mt-4">
               <MiniList
@@ -194,8 +191,8 @@ export function AyudaSection() {
                 }))}
               />
             </div>
-            <p className="mt-3 text-xs text-[#6E8B9E]">
-              Número de despachos que declaran expresamente cada población en el formato.
+            <p className="mt-3 text-base text-[#6E8B9E]">
+              Entregas que incluyeron ayuda dirigida a cada grupo.
             </p>
           </Card>
         </div>
@@ -203,10 +200,8 @@ export function AyudaSection() {
 
       <div className="mt-6">
         <Aviso>
-          <b>Cómo leer estas cifras.</b> «Unidades» suma las cantidades tal como están escritas en el
-          papel, y el papel mezcla unidades: mercados, paquetes, kilos y pacas conviven en la misma
-          columna. Sirve para comparar composición y peso relativo entre categorías y municipios,{" "}
-          <b>no es un peso ni un conteo de personas</b>. Las toneladas son una estimación aparte.
+          <b>Cómo leer estas cifras.</b> Los porcentajes comparan cuánta ayuda de cada tipo se
+          entregó. Las toneladas son una estimación a partir del número de entregas.
         </Aviso>
       </div>
     </div>

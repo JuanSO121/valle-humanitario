@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { n as ChevronDown, t as MapPinned } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DKUrsOrs.js
+import { a as Menu, c as Lightbulb, d as ChevronDown, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as ChevronLeft } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dwf4o1Hs.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -243,143 +243,35 @@ var viewTransitions = {
 		} : prev;
 	}
 };
-/**
-* Duración de una jornada del timeline. Con las 13 fechas del dataset
-* real da una reproducción completa de ~34 s: lenta a propósito, porque
-* lo que la gente sigue es el marcador subiendo, no la barra llegando al
-* final.
-*/
-var TIMELINE_STEP_MS = 2800;
-/**
-* Techo de la reproducción completa, como red de seguridad. Solo entra en
-* juego si algún día el dataset trae muchísimas más fechas: con 13 no
-* hace nada, con 200 comprime el paso para que no dure diez minutos.
-*/
-var TIMELINE_MAX_PLAYBACK_MS = 12e4;
-/** Paso real del timeline según cuántas fechas haya. */
-function computeTimelineStepMs(dateCount) {
-	if (dateCount <= 1) return TIMELINE_STEP_MS;
-	const comprimido = TIMELINE_MAX_PLAYBACK_MS / (dateCount - 1);
-	return Math.min(TIMELINE_STEP_MS, Math.max(450, comprimido));
-}
-/**
-* Timeline.tsx
-* -----------------------------------------------------------------------
-* Componente de presentación puro: no decide fases ni construye fechas —
-* solo recibe la lista de fechas disponibles y el valor actual, y avisa
-* hacia arriba (onSeek/onAdvance) qué pasó. La distinción seek-vs-advance
-* que ya está en viewState.ts (seekTimeline nunca anima, advanceTimeline
-* sí) se preserva acá: arrastrar el handle llama onSeek(), el intervalo
-* de reproducción automática llama onAdvance().
-*
-* VELOCIDAD: el paso ya no se calcula acá. Antes repartía 20 s entre las
-* fechas, lo que con el dataset real daba 1.667 ms por jornada — mientras
-* la cascada de arcos necesitaba 9.000 ms solo para arrancar el último
-* arco del día. El día cambiaba cinco veces antes de que las líneas
-* llegaran. Ahora el paso sale de animationTiming.ts, que es el mismo
-* módulo del que sale el presupuesto de la cascada: una jornada dura lo
-* que tarda su último arco en salir y llegar.
-*
-* FIX (bug "el timeline se queda pegado en la segunda fecha"): el efecto
-* que arma el `setInterval` depende solo de `[playing]` a propósito —
-* cada play/pause reinicia el conteo desde cero, en vez de reiniciar el
-* intervalo en CADA cambio de fecha, lo que se vería entrecortado. Pero
-* eso significa que la función del intervalo se crea UNA sola vez por
-* play, con el `dates`/`currentDate` de ESE momento capturados por
-* closure. Por eso ambos se leen desde un `ref` que se actualiza en cada
-* render: el intervalo vive lo mismo, pero cada tick lee el valor de
-* verdad más reciente.
-*
-* NOTA aparte (no es un bug de este archivo): si en desarrollo el
-* timeline solo avanza limpiando la caché del navegador, es casi seguro
-* Fast Refresh de Vite — agregar/quitar refs cambia la forma de los
-* hooks, y puede quedar vivo un closure viejo hasta un reload completo
-* (Ctrl+Shift+R).
-* -----------------------------------------------------------------------
-*/
 function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
-	const [playing, setPlaying] = (0, import_react.useState)(false);
-	const intervalRef = (0, import_react.useRef)(null);
-	const datesRef = (0, import_react.useRef)(dates);
-	datesRef.current = dates;
-	const currentDateRef = (0, import_react.useRef)(currentDate);
-	currentDateRef.current = currentDate;
+	if (dates.length === 0) return null;
 	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
-	const atEnd = currentIndex >= 0 && currentIndex === dates.length - 1;
-	(0, import_react.useEffect)(() => {
-		if (currentDate === null) setPlaying(false);
-	}, [currentDate]);
-	(0, import_react.useEffect)(() => {
-		if (!playing) {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
-			intervalRef.current = null;
+	const activo = currentIndex >= 0;
+	/**
+	* Un solo lugar decide activar / animar / saltar, para que los botones
+	* y el arrastre no puedan discrepar entre sí.
+	*/
+	const irA = (index) => {
+		const date = dates[index];
+		if (date === void 0) return;
+		if (!activo) {
+			onActivate(date);
 			return;
 		}
-		const stepMs = computeTimelineStepMs(datesRef.current.length);
-		intervalRef.current = setInterval(() => {
-			const freshDates = datesRef.current;
-			const freshCurrent = currentDateRef.current;
-			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
-			if (next === void 0) {
-				setPlaying(false);
-				return;
-			}
-			onAdvance(next);
-		}, stepMs);
-		return () => {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
-		};
-	}, [playing]);
-	const handleTogglePlay = () => {
-		if (!currentDate && dates.length > 0) {
-			const first = dates[0];
-			if (first !== void 0) onActivate(first);
+		if (index === currentIndex + 1) {
+			onAdvance(date);
+			return;
 		}
-		if (atEnd) {
-			const first = dates[0];
-			if (first !== void 0) onSeek(first);
-		}
-		setPlaying((v) => !v);
+		onSeek(date);
 	};
-	const handleScrub = (event) => {
-		setPlaying(false);
-		const date = dates[Number(event.target.value)];
-		if (date !== void 0) onSeek(date);
-	};
-	if (dates.length === 0) return null;
+	const handleScrub = (event) => irA(Number(event.target.value));
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-4 py-2 shadow-sm backdrop-blur",
+		className: "pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: handleTogglePlay,
-				"aria-label": playing ? "Pausar reproducción" : "Reproducir por fecha",
-				className: "flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background",
-				children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-					width: "12",
-					height: "12",
-					viewBox: "0 0 24 24",
-					fill: "currentColor",
-					"aria-hidden": true,
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-						x: "5",
-						y: "4",
-						width: "5",
-						height: "16"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-						x: "14",
-						y: "4",
-						width: "5",
-						height: "16"
-					})]
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-					width: "12",
-					height: "12",
-					viewBox: "0 0 24 24",
-					fill: "currentColor",
-					"aria-hidden": true,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
-				})
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasoButton, {
+				direccion: "anterior",
+				onClick: () => irA(activo ? currentIndex - 1 : 0),
+				disabled: activo && currentIndex <= 0
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 				type: "range",
@@ -388,46 +280,66 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 				step: 1,
 				value: currentIndex >= 0 ? currentIndex : 0,
 				onChange: handleScrub,
-				"aria-label": "Fecha del timeline",
+				"aria-label": "Jornada",
 				className: "h-1 w-40 shrink-0 accent-foreground md:w-64"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasoButton, {
+				direccion: "siguiente",
+				onClick: () => irA(activo ? currentIndex + 1 : 0),
+				disabled: activo && currentIndex >= dates.length - 1
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 				className: "min-w-[5.5rem] shrink-0 font-mono text-xs text-muted-foreground",
-				children: currentDate ?? dates[0]
+				"aria-live": "polite",
+				children: currentDate ?? dates[0] ?? ""
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+			activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 				type: "button",
-				onClick: () => {
-					setPlaying(false);
-					onExit();
-				},
-				"aria-label": "Salir del modo timeline",
-				className: "ml-1 shrink-0 text-xs text-muted-foreground hover:text-foreground",
+				onClick: onExit,
+				className: "ml-1 shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground",
 				children: "Ver todo"
 			})
 		]
 	});
 }
+function PasoButton({ direccion, onClick, disabled }) {
+	const esSiguiente = direccion === "siguiente";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick,
+		disabled,
+		"aria-label": esSiguiente ? "Jornada siguiente" : "Jornada anterior",
+		className: "flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-30",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+			width: "12",
+			height: "12",
+			viewBox: "0 0 24 24",
+			fill: "currentColor",
+			"aria-hidden": true,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: esSiguiente ? "M8 4l10 8-10 8V4z" : "M16 4L6 12l10 8V4z" })
+		})
+	});
+}
 function MarcadorHUD({ toneladas, despachos, day, lens, instant = false }) {
-	const corte = day === null ? "Toda la operación" : lens === "jornada" ? `Jornada del ${day} de agosto` : `Al ${day} de agosto`;
+	const corte = day === null ? "Total del departamento" : lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "pointer-events-none absolute right-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 select-none",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "rounded-lg border border-white/12 bg-[#0A1822]/85 px-5 py-4 shadow-lg backdrop-blur",
+			className: "rounded-xl border border-white/12 bg-[#0A1822]/85 px-6 py-5 shadow-lg backdrop-blur",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-[10px] font-bold uppercase tracking-[0.16em] text-[#81C8EC]",
-					children: "Ayuda movilizada"
+					className: "text-[13px] font-bold uppercase tracking-[0.14em] text-[#81C8EC]",
+					children: "Ayuda entregada"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-1.5 flex items-baseline gap-1.5",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
 						value: toneladas,
 						instant,
-						className: "text-[42px]"
+						className: "text-[52px]"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "font-serif text-xl text-[#81C8EC]",
-						children: "t"
+						className: "font-serif text-2xl text-[#81C8EC]",
+						children: "toneladas"
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -435,14 +347,14 @@ function MarcadorHUD({ toneladas, despachos, day, lens, instant = false }) {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
 						value: despachos,
 						instant,
-						className: "text-[19px]"
+						className: "text-[24px]"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#9DB4C2]",
-						children: "despachos"
+						className: "text-sm font-semibold text-[#9DB4C2]",
+						children: "entregas a municipios"
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-2 text-[11px] text-[#7E9AAD]",
+					className: "mt-3 text-sm text-[#7E9AAD]",
 					"aria-live": "polite",
 					children: corte
 				})
@@ -502,6 +414,72 @@ function Digito({ digito, instant }) {
 			}, n))
 		})
 	});
+}
+var VISIBLE_MS = 3200;
+/**
+* Aviso breve de entrega, al estilo de una historia: aparece, se lee en
+* dos segundos y se va. Nunca se acumula en pantalla.
+*/
+function AvisoEntrega({ frame }) {
+	const [visible, setVisible] = (0, import_react.useState)(null);
+	(0, import_react.useEffect)(() => {
+		if (!frame) {
+			setVisible(null);
+			return;
+		}
+		setVisible(frame);
+		const t = setTimeout(() => setVisible(null), VISIBLE_MS);
+		return () => clearTimeout(t);
+	}, [frame]);
+	if (!visible) return null;
+	const municipio = leerNombre(visible);
+	const entregas = leerCantidad(visible);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-x-0 bottom-28 z-20 flex justify-center px-4",
+		"aria-live": "polite",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center gap-3 rounded-full border border-white/15 bg-[#0A1822]/90 py-3 pl-4 pr-5 shadow-lg backdrop-blur",
+			style: { animation: "toast-pop 260ms cubic-bezier(0.16,1,0.3,1) both" },
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-[#81C8EC]/20 text-[#81C8EC]",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PackageCheck, {
+					className: "size-5",
+					"aria-hidden": true
+				})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "block text-base leading-tight text-white",
+				children: municipio
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "block text-sm text-[#9DB4C2]",
+				children: entregas === 1 ? "Recibió una entrega" : `Recibió ${entregas} entregas`
+			})] })]
+		}, `${municipio}-${entregas}`)
+	});
+}
+/**
+* `ActivityFrame` lo produce dispatchActivityEngine.spawn(destinoId,
+* nombre, cantidad, now). Los nombres exactos de sus campos no están a la
+* vista desde acá, así que se leen de forma tolerante en vez de asumir
+* una forma que rompería en silencio si cambia.
+*/
+function leerNombre(frame) {
+	const f = frame;
+	const encontrado = [
+		f["nombre"],
+		f["destinoNombre"],
+		f["label"]
+	].find((v) => typeof v === "string" && v.trim() !== "");
+	return typeof encontrado === "string" ? encontrado : "Nueva entrega";
+}
+function leerCantidad(frame) {
+	const f = frame;
+	const encontrado = [
+		f["cantidad"],
+		f["weight"],
+		f["despachos"],
+		f["delta"]
+	].find((v) => typeof v === "number" && v > 0);
+	return typeof encontrado === "number" ? encontrado : 1;
 }
 /**
 * FlujosLegend.tsx
@@ -1905,12 +1883,395 @@ function normMunicipalityName(name) {
 	return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, " ");
 }
 normMunicipalityName("Guadalajara de Buga"), normMunicipalityName("Buga"), normMunicipalityName("Cali");
-var territoryByCode = new Map(territoryMunicipalities.map((m) => [m.codigoDane, m]));
+new Map(territoryMunicipalities.map((m) => [m.codigoDane, m]));
 new Map(territoryMunicipalities.map((m) => [normMunicipalityName(m.name), m]));
-/** Preferido: join robusto por código DANE, sin ambigüedad de texto. */
-function getTerritoryStatByCode(codigoDane) {
-	if (!codigoDane) return void 0;
-	return territoryByCode.get(codigoDane);
+[...new Set(territoryMunicipalities.flatMap((m) => Object.keys(m.dias)))].sort((a, b) => Number(a) - Number(b));
+/** "2026-08-14" → "14". Devuelve null si no hay fecha. */
+function dayFromIsoDate(iso) {
+	if (!iso) return null;
+	const dd = iso.slice(-2);
+	return /^\d{2}$/.test(dd) ? dd : null;
+}
+/** Acumulado del municipio hasta `day` inclusive. Con day null, el total. */
+function territoryValueAsOf(stat, day) {
+	if (!stat) return 0;
+	if (day === null) return stat.despachos;
+	const limite = Number(day);
+	return Object.entries(stat.dias).reduce((sum, [d, v]) => Number(d) <= limite ? sum + v : sum, 0);
+}
+/** Lo que se movió exactamente ese día. Con day null, 0: una jornada sin día no existe. */
+function territoryValueOnDay(stat, day) {
+	if (!stat || day === null) return 0;
+	return stat.dias[day] ?? 0;
+}
+/**
+* Punto de entrada único del mapa. Reemplaza a `territoryValueFor`, que
+* ignoraba el día cuando el modo era "acumulado" y por eso pintaba el
+* total final mientras el timeline iba por la mitad.
+*/
+function territoryValue(stat, lens, day) {
+	if (lens === "jornada" && day !== null) return territoryValueOnDay(stat, day);
+	return territoryValueAsOf(stat, day);
+}
+/** Etiqueta del estado temporal, para el HUD y los popups. */
+function describeLens(lens, day) {
+	if (day === null) return "Total del departamento";
+	return lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
+}
+/**
+* Toneladas por despacho.
+*
+* La hoja TONELADAS del workbook trae el dato medido por día, pero es
+* DEPARTAMENTAL y no es proporcional a los despachos: la razón va de 0,68
+* t/despacho el día 19 a 11,5 el día 24, porque la tonelada se siguió
+* reportando cuando los formatos de esos días todavía no estaban
+* transcritos. Cruzar las dos series deja el marcador diciendo cosas que
+* el mapa no muestra.
+*
+* Por eso acá la tonelada se ESTIMA sobre los despachos visibles: 531 t
+* medidas / 384 despachos con fecha = 1,38 t por despacho. Es un
+* estimado declarado, no una medición, y tiene la ventaja de moverse
+* siempre junto con el mapa.
+*
+* Consecuencia a tener presente: aplicado a los 321 despachos
+* municipales da ~444 t, no las 531 t del total departamental. La
+* diferencia es Cali, el acopio de Cartago y las otras ayudas
+* solidarias, que no se dibujan en el mapa.
+*/
+var TONELADAS_POR_DESPACHO = 1.38;
+/** Toneladas estimadas para una cantidad de despachos. */
+function toneladasEstimadas(despachos) {
+	return Math.round(despachos * TONELADAS_POR_DESPACHO);
+}
+function useIsMobile(breakpointPx = 768) {
+	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		const mql = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
+		const onChange = () => setIsMobile(mql.matches);
+		onChange();
+		mql.addEventListener("change", onChange);
+		return () => mql.removeEventListener("change", onChange);
+	}, [breakpointPx]);
+	return isMobile;
+}
+function DashboardPage({ embedded = false }) {
+	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
+	const [linesDismissed, setLinesDismissed] = (0, import_react.useState)(false);
+	/**
+	* `lens` es CÓMO se lee el día que marca el timeline, no un segundo
+	* reloj. Antes esto era `territoryMode` y venía con su propio slider de
+	* jornada, independiente del timeline: se podía tener los arcos en el
+	* día 14 y los polígonos pintados con el total final de la operación.
+	* Ahora hay un solo control temporal, el Timeline, y este toggle solo
+	* decide si ese día se lee como acumulado o como jornada suelta.
+	*
+	* Por defecto acumulado: mover una línea de tiempo normalmente
+	* significa "mostrame cómo iba", no "mostrame solo ese día".
+	*/
+	const [lens, setLens] = (0, import_react.useState)("acumulado");
+	const [territoryZone, setTerritoryZone] = (0, import_react.useState)("todas");
+	const [routesMode, setRoutesMode] = (0, import_react.useState)("visibles");
+	const [visibleActivity, ,] = (0, import_react.useState)(null);
+	const isMobile = useIsMobile();
+	const { data: origenes } = useOrigenes();
+	const { data: destinos } = useDestinos();
+	const { data: flujosResponse } = useFlujos();
+	const timelineDates = (0, import_react.useMemo)(() => {
+		if (!flujosResponse?.flujos) return [];
+		const set = /* @__PURE__ */ new Set();
+		flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
+		return [...set].sort();
+	}, [flujosResponse]);
+	/** El único reloj. Todo lo temporal del mapa se deriva de acá. */
+	const isoDate = viewState.timelineDate;
+	const territoryDay = (0, import_react.useMemo)(() => dayFromIsoDate(isoDate), [isoDate]);
+	const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
+	const totalDespachosAsOf = (0, import_react.useMemo)(() => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0), [flujosParaMapa]);
+	/**
+	* Toneladas estimadas sobre los despachos que el mapa está mostrando.
+	* Se deriva, no se cruza contra la hoja TONELADAS, para que el
+	* marcador y el mapa nunca digan cosas distintas. Ver
+	* TONELADAS_POR_DESPACHO.
+	*/
+	const totalToneladasAsOf = (0, import_react.useMemo)(() => toneladasEstimadas(totalDespachosAsOf), [totalDespachosAsOf]);
+	const flujosFiltrados = (0, import_react.useMemo)(() => {
+		if (linesDismissed && !viewState.origenId && !viewState.destinoId) return [];
+		if (viewState.origenId) return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
+		if (viewState.destinoId) return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
+		return flujosParaMapa;
+	}, [
+		flujosParaMapa,
+		linesDismissed,
+		viewState.origenId,
+		viewState.destinoId
+	]);
+	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
+	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
+	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
+	/**
+	* Control de aparición de las notificaciones. El engine puede producir
+	* varios frames mientras siguen llegando despachos; si una tarjeta
+	* acaba de aparecer, no la reemplazamos durante 1200 ms.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!viewState.timelineInstant) return;
+		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
+	}, [viewState.timelineInstant, viewState.timelineDate]);
+	const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: embedded ? "theme-ayudas relative h-full min-h-[720px] w-full overflow-hidden bg-background" : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ClientOnly, { fallback: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground",
+				children: "Cargando mapa…"
+			}) }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcadorHUD, {
+				toneladas: totalToneladasAsOf,
+				despachos: totalDespachosAsOf,
+				day: territoryDay,
+				lens,
+				instant: viewState.timelineInstant
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvisoEntrega, { frame: visibleActivity }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
+				viewState,
+				seleccionNombre,
+				onGoToAll: () => {
+					setLinesDismissed(false);
+					setViewState((prev) => viewTransitions.toAll(prev));
+				}
+			}),
+			!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile }),
+			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
+				lens,
+				day: territoryDay,
+				zone: territoryZone,
+				routesMode,
+				onLensChange: setLens,
+				onZoneChange: setTerritoryZone,
+				onRoutesModeChange: setRoutesMode
+			}),
+			viewState.level === "DESTINO" && viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DestinoPanel, {
+				destinoId: viewState.destinoId,
+				isMobile,
+				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
+			}),
+			viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrigenPanel, {
+				origenId: viewState.origenId,
+				origenNombre: origenSeleccionado.nombre,
+				flujos: flujosFiltrados,
+				isMobile,
+				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
+			}),
+			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
+					dates: timelineDates,
+					currentDate: viewState.timelineDate,
+					onActivate: (first) => {
+						setLinesDismissed(false);
+						setViewState((prev) => viewTransitions.startTimeline(first, prev));
+					},
+					onSeek: (date) => {
+						setLinesDismissed(false);
+						setViewState((prev) => viewTransitions.seekTimeline(date, prev));
+					},
+					onAdvance: (date) => {
+						setLinesDismissed(false);
+						setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
+					},
+					onExit: () => {
+						setLinesDismissed(false);
+						setViewState((prev) => viewTransitions.exitTimeline(prev));
+					}
+				})
+			})
+		]
+	});
+}
+var ZONES = [
+	"todas",
+	"Norte",
+	"Centro",
+	"Sur",
+	"Pacífico"
+];
+function TerritoryControls({ lens, day, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange }) {
+	const visibleMunicipalities = zone === "todas" ? territoryMunicipalities : territoryMunicipalities.filter((m) => m.zone === zone);
+	const totalDespachos = visibleMunicipalities.reduce((sum, m) => sum + territoryValue(m, lens, day), 0);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
+		className: "pointer-events-auto absolute left-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex items-start justify-between gap-3",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground",
+						children: "Ayudas entregadas"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-1.5 text-base font-semibold text-foreground",
+						children: [
+							plural$1(totalDespachos, "entrega", "entregas"),
+							" en",
+							" ",
+							plural$1(visibleMunicipalities.length, "municipio", "municipios")
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1 text-sm text-muted-foreground",
+						children: describeLens(lens, day)
+					})
+				] })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+					active: lens === "acumulado",
+					onClick: () => onLensChange("acumulado"),
+					children: "Todo lo entregado"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+					active: lens === "jornada",
+					onClick: () => onLensChange("jornada"),
+					disabled: day === null,
+					title: day === null ? "Elige una jornada en la línea de tiempo" : void 0,
+					children: "Solo ese día"
+				})]
+			}),
+			day === null && lens === "acumulado" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-2.5 text-sm leading-5 text-muted-foreground",
+				children: "Mueve la línea de tiempo y ves cómo se entregaron las ayudas día por día."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-3 flex flex-wrap gap-1.5",
+				children: ZONES.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+					active: zone === item,
+					onClick: () => onZoneChange(item),
+					children: item === "todas" ? "Todas" : item
+				}, item))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+						active: routesMode === "visibles",
+						onClick: () => onRoutesModeChange("visibles"),
+						children: "Rutas visibles"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+						active: routesMode === "solo",
+						onClick: () => onRoutesModeChange("solo"),
+						children: "Solo selección"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
+						active: routesMode === "color",
+						onClick: () => onRoutesModeChange("color"),
+						children: "Solo color"
+					})
+				]
+			})
+		]
+	});
+}
+/** "1 municipio" y no "1 municipios". */
+function plural$1(n, uno, varios) {
+	return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
+}
+function ToggleButton({ active, onClick, children, disabled = false, title }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick,
+		disabled,
+		title,
+		"aria-pressed": active,
+		className: `rounded px-2.5 py-2 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
+		children
+	});
+}
+var CIRCUMFERENCE = 326.7;
+/**
+* Verificados contra el workbook:
+*   · 39/41 → CAT_MUNICIPIOS menos Cali, cruzado con DESPACHO_DESTINO.
+*     Faltan Candelaria y Florida.
+*   · 38/41 → municipios con al menos un requerimiento en pmuData. Los
+*     tres que no radicaron son Florida, Trujillo y Vijes.
+*   · 72/199 → 37 atendidos + 35 parcialmente atendidos.
+*   · 13/15 → días con al menos un despacho entre el 11 y el 25. Antes
+*     decía 14: no hay despacho ni el 23 ni el 25. (La hoja TONELADAS sí
+*     anota 4 t el 25, así que el workbook se contradice ahí; se cuenta
+*     por DESPACHOS, que es la tabla de hechos.)
+*/
+var panoramaDonuts = [{
+	id: "municipios",
+	value: 39,
+	total: 41,
+	label: "Municipios con ayudas entregadas",
+	color: "#039A39"
+}, {
+	id: "jornadas",
+	value: 13,
+	total: 15,
+	label: "Días con entregas, del 11 al 25",
+	color: "#81C8EC"
+}];
+function Donut({ value, total, label, color }) {
+	const dash = (total > 0 ? value / total : 0) * CIRCUMFERENCE;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex flex-col items-center text-center",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+			viewBox: "0 0 128 128",
+			className: "h-28 w-28",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+					cx: "64",
+					cy: "64",
+					r: "52",
+					fill: "none",
+					stroke: "#E4E7EA",
+					strokeWidth: "13"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
+					cx: "64",
+					cy: "64",
+					r: "52",
+					fill: "none",
+					stroke: color,
+					strokeWidth: "13",
+					strokeLinecap: "round",
+					strokeDasharray: `${dash.toFixed(1)} ${CIRCUMFERENCE}`,
+					transform: "rotate(-90 64 64)"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
+					x: "64",
+					y: "60",
+					textAnchor: "middle",
+					className: "fill-[#0B2233] font-serif text-[27px]",
+					children: value
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
+					x: "64",
+					y: "80",
+					textAnchor: "middle",
+					className: "fill-[#7E9AAD] text-[10.5px]",
+					children: ["de ", total]
+				})
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mt-1 max-w-[10rem] text-xs text-[#4E6B7C]",
+			children: label
+		})]
+	});
+}
+function PanoramaDonuts() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "mt-10 grid grid-cols-2 gap-6 rounded-lg border border-[#00578C]/12 bg-white p-6 md:grid-cols-4",
+		children: panoramaDonuts.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Donut, {
+			value: d.value,
+			total: d.total,
+			label: d.label,
+			color: d.color
+		}, d.id))
+	});
 }
 var jornadas = [
 	{
@@ -2130,1623 +2491,6 @@ var movimientoStats = [
 		color: "#B57BB5"
 	}
 ];
-[...new Set(territoryMunicipalities.flatMap((m) => Object.keys(m.dias)))].sort((a, b) => Number(a) - Number(b));
-/** "2026-08-14" → "14". Devuelve null si no hay fecha. */
-function dayFromIsoDate(iso) {
-	if (!iso) return null;
-	const dd = iso.slice(-2);
-	return /^\d{2}$/.test(dd) ? dd : null;
-}
-/** Acumulado del municipio hasta `day` inclusive. Con day null, el total. */
-function territoryValueAsOf(stat, day) {
-	if (!stat) return 0;
-	if (day === null) return stat.despachos;
-	const limite = Number(day);
-	return Object.entries(stat.dias).reduce((sum, [d, v]) => Number(d) <= limite ? sum + v : sum, 0);
-}
-/** Lo que se movió exactamente ese día. Con day null, 0: una jornada sin día no existe. */
-function territoryValueOnDay(stat, day) {
-	if (!stat || day === null) return 0;
-	return stat.dias[day] ?? 0;
-}
-/**
-* Punto de entrada único del mapa. Reemplaza a `territoryValueFor`, que
-* ignoraba el día cuando el modo era "acumulado" y por eso pintaba el
-* total final mientras el timeline iba por la mitad.
-*/
-function territoryValue(stat, lens, day) {
-	if (lens === "jornada" && day !== null) return territoryValueOnDay(stat, day);
-	return territoryValueAsOf(stat, day);
-}
-/** Etiqueta del estado temporal, para el HUD y los popups. */
-function describeLens(lens, day) {
-	if (day === null) return "Toda la operación";
-	return lens === "jornada" ? `Solo el ${day} de agosto` : `Acumulado al ${day} de agosto`;
-}
-/**
-* Toneladas movilizadas al corte activo.
-*
-* Vive acá y no en DashboardPage porque tenía un `return 0` que se
-* disparaba cada vez que el timeline caía en un día sin fila en
-* `jornadas` — y ahí el marcador se vaciaba. Un día sin fila no significa
-* "cero toneladas acumuladas": significa "ese día no hubo movimiento",
-* así que el acumulado es el del último día que sí lo tuvo.
-*
-* La serie es DEPARTAMENTAL (hoja TONELADAS del workbook): incluye Cali,
-* el acopio de Cartago y las otras ayudas solidarias. No es divisible
-* contra los despachos municipales que muestra el mapa.
-*/
-function toneladasMovilizadas(lens, day) {
-	const ultima = jornadas.at(-1)?.acumuladoToneladas ?? 0;
-	if (day === null) return ultima;
-	const exacta = jornadas.find((j) => j.dia === day);
-	if (lens === "jornada") return exacta?.toneladas ?? 0;
-	if (exacta) return exacta.acumuladoToneladas;
-	return jornadas.filter((j) => Number(j.dia) <= Number(day)).at(-1)?.acumuladoToneladas ?? 0;
-}
-function useIsMobile(breakpointPx = 768) {
-	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
-	(0, import_react.useEffect)(() => {
-		const mql = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
-		const onChange = () => setIsMobile(mql.matches);
-		onChange();
-		mql.addEventListener("change", onChange);
-		return () => mql.removeEventListener("change", onChange);
-	}, [breakpointPx]);
-	return isMobile;
-}
-function DashboardPage({ embedded = false }) {
-	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
-	const [linesDismissed, setLinesDismissed] = (0, import_react.useState)(false);
-	/**
-	* `lens` es CÓMO se lee el día que marca el timeline, no un segundo
-	* reloj. Antes esto era `territoryMode` y venía con su propio slider de
-	* jornada, independiente del timeline: se podía tener los arcos en el
-	* día 14 y los polígonos pintados con el total final de la operación.
-	* Ahora hay un solo control temporal —el Timeline— y este toggle solo
-	* decide si ese día se lee como acumulado o como jornada suelta.
-	*
-	* Por defecto acumulado: mover una línea de tiempo normalmente
-	* significa "mostrame cómo iba", no "mostrame solo ese día".
-	*/
-	const [lens, setLens] = (0, import_react.useState)("acumulado");
-	const [territoryZone, setTerritoryZone] = (0, import_react.useState)("todas");
-	const [routesMode, setRoutesMode] = (0, import_react.useState)("visibles");
-	const isMobile = useIsMobile();
-	const { data: origenes } = useOrigenes();
-	const { data: destinos } = useDestinos();
-	const { data: flujosResponse } = useFlujos();
-	const timelineDates = (0, import_react.useMemo)(() => {
-		if (!flujosResponse?.flujos) return [];
-		const set = /* @__PURE__ */ new Set();
-		flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
-		return [...set].sort();
-	}, [flujosResponse]);
-	/** El único reloj. Todo lo temporal del mapa se deriva de acá. */
-	const isoDate = viewState.timelineDate;
-	const territoryDay = (0, import_react.useMemo)(() => dayFromIsoDate(isoDate), [isoDate]);
-	const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
-	const totalDespachosAsOf = (0, import_react.useMemo)(() => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0), [flujosParaMapa]);
-	/**
-	* Toneladas del HUD, con el mismo lente que todo lo demás.
-	*
-	* OJO: la serie de `jornadas` es DEPARTAMENTAL —incluye Cali, el acopio
-	* de Cartago y las otras ayudas solidarias—, mientras que `totalDespachosAsOf`
-	* cuenta solo los flujos visibles en el mapa. Las dos cifras del HUD no
-	* son divisibles entre sí.
-	*/
-	const totalToneladasAsOf = (0, import_react.useMemo)(() => toneladasMovilizadas(lens, territoryDay), [lens, territoryDay]);
-	const flujosFiltrados = (0, import_react.useMemo)(() => {
-		if (linesDismissed && !viewState.origenId && !viewState.destinoId) return [];
-		if (viewState.origenId) return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
-		if (viewState.destinoId) return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
-		return flujosParaMapa;
-	}, [
-		flujosParaMapa,
-		linesDismissed,
-		viewState.origenId,
-		viewState.destinoId
-	]);
-	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
-	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
-	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
-	/**
-	* Control de aparición de las notificaciones. El engine puede producir
-	* varios frames mientras siguen llegando despachos; si una tarjeta
-	* acaba de aparecer, no la reemplazamos durante 1200 ms.
-	*/
-	(0, import_react.useEffect)(() => {
-		if (!viewState.timelineInstant) return;
-		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
-	}, [viewState.timelineInstant, viewState.timelineDate]);
-	const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: embedded ? "theme-ayudas relative h-full min-h-[720px] w-full overflow-hidden bg-background" : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ClientOnly, { fallback: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground",
-				children: "Cargando mapa…"
-			}) }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcadorHUD, {
-				toneladas: totalToneladasAsOf,
-				despachos: totalDespachosAsOf,
-				day: territoryDay,
-				lens,
-				instant: viewState.timelineInstant
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
-				viewState,
-				seleccionNombre,
-				onGoToAll: () => {
-					setLinesDismissed(false);
-					setViewState((prev) => viewTransitions.toAll(prev));
-				}
-			}),
-			!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile }),
-			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
-				lens,
-				day: territoryDay,
-				zone: territoryZone,
-				routesMode,
-				onLensChange: setLens,
-				onZoneChange: setTerritoryZone,
-				onRoutesModeChange: setRoutesMode
-			}),
-			viewState.level === "DESTINO" && viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DestinoPanel, {
-				destinoId: viewState.destinoId,
-				isMobile,
-				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
-			}),
-			viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrigenPanel, {
-				origenId: viewState.origenId,
-				origenNombre: origenSeleccionado.nombre,
-				flujos: flujosFiltrados,
-				isMobile,
-				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
-			}),
-			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
-					dates: timelineDates,
-					currentDate: viewState.timelineDate,
-					onActivate: (first) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.startTimeline(first, prev));
-					},
-					onSeek: (date) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.seekTimeline(date, prev));
-					},
-					onAdvance: (date) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
-					},
-					onExit: () => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.exitTimeline(prev));
-					}
-				})
-			})
-		]
-	});
-}
-var ZONES = [
-	"todas",
-	"Norte",
-	"Centro",
-	"Sur",
-	"Pacífico"
-];
-function TerritoryControls({ lens, day, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange }) {
-	const visibleMunicipalities = zone === "todas" ? territoryMunicipalities : territoryMunicipalities.filter((m) => m.zone === zone);
-	const totalDespachos = visibleMunicipalities.reduce((sum, m) => sum + territoryValue(m, lens, day), 0);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
-		className: "pointer-events-auto absolute left-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "flex items-start justify-between gap-3",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "label-caps text-[10px]",
-						children: "Territorio"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1 text-sm font-semibold text-foreground",
-						children: [
-							plural(totalDespachos, "despacho", "despachos"),
-							" ·",
-							" ",
-							plural(visibleMunicipalities.length, "municipio", "municipios")
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-0.5 text-[11px] text-muted-foreground",
-						children: describeLens(lens, day)
-					})
-				] })
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-3 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: lens === "acumulado",
-					onClick: () => onLensChange("acumulado"),
-					children: "Acumulado"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: lens === "jornada",
-					onClick: () => onLensChange("jornada"),
-					disabled: day === null,
-					title: day === null ? "Movés el timeline para elegir una jornada" : void 0,
-					children: "Solo la jornada"
-				})]
-			}),
-			day === null && lens === "acumulado" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-2 text-[11px] leading-4 text-muted-foreground",
-				children: "Mové la línea de tiempo para ver cómo se fue llenando el mapa."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-3 flex flex-wrap gap-1.5",
-				children: ZONES.map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: zone === item,
-					onClick: () => onZoneChange(item),
-					children: item === "todas" ? "Todas" : item
-				}, item))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-3 grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "visibles",
-						onClick: () => onRoutesModeChange("visibles"),
-						children: "Rutas visibles"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "solo",
-						onClick: () => onRoutesModeChange("solo"),
-						children: "Solo selección"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "color",
-						onClick: () => onRoutesModeChange("color"),
-						children: "Solo color"
-					})
-				]
-			})
-		]
-	});
-}
-/** "1 municipio" y no "1 municipios". */
-function plural(n, uno, varios) {
-	return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
-}
-function ToggleButton({ active, onClick, children, disabled = false, title }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-		type: "button",
-		onClick,
-		disabled,
-		title,
-		"aria-pressed": active,
-		className: `rounded px-2 py-1.5 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
-		children
-	});
-}
-var features = {
-	type: "FeatureCollection",
-	features: [
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76001",
-				"name": "CALI"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.49136, 3.50601],
-					[-76.47544, 3.45147],
-					[-76.46075, 3.32876],
-					[-76.49258, 3.2891],
-					[-76.55868, 3.2829],
-					[-76.60765, 3.31389],
-					[-76.69579, 3.31141],
-					[-76.70191, 3.35603],
-					[-76.70681, 3.42792],
-					[-76.6505, 3.46635],
-					[-76.59541, 3.54815],
-					[-76.59174, 3.54691],
-					[-76.54767, 3.49981],
-					[-76.49136, 3.50601]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76036",
-				"name": "ANDALUCÍA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.07147, 4.08856],
-					[-76.17185, 4.11955],
-					[-76.2453, 4.16789],
-					[-76.24897, 4.184],
-					[-76.23551, 4.21375],
-					[-76.15104, 4.18276],
-					[-76.07147, 4.08856]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76041",
-				"name": "ANSERMANUEVO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.98945, 4.88058],
-					[-75.91478, 4.87314],
-					[-75.93559, 4.80745],
-					[-75.96375, 4.80125],
-					[-76.01639, 4.69218],
-					[-76.08861, 4.73556],
-					[-76.14737, 4.78514],
-					[-76.1388, 4.84092],
-					[-76.13758, 4.8434],
-					[-76.07147, 4.8372],
-					[-75.98945, 4.88058]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76054",
-				"name": "ARGELIA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.08861, 4.73556],
-					[-76.12289, 4.65128],
-					[-76.19389, 4.68227],
-					[-76.14737, 4.78514],
-					[-76.08861, 4.73556]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76111",
-				"name": "GUADALAJARA DE BUGA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.31263, 3.99312],
-					[-76.22694, 3.93239],
-					[-76.14125, 3.90388],
-					[-76.10085, 3.95718],
-					[-76.08371, 3.90636],
-					[-75.99802, 3.89396],
-					[-75.87316, 3.92619],
-					[-75.8499, 3.889],
-					[-75.91723, 3.74894],
-					[-75.95518, 3.71424],
-					[-75.99925, 3.75638],
-					[-76.08249, 3.77002],
-					[-76.10452, 3.81959],
-					[-76.17797, 3.80472],
-					[-76.27713, 3.83819],
-					[-76.37261, 3.81216],
-					[-76.31263, 3.99312]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76113",
-				"name": "BUGALAGRANDE"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.0372, 4.25589],
-					[-75.95395, 4.17656],
-					[-76.0017, 4.10219],
-					[-76.07147, 4.08856],
-					[-76.15104, 4.18276],
-					[-76.23551, 4.21375],
-					[-76.21225, 4.25961],
-					[-76.17185, 4.31786],
-					[-76.08371, 4.24349],
-					[-76.0372, 4.25589]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76122",
-				"name": "CAICEDONIA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.80338, 4.39595],
-					[-75.79237, 4.33769],
-					[-75.79481, 4.31042],
-					[-75.82542, 4.21499],
-					[-75.89275, 4.29927],
-					[-75.8548, 4.36372],
-					[-75.86704, 4.41082],
-					[-75.80338, 4.39595]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76126",
-				"name": "CALIMA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.4987, 4.06377],
-					[-76.41546, 4.00923],
-					[-76.42403, 3.9423],
-					[-76.47789, 3.86546],
-					[-76.56113, 3.8481],
-					[-76.59296, 3.86298],
-					[-76.71415, 3.84191],
-					[-76.81453, 3.87537],
-					[-76.88798, 3.99312],
-					[-76.85983, 4.0303],
-					[-76.6811, 3.96461],
-					[-76.62479, 4.01543],
-					[-76.58929, 3.99312],
-					[-76.4987, 4.06377]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76130",
-				"name": "CANDELARIA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.2906, 3.4713],
-					[-76.32977, 3.3833],
-					[-76.30039, 3.36595],
-					[-76.34323, 3.28166],
-					[-76.3518, 3.28662],
-					[-76.46075, 3.32876],
-					[-76.47544, 3.45147],
-					[-76.37506, 3.45023],
-					[-76.2906, 3.4713]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76147",
-				"name": "CARTAGO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.93559, 4.80745],
-					[-75.85602, 4.72813],
-					[-75.85602, 4.71325],
-					[-75.82787, 4.65995],
-					[-75.86581, 4.61286],
-					[-75.97232, 4.66739],
-					[-76.01639, 4.66615],
-					[-76.01639, 4.69218],
-					[-75.96375, 4.80125],
-					[-75.93559, 4.80745]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76243",
-				"name": "EL ÁGUILA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.99068, 4.91281],
-					[-75.98945, 4.88058],
-					[-76.07147, 4.8372],
-					[-76.13758, 4.8434],
-					[-76.08861, 4.94627],
-					[-76.07759, 5.04667],
-					[-76.0274, 4.93884],
-					[-75.99068, 4.91281]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76246",
-				"name": "EL CAIRO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.14737, 4.78514],
-					[-76.19389, 4.68227],
-					[-76.29794, 4.69838],
-					[-76.31263, 4.75044],
-					[-76.21103, 4.82976],
-					[-76.1388, 4.84092],
-					[-76.14737, 4.78514]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76248",
-				"name": "EL CERRITO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.95518, 3.71424],
-					[-75.96007, 3.70432],
-					[-76.00659, 3.71672],
-					[-76.08983, 3.62128],
-					[-76.24163, 3.62128],
-					[-76.29304, 3.60269],
-					[-76.36772, 3.62748],
-					[-76.42648, 3.69441],
-					[-76.40077, 3.74027],
-					[-76.3971, 3.76258],
-					[-76.3212, 3.7068],
-					[-76.20123, 3.66218],
-					[-76.12411, 3.68821],
-					[-76.08249, 3.77002],
-					[-75.99925, 3.75638],
-					[-75.95518, 3.71424]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76250",
-				"name": "EL DOVIO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.18532, 4.54592],
-					[-76.16573, 4.51246],
-					[-76.26856, 4.48147],
-					[-76.36527, 4.49263],
-					[-76.30039, 4.65376],
-					[-76.28325, 4.59426],
-					[-76.22204, 4.60294],
-					[-76.18532, 4.54592]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76275",
-				"name": "FLORIDA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.06168, 3.35479],
-					[-76.03842, 3.3015],
-					[-76.05556, 3.22341],
-					[-76.19144, 3.22713],
-					[-76.22939, 3.27671],
-					[-76.34323, 3.28166],
-					[-76.30039, 3.36595],
-					[-76.18165, 3.35727],
-					[-76.08861, 3.38826],
-					[-76.06168, 3.35479]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76306",
-				"name": "GINEBRA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.08249, 3.77002],
-					[-76.12411, 3.68821],
-					[-76.20123, 3.66218],
-					[-76.3212, 3.7068],
-					[-76.30284, 3.7601],
-					[-76.22082, 3.76878],
-					[-76.17797, 3.80472],
-					[-76.10452, 3.81959],
-					[-76.08249, 3.77002]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76318",
-				"name": "GUACARÍ"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.17797, 3.80472],
-					[-76.22082, 3.76878],
-					[-76.30284, 3.7601],
-					[-76.3212, 3.7068],
-					[-76.3971, 3.76258],
-					[-76.37261, 3.81216],
-					[-76.27713, 3.83819],
-					[-76.17797, 3.80472]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76020",
-				"name": "ALCALÁ"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.70912, 4.67979],
-					[-75.74095, 4.655],
-					[-75.82787, 4.65995],
-					[-75.85602, 4.71325],
-					[-75.70912, 4.67979]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76497",
-				"name": "OBANDO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.86581, 4.61286],
-					[-75.86704, 4.57567],
-					[-75.8805, 4.53105],
-					[-75.96375, 4.53105],
-					[-76.03108, 4.56947],
-					[-76.03842, 4.58311],
-					[-76.01639, 4.66615],
-					[-75.97232, 4.66739],
-					[-75.86581, 4.61286]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76520",
-				"name": "PALMIRA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.96007, 3.70432],
-					[-75.99313, 3.60888],
-					[-75.98456, 3.55931],
-					[-76.0372, 3.45271],
-					[-76.12166, 3.47626],
-					[-76.2906, 3.4713],
-					[-76.37506, 3.45023],
-					[-76.47544, 3.45147],
-					[-76.49136, 3.50601],
-					[-76.42648, 3.68077],
-					[-76.42648, 3.69441],
-					[-76.36772, 3.62748],
-					[-76.29304, 3.60269],
-					[-76.24163, 3.62128],
-					[-76.08983, 3.62128],
-					[-76.00659, 3.71672],
-					[-75.96007, 3.70432]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76563",
-				"name": "PRADERA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.0372, 3.45271],
-					[-76.06168, 3.35479],
-					[-76.08861, 3.38826],
-					[-76.18165, 3.35727],
-					[-76.30039, 3.36595],
-					[-76.32977, 3.3833],
-					[-76.2906, 3.4713],
-					[-76.12166, 3.47626],
-					[-76.0372, 3.45271]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76606",
-				"name": "RESTREPO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.47789, 3.86546],
-					[-76.4681, 3.83075],
-					[-76.53665, 3.74894],
-					[-76.60275, 3.75142],
-					[-76.56113, 3.8481],
-					[-76.47789, 3.86546]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76616",
-				"name": "RIOFRÍO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.24897, 4.184],
-					[-76.2453, 4.16789],
-					[-76.30284, 4.06749],
-					[-76.41546, 4.00923],
-					[-76.4987, 4.06377],
-					[-76.44851, 4.16169],
-					[-76.34813, 4.15921],
-					[-76.3261, 4.19515],
-					[-76.24897, 4.184]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76622",
-				"name": "ROLDANILLO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.16573, 4.51246],
-					[-76.06535, 4.49263],
-					[-76.06902, 4.45544],
-					[-76.14859, 4.3724],
-					[-76.25632, 4.40215],
-					[-76.26856, 4.48147],
-					[-76.16573, 4.51246]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76670",
-				"name": "SAN PEDRO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.10085, 3.95718],
-					[-76.14125, 3.90388],
-					[-76.22694, 3.93239],
-					[-76.31263, 3.99312],
-					[-76.30039, 4.0489],
-					[-76.16206, 4.02287],
-					[-76.10085, 3.95718]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76736",
-				"name": "SEVILLA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.86704, 4.41082],
-					[-75.8548, 4.36372],
-					[-75.89275, 4.29927],
-					[-75.82542, 4.21499],
-					[-75.84011, 4.10095],
-					[-75.75197, 4.0774],
-					[-75.74585, 4.0427],
-					[-75.82297, 3.90512],
-					[-75.8548, 4.05014],
-					[-75.90132, 4.08484],
-					[-75.91356, 4.17532],
-					[-75.95395, 4.17656],
-					[-76.0372, 4.25589],
-					[-76.02128, 4.30175],
-					[-75.95395, 4.3253],
-					[-75.95151, 4.3724],
-					[-75.87806, 4.40958],
-					[-75.86704, 4.41082]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76823",
-				"name": "TORO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.01639, 4.69218],
-					[-76.01639, 4.66615],
-					[-76.03842, 4.58311],
-					[-76.15104, 4.57567],
-					[-76.12289, 4.65128],
-					[-76.08861, 4.73556],
-					[-76.01639, 4.69218]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76828",
-				"name": "TRUJILLO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.21225, 4.25961],
-					[-76.23551, 4.21375],
-					[-76.24897, 4.184],
-					[-76.3261, 4.19515],
-					[-76.34813, 4.15921],
-					[-76.44851, 4.16169],
-					[-76.45463, 4.22986],
-					[-76.40689, 4.29927],
-					[-76.29672, 4.29431],
-					[-76.21225, 4.25961]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76834",
-				"name": "TULUÁ"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.82297, 3.90512],
-					[-75.8499, 3.889],
-					[-75.87316, 3.92619],
-					[-75.99802, 3.89396],
-					[-76.08371, 3.90636],
-					[-76.10085, 3.95718],
-					[-76.16206, 4.02287],
-					[-76.30039, 4.0489],
-					[-76.30284, 4.06749],
-					[-76.2453, 4.16789],
-					[-76.17185, 4.11955],
-					[-76.07147, 4.08856],
-					[-76.0017, 4.10219],
-					[-75.95395, 4.17656],
-					[-75.91356, 4.17532],
-					[-75.90132, 4.08484],
-					[-75.8548, 4.05014],
-					[-75.82297, 3.90512]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76845",
-				"name": "ULLOA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.71402, 4.71325],
-					[-75.70912, 4.67979],
-					[-75.85602, 4.71325],
-					[-75.85602, 4.72813],
-					[-75.71402, 4.71325]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76863",
-				"name": "VERSALLES"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.19389, 4.68227],
-					[-76.12289, 4.65128],
-					[-76.15104, 4.57567],
-					[-76.18532, 4.54592],
-					[-76.22204, 4.60294],
-					[-76.28325, 4.59426],
-					[-76.30039, 4.65376],
-					[-76.29794, 4.69838],
-					[-76.19389, 4.68227]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76869",
-				"name": "VIJES"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.40077, 3.74027],
-					[-76.42648, 3.69441],
-					[-76.42648, 3.68077],
-					[-76.50605, 3.69937],
-					[-76.53665, 3.74894],
-					[-76.4681, 3.83075],
-					[-76.44484, 3.74647],
-					[-76.40077, 3.74027]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76890",
-				"name": "YOTOCO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.30039, 4.0489],
-					[-76.31263, 3.99312],
-					[-76.37261, 3.81216],
-					[-76.3971, 3.76258],
-					[-76.40077, 3.74027],
-					[-76.44484, 3.74647],
-					[-76.4681, 3.83075],
-					[-76.47789, 3.86546],
-					[-76.42403, 3.9423],
-					[-76.41546, 4.00923],
-					[-76.30284, 4.06749],
-					[-76.30039, 4.0489]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76892",
-				"name": "YUMBO"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.42648, 3.68077],
-					[-76.49136, 3.50601],
-					[-76.54767, 3.49981],
-					[-76.59174, 3.54691],
-					[-76.50605, 3.69937],
-					[-76.42648, 3.68077]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76895",
-				"name": "ZARZAL"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.89519, 4.4257],
-					[-75.87806, 4.40958],
-					[-75.95151, 4.3724],
-					[-75.95395, 4.3253],
-					[-76.02128, 4.30175],
-					[-76.0372, 4.25589],
-					[-76.08371, 4.24349],
-					[-76.17185, 4.31786],
-					[-76.14859, 4.3724],
-					[-76.06902, 4.45544],
-					[-76.03842, 4.46536],
-					[-75.95763, 4.40215],
-					[-75.89519, 4.4257]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76403",
-				"name": "LA VICTORIA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-75.8805, 4.53105],
-					[-75.86949, 4.4542],
-					[-75.89519, 4.4257],
-					[-75.95763, 4.40215],
-					[-76.03842, 4.46536],
-					[-76.06902, 4.45544],
-					[-76.06535, 4.49263],
-					[-76.03108, 4.56947],
-					[-75.96375, 4.53105],
-					[-75.8805, 4.53105]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76400",
-				"name": "LA UNIÓN"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.03842, 4.58311],
-					[-76.03108, 4.56947],
-					[-76.06535, 4.49263],
-					[-76.16573, 4.51246],
-					[-76.18532, 4.54592],
-					[-76.15104, 4.57567],
-					[-76.03842, 4.58311]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76377",
-				"name": "LA CUMBRE"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.56113, 3.8481],
-					[-76.60275, 3.75142],
-					[-76.53665, 3.74894],
-					[-76.50605, 3.69937],
-					[-76.59174, 3.54691],
-					[-76.59541, 3.54815],
-					[-76.64927, 3.63243],
-					[-76.64437, 3.78489],
-					[-76.59296, 3.86298],
-					[-76.56113, 3.8481]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76364",
-				"name": "JAMUNDÍ"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.49258, 3.2891],
-					[-76.46075, 3.25935],
-					[-76.5036, 3.14408],
-					[-76.55746, 3.10194],
-					[-76.67743, 3.09946],
-					[-76.74965, 3.14656],
-					[-76.7827, 3.23085],
-					[-76.70191, 3.35603],
-					[-76.69579, 3.31141],
-					[-76.60765, 3.31389],
-					[-76.55868, 3.2829],
-					[-76.49258, 3.2891]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76100",
-				"name": "BOLÍVAR"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.26856, 4.48147],
-					[-76.25632, 4.40215],
-					[-76.14859, 4.3724],
-					[-76.17185, 4.31786],
-					[-76.21225, 4.25961],
-					[-76.29672, 4.29431],
-					[-76.40689, 4.29927],
-					[-76.45463, 4.22986],
-					[-76.48768, 4.23606],
-					[-76.54889, 4.33769],
-					[-76.5391, 4.39595],
-					[-76.48156, 4.41454],
-					[-76.36527, 4.49263],
-					[-76.26856, 4.48147]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76233",
-				"name": "DAGUA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.59296, 3.86298],
-					[-76.64437, 3.78489],
-					[-76.64927, 3.63243],
-					[-76.59541, 3.54815],
-					[-76.6505, 3.46635],
-					[-76.70681, 3.42792],
-					[-76.74843, 3.43412],
-					[-76.85493, 3.56426],
-					[-76.79372, 3.66466],
-					[-76.82188, 3.70556],
-					[-76.77536, 3.76258],
-					[-76.81453, 3.87537],
-					[-76.71415, 3.84191],
-					[-76.59296, 3.86298]
-				]]]
-			}
-		},
-		{
-			"type": "Feature",
-			"properties": {
-				"municipalityCode": "76109",
-				"name": "BUENAVENTURA"
-			},
-			"geometry": {
-				"type": "MultiPolygon",
-				"coordinates": [[[
-					[-76.85983, 4.0303],
-					[-76.88798, 3.99312],
-					[-76.81453, 3.87537],
-					[-76.77536, 3.76258],
-					[-76.82188, 3.70556],
-					[-76.79372, 3.66466],
-					[-76.85493, 3.56426],
-					[-76.74843, 3.43412],
-					[-76.70681, 3.42792],
-					[-76.70191, 3.35603],
-					[-76.7827, 3.23085],
-					[-76.78882, 3.21845],
-					[-76.90879, 3.2011],
-					[-76.93817, 3.11434],
-					[-76.99815, 3.15524],
-					[-77.10098, 3.18499],
-					[-77.1781, 3.15648],
-					[-77.23442, 3.10814],
-					[-77.31643, 3.17383],
-					[-77.34704, 3.14037],
-					[-77.43028, 3.2544],
-					[-77.49761, 3.21597],
-					[-77.55025, 3.23085],
-					[-77.48047, 3.32257],
-					[-77.33724, 3.44775],
-					[-77.36662, 3.4837],
-					[-77.30052, 3.57046],
-					[-77.2283, 3.58286],
-					[-77.18423, 3.65475],
-					[-77.19769, 3.74647],
-					[-77.18055, 3.83199],
-					[-77.28338, 3.84191],
-					[-77.31766, 3.94974],
-					[-77.21238, 4.00923],
-					[-77.24298, 4.0836],
-					[-77.31399, 4.02907],
-					[-77.35928, 3.92619],
-					[-77.44987, 4.03898],
-					[-77.35316, 4.19763],
-					[-77.30664, 4.16541],
-					[-77.15852, 4.18276],
-					[-77.04957, 4.09476],
-					[-76.99448, 4.12079],
-					[-76.91491, 4.096],
-					[-76.85983, 4.0303]
-				]]]
-			}
-		}
-	]
-}.features ?? [];
-function getRings(feature) {
-	if (!feature.geometry) return [];
-	if (feature.geometry.type === "Polygon") return feature.geometry.coordinates;
-	return feature.geometry.coordinates.flat();
-}
-var allPoints = features.flatMap((feature) => getRings(feature).flat());
-var lngs = allPoints.map(([lng]) => lng);
-var lats = allPoints.map(([, lat]) => lat);
-var minLng = Math.min(...lngs);
-var maxLng = Math.max(...lngs);
-var minLat = Math.min(...lats);
-var maxLat = Math.max(...lats);
-function project([lng, lat]) {
-	const x = (lng - minLng) / (maxLng - minLng) * 86 + 7;
-	const y = (maxLat - lat) / (maxLat - minLat) * 92 + 4;
-	return `${x.toFixed(2)},${y.toFixed(2)}`;
-}
-function ValleGlyph({ className }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-		className,
-		viewBox: "0 0 100 100",
-		role: "img",
-		"aria-label": "Silueta del Valle del Cauca",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("defs", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("linearGradient", {
-				id: "valle-glyph-fill",
-				x1: "0",
-				x2: "1",
-				y1: "0",
-				y2: "1",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("stop", {
-						offset: "0",
-						stopColor: "#C6ECFB"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("stop", {
-						offset: "0.52",
-						stopColor: "#3E9BCB"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("stop", {
-						offset: "1",
-						stopColor: "#00578C"
-					})
-				]
-			}) }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-				width: "100",
-				height: "100",
-				rx: "8",
-				fill: "#0B2233"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("g", { children: features.flatMap((feature) => getRings(feature).map((ring, index) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("polygon", {
-				points: ring.map(project).join(" "),
-				fill: "url(#valle-glyph-fill)",
-				fillOpacity: feature.properties?.name === "CALI" ? .34 : .82,
-				stroke: "#0B2233",
-				strokeWidth: "0.38",
-				strokeLinejoin: "round"
-			}, `${feature.properties?.municipalityCode ?? feature.properties?.name ?? "mun"}-${index}`))) }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
-				d: "M17 79 C35 65, 38 46, 52 33 S72 19, 83 8",
-				fill: "none",
-				stroke: "#FFD103",
-				strokeWidth: "1.8",
-				strokeLinecap: "round",
-				opacity: "0.82"
-			})
-		]
-	});
-}
-var CIRCUMFERENCE = 326.7;
-/**
-* Verificados contra el workbook:
-*   · 39/41 → CAT_MUNICIPIOS menos Cali, cruzado con DESPACHO_DESTINO.
-*     Faltan Candelaria y Florida.
-*   · 38/41 → municipios con al menos un requerimiento en pmuData. Los
-*     tres que no radicaron son Florida, Trujillo y Vijes.
-*   · 72/199 → 37 atendidos + 35 parcialmente atendidos.
-*   · 13/15 → días con al menos un despacho entre el 11 y el 25. Antes
-*     decía 14: no hay despacho ni el 23 ni el 25. (La hoja TONELADAS sí
-*     anota 4 t el 25, así que el workbook se contradice ahí; se cuenta
-*     por DESPACHOS, que es la tabla de hechos.)
-*/
-var panoramaDonuts = [
-	{
-		id: "municipios",
-		value: 39,
-		total: 41,
-		label: "Municipios atendidos",
-		color: "#039A39"
-	},
-	{
-		id: "requerimientos-radicados",
-		value: 38,
-		total: 41,
-		label: "Con requerimientos radicados",
-		color: "#7F207F"
-	},
-	{
-		id: "requerimientos-accion",
-		value: 72,
-		total: 199,
-		label: "Requerimientos con acción registrada",
-		color: "#F0B102"
-	},
-	{
-		id: "jornadas",
-		value: 13,
-		total: 15,
-		label: "Días con despacho, del 11 al 25",
-		color: "#81C8EC"
-	}
-];
-var puenteSteps = [
-	{
-		id: "base",
-		kind: "base",
-		label: "Documentos catalogados en el Drive",
-		delta: 414
-	},
-	{
-		id: "propio-canal",
-		kind: "resta",
-		label: "Carpetas que van por su propio canal",
-		delta: -113,
-		detail: [
-			{
-				label: "Cali",
-				value: 56,
-				note: "Excluida del consolidado por instrucción expresa"
-			},
-			{
-				label: "Centro de acopio Cartago",
-				value: 35,
-				note: "Bodega: es la misma ayuda vista desde el origen"
-			},
-			{
-				label: "Otras Ayudas Solidarias",
-				value: 19,
-				note: "Entregas a instituciones, no a un municipio"
-			},
-			{
-				label: "Inciva",
-				value: 1,
-				note: "Entrega institucional"
-			},
-			{
-				label: "Centro de Protección",
-				value: 1,
-				note: "Entrega institucional"
-			},
-			{
-				label: "CHOCO",
-				value: 1,
-				note: "Fuera del Valle: suma como despacho, no como municipio"
-			}
-		]
-	},
-	{
-		id: "formatos-conjuntos",
-		kind: "resta",
-		label: "Formatos conjuntos, contados por municipio",
-		delta: -7,
-		detail: [{
-			label: "Municipios múltiples",
-			value: 6,
-			note: "Un formato que reparte a varios municipios"
-		}, {
-			label: "_RAIZ",
-			value: 1,
-			note: "Formato conjunto suelto en la raíz del Drive"
-		}]
-	},
-	{
-		id: "subtotal-1",
-		kind: "subtotal",
-		label: "Archivos en carpetas de municipio",
-		delta: 294
-	},
-	{
-		id: "reescaneos",
-		kind: "resta",
-		label: "Reescaneos del mismo despacho",
-		delta: -3,
-		detail: [
-			{
-				label: "Argelia",
-				value: 1,
-				note: "12_08_2026_ARGELIA"
-			},
-			{
-				label: "Zarzal",
-				value: 1,
-				note: "12_08_2026_Zarzal"
-			},
-			{
-				label: "Yotoco",
-				value: 1,
-				note: "13_08_2026_YOTOCO PDF.pdf"
-			}
-		]
-	},
-	{
-		id: "subtotal-2",
-		kind: "subtotal",
-		label: "Despachos con documento propio",
-		delta: 291
-	},
-	{
-		id: "reparto-conjuntos",
-		kind: "suma",
-		label: "Entregas que reparten los 7 formatos conjuntos",
-		delta: 15
-	},
-	{
-		id: "subtotal-3",
-		kind: "subtotal",
-		label: "Despachos municipales",
-		delta: 306
-	},
-	{
-		id: "choco",
-		kind: "suma",
-		label: "Despacho fuera del Valle (Chocó)",
-		delta: 1
-	},
-	{
-		id: "total",
-		kind: "total",
-		label: "DESPACHOS DOCUMENTADOS",
-		delta: 307
-	}
-];
-function Donut({ value, total, label, color }) {
-	const dash = (total > 0 ? value / total : 0) * CIRCUMFERENCE;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-col items-center text-center",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-			viewBox: "0 0 128 128",
-			className: "h-28 w-28",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
-					cx: "64",
-					cy: "64",
-					r: "52",
-					fill: "none",
-					stroke: "#E4E7EA",
-					strokeWidth: "13"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
-					cx: "64",
-					cy: "64",
-					r: "52",
-					fill: "none",
-					stroke: color,
-					strokeWidth: "13",
-					strokeLinecap: "round",
-					strokeDasharray: `${dash.toFixed(1)} ${CIRCUMFERENCE}`,
-					transform: "rotate(-90 64 64)"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
-					x: "64",
-					y: "60",
-					textAnchor: "middle",
-					className: "fill-[#0B2233] font-serif text-[27px]",
-					children: value
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
-					x: "64",
-					y: "80",
-					textAnchor: "middle",
-					className: "fill-[#7E9AAD] text-[10.5px]",
-					children: ["de ", total]
-				})
-			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "mt-1 max-w-[10rem] text-xs text-[#4E6B7C]",
-			children: label
-		})]
-	});
-}
-function PanoramaDonuts() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mt-10 grid grid-cols-2 gap-6 rounded-lg border border-[#00578C]/12 bg-white p-6 md:grid-cols-4",
-		children: panoramaDonuts.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Donut, {
-			value: d.value,
-			total: d.total,
-			label: d.label,
-			color: d.color
-		}, d.id))
-	});
-}
-function signedLabel(row) {
-	if (row.kind === "resta") return row.delta.toString();
-	if (row.kind === "suma") return `+${row.delta}`;
-	return row.delta.toLocaleString("es-CO");
-}
-function rowStyles(kind) {
-	switch (kind) {
-		case "resta": return "text-[#DC3514]";
-		case "suma": return "text-[#039A39]";
-		case "subtotal": return "bg-[#00578C]/5 rounded font-semibold";
-		case "total": return "border-t-2 border-[#00578C] pt-3 mt-1 font-bold text-2xl text-[#00578C]";
-		default: return "";
-	}
-}
-function PanoramaPuente() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "mt-10 rounded-lg border border-[#00578C]/12 bg-white p-6",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-			className: "mb-4 max-w-3xl text-sm leading-6 text-[#4E6B7C]",
-			children: [
-				"Cada despacho de este tablero tiene un documento detrás. No es una relación de uno a uno —un formato conjunto es varias entregas y un reescaneo no es ninguna— así que la cuenta va paso a paso.",
-				" ",
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-					className: "text-[#0B2233]",
-					children: "Si esta suma no cuadra, el tablero no se genera."
-				})
-			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "divide-y divide-[#00578C]/10",
-			children: puenteSteps.map((row) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: `px-2 py-2.5 ${rowStyles(row.kind)}`,
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex items-baseline justify-between gap-4",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: row.kind === "total" ? "text-xs font-bold uppercase tracking-[0.12em] text-[#00578C]" : "text-sm text-[#315A70]",
-						children: row.label
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "shrink-0 font-serif tabular-nums",
-						children: signedLabel(row)
-					})]
-				}), row.detail && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-1.5 flex flex-wrap gap-1.5",
-					children: row.detail.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "rounded-full bg-[#00578C]/5 px-2.5 py-1 text-[11px] text-[#5E7789]",
-						title: d.note,
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "text-[#315A70]",
-								children: d.value
-							}),
-							" ",
-							d.label
-						]
-					}, d.label))
-				})]
-			}, row.id))
-		})]
-	});
-}
 var WIDTH = 1e3;
 var HEIGHT = 300;
 var PAD_LEFT = 58;
@@ -3929,471 +2673,136 @@ function MunicipiosNuevosCallouts() {
 		}, m.dia))
 	});
 }
-var PMU_FECHA_CORTE = "21 de agosto de 2026";
-var estadosRequerimientos = [
-	{
-		estado: "ATENDIDO",
-		cantidad: 37,
-		color: "#039A39",
-		texto: "#0B6B2B"
-	},
-	{
-		estado: "PARCIALMENTE ATENDIDO",
-		cantidad: 35,
-		color: "#F0B102",
-		texto: "#8A6500"
-	},
-	{
-		estado: "NO ATENDIDO",
-		cantidad: 95,
-		color: "#DC3514",
-		texto: "#A3260E"
-	},
-	{
-		estado: "EXCEDE CAPACIDAD ACTUAL",
-		cantidad: 2,
-		color: "#7F207F",
-		texto: "#5E175E"
-	},
-	{
-		estado: "SIN ESTADO",
-		cantidad: 30,
-		color: "#9AA7AE",
-		texto: "#5E7789"
-	}
-];
-/**
-* Por sector. La lectura del nivel está acá: solo 52 de 199 son ayuda
-* humanitaria. El resto son obras, y no se cierran despachando mercados.
-*/
-var sectoresRequerimientos = [
-	["Infraestructura", 75],
-	["Ayuda humanitaria", 52],
-	["Vivienda", 22],
-	["Servicios públicos", 12],
-	["Salud", 8],
-	["Agua y saneamiento", 8],
-	["Edificaciones públicas", 4],
-	["Otros", 4],
-	["Poblaciones", 3]
-];
-/** Los 41 municipios del catálogo. Cali no radica por esta vía. */
-var pmuPorMunicipio = [
-	{
-		codigoDane: "76020",
-		municipio: "Alcalá",
-		total: 1,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76036",
-		municipio: "Andalucía",
-		total: 7,
-		atendido: 2,
-		parcial: 2,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76041",
-		municipio: "Ansermanuevo",
-		total: 8,
-		atendido: 4,
-		parcial: 2,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76054",
-		municipio: "Argelia",
-		total: 5,
-		atendido: 3,
-		parcial: 0,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76100",
-		municipio: "Bolívar",
-		total: 5,
-		atendido: 2,
-		parcial: 2,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76109",
-		municipio: "Buenaventura",
-		total: 3,
-		atendido: 3,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76111",
-		municipio: "Guadalajara de Buga",
-		total: 10,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 9,
-		excede: 0,
-		sinEstado: 1
-	},
-	{
-		codigoDane: "76113",
-		municipio: "Bugalagrande",
-		total: 1,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76122",
-		municipio: "Caicedonia",
-		total: 1,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76126",
-		municipio: "Calima",
-		total: 5,
-		atendido: 3,
-		parcial: 1,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76130",
-		municipio: "Candelaria",
-		total: 6,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 4,
-		excede: 0,
-		sinEstado: 2
-	},
-	{
-		codigoDane: "76147",
-		municipio: "Cartago",
-		total: 4,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76233",
-		municipio: "Dagua",
-		total: 15,
-		atendido: 3,
-		parcial: 1,
-		abiertos: 8,
-		excede: 0,
-		sinEstado: 3
-	},
-	{
-		codigoDane: "76243",
-		municipio: "El Águila",
-		total: 9,
-		atendido: 0,
-		parcial: 4,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 4
-	},
-	{
-		codigoDane: "76246",
-		municipio: "El Cairo",
-		total: 1,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76248",
-		municipio: "El Cerrito",
-		total: 10,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 6
-	},
-	{
-		codigoDane: "76250",
-		municipio: "El Dovio",
-		total: 1,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76275",
-		municipio: "Florida",
-		total: 0,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76306",
-		municipio: "Ginebra",
-		total: 4,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 1
-	},
-	{
-		codigoDane: "76318",
-		municipio: "Guacarí",
-		total: 1,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76364",
-		municipio: "Jamundí",
-		total: 5,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 4,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76377",
-		municipio: "La Cumbre",
-		total: 11,
-		atendido: 1,
-		parcial: 2,
-		abiertos: 8,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76400",
-		municipio: "La Unión",
-		total: 3,
-		atendido: 0,
-		parcial: 2,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76403",
-		municipio: "La Victoria",
-		total: 14,
-		atendido: 0,
-		parcial: 2,
-		abiertos: 9,
-		excede: 0,
-		sinEstado: 3
-	},
-	{
-		codigoDane: "76497",
-		municipio: "Obando",
-		total: 6,
-		atendido: 1,
-		parcial: 1,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 3
-	},
-	{
-		codigoDane: "76520",
-		municipio: "Palmira",
-		total: 2,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76563",
-		municipio: "Pradera",
-		total: 5,
-		atendido: 0,
-		parcial: 2,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 2
-	},
-	{
-		codigoDane: "76606",
-		municipio: "Restrepo",
-		total: 8,
-		atendido: 0,
-		parcial: 3,
-		abiertos: 4,
-		excede: 0,
-		sinEstado: 1
-	},
-	{
-		codigoDane: "76616",
-		municipio: "Riofrío",
-		total: 5,
-		atendido: 2,
-		parcial: 1,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76622",
-		municipio: "Roldanillo",
-		total: 4,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 1,
-		excede: 2,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76670",
-		municipio: "San Pedro",
-		total: 2,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76736",
-		municipio: "Sevilla",
-		total: 3,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76823",
-		municipio: "Toro",
-		total: 4,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76828",
-		municipio: "Trujillo",
-		total: 0,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76834",
-		municipio: "Tuluá",
-		total: 1,
-		atendido: 0,
-		parcial: 1,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76845",
-		municipio: "Ulloa",
-		total: 5,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 4,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76863",
-		municipio: "Versalles",
-		total: 8,
-		atendido: 0,
-		parcial: 3,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 3
-	},
-	{
-		codigoDane: "76869",
-		municipio: "Vijes",
-		total: 0,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 0,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76890",
-		municipio: "Yotoco",
-		total: 4,
-		atendido: 1,
-		parcial: 0,
-		abiertos: 3,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76892",
-		municipio: "Yumbo",
-		total: 1,
-		atendido: 0,
-		parcial: 0,
-		abiertos: 1,
-		excede: 0,
-		sinEstado: 0
-	},
-	{
-		codigoDane: "76895",
-		municipio: "Zarzal",
-		total: 4,
-		atendido: 2,
-		parcial: 0,
-		abiertos: 2,
-		excede: 0,
-		sinEstado: 0
-	}
-];
-var pmuPorCodigo = new Map(pmuPorMunicipio.map((r) => [r.codigoDane, r]));
+function SidebarNav({ items, scrollRootId, homeId }) {
+	const [abierto, setAbierto] = (0, import_react.useState)(false);
+	const [activo, setActivo] = (0, import_react.useState)(items[0]?.id ?? "");
+	(0, import_react.useEffect)(() => {
+		const root = document.getElementById(scrollRootId);
+		if (!root) return;
+		const observer = new IntersectionObserver((entries) => {
+			const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+			if (visible) setActivo(visible.target.id);
+		}, {
+			root,
+			threshold: [
+				.25,
+				.5,
+				.75
+			],
+			rootMargin: "-20% 0px -60% 0px"
+		});
+		items.forEach((item) => {
+			const el = document.getElementById(item.id);
+			if (el) observer.observe(el);
+		});
+		return () => observer.disconnect();
+	}, [items, scrollRootId]);
+	const inicioId = homeId ?? items[0]?.id ?? "";
+	const irA = (id) => {
+		document.getElementById(id)?.scrollIntoView({
+			behavior: "smooth",
+			block: "start"
+		});
+		setAbierto(false);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+			type: "button",
+			onClick: () => setAbierto(true),
+			"aria-label": "Abrir menú",
+			className: "fixed left-4 top-4 z-50 flex size-12 items-center justify-center rounded-full bg-white text-[#00578C] shadow-lg ring-1 ring-[#00578C]/15 transition hover:bg-[#E8F6FC] md:hidden",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
+				className: "size-6",
+				"aria-hidden": true
+			})
+		}),
+		abierto && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+			type: "button",
+			"aria-label": "Cerrar menú",
+			onClick: () => setAbierto(false),
+			className: "fixed inset-0 z-40 bg-[#0B2233]/50 backdrop-blur-sm md:hidden"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+			"aria-label": "Secciones",
+			className: `fixed left-0 top-0 z-50 flex h-dvh flex-col border-r border-[#00578C]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}`,
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mb-5 flex items-center gap-3 px-1",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => irA(inicioId),
+						"aria-label": "Volver al inicio",
+						title: "Volver al inicio",
+						className: "flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#00578C] text-white transition hover:bg-[#00456F]",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, {
+							className: "size-6",
+							"aria-hidden": true
+						})
+					}), abierto ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: () => irA(inicioId),
+						className: "min-w-0 flex-1 text-left",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "block truncate font-serif text-lg leading-tight text-[#00578C]",
+							children: "Mapa de Ayudas"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block text-sm text-[#5E7789]",
+							children: "Valle del Cauca"
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: () => setAbierto(false),
+						"aria-label": "Cerrar menú",
+						className: "flex size-9 shrink-0 items-center justify-center rounded-full text-[#4E6B7C] transition hover:bg-[#F4F9FC]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+							className: "size-5 md:hidden",
+							"aria-hidden": true
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronLeft, {
+							className: "hidden size-5 md:block",
+							"aria-hidden": true
+						})]
+					})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setAbierto(true),
+						"aria-label": "Abrir menú",
+						className: "hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#4E6B7C] transition hover:bg-[#F4F9FC] md:flex",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
+							className: "size-6",
+							"aria-hidden": true
+						})
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "flex flex-1 flex-col gap-1",
+					children: items.map(({ id, label, icon: Icon }) => {
+						const esActivo = activo === id;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => irA(id),
+							"aria-current": esActivo ? "true" : void 0,
+							title: abierto ? void 0 : label,
+							className: `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${esActivo ? "bg-[#E8F6FC] text-[#00578C]" : "text-[#4E6B7C] hover:bg-[#F4F9FC] hover:text-[#00578C]"} ${abierto ? "" : "md:justify-center md:px-0"}`,
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, {
+								className: "size-6 shrink-0",
+								"aria-hidden": true
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: abierto ? "truncate" : "truncate md:hidden",
+								children: label
+							})]
+						}) }, id);
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: `px-2 pt-4 text-sm text-[#6E8B9E] ${abierto ? "" : "md:hidden"}`,
+					children: "Información al 25 de agosto de 2026"
+				})
+			]
+		})
+	] });
+}
 function SectionLabel({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-		className: "text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]",
+		className: "text-sm font-bold uppercase tracking-[0.16em] text-[#006A87]",
 		children
 	});
 }
@@ -4417,13 +2826,13 @@ function Bar({ ratio, color = "#00578C" }) {
 		})
 	});
 }
-/** Lista "etiqueta — barra — cifra". El máximo se calcula sobre la propia lista. */
+/** Lista "etiqueta, barra, cifra". El máximo se calcula sobre la propia lista. */
 function MiniList({ rows }) {
 	const max = Math.max(1, ...rows.map((r) => r.value));
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 		className: "flex flex-col gap-2",
 		children: rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-			className: "flex items-center gap-3 text-[13px]",
+			className: "flex items-center gap-3 text-base",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "min-w-0 flex-1 truncate text-[#4E6B7C]",
@@ -4437,7 +2846,7 @@ function MiniList({ rows }) {
 					})
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", {
-					className: "w-16 shrink-0 text-right tabular-nums text-[#0B2233]",
+					className: "w-20 shrink-0 text-right tabular-nums text-[#0B2233]",
 					children: [r.value.toLocaleString("es-CO"), r.suffix ?? ""]
 				})
 			]
@@ -4453,7 +2862,7 @@ function Card({ children, className = "" }) {
 /** Aviso metodológico. Amarillo, porque siempre dice qué NO se puede afirmar. */
 function Aviso({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "rounded-lg border border-[#F0B102]/40 border-l-[3px] border-l-[#F0B102] bg-[#FFF8E5] p-4 text-[13.4px] leading-6 text-[#6B5200]",
+		className: "rounded-lg border border-[#F0B102]/40 border-l-[3px] border-l-[#F0B102] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]",
 		children
 	});
 }
@@ -4463,7 +2872,7 @@ function Aviso({ children }) {
 * Las tres piezas que van DEBAJO del mapa en el nivel Territorio:
 * el podio, la cobertura por zona y la grilla de los 41 municipios.
 *
-* Todo se deriva de `territoryMunicipalities` — nada está escrito a mano.
+* Todo se deriva de `territoryMunicipalities`, nada está escrito a mano.
 * Importa porque el catálogo v2 movió Dagua de Pacífico a Sur: los
 * totales por zona del tablero HTML (Pacífico 2/2) ya no aplican, y
 * calcularlos evita que queden dos verdades circulando.
@@ -4490,7 +2899,7 @@ var BARRA_COLOR = TERRITORY_BLUE_RAMP[2] ?? "#2181B4";
 var norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 function PodioMunicipios({ onSelect }) {
 	const top = (0, import_react.useMemo)(() => [...territoryMunicipalities].sort((a, b) => b.despachos - a.despachos || a.name.localeCompare(b.name, "es")).slice(0, 6), []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Donde más se ha movilizado la ayuda" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Municipios que más ayuda recibieron" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
 		className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
 		children: top.map((m, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 			type: "button",
@@ -4507,14 +2916,12 @@ function PodioMunicipios({ onSelect }) {
 						children: m.name
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "mt-0.5 mb-2 block text-[11.5px] text-[#6E8B9E]",
+						className: "mt-0.5 mb-2 block text-[15px] text-[#6E8B9E]",
 						children: [
 							m.despachos,
-							" despachos · ",
+							" entregas · ",
 							m.toneladas,
-							" t · ",
-							m.unidades.toLocaleString("es-CO"),
-							" und"
+							" toneladas"
 						]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, { ratio: m.despachos / MAX_DESPACHOS })
@@ -4542,7 +2949,7 @@ function CoberturaPorZona() {
 			...acc.get(z)
 		}));
 	}, []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Cobertura por zona" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Ayudas por zona" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
 		children: zonas.map((z) => {
 			const ratio = z.atendidos / z.total;
@@ -4551,7 +2958,7 @@ function CoberturaPorZona() {
 				className: "rounded-lg border border-[#00578C]/12 bg-white p-5",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-[11.5px] font-bold uppercase tracking-[0.08em] text-[#6E8B9E]",
+						className: "text-base font-bold uppercase tracking-[0.08em] text-[#6E8B9E]",
 						children: z.zone
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
@@ -4571,10 +2978,11 @@ function CoberturaPorZona() {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "mt-2 text-[13px] text-[#5E7789]",
 						children: [
-							Math.round(ratio * 100),
-							"% · ",
+							z.atendidos === 1 ? "1 municipio" : `${z.atendidos} municipios`,
+							" ·",
+							" ",
 							z.despachos,
-							" despachos"
+							" entregas"
 						]
 					})
 				]
@@ -4593,7 +3001,7 @@ function MunicipiosGrid({ onSelect }) {
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionLabel, { children: [
 			"Los ",
 			territoryMunicipalities.length,
-			" municipios, uno por uno"
+			" municipios"
 		] }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mt-4 flex flex-wrap gap-2",
@@ -4601,7 +3009,7 @@ function MunicipiosGrid({ onSelect }) {
 				type: "button",
 				onClick: () => setZona(z),
 				"aria-pressed": zona === z,
-				className: `rounded-full border px-3.5 py-1.5 text-[12.4px] font-semibold transition ${zona === z ? "border-[#00578C] bg-[#00578C] text-white" : "border-[#00578C]/20 bg-white text-[#4E6B7C] hover:border-[#00578C]/50 hover:text-[#00578C]"}`,
+				className: `rounded-full border px-3.5 py-1.5 text-base font-semibold transition ${zona === z ? "border-[#00578C] bg-[#00578C] text-white" : "border-[#00578C]/20 bg-white text-[#4E6B7C] hover:border-[#00578C]/50 hover:text-[#00578C]"}`,
 				children: z === "todas" ? "Todas las zonas" : z
 			}, z))
 		}),
@@ -4611,16 +3019,16 @@ function MunicipiosGrid({ onSelect }) {
 			onChange: (e) => setTexto(e.target.value),
 			placeholder: "Buscar municipio…",
 			"aria-label": "Buscar municipio",
-			className: "mt-3 w-full rounded-lg border border-[#00578C]/20 bg-white px-3.5 py-2.5 text-[13.4px] text-[#0B2233] outline-none transition placeholder:text-[#8FAABC] focus:border-[#00578C]"
+			className: "mt-3 w-full rounded-lg border border-[#00578C]/20 bg-white px-3.5 py-2.5 text-base text-[#0B2233] outline-none transition placeholder:text-[#8FAABC] focus:border-[#00578C]"
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 text-[12.5px] text-[#6E8B9E]",
+			className: "mt-3 text-base text-[#6E8B9E]",
 			"aria-live": "polite",
 			children: visibles.length === territoryMunicipalities.length ? `${visibles.length} municipios` : `${visibles.length} de ${territoryMunicipalities.length} municipios`
 		}),
 		visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-6 rounded-lg border border-dashed border-[#00578C]/25 p-8 text-center text-sm text-[#6E8B9E]",
-			children: "Ningún municipio coincide. Probá con otro nombre o quitá el filtro de zona."
+			children: "Ningún municipio coincide. Prueba con otro nombre o quita el filtro de zona."
 		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(212px,1fr))]",
 			children: visibles.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipioCard, {
@@ -4632,8 +3040,6 @@ function MunicipiosGrid({ onSelect }) {
 }
 function MunicipioCard({ m, onSelect }) {
 	const sinDespacho = m.despachos === 0;
-	const pmu = pmuPorCodigo.get(m.codigoDane);
-	const alerta = sinDespacho || pmu != null && pmu.abiertos >= 8;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 		type: "button",
 		onClick: () => onSelect?.(m),
@@ -4642,10 +3048,10 @@ function MunicipioCard({ m, onSelect }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex items-baseline justify-between gap-2",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-					className: "min-w-0 truncate text-[14.4px] text-[#0B2233]",
+					className: "min-w-0 truncate text-lg text-[#0B2233]",
 					children: m.name
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: `font-serif text-[19px] ${sinDespacho ? "text-[#F26049]" : "text-[#00578C]"}`,
+					className: `font-serif text-2xl ${sinDespacho ? "text-[#F26049]" : "text-[#00578C]"}`,
 					children: m.despachos
 				})]
 			}),
@@ -4657,22 +3063,18 @@ function MunicipioCard({ m, onSelect }) {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex justify-between text-[11.4px] text-[#6E8B9E]",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [m.toneladas, " t"] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [m.unidades.toLocaleString("es-CO"), " und"] })]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: `mt-2.5 border-t border-[#00578C]/10 pt-2.5 text-[11.4px] ${alerta ? "font-semibold text-[#C43A20]" : "text-[#6E8B9E]"}`,
-				children: textoRequerimientos(pmu?.total ?? 0, pmu?.abiertos ?? 0)
+				className: "flex justify-between text-[15px] text-[#6E8B9E]",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [m.toneladas, " toneladas"] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: plural(m.despachos, "entrega", "entregas") })]
 			})
 		]
 	});
 }
-function textoRequerimientos(total, abiertos) {
-	if (total === 0) return "Sin requerimientos radicados";
-	return `${total === 1 ? "1 requerimiento" : `${total} requerimientos`} · ${abiertos === 1 ? "1 abierto" : `${abiertos} abiertos`} al 21-08`;
+/** "1 entrega" y no "1 entregas". */
+function plural(n, uno, varios) {
+	return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
 }
 /**
-* EvolucionHeatmap.tsx — Nivel 5, "¿Cómo ha cambiado?"
+* EvolucionHeatmap.tsx, Nivel 5, "¿Cómo ha cambiado?"
 * -----------------------------------------------------------------------
 * Una casilla por municipio y jornada. Se deriva de
 * `territoryMunicipalities[].dias`, así que no hay data nueva ni riesgo
@@ -4690,7 +3092,7 @@ var ORDEN_ZONAS = [
 	"Sur",
 	"Pacífico"
 ];
-/** Máximo de despachos en una sola casilla — fija el tope de opacidad. */
+/** Máximo de despachos en una sola casilla, fija el tope de opacidad. */
 var MAX_DIA = Math.max(1, ...territoryMunicipalities.flatMap((m) => Object.values(m.dias)));
 function celdaColor(value) {
 	if (value <= 0) return "rgba(255,255,255,0.055)";
@@ -4702,10 +3104,10 @@ function EvolucionHeatmap({ onSelect }) {
 		filas: territoryMunicipalities.filter((m) => m.zone === zone).sort((a, b) => b.despachos - a.despachos || a.name.localeCompare(b.name, "es"))
 	})).filter((g) => g.filas.length > 0), []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Quién recibió, qué día" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué municipio recibió cada día" }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 max-w-2xl text-[15px] leading-7 text-[#4E6B7C]",
-			children: "Cada casilla es una jornada de un municipio. Cuanto más intenso el azul, más despachos ese día. Las filas vacías del sur son las dos ausencias del departamento."
+			className: "mt-3 max-w-2xl text-lg leading-8 text-[#4E6B7C]",
+			children: "Cada casilla es un día. Más azul, más entregas ese día."
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mt-6 overflow-x-auto rounded-lg border border-white/12 bg-[#0B2233] p-5",
@@ -4714,15 +3116,15 @@ function EvolucionHeatmap({ onSelect }) {
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
 					etiqueta: "",
 					celdas: TERRITORY_DAYS.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-center text-[10.6px] text-[#7E9AAD]",
+						className: "text-center text-sm text-[#7E9AAD]",
 						children: d
 					}, d)),
 					total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-[10.6px] text-[#7E9AAD]",
+						className: "text-sm text-[#7E9AAD]",
 						children: "total"
 					})
 				}), porZona.map(({ zone, filas }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-3.5 mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#81C8EC]",
+					className: "mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#81C8EC]",
 					children: zone
 				}), filas.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 					type: "button",
@@ -4733,14 +3135,14 @@ function EvolucionHeatmap({ onSelect }) {
 						celdas: TERRITORY_DAYS.map((d) => {
 							const v = m.dias[d] ?? 0;
 							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								title: `${m.name} · ${d} de agosto · ${v === 0 ? "sin despacho" : v === 1 ? "1 despacho" : `${v} despachos`}`,
+								title: `${m.name} · ${d} de agosto · ${v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`}`,
 								className: "flex h-[21px] items-center justify-center rounded-sm text-[9.6px] font-bold text-[#06202F]",
 								style: { background: celdaColor(v) },
 								children: v > 1 ? v : ""
 							}, d);
 						}),
 						total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-right font-serif text-[13px] text-white",
+							className: "text-right font-serif text-base text-white",
 							children: m.despachos
 						})
 					})
@@ -4755,7 +3157,7 @@ function Fila({ etiqueta, celdas, total }) {
 		style: { gridTemplateColumns: `112px repeat(${TERRITORY_DAYS.length}, 1fr) 42px` },
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "truncate pr-1.5 text-left text-[11.6px] text-[#A9C2D2]",
+				className: "truncate pr-1.5 text-left text-[15px] text-[#A9C2D2]",
 				children: etiqueta
 			}),
 			celdas,
@@ -4763,8 +3165,7 @@ function Fila({ etiqueta, celdas, total }) {
 		]
 	});
 }
-var TOTAL_UNIDADES$1 = 256650;
-var TOTAL_RENGLONES = 6111;
+var TOTAL_UNIDADES = 256650;
 var categoriasAyuda = [
 	{
 		nombre: "Aseo personal",
@@ -5091,7 +3492,7 @@ var familiasDeAyuda = [
 	}
 ];
 /**
-* AyudaSection.tsx — Nivel 4, "¿Qué se está movilizando?"
+* AyudaSection.tsx, Nivel 4, "¿Qué se está movilizando?"
 * -----------------------------------------------------------------------
 * La cinta es la composición real de la ayuda. Al elegir una categoría,
 * la lista de la derecha cambia a los productos que la componen; al
@@ -5099,8 +3500,8 @@ var familiasDeAyuda = [
 * tablero HTML, pero con estado de React en vez de innerHTML.
 * -----------------------------------------------------------------------
 */
-/** Una casilla del waffle equivale a esto. Redondeado para que la glosa sea legible. */
-var UNIDADES_POR_BLOQUE = 1700;
+/** Cada bloque del waffle vale 1 por ciento del total entregado. */
+var UNIDADES_POR_BLOQUE = Math.round(TOTAL_UNIDADES / 100);
 function AyudaSection() {
 	const [activa, setActiva] = (0, import_react.useState)(null);
 	const categoria = activa ? categoriasAyuda.find((c) => c.nombre === activa) : void 0;
@@ -5117,38 +3518,39 @@ function AyudaSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué se mueve" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Dos de cada tres unidades son higiene, comida o agua" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué se entregó" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "La mayor parte de la ayuda es aseo, comida y agua" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-4 max-w-2xl text-[15.5px] leading-7 text-[#4E6B7C]",
-				children: "Cada renglón manuscrito se transcribió y se clasificó. Elegí una categoría para ver qué producto la compone."
+				className: "mt-4 max-w-2xl text-lg leading-8 text-[#4E6B7C]",
+				children: "Toca una categoría y ves qué artículos incluyó."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-10 grid gap-8 rounded-xl border border-[#00578C]/12 bg-white p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "text-center",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "block font-serif text-[58px] leading-none tracking-[-0.02em] text-[#00578C]",
-						children: TOTAL_UNIDADES$1.toLocaleString("es-CO")
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "mt-2.5 block text-[12.5px] leading-5 text-[#6E8B9E]",
-						children: [
-							"unidades registradas en ",
-							TOTAL_RENGLONES.toLocaleString("es-CO"),
-							" renglones",
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-							"transcritos de los formatos"
-						]
-					})]
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#00578C]",
+							children: 531
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "mt-3 block text-lg text-[#4E6B7C]",
+							children: "toneladas de ayuda"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "mt-2 block text-base leading-6 text-[#6E8B9E]",
+							children: "entregadas en todo el departamento"
+						})
+					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						className: "text-[17px] font-semibold text-[#0B2233]",
+						className: "text-xl font-semibold text-[#0B2233]",
 						children: "De qué está hecha esa ayuda"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "mt-4 flex h-9 overflow-hidden rounded-md",
 						children: categoriasAyuda.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-							title: `${c.nombre} · ${c.unidades.toLocaleString("es-CO")} unidades (${pct(c.unidades)}%)`,
+							title: `${c.nombre}: ${pct(c.unidades)} por ciento de la ayuda`,
 							className: "block transition-opacity",
 							style: {
 								flex: c.unidades,
@@ -5168,22 +3570,14 @@ function AyudaSection() {
 							}
 						}, `${c.nombre}-${i}`))
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-2.5 text-xs text-[#6E8B9E]",
-						children: [
-							"Cada bloque equivale a",
-							" ",
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", {
-								className: "text-[#0B2233]",
-								children: [UNIDADES_POR_BLOQUE.toLocaleString("es-CO"), " unidades"]
-							}),
-							". El color dice a qué necesidad responde la categoría, no en qué puesto va."
-						]
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-3 text-base text-[#6E8B9E]",
+						children: "Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde cada categoría."
 					})
 				] })]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-				className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[11.6px] text-[#4E6B7C]",
+				className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#4E6B7C]",
 				children: familiasDeAyuda.map((f) => {
 					const colores = f.categorias.map((n) => categoriasAyuda.find((c) => c.nombre === n)?.color).filter((c) => typeof c === "string");
 					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
@@ -5233,9 +3627,9 @@ function AyudaSection() {
 												className: "truncate",
 												children: c.nombre
 											})]
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "shrink-0 font-serif text-base text-[#00578C]",
-											children: c.unidades.toLocaleString("es-CO")
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "shrink-0 font-serif text-xl text-[#00578C]",
+											children: [pct(c.unidades), "%"]
 										})]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -5246,12 +3640,11 @@ function AyudaSection() {
 										})
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "mt-1.5 block text-[11.4px] text-[#6E8B9E]",
+										className: "mt-2 block text-[15px] text-[#6E8B9E]",
 										children: [
-											pct(c.unidades),
-											"% · ",
+											"Llegó a ",
 											c.destinos,
-											" destinos"
+											" municipios"
 										]
 									})
 								]
@@ -5262,14 +3655,14 @@ function AyudaSection() {
 					className: "flex flex-col gap-5",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]",
-						children: categoria ? `${categoria.nombre} · qué la compone` : "Productos más repartidos"
+						children: categoria ? `${categoria.nombre}` : "Lo más entregado"
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "mt-4",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: productos })
 					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]",
-							children: "Poblaciones focalizadas"
+							children: "Grupos atendidos"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mt-4",
@@ -5280,27 +3673,21 @@ function AyudaSection() {
 							})) })
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-xs text-[#6E8B9E]",
-							children: "Número de despachos que declaran expresamente cada población en el formato."
+							className: "mt-3 text-base text-[#6E8B9E]",
+							children: "Entregas que incluyeron ayuda dirigida a cada grupo."
 						})
 					] })]
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-6",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
-					" «Unidades» suma las cantidades tal como están escritas en el papel, y el papel mezcla unidades: mercados, paquetes, kilos y pacas conviven en la misma columna. Sirve para comparar composición y peso relativo entre categorías y municipios,",
-					" ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "no es un peso ni un conteo de personas" }),
-					". Las toneladas son una estimación aparte."
-				] })
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }), " Los porcentajes comparan cuánta ayuda de cada tipo se entregó. Las toneladas son una estimación a partir del número de entregas."] })
 			})
 		]
 	});
 }
 function pct(unidades) {
-	return Math.round(unidades / TOTAL_UNIDADES$1 * 100);
+	return Math.round(unidades / TOTAL_UNIDADES * 100);
 }
 var canales = [
 	{
@@ -5558,7 +3945,7 @@ var redCartago = [
 	["Ulloa", 1]
 ];
 /**
-* CanalesSection.tsx — Nivel 6, "Lo que no cabe en el mapa municipal"
+* CanalesSection.tsx, Nivel 6, "Lo que no cabe en el mapa municipal"
 * -----------------------------------------------------------------------
 * Los canales que el consolidado deja fuera por regla. Se muestran
 * juntos y con su total explícito porque el punto del nivel es que sin
@@ -5566,22 +3953,18 @@ var redCartago = [
 * -----------------------------------------------------------------------
 */
 var TOTAL_DESPACHOS = canales.reduce((s, c) => s + c.despachos, 0);
-var TOTAL_UNIDADES = canales.reduce((s, c) => s + c.unidades, 0);
 function CanalesSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Canales" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Cali, los dos acopios, las otras ayudas solidarias y lo que salió del Valle" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "De dónde salió" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Además de los municipios, la ayuda salió por otras siete rutas" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "mt-4 max-w-2xl text-[15.5px] leading-7 text-[#4E6B7C]",
+				className: "mt-4 max-w-2xl text-lg leading-8 text-[#4E6B7C]",
 				children: [
-					"El consolidado municipal deja fuera siete canales: ",
+					"El conteo por municipio deja fuera estas rutas. Suman ",
 					TOTAL_DESPACHOS,
-					" despachos y",
-					" ",
-					TOTAL_UNIDADES.toLocaleString("es-CO"),
-					" unidades que se movieron igual."
+					" entregas que también se movieron."
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -5591,24 +3974,20 @@ function CanalesSection() {
 					style: { borderTopColor: c.color },
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "text-[17px] font-semibold text-[#0B2233]",
+							className: "text-xl font-semibold text-[#0B2233]",
 							children: c.nombre
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-1 min-h-[34px] text-[12.2px] leading-5 text-[#6E8B9E]",
+							className: "mt-1 min-h-[34px] text-base leading-6 text-[#6E8B9E]",
 							children: c.glosa
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dl", {
 							className: "mt-3 flex gap-6",
-							children: [
-								["despachos", c.despachos],
-								["unidades", c.unidades],
-								["renglones", c.renglones]
-							].map(([label, value]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+							children: [["entregas", c.despachos]].map(([label, value]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
 								className: "font-serif text-[23px] leading-none text-[#00578C]",
 								children: value.toLocaleString("es-CO")
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
-								className: "mt-1 text-[10.6px] uppercase tracking-[0.05em] text-[#6E8B9E]",
+								className: "mt-1 text-sm text-[#6E8B9E]",
 								children: label
 							})] }, label))
 						}),
@@ -5631,8 +4010,8 @@ function CanalesSection() {
 						children: "La red del acopio de Cartago"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-3 text-[13.2px] leading-6 text-[#4E6B7C]",
-						children: "Los formatos de esta bodega declaran a qué municipio salió cada despacho. Es la única ruta del sistema con origen distinto de Cali, y explica cómo se abasteció el norte."
+						className: "mt-3 text-base leading-7 text-[#4E6B7C]",
+						children: "Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte de Cali y explica cómo se abasteció el norte."
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "mt-4",
@@ -5643,8 +4022,8 @@ function CanalesSection() {
 						})) })
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-3.5 text-[11.8px] leading-5 text-[#6E8B9E]",
-						children: "Estas cifras cuentan menciones de municipio, no documentos: un mismo formato puede nombrar más de uno, y por eso suman más que los 35 formatos del canal."
+						className: "mt-3.5 text-[15px] leading-6 text-[#6E8B9E]",
+						children: "Una misma entrega llega a veces a más de un municipio, por eso la suma de esta lista es mayor que el total del centro de acopio."
 					})
 				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
 					className: "border-l-[3px] border-l-[#F0801E]",
@@ -5654,281 +4033,82 @@ function CanalesSection() {
 							children: "35"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#6E8B9E]",
-							children: "Formatos del acopio de Cartago"
+							className: "mt-1.5 text-base font-semibold text-[#6E8B9E]",
+							children: "Entregas desde Cartago"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-[13.4px] leading-6 text-[#4E6B7C]",
-							children: [
-								"Se reclasificaron desde las carpetas municipales a una carpeta propia del Drive.",
-								" ",
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-									className: "text-[#0B2233]",
-									children: "No se cuentan como despacho municipal"
-								}),
-								" para no inflar la cifra del departamento: es la misma ayuda vista desde la bodega que la despacha."
-							]
+							className: "mt-3 text-base leading-7 text-[#4E6B7C]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "text-[#0B2233]",
+								children: "No se cuentan como entrega municipal"
+							}), " para no repetir la misma ayuda dos veces. Es la ayuda vista desde la bodega que la envía."]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-[13px] leading-6 text-[#6E8B9E]",
-							children: "Chocó, en cambio, sí suma como despacho —la ayuda se movió— pero no como municipio atendido: no pertenece al Valle."
+							className: "mt-3 text-base leading-7 text-[#6E8B9E]",
+							children: "La ayuda enviada al Chocó sí cuenta como entrega. No cuenta como municipio del Valle, porque no pertenece al departamento."
 						})
 					]
 				})]
 			})
 		]
 	});
-}
-/**
-* BrechasSection.tsx — Nivel 7, "¿Qué más están pidiendo los municipios?"
-* -----------------------------------------------------------------------
-* La tabla de brecha se CALCULA cruzando pmuData con territoryData en
-* vez de transcribirse: así, si mañana se regenera cualquiera de las dos
-* fuentes, la tabla sigue diciendo la verdad y no hay que acordarse de
-* actualizar una lista paralela.
-* -----------------------------------------------------------------------
-*/
-var AYUDA_HUMANITARIA = sectoresRequerimientos.find(([s]) => s === "Ayuda humanitaria")?.[1] ?? 0;
-function BrechasSection() {
-	const filas = (0, import_react.useMemo)(() => pmuPorMunicipio.map((r) => ({
-		...r,
-		despachos: getTerritoryStatByCode(r.codigoDane)?.despachos ?? 0
-	})).filter((r) => r.abiertos > 0 || r.total > 0 && r.despachos === 0).sort((a, b) => b.abiertos - a.abiertos || b.total - a.total).slice(0, 14), []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "mx-auto max-w-6xl",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Brechas" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionTitle, { children: [199, " requerimientos radicados, y solo uno de cada cuatro es ayuda humanitaria"] }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-4 max-w-2xl text-[15.5px] leading-7 text-[#4E6B7C]",
-				children: "Esta es la otra cara de la respuesta: lo que los municipios le pidieron al Puesto de Mando Unificado. La mayoría no son entregas —son puentes, vías, viviendas, acueductos— y por eso no se resuelven con un despacho."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-8",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Qué significa acá «no atendido»." }),
-					" Es el estado que el propio PMU escribió en su matriz de seguimiento, con corte al ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: PMU_FECHA_CORTE }),
-					". Marca que en esa fecha el requerimiento todavía no tenía acción registrada, no que se haya negado ni abandonado. Como los despachos van cuatro jornadas por delante de ese archivo,",
-					" ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "una parte de estos casos ya puede estar resuelta" }),
-					" y aún no reflejada. La lectura útil no es el porcentaje: es ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "dónde se concentran" }),
-					" las peticiones abiertas."
-				] })
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-8 flex h-11 overflow-hidden rounded-md",
-				children: estadosRequerimientos.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-					title: `${e.estado}: ${e.cantidad} requerimientos`,
-					className: "flex items-center justify-center text-xs font-bold text-[#06202F]",
-					style: {
-						flex: e.cantidad,
-						background: e.color
-					},
-					children: e.cantidad >= 20 ? e.cantidad : ""
-				}, e.estado))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-				className: "mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11.6px] text-[#4E6B7C]",
-				children: estadosRequerimientos.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-					className: "flex items-center gap-1.5",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-							className: "block size-2.5 rounded-sm",
-							style: { background: e.color }
-						}),
-						sentenceCase(e.estado),
-						" (",
-						e.cantidad,
-						")"
-					]
-				}, e.estado))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.85fr)] lg:items-start",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					className: "p-0",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "px-6 pt-6 text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]",
-						children: "Dónde está la brecha"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-4 overflow-x-auto px-6 pb-6",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
-							className: "w-full min-w-[520px] border-collapse text-[13.2px]",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: [
-								"Municipio",
-								"Req.",
-								"Atend.",
-								"Parcial",
-								"Abiertos",
-								"Despachos"
-							].map((h, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
-								scope: "col",
-								className: `border-b-2 border-[#00578C]/15 px-2 py-2 text-[10.6px] font-bold uppercase tracking-[0.07em] text-[#6E8B9E] ${i === 0 ? "text-left" : "text-right"}`,
-								children: h
-							}, h)) }) }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: filas.map((r) => {
-								const alerta = r.abiertos >= 8 || r.despachos === 0;
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
-									className: alerta ? "bg-[#FDEBE7]" : void 0,
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-											className: "border-b border-[#00578C]/10 px-2 py-2.5 font-semibold text-[#0B2233]",
-											children: r.municipio
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Num, { children: r.total }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Num, { children: r.atendido }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Num, { children: r.parcial }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Num, { children: r.abiertos }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-											className: `border-b border-[#00578C]/10 px-2 py-2.5 text-right tabular-nums ${r.despachos === 0 ? "font-bold text-[#C43A20]" : "text-[#4E6B7C]"}`,
-											children: r.despachos
-										})
-									]
-								}, r.codigoDane);
-							}) })]
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-[12.2px] leading-5 text-[#6E8B9E]",
-							children: [
-								"Resaltadas, las filas que piden una mirada: ",
-								8,
-								" o más requerimientos todavía abiertos al corte, o municipios sin un solo despacho."
-							]
-						})]
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex flex-col gap-5",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]",
-							children: "Por sector"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: sectoresRequerimientos.map(([label, value]) => ({
-								label,
-								value,
-								color: "#8375A9"
-							})) })
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-xs leading-5 text-[#6E8B9E]",
-							children: [
-								"La mayoría de lo pendiente no es ayuda humanitaria —solo ",
-								AYUDA_HUMANITARIA,
-								" de",
-								" ",
-								199,
-								"—: es infraestructura y vivienda."
-							]
-						})
-					] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						className: "border-l-[3px] border-l-[#F26049]",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block font-serif text-[30px] leading-none text-[#00578C]",
-								children: "Candelaria"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#6E8B9E]",
-								children: "El caso que hay que mirar"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-								className: "mt-3 text-[13.4px] leading-6 text-[#4E6B7C]",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-									className: "text-[#0B2233]",
-									children: "6 requerimientos radicados y cero despachos"
-								}), " en toda la emergencia. Es el único municipio del Valle en esa situación."]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-3 text-[13px] leading-6 text-[#6E8B9E]",
-								children: "Florida tampoco registra despacho, pero tampoco ha radicado requerimientos ante el PMU."
-							})
-						]
-					})]
-				})]
-			})
-		]
-	});
-}
-function Num({ children }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-		className: "border-b border-[#00578C]/10 px-2 py-2.5 text-right tabular-nums text-[#4E6B7C]",
-		children
-	});
-}
-function sentenceCase(s) {
-	const lower = s.toLocaleLowerCase("es-CO");
-	return lower.charAt(0).toLocaleUpperCase("es-CO") + lower.slice(1);
 }
 var EJE_COLOR = {
 	movimiento: "#F0801E",
 	territorio: "#81C8EC",
 	ayuda: "#00A494",
-	brecha: "#F26049",
 	evolucion: "#FFD103"
 };
 var EJE_ETIQUETA = {
 	movimiento: "Movimiento",
 	territorio: "Territorio",
 	ayuda: "Qué se mueve",
-	brecha: "Brecha",
 	evolucion: "Evolución"
 };
 var hallazgos = [
 	{
 		eje: "movimiento",
-		titulo: "La cobertura se resolvió en 48 horas; el volumen, no",
-		texto: "Entre el 11 y el 12 de agosto la operación pasó de 5 a 33 municipios: cuatro de cada cinco de los que llegarían a atenderse. Pero en esas dos jornadas salió apenas el 18% de los despachos, 57 de 321. Lo que vino después no fue llegar más lejos, sino volver una y otra vez sobre el mismo territorio."
+		titulo: "Las ayudas llegaron a casi todo el departamento en dos días",
+		texto: "Entre el 11 y el 12 de agosto las ayudas pasaron de 5 a 33 municipios. En esos dos días salió el 18 por ciento de las entregas, 57 de 321. Después la operación volvió una y otra vez sobre los mismos municipios."
 	},
 	{
 		eje: "territorio",
-		titulo: "Dagua concentra la operación, pero no por volumen de ayuda",
-		texto: "Dagua encabeza en número de despachos. El mayor volumen de ítems registrados, en cambio, es de Sevilla: 24.982 unidades en 817 renglones. Más despachos significa más veces, no necesariamente más carga."
+		titulo: "Dagua recibió más veces, Sevilla recibió más cantidad",
+		texto: "Dagua recibió ayudas más veces que ningún otro municipio. Sevilla recibió la mayor cantidad de artículos. Recibir más veces no significa recibir más cantidad."
 	},
 	{
 		eje: "movimiento",
-		titulo: "La operación tiene dos orígenes, no uno",
-		texto: "Además del acopio de Cali, la bodega de Cartago despachó por su cuenta 35 formatos hacia 13 municipios del norte y movió 17.106 unidades. El norte del Valle se abastece por una ruta propia."
+		titulo: "Las ayudas salen de dos centros de acopio",
+		texto: "Además del acopio de Cali, la bodega de Cartago envió ayudas a 13 municipios del norte. El norte del Valle se abastece por una ruta propia."
 	},
 	{
 		eje: "ayuda",
-		titulo: "La ayuda es, ante todo, higiene y comida",
-		texto: "Aseo personal y Alimentos suman 136.598 de las 256.650 unidades registradas: el 53%. El producto más repartido de toda la emergencia son los tapabocas, con 17.100 unidades en 31 destinos."
-	},
-	{
-		eje: "brecha",
-		titulo: "Lo que queda abierto casi nunca se arregla con un despacho",
-		texto: "De los 199 requerimientos del PMU, solo 52 son de ayuda humanitaria. Los que más pesan son infraestructura, 75, y vivienda, 22: obras, no entregas. Por eso los 95 casos marcados «no atendido» al corte del 21 de agosto no se cierran despachando más mercados."
-	},
-	{
-		eje: "brecha",
-		titulo: "Candelaria pide y no recibe",
-		texto: "Candelaria tiene 6 requerimientos radicados y cero despachos en toda la emergencia. Es el único municipio del departamento en esa situación. Florida tampoco registra despacho, pero tampoco ha radicado requerimientos."
+		titulo: "Más de la mitad de la ayuda es aseo y comida",
+		texto: "El aseo personal y los alimentos suman el 53 por ciento de todo lo entregado. El artículo más repartido son los tapabocas, que llegaron a 31 municipios."
 	},
 	{
 		eje: "ayuda",
-		titulo: "Las mascotas son una población focalizada de primer orden",
-		texto: "84 despachos declaran mascotas como población focalizada: más que adulto mayor, 33, o discapacidad, 25. La ayuda animal dejó de ser marginal en esta emergencia."
+		titulo: "Las mascotas aparecen en más entregas que el adulto mayor",
+		texto: "84 entregas incluyeron ayuda para mascotas. El adulto mayor aparece en 33 y las personas con discapacidad en 25."
 	},
 	{
 		eje: "movimiento",
-		titulo: "La donación de China es una línea propia dentro de lo municipal",
-		texto: "19 despachos vienen marcados como donación de la República China. No van aparte: se reparten dentro de la operación municipal, y se distinguen porque el formato de papel trae su propio encabezado."
+		titulo: "La donación de China se repartió junto con el resto",
+		texto: "19 entregas corresponden a la donación de la República China. Se repartieron junto con el resto de las ayudas, en los mismos municipios."
 	},
 	{
 		eje: "territorio",
-		titulo: "La cobertura está completa salvo en el sur",
-		texto: "Norte, Centro y Pacífico están al 100%. El Sur no: faltan Candelaria y Florida, los dos únicos municipios del Valle sin un solo despacho documentado."
+		titulo: "El norte, el centro y el Pacífico recibieron ayudas completas",
+		texto: "Todos los municipios del norte, el centro y el Pacífico recibieron ayudas. En el sur, 7 de 9 municipios las recibieron."
 	},
 	{
 		eje: "evolucion",
-		titulo: "El pico de volumen y el de cobertura no coinciden",
-		texto: "El 17 de agosto salieron 58 despachos, y el 12 llegaron a 32 municipios en una sola jornada: el pico de volumen y el de cobertura no cayeron el mismo día. La última entrega municipal se documentó el 24."
+		titulo: "El día de más entregas y el de más municipios no fueron el mismo",
+		texto: "El 17 de agosto salieron 58 entregas, la cifra más alta. El 12 de agosto llegaron ayudas a 32 municipios, la mayor cobertura en un día. La última entrega registrada es del 24."
 	}
 ];
 /**
-* HallazgosSection.tsx — Nivel 8, "¿Qué nos están diciendo los datos?"
+* HallazgosSection.tsx, Nivel 8, "¿Qué nos están diciendo los datos?"
 * -----------------------------------------------------------------------
 * Cierre del recorrido. El color del borde codifica de qué nivel viene
 * cada lectura, así que funciona como índice inverso: dice dónde volver
@@ -5940,16 +4120,16 @@ function HallazgosSection() {
 		className: "mx-auto max-w-6xl",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-xs font-bold uppercase tracking-[0.18em] text-[#81C8EC]",
-				children: "Lectura ejecutiva"
+				className: "text-sm font-bold uppercase tracking-[0.16em] text-[#81C8EC]",
+				children: "Conclusiones"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 				className: "mt-3 max-w-3xl font-serif text-4xl leading-[1.12] text-white md:text-5xl",
-				children: "Diez lecturas que no se ven en la cifra total"
+				children: "Lo que muestran los datos"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-4 max-w-2xl text-[15.5px] leading-7 text-[#BBD6E6]",
-				children: "Cada una sale de un cruce concreto de las fuentes. Ninguna es una impresión."
+				className: "mt-4 max-w-2xl text-lg leading-8 text-[#BBD6E6]",
+				children: "Ocho lecturas sobre cómo se movió la ayuda en el departamento."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3",
@@ -5958,337 +4138,264 @@ function HallazgosSection() {
 					style: { borderLeftColor: EJE_COLOR[h.eje] },
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-[10px] font-bold uppercase tracking-[0.13em]",
+							className: "text-[13px] font-bold uppercase tracking-[0.12em]",
 							style: { color: EJE_COLOR[h.eje] },
 							children: EJE_ETIQUETA[h.eje]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "mt-2.5 font-serif text-[19px] leading-[1.24] text-white",
+							className: "mt-2.5 font-serif text-2xl leading-[1.2] text-white",
 							children: h.titulo
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-[13.6px] leading-[1.62] text-[#D7EDF8]",
+							className: "mt-3 text-lg leading-[1.6] text-[#D7EDF8]",
 							children: h.texto
 						})
 					]
 				}, h.titulo))
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "mt-12 max-w-3xl text-[13px] leading-7 text-[#9DB4C2]",
-				children: [
-					"Cuatro fuentes con cortes distintos alimentan este tablero: la matriz de despachos y el censo del Drive cierran el 25 de agosto, la base de ítems el 24 y los requerimientos del PMU el 21. No existe una línea base de necesidad por municipio, así que",
-					" ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "text-[#D7EDF8]",
-						children: "esto mide la respuesta, no su suficiencia"
-					}),
-					"."
-				]
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-12 max-w-3xl text-base leading-7 text-[#9DB4C2]",
+				children: "La información llega hasta el 25 de agosto de 2026. Estas cifras muestran las ayudas que se entregaron. No miden cuánta ayuda necesita cada municipio."
 			})
 		]
 	});
 }
-var kpis = [
+var SCROLL_ROOT_ID = "mapa-de-ayudas-scroll";
+var NAV = [
 	{
-		value: 321 .toLocaleString("es-CO"),
-		label: "Despachos municipales",
-		note: "Sin Cali, excluida del consolidado"
+		id: "inicio",
+		label: "Inicio",
+		icon: House
 	},
 	{
-		value: `39 / 41`,
-		label: "Municipios atendidos",
-		note: `Cobertura del ${Math.round(39 / 41 * 100)}%`
+		id: "mapa-de-ayudas",
+		label: "Mapa de Ayudas",
+		icon: Map$1
 	},
 	{
-		value: `531 t`,
-		label: "Ayuda movilizada",
-		note: "Total departamental, todos los canales"
+		id: "resumen",
+		label: "Resumen",
+		icon: MapPin
 	},
 	{
-		value: TOTAL_UNIDADES$1.toLocaleString("es-CO"),
-		label: "Unidades registradas",
-		note: `${TOTAL_RENGLONES.toLocaleString("es-CO")} renglones transcritos`
+		id: "cuando",
+		label: "Cuándo se entregó",
+		icon: CalendarDays
+	},
+	{
+		id: "municipios",
+		label: "Municipios",
+		icon: MapPin
+	},
+	{
+		id: "que-se-entrego",
+		label: "Qué se entregó",
+		icon: Package
+	},
+	{
+		id: "de-donde-salio",
+		label: "De dónde salió",
+		icon: Truck
+	},
+	{
+		id: "conclusiones",
+		label: "Conclusiones",
+		icon: Lightbulb
 	}
 ];
-var NAV = [
-	["#panorama", "Panorama"],
-	["#movimiento", "Movimiento"],
-	["#portal-mapa", "Territorio"],
-	["#mapa-vivo", "Mapa vivo"],
-	["#ayuda", "Qué se mueve"],
-	["#evolucion", "Evolución"],
-	["#canales", "Canales"],
-	["#brechas", "Brechas"],
-	["#hallazgos", "Hallazgos"]
+var kpis = [
+	{
+		value: `39 de 41`,
+		label: "municipios recibieron ayudas"
+	},
+	{
+		value: 321 .toLocaleString("es-CO"),
+		label: "entregas llegaron a los municipios"
+	},
+	{
+		value: `531 toneladas`,
+		label: "de ayuda salieron del departamento"
+	},
+	{
+		value: "14 días",
+		label: "de entregas, del 11 al 25 de agosto"
+	}
 ];
-function DownLink({ href, label }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-		href,
-		"aria-label": label,
-		className: "inline-flex size-10 items-center justify-center rounded-full border border-[#00578C]/20 bg-white text-[#00578C] shadow-sm transition hover:bg-[#E8F6FC]",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
-			className: "size-5",
-			"aria-hidden": true
-		})
-	});
-}
 function StoryPage() {
-	/**
-	* Las tarjetas, el podio y el heatmap llevan de vuelta al mapa. Hoy
-	* solo hacen scroll: seleccionar el municipio dentro del DashboardPage
-	* embebido requiere subirle un prop de selección controlada, que hoy
-	* no tiene (su viewState es interno). Cuando exista, este handler es
-	* el único punto a tocar.
-	*/
 	const irAlMapa = (0, import_react.useCallback)(() => {
-		document.getElementById("mapa-vivo")?.scrollIntoView({
+		document.getElementById("mapa-de-ayudas")?.scrollIntoView({
 			behavior: "smooth",
 			block: "start"
 		});
 	}, []);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
-		className: "h-dvh overflow-y-auto scroll-smooth bg-[#F4F9FC] text-[#0B2233] [scroll-snap-type:y_proximity]",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarNav, {
+		items: NAV,
+		scrollRootId: SCROLL_ROOT_ID,
+		homeId: "inicio"
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+		id: SCROLL_ROOT_ID,
+		className: "h-dvh overflow-y-auto scroll-smooth bg-[#F4F9FC] text-[#0B2233] md:pl-20",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("nav", {
-				className: "sticky top-0 z-50 border-b border-[#00578C]/10 bg-white/90 backdrop-blur",
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				id: "inicio",
+				className: "grid min-h-dvh place-items-center bg-[#EAF6FB] px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto flex h-14 max-w-6xl items-center gap-4 overflow-x-auto px-5 text-xs font-semibold text-[#4E6B7C]",
+					className: "mx-auto flex max-w-4xl flex-col items-center text-center",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "shrink-0 font-serif text-sm text-[#00578C]",
-							children: "SOR Valle del Cauca"
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#006A87]",
+							children: "Gobernación del Valle del Cauca"
 						}),
-						NAV.map(([href, label]) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-							href,
-							className: "shrink-0 hover:text-[#00578C]",
-							children: label
-						}, href)),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "ml-auto shrink-0 text-[#6E8B9E]",
-							children: "Corte 25 de agosto de 2026"
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+							className: "mt-6 font-serif text-6xl leading-[0.98] text-[#00578C] md:text-8xl",
+							children: "Ruta de la Solidaridad"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
+							children: "Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas en el Valle del Cauca. Aquí ves adónde llegaron, cuántas fueron y en qué días."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-10 font-serif text-3xl text-[#00578C] md:text-4xl",
+							children: [
+								39,
+								" de los ",
+								41,
+								" municipios recibieron ayudas"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+							href: "#mapa-de-ayudas",
+							className: "mt-12 inline-flex items-center gap-3 rounded-full bg-[#00578C] px-7 py-4 text-lg font-bold text-white transition hover:bg-[#00456F]",
+							children: ["Ver el mapa", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
+								className: "size-5",
+								"aria-hidden": true
+							})]
 						})
 					]
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "inicio",
-				className: "grid min-h-dvh snap-start place-items-center bg-[#EAF6FB] px-5 py-16",
+				id: "mapa-de-ayudas",
+				className: "relative h-dvh bg-[#0B2233]",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				id: "resumen",
+				className: "bg-white px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto flex max-w-5xl flex-col items-center text-center",
+					className: "mx-auto max-w-6xl",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Sistema Operativo Regional" }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h1", {
-							className: "mt-6 font-serif text-6xl leading-[0.95] text-[#00578C] md:text-8xl",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Resumen" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+							className: "mt-4 max-w-3xl font-serif text-4xl leading-[1.15] text-[#0B2233] md:text-5xl",
 							children: [
-								"Ayudas humanitarias",
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-								"en el Valle del Cauca"
+								39,
+								" de los ",
+								41,
+								" municipios del Valle recibieron ayudas"
 							]
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-8 max-w-3xl text-xl leading-9 text-[#315A70]",
-							children: "Una visualización interactiva que muestra cómo se movilizaron las ayudas humanitarias durante la emergencia, desde los centros de acopio hasta los municipios atendidos."
+							className: "mt-5 max-w-2xl text-lg leading-8 text-[#4E6B7C]",
+							children: "Entre el 11 y el 25 de agosto de 2026, la Gobernación entregó ayudas tras el terremoto. Aquí ves cuántas llegaron, adónde y cuándo."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4",
+							children: kpis.map((kpi) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "rounded-xl border border-[#00578C]/12 bg-[#F7FBFD] p-7",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+									className: "block font-serif text-4xl leading-none text-[#00578C]",
+									children: kpi.value
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-3 text-lg leading-7 text-[#4E6B7C]",
+									children: kpi.label
+								})]
+							}, kpi.label))
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mt-14",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DownLink, {
-								href: "#panorama",
-								label: "Explorar"
-							})
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
 						})
 					]
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "panorama",
-				className: "min-h-dvh snap-start bg-white px-5 py-20",
+				id: "cuando",
+				className: "bg-[#F4F9FC] px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mx-auto max-w-6xl",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Panorama" }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-							className: "mt-3 max-w-3xl font-serif text-4xl text-[#0B2233] md:text-5xl",
-							children: [
-								"Catorce jornadas, ",
-								321,
-								" despachos y un departamento casi cubierto"
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-10 grid gap-px overflow-hidden rounded-lg border border-[#00578C]/12 bg-[#00578C]/12 md:grid-cols-4",
-							children: kpis.map((kpi) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "bg-[#F7FBFD] p-6",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-										className: "block font-serif text-4xl text-[#00578C]",
-										children: kpi.value
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "mt-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#4E6B7C]",
-										children: kpi.label
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										className: "mt-2 text-sm text-[#5E7789]",
-										children: kpi.note
-									})
-								]
-							}, kpi.label))
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "mt-14 space-y-12",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaPuente, {})]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-10",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DownLink, {
-								href: "#movimiento",
-								label: "Bajar al movimiento"
-							})
-						})
-					]
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "movimiento",
-				className: "min-h-dvh snap-start bg-[#F4F9FC] px-5 py-20",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto max-w-6xl",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Movimiento" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Cuándo se entregó" }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "mt-3 max-w-3xl font-serif text-4xl md:text-5xl",
-							children: "La operación tuvo un pico temprano y luego se estabilizó"
+							className: "mt-4 max-w-3xl font-serif text-4xl leading-[1.15] md:text-5xl",
+							children: "Las ayudas llegaron a casi todo el departamento en los primeros dos días"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "mt-10 space-y-12",
+							className: "mt-12 space-y-14",
 							children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AcumuladoChart, {}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MovimientoStatCards, {}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(JornadaBars, {}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {})
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })
 							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-10",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DownLink, {
-								href: "#portal-mapa",
-								label: "Bajar al territorio"
-							})
 						})
 					]
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "portal-mapa",
-				className: "grid min-h-dvh snap-start place-items-center bg-[#0B2233] px-5 py-16 text-white",
+				id: "municipios",
+				className: "bg-white px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[0.85fr_1fr]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-						href: "#mapa-vivo",
-						className: "group block",
-						"aria-label": "Abrir mapa interactivo",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ValleGlyph, { className: "aspect-square w-full rounded-lg ring-1 ring-white/15 transition duration-300 group-hover:scale-[1.02] motion-reduce:transition-none motion-reduce:group-hover:scale-100" })
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Territorio" }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "mt-4 font-serif text-5xl leading-none text-white md:text-6xl",
-							children: "El mapa entra como pieza central"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-6 max-w-xl text-lg leading-8 text-[#BBD6E6]",
-							children: "Este símbolo usa los mismos límites municipales del mapa real. Al tocarlo o seguir bajando aparece el mapa interactivo con rutas, línea de tiempo, paneles y selección por municipio."
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-							href: "#mapa-vivo",
-							className: "mt-8 inline-flex items-center gap-2 rounded-md bg-[#81C8EC] px-4 py-2 text-sm font-bold text-[#06202F] transition hover:bg-white",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MapPinned, {
-								className: "size-4",
-								"aria-hidden": true
-							}), "Entrar al mapa"]
-						})
-					] })]
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "mapa-vivo",
-				className: "min-h-[120dvh] snap-start bg-[#0B2233]",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "sticky top-0 h-dvh",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "territorio-detalle",
-				className: "bg-[#F4F9FC] px-5 py-20",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto max-w-6xl space-y-14",
+					className: "mx-auto max-w-6xl space-y-16",
 					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Municipios" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+							className: "mt-4 max-w-3xl font-serif text-4xl leading-[1.15] md:text-5xl",
+							children: "Cuánta ayuda recibió cada municipio"
+						})] }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PodioMunicipios, { onSelect: irAlMapa }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CoberturaPorZona, {}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosGrid, { onSelect: irAlMapa }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "text-[12.4px] leading-5 text-[#6E8B9E]",
-							children: [
-								"El mapa muestra dónde se documentó la respuesta.",
-								" ",
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-									className: "text-[#0B2233]",
-									children: "No expresa el nivel de necesidad del territorio"
-								}),
-								": para eso está el nivel de brechas."
-							]
-						})
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosGrid, { onSelect: irAlMapa })
 					]
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "ayuda",
-				className: "bg-white px-5 py-20",
+				id: "que-se-entrego",
+				className: "bg-[#F4F9FC] px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AyudaSection, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "evolucion",
-				className: "bg-[#F4F9FC] px-5 py-20",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mx-auto max-w-6xl",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "canales",
-				className: "bg-white px-5 py-20",
+				id: "de-donde-salio",
+				className: "bg-white px-5 py-20 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CanalesSection, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "brechas",
-				className: "bg-[#F4F9FC] px-5 py-20",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BrechasSection, {})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "hallazgos",
-				className: "snap-start bg-[#0B2233] px-5 py-20 text-white",
+				id: "conclusiones",
+				className: "bg-[#0B2233] px-5 py-20 text-white md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HallazgosSection, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
-				className: "bg-[#061621] px-5 py-9 text-[12.4px] leading-6 text-[#7E9AAD]",
+				className: "bg-[#061621] px-5 py-12 text-base leading-7 text-[#9DB4C2] md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mx-auto max-w-6xl",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "font-serif text-sm text-[#CBE4F2]",
-							children: "Sistema Operativo de la Respuesta"
+							className: "block font-serif text-xl text-[#CBE4F2]",
+							children: "Mapa de Ayudas"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-						"Gobernación del Valle del Cauca · Departamento Administrativo de Desarrollo Institucional",
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-						"Emergencia por el terremoto del 10 de agosto de 2026 · Corte 25 de agosto de 2026",
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-						"Construido a partir de los formatos de entrega manuscritos radicados en el Drive institucional."
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-3 max-w-2xl",
+							children: "Gobernación del Valle del Cauca. Ayudas entregadas tras el terremoto del 10 de agosto de 2026, con información al 25 de agosto."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-4 max-w-2xl",
+							children: "Fuente de información: registros oficiales de entrega de ayudas de la Gobernación del Valle del Cauca."
+						})
 					]
 				})
 			})
 		]
-	});
+	})] });
 }
 /**
 * routes/index.tsx

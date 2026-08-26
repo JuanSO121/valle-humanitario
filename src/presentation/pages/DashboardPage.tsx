@@ -10,6 +10,7 @@ import {
 import { MapCanvas } from "@/presentation/components/MapCanvas";
 import { Timeline } from "@/presentation/components/Timeline";
 import { MarcadorHUD } from "@/presentation/components/MarcadorHUD";
+import { AvisoEntrega } from "@/presentation/components/AvisoEntrega";
 import { FlujosLegend } from "@/presentation/components/FlujosLegend";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
@@ -25,7 +26,7 @@ import {
   dayFromIsoDate,
   describeLens,
   territoryValue,
-  toneladasMovilizadas,
+  toneladasEstimadas,
 } from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
 
@@ -54,7 +55,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    * reloj. Antes esto era `territoryMode` y venía con su propio slider de
    * jornada, independiente del timeline: se podía tener los arcos en el
    * día 14 y los polígonos pintados con el total final de la operación.
-   * Ahora hay un solo control temporal —el Timeline— y este toggle solo
+   * Ahora hay un solo control temporal, el Timeline, y este toggle solo
    * decide si ese día se lee como acumulado o como jornada suelta.
    *
    * Por defecto acumulado: mover una línea de tiempo normalmente
@@ -95,16 +96,14 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   );
 
   /**
-   * Toneladas del HUD, con el mismo lente que todo lo demás.
-   *
-   * OJO: la serie de `jornadas` es DEPARTAMENTAL —incluye Cali, el acopio
-   * de Cartago y las otras ayudas solidarias—, mientras que `totalDespachosAsOf`
-   * cuenta solo los flujos visibles en el mapa. Las dos cifras del HUD no
-   * son divisibles entre sí.
+   * Toneladas estimadas sobre los despachos que el mapa está mostrando.
+   * Se deriva, no se cruza contra la hoja TONELADAS, para que el
+   * marcador y el mapa nunca digan cosas distintas. Ver
+   * TONELADAS_POR_DESPACHO.
    */
   const totalToneladasAsOf = useMemo(
-    () => toneladasMovilizadas(lens, territoryDay),
-    [lens, territoryDay],
+    () => toneladasEstimadas(totalDespachosAsOf),
+    [totalDespachosAsOf],
   );
 
   const flujosFiltrados = useMemo(() => {
@@ -212,8 +211,6 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         />
       </ClientOnly>
 
-      {/* Reemplaza a TimelineStatsHUD: la cifra que la gente sigue es la
-          tonelada, y tiene que verse subir. Ver MarcadorHUD. */}
       <MarcadorHUD
         toneladas={totalToneladasAsOf}
         despachos={totalDespachosAsOf}
@@ -221,6 +218,8 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         lens={lens}
         instant={viewState.timelineInstant}
       />
+
+      <AvisoEntrega frame={visibleActivity} />
 
       <TopBar
         viewState={viewState}
@@ -329,35 +328,32 @@ function TerritoryControls({
     <aside className="pointer-events-auto absolute left-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <span className="label-caps text-[10px]">Territorio</span>
-          <p className="mt-1 text-sm font-semibold text-foreground">
-            {plural(totalDespachos, "despacho", "despachos")} ·{" "}
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ayudas entregadas</span>
+          <p className="mt-1.5 text-base font-semibold text-foreground">
+            {plural(totalDespachos, "entrega", "entregas")} en{" "}
             {plural(visibleMunicipalities.length, "municipio", "municipios")}
           </p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{describeLens(lens, day)}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{describeLens(lens, day)}</p>
         </div>
       </div>
 
-      {/* El slider de jornada se eliminó: era un segundo control temporal
-          que competía con el timeline de abajo. Este toggle ya no elige
-          un día, elige cómo leer el que marca el timeline. */}
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1">
         <ToggleButton active={lens === "acumulado"} onClick={() => onLensChange("acumulado")}>
-          Acumulado
+          Todo lo entregado
         </ToggleButton>
         <ToggleButton
           active={lens === "jornada"}
           onClick={() => onLensChange("jornada")}
           disabled={day === null}
-          title={day === null ? "Movés el timeline para elegir una jornada" : undefined}
+          title={day === null ? "Elige una jornada en la línea de tiempo" : undefined}
         >
-          Solo la jornada
+          Solo ese día
         </ToggleButton>
       </div>
 
       {day === null && lens === "acumulado" && (
-        <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-          Mové la línea de tiempo para ver cómo se fue llenando el mapa.
+        <p className="mt-2.5 text-sm leading-5 text-muted-foreground">
+          Mueve la línea de tiempo y ves cómo se entregaron las ayudas día por día.
         </p>
       )}
 
@@ -412,7 +408,7 @@ function ToggleButton({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`rounded px-2 py-1.5 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`rounded px-2.5 py-2 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"

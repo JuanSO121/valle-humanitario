@@ -1,5 +1,5 @@
 /**
- * EvolucionHeatmap.tsx — Nivel 5, "¿Cómo ha cambiado?"
+ * EvolucionHeatmap.tsx, Nivel 5, "¿Cómo ha cambiado?"
  * -----------------------------------------------------------------------
  * Una casilla por municipio y jornada. Se deriva de
  * `territoryMunicipalities[].dias`, así que no hay data nueva ni riesgo
@@ -22,7 +22,7 @@ import { SectionLabel } from "./storyPrimitives";
 
 const ORDEN_ZONAS: TerritoryZone[] = ["Norte", "Centro", "Sur", "Pacífico"];
 
-/** Máximo de despachos en una sola casilla — fija el tope de opacidad. */
+/** Máximo de despachos en una sola casilla, fija el tope de opacidad. */
 const MAX_DIA = Math.max(
   1,
   ...territoryMunicipalities.flatMap((m) => Object.values(m.dias)),
@@ -54,10 +54,9 @@ export function EvolucionHeatmap({
 
   return (
     <section>
-      <SectionLabel>Quién recibió, qué día</SectionLabel>
-      <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#4E6B7C]">
-        Cada casilla es una jornada de un municipio. Cuanto más intenso el azul, más despachos ese
-        día. Las filas vacías del sur son las dos ausencias del departamento.
+      <SectionLabel>Qué municipio recibió cada día</SectionLabel>
+      <p className="mt-3 max-w-2xl text-lg leading-8 text-[#4E6B7C]">
+        Cada casilla es un día. Más azul, más entregas ese día.
       </p>
 
       <div className="mt-6 overflow-x-auto rounded-lg border border-white/12 bg-[#0B2233] p-5">
@@ -65,16 +64,16 @@ export function EvolucionHeatmap({
           <Fila
             etiqueta=""
             celdas={TERRITORY_DAYS.map((d) => (
-              <span key={d} className="text-center text-[10.6px] text-[#7E9AAD]">
+              <span key={d} className="text-center text-sm text-[#7E9AAD]">
                 {d}
               </span>
             ))}
-            total={<span className="text-[10.6px] text-[#7E9AAD]">total</span>}
+            total={<span className="text-sm text-[#7E9AAD]">total</span>}
           />
 
           {porZona.map(({ zone, filas }) => (
             <div key={zone}>
-              <p className="mt-3.5 mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#81C8EC]">
+              <p className="mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#81C8EC]">
                 {zone}
               </p>
               {filas.map((m) => (
@@ -91,7 +90,7 @@ export function EvolucionHeatmap({
                       return (
                         <span
                           key={d}
-                          title={`${m.name} · ${d} de agosto · ${v === 0 ? "sin despacho" : v === 1 ? "1 despacho" : `${v} despachos`}`}
+                          title={`${m.name} · ${d} de agosto · ${v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`}`}
                           className="flex h-[21px] items-center justify-center rounded-sm text-[9.6px] font-bold text-[#06202F]"
                           style={{ background: celdaColor(v) }}
                         >
@@ -100,7 +99,7 @@ export function EvolucionHeatmap({
                       );
                     })}
                     total={
-                      <span className="text-right font-serif text-[13px] text-white">
+                      <span className="text-right font-serif text-base text-white">
                         {m.despachos}
                       </span>
                     }
@@ -129,7 +128,7 @@ function Fila({
       className="grid items-center gap-[2px] py-[1px]"
       style={{ gridTemplateColumns: `112px repeat(${TERRITORY_DAYS.length}, 1fr) 42px` }}
     >
-      <span className="truncate pr-1.5 text-left text-[11.6px] text-[#A9C2D2]">{etiqueta}</span>
+      <span className="truncate pr-1.5 text-left text-[15px] text-[#A9C2D2]">{etiqueta}</span>
       {celdas}
       {total}
     </div>

@@ -1,7 +1,7 @@
 // src/presentation/data/panoramaData.ts
 
 /**
- * Nivel 1 — Panorama.
+ * Nivel 1, Panorama.
  *
  * DOS FUENTES CONVIVEN EN ESTE ARCHIVO, y no cuadran entre sí a propósito:
  *
@@ -39,10 +39,8 @@ export const CIRCUMFERENCE = 326.7;
  *     por DESPACHOS, que es la tabla de hechos.)
  */
 export const panoramaDonuts: DonutStat[] = [
-  { id: "municipios", value: 39, total: 41, label: "Municipios atendidos", color: "#039A39" },
-  { id: "requerimientos-radicados", value: 38, total: 41, label: "Con requerimientos radicados", color: "#7F207F" },
-  { id: "requerimientos-accion", value: 72, total: 199, label: "Requerimientos con acción registrada", color: "#F0B102" },
-  { id: "jornadas", value: 13, total: 15, label: "Días con despacho, del 11 al 25", color: "#81C8EC" },
+  { id: "municipios", value: 39, total: 41, label: "Municipios con ayudas entregadas", color: "#039A39" },
+  { id: "jornadas", value: 13, total: 15, label: "Días con entregas, del 11 al 25", color: "#81C8EC" },
 ];
 
 export interface PuenteRow {
@@ -55,7 +53,7 @@ export interface PuenteRow {
 
 /**
  * FUENTE: censo del Drive, corte del 25 de agosto de 2026. NO se puede
- * regenerar desde BD_Entregas_Operativa_v2.xlsx — se intentó y no da:
+ * regenerar desde BD_Entregas_Operativa_v2.xlsx, se intentó y no da:
  * la hoja BD_DOCUMENTOS trae 386 documentos, no 414, con Cali en 48 y
  * otras ayudas solidarias en 17, y sin carpetas para _RAIZ ni municipios
  * múltiples. Es un censo anterior o con otro criterio de catalogación.

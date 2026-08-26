@@ -4,7 +4,7 @@
  * Piezas mínimas que repiten TODOS los niveles del Story. Viven acá para
  * que el eyebrow, la barra proporcional y la lista de "categoría · valor"
  * se vean idénticas en Panorama, Territorio, Qué se mueve, Canales y
- * Brechas — antes cada sección las reescribía con su propio tamaño de
+ * Brechas, antes cada sección las reescribía con su propio tamaño de
  * texto y su propio gris.
  *
  * NOTA sobre los tipos: el proyecto compila con
@@ -19,7 +19,7 @@
 import type { ReactNode } from "react";
 
 export function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#006A87]">{children}</p>;
+  return <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#006A87]">{children}</p>;
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {
@@ -31,7 +31,7 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export function SectionIntro({ children }: { children: ReactNode }) {
-  return <p className="mt-4 max-w-2xl text-[15.5px] leading-7 text-[#4E6B7C]">{children}</p>;
+  return <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4E6B7C]">{children}</p>;
 }
 
 interface BarProps {
@@ -61,18 +61,18 @@ export interface MiniRow {
   suffix?: string | undefined;
 }
 
-/** Lista "etiqueta — barra — cifra". El máximo se calcula sobre la propia lista. */
+/** Lista "etiqueta, barra, cifra". El máximo se calcula sobre la propia lista. */
 export function MiniList({ rows }: { rows: MiniRow[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="flex flex-col gap-2">
       {rows.map((r) => (
-        <li key={r.label} className="flex items-center gap-3 text-[13px]">
+        <li key={r.label} className="flex items-center gap-3 text-base">
           <span className="min-w-0 flex-1 truncate text-[#4E6B7C]">{r.label}</span>
           <span className="w-[38%] shrink-0">
             <Bar ratio={r.value / max} color={r.color} />
           </span>
-          <b className="w-16 shrink-0 text-right tabular-nums text-[#0B2233]">
+          <b className="w-20 shrink-0 text-right tabular-nums text-[#0B2233]">
             {r.value.toLocaleString("es-CO")}
             {r.suffix ?? ""}
           </b>
@@ -91,7 +91,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 /** Aviso metodológico. Amarillo, porque siempre dice qué NO se puede afirmar. */
 export function Aviso({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-[#F0B102]/40 border-l-[3px] border-l-[#F0B102] bg-[#FFF8E5] p-4 text-[13.4px] leading-6 text-[#6B5200]">
+    <div className="rounded-lg border border-[#F0B102]/40 border-l-[3px] border-l-[#F0B102] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]">
       {children}
     </div>
   );

@@ -4,7 +4,7 @@
  * El contador del mapa, en clave de tablero de estadio: la cifra que
  * importa es cuánta ayuda se movilizó, y tiene que VERSE subir mientras
  * corre el timeline. Por eso los dígitos ruedan en vez de reemplazarse
- * de golpe — el movimiento es el dato.
+ * de golpe, el movimiento es el dato.
  *
  * La unidad es la TONELADA. Las unidades sueltas (mercados, paquetes,
  * kilos y pacas mezclados en la misma columna del formato) no se
@@ -25,7 +25,7 @@ import type { TerritoryMapMode } from "@/presentation/data/territoryData";
 interface Props {
   /** Toneladas movilizadas al corte activo. */
   toneladas: number;
-  /** Despachos visibles en el mapa al corte activo. */
+  /** Entregas visibles en el mapa al corte activo. */
   despachos: number;
   /** Día de agosto en dos dígitos, o null = toda la operación. */
   day: string | null;
@@ -37,31 +37,31 @@ interface Props {
 export function MarcadorHUD({ toneladas, despachos, day, lens, instant = false }: Props) {
   const corte =
     day === null
-      ? "Toda la operación"
+      ? "Total del departamento"
       : lens === "jornada"
-        ? `Jornada del ${day} de agosto`
-        : `Al ${day} de agosto`;
+        ? `Solo el ${day} de agosto`
+        : `Hasta el ${day} de agosto`;
 
   return (
     <div className="pointer-events-none absolute right-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 select-none">
-      <div className="rounded-lg border border-white/12 bg-[#0A1822]/85 px-5 py-4 shadow-lg backdrop-blur">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#81C8EC]">
-          Ayuda movilizada
+      <div className="rounded-xl border border-white/12 bg-[#0A1822]/85 px-6 py-5 shadow-lg backdrop-blur">
+        <p className="text-[13px] font-bold uppercase tracking-[0.14em] text-[#81C8EC]">
+          Ayuda entregada
         </p>
 
         <div className="mt-1.5 flex items-baseline gap-1.5">
-          <Rodillo value={toneladas} instant={instant} className="text-[42px]" />
-          <span className="font-serif text-xl text-[#81C8EC]">t</span>
+          <Rodillo value={toneladas} instant={instant} className="text-[52px]" />
+          <span className="font-serif text-2xl text-[#81C8EC]">toneladas</span>
         </div>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-white/12 pt-3">
-          <Rodillo value={despachos} instant={instant} className="text-[19px]" />
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#9DB4C2]">
-            despachos
+          <Rodillo value={despachos} instant={instant} className="text-[24px]" />
+          <span className="text-sm font-semibold text-[#9DB4C2]">
+            entregas a municipios
           </span>
         </div>
 
-        <p className="mt-2 text-[11px] text-[#7E9AAD]" aria-live="polite">
+        <p className="mt-3 text-sm text-[#7E9AAD]" aria-live="polite">
           {corte}
         </p>
       </div>

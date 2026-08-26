@@ -2,13 +2,13 @@
  * arcAnimationEngine.ts
  * -----------------------------------------------------------------------
  * Máquina de estados de la animación de arcos, sin ninguna dependencia de
- * MapLibre/React — mismo principio que arcGeometry.ts. Se testea con reloj
+ * MapLibre/React, mismo principio que arcGeometry.ts. Se testea con reloj
  * inyectado, sin navegador. MapCanvas.tsx solo llama tick() y traduce el
  * resultado a llamadas de MapLibre; nunca decide fases ahí.
  *
  * CASCADA (v3): el presupuesto de la ola ya no es un número propio de
  * este archivo. Antes eran 9.000 ms fijos, contra un paso de timeline de
- * 1.667 ms — el día cambiaba cinco veces antes de que el último arco de
+ * 1.667 ms, el día cambiaba cinco veces antes de que el último arco de
  * la jornada llegara a arrancar, y el backlog crecía hasta reproducirse
  * después de que el timeline había terminado. Ahora sale de
  * animationTiming.ts, donde el paso del timeline y esta cascada se
@@ -22,13 +22,13 @@
  * ventana, sin sentirse simultáneas ni quedar arrastrándose.
  *
  * El arco activo sigue creciendo de forma independiente después de
- * disparar al siguiente — por eso en un momento dado puede haber más de
+ * disparar al siguiente, por eso en un momento dado puede haber más de
  * un arco en fase "growing" (el saliente terminando, el entrante
  * empezando), que es el solapamiento suave buscado, no arcos en serie.
  *
  * `justSettled` se puebla en el tick en que un arco individual termina de
  * crecer; `snapTo()` (seek del timeline) no lo puebla ni pasa por la cola
- * — un salto no anima ni tiene "llegada" que notificar.
+ *, un salto no anima ni tiene "llegada" que notificar.
  * -----------------------------------------------------------------------
  */
 import { easeOutCubic } from "./arcGeometry";
@@ -52,13 +52,13 @@ interface ArcRecord {
   key: string; // `${origenId}::${destinoId}`
   phase: ArcPhase;
   enteredAt: number | null; // timestamp en el que empezó a crecer (null si aún no le toca)
-  weight: number; // despachosCount actual — puede subir sin regrow
+  weight: number; // despachosCount actual, puede subir sin regrow
 }
 
 export interface ArcFrame {
   key: string;
   phase: ArcPhase;
-  sampleFraction: number; // 0..1 — fracción de ARC_SAMPLES a renderizar si "growing"
+  sampleFraction: number; // 0..1, fracción de ARC_SAMPLES a renderizar si "growing"
   weight: number;
 }
 
@@ -66,14 +66,14 @@ export interface EngineFrame {
   growing: ArcFrame[];
   settled: ArcFrame[];
   /**
-   * Arcos que TERMINARON de crecer justo en este tick — evento puntual,
+   * Arcos que TERMINARON de crecer justo en este tick, evento puntual,
    * no acumulado (a diferencia de `settled`, que siempre trae TODOS los
    * arcos ya asentados). Un arco aparece acá una única vez, en el frame
    * exacto en que su `sampleFraction` llega a 1. `snapTo()` nunca lo
    * puebla.
    */
   justSettled: ArcFrame[];
-  /** 0..1, reloj compartido de pulso — todos los arcos asentados comparten
+  /** 0..1, reloj compartido de pulso, todos los arcos asentados comparten
    *  el mismo reloj a propósito, para leerse como un único impulso
    *  recorriendo la red, no como parpadeos independientes. */
   pulseLoopT: number;
@@ -92,7 +92,7 @@ export function createArcAnimationEngine() {
   /**
    * Sincroniza el registro contra las claves vivas (según los flujos del
    * corte actual). Claves que ya no existen se eliminan del registro Y de
-   * la cola — evita fugas de memoria y evita que la cola intente arrancar
+   * la cola, evita fugas de memoria y evita que la cola intente arrancar
    * un arco que el dataset actual ya no incluye.
    */
   function sync(liveKeys: string[], weights: Record<string, number>) {
@@ -118,7 +118,7 @@ export function createArcAnimationEngine() {
 
   /**
    * Encola la entrada animada de un arco. Si el arco ya no está en
-   * "idle" (ya está en cola, creciendo o asentado) no hace nada — evita
+   * "idle" (ya está en cola, creciendo o asentado) no hace nada, evita
    * que un segundo `enter()` accidental lo reencole o reinicie una
    * animación en curso.
    */
@@ -163,8 +163,8 @@ export function createArcAnimationEngine() {
 
   /**
    * Usado por seek/rebobinar del timeline: todo lo que corresponde a la
-   * fecha destino pasa directo a "settled", sin transición ni cola —
-   * nunca se anima un salto, ni hacia adelante ni hacia atrás (encoger
+   * fecha destino pasa directo a "settled", sin transición ni cola.
+   * Nunca se anima un salto, ni hacia adelante ni hacia atrás (encoger
    * una línea ya dibujada se lee como un error visual, no como
    * "retrocedió en el tiempo"). Por eso limpia la cola: un seek no debe
    * dejar arranques pendientes de un estado que ya no existe.
@@ -190,7 +190,7 @@ export function createArcAnimationEngine() {
 
   function tick(now: number): EngineFrame {
     // Si nadie está en el rol de "activo" pero hay cola esperando,
-    // arranca el primero — cubre el arranque inicial y el caso en que el
+    // arranca el primero, cubre el arranque inicial y el caso en que el
     // último disparo ya se asentó sin nadie más por delante.
     if (activeGrowingKey === null && queue.length > 0) {
       advanceQueue(now);

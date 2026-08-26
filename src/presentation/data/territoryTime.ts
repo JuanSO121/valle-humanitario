@@ -2,8 +2,8 @@
  * territoryTime.ts
  * -----------------------------------------------------------------------
  * El lente temporal del territorio. Existe porque `territoryValueFor`
- * solo sabe responder dos preguntas —"¿cuánto en total?" y "¿cuánto ese
- * día?"— y faltaba justo la del medio: "¿cuánto llevaba acumulado al
+ * solo sabe responder dos preguntas, "¿cuánto en total?" y "¿cuánto ese
+ * día?", y faltaba justo la del medio: "¿cuánto llevaba acumulado al
  * día X?". Esa es la que necesita el mapa mientras corre el timeline.
  *
  * Antes el mapa mostraba los arcos del día 14 sobre polígonos pintados
@@ -18,7 +18,6 @@
  *       - "jornada": solo lo que se movió ese día.
  * -----------------------------------------------------------------------
  */
-import { jornadas } from "./movimientoData";
 import {
   territoryMunicipalities,
   type TerritoryMapMode,
@@ -85,33 +84,33 @@ export function territoryValue(
 
 /** Etiqueta del estado temporal, para el HUD y los popups. */
 export function describeLens(lens: TerritoryMapMode, day: string | null): string {
-  if (day === null) return "Toda la operación";
-  return lens === "jornada" ? `Solo el ${day} de agosto` : `Acumulado al ${day} de agosto`;
+  if (day === null) return "Total del departamento";
+  return lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
 }
 
 /**
- * Toneladas movilizadas al corte activo.
+ * Toneladas por despacho.
  *
- * Vive acá y no en DashboardPage porque tenía un `return 0` que se
- * disparaba cada vez que el timeline caía en un día sin fila en
- * `jornadas` — y ahí el marcador se vaciaba. Un día sin fila no significa
- * "cero toneladas acumuladas": significa "ese día no hubo movimiento",
- * así que el acumulado es el del último día que sí lo tuvo.
+ * La hoja TONELADAS del workbook trae el dato medido por día, pero es
+ * DEPARTAMENTAL y no es proporcional a los despachos: la razón va de 0,68
+ * t/despacho el día 19 a 11,5 el día 24, porque la tonelada se siguió
+ * reportando cuando los formatos de esos días todavía no estaban
+ * transcritos. Cruzar las dos series deja el marcador diciendo cosas que
+ * el mapa no muestra.
  *
- * La serie es DEPARTAMENTAL (hoja TONELADAS del workbook): incluye Cali,
- * el acopio de Cartago y las otras ayudas solidarias. No es divisible
- * contra los despachos municipales que muestra el mapa.
+ * Por eso acá la tonelada se ESTIMA sobre los despachos visibles: 531 t
+ * medidas / 384 despachos con fecha = 1,38 t por despacho. Es un
+ * estimado declarado, no una medición, y tiene la ventaja de moverse
+ * siempre junto con el mapa.
+ *
+ * Consecuencia a tener presente: aplicado a los 321 despachos
+ * municipales da ~444 t, no las 531 t del total departamental. La
+ * diferencia es Cali, el acopio de Cartago y las otras ayudas
+ * solidarias, que no se dibujan en el mapa.
  */
-export function toneladasMovilizadas(lens: TerritoryMapMode, day: string | null): number {
-  const ultima = jornadas.at(-1)?.acumuladoToneladas ?? 0;
-  if (day === null) return ultima;
+export const TONELADAS_POR_DESPACHO = 1.38;
 
-  const exacta = jornadas.find((j) => j.dia === day);
-  if (lens === "jornada") return exacta?.toneladas ?? 0;
-  if (exacta) return exacta.acumuladoToneladas;
-
-  // Día sin fila propia (el 23, por ejemplo): se arrastra el acumulado
-  // del último día anterior con movimiento, nunca cero.
-  const previas = jornadas.filter((j) => Number(j.dia) <= Number(day));
-  return previas.at(-1)?.acumuladoToneladas ?? 0;
+/** Toneladas estimadas para una cantidad de despachos. */
+export function toneladasEstimadas(despachos: number): number {
+  return Math.round(despachos * TONELADAS_POR_DESPACHO);
 }

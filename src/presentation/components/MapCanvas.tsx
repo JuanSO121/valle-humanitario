@@ -23,7 +23,11 @@ import {
   type TerritoryRoutesMode,
   type TerritoryZone,
 } from "@/presentation/data/territoryData";
-import { describeLens, territoryValue } from "@/presentation/data/territoryTime";
+import {
+  describeLens,
+  territoryValue,
+  TONELADAS_POR_DESPACHO,
+} from "@/presentation/data/territoryTime";
 
 const OVERVIEW_CENTER: LngLat = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
@@ -41,7 +45,7 @@ const POINT_HIT_TOLERANCE_PX = 8;
  * Municipio sin despacho documentado. NO es "el tono más bajo de la
  * rampa": es una categoría aparte, igual que `DATA.sinDato` en el
  * tablero HTML de referencia. Por eso territoryToneIndex devuelve null
- * para valor 0 y no 0 — ver territoryColorForTone.
+ * para valor 0 y no 0, ver territoryColorForTone.
  */
 const TERRITORY_NO_DATA = "#162936";
 
@@ -54,19 +58,11 @@ const TERRITORY_NO_DATA = "#162936";
 const TERRITORY_EXCLUDED = "#2A3D4A";
 const CALI_DANE = "76001";
 
-/**
- * Razón toneladas/despacho de toda la operación (531 t / 397 despachos).
- * Es la MISMA constante documentada en territoryData.toneladas — se
- * repite acá para estimar toneladas del modo "jornada", donde no hay un
- * acumulado por municipio que consultar. Antes este archivo usaba 1.75,
- * que venía de otra fuente y no cuadraba con el catálogo.
- */
-const TONELADAS_POR_DESPACHO = 1.34;
 
 /**
  * Umbral heurístico de "verde pleno" para el mapa de calor de destinos.
  * No hay un campo de meta esperada por destino en el backend (Flujo /
- * DestinoResumenLista no lo traen — ver entities.ts), así que se usa un
+ * DestinoResumenLista no lo traen, ver entities.ts), así que se usa un
  * número fijo documentado acá en vez de inventar un campo que el backend
  * no devuelve.
  */
@@ -126,7 +122,7 @@ function municipalityCodeFromProperties(properties: Record<string, unknown> | un
  * Centro del bounding box del anillo exterior. Sirve como ancla de
  * etiqueta: no es el centroide real (un municipio en forma de C puede
  * caer fuera del polígono) pero para los 42 del Valle, que son convexos
- * o casi, alcanza — y evita meter turf.js solo por esto.
+ * o casi, alcanza, y evita meter turf.js solo por esto.
  */
 function ringCenter(geometry: unknown): LngLat | null {
   const geo = geometry as { type?: string; coordinates?: unknown };
@@ -178,7 +174,7 @@ function normalizeBoundaries(geojson: unknown): maplibregl.GeoJSONSourceSpecific
 
       return {
         ...feature,
-        id: code || `idx-${feature.id ?? name}`, // nunca undefined — sin id, feature-state no pega
+        id: code || `idx-${feature.id ?? name}`, // nunca undefined, sin id, feature-state no pega
         properties: {
           ...properties,
           municipalityCode: code,
@@ -236,13 +232,13 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
     // era #0B2233, el mismo azul profundo de la rampa territorial, así
     // que los municipios de menor volumen se confundían con el mar y con
     // los departamentos vecinos.
-    { id: "bg", type: "background", paint: { "background-color": "#586A78" } },
+    { id: "bg", type: "background", paint: { "background-color": "#33404B" } },
     {
       id: "osm",
       type: "raster",
       source: "osm",
       paint: {
-        "raster-opacity": 0.14,
+        "raster-opacity": 0.12,
         "raster-saturation": -0.7,
         "raster-brightness-min": 0.25,
         "raster-brightness-max": 0.8,
@@ -304,9 +300,9 @@ function municipalityPopupHtml(
   if (!stat) {
     // Cali y cualquier polígono fuera del catálogo caen acá: se dice por
     // qué no hay cifras, en vez de mostrar un popup vacío.
-    return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:170px">
-      <strong style="display:block;font-size:13px;margin-bottom:4px">${escapeHtml(label)}</strong>
-      <span style="color:#9DB4C2;font-size:11.5px">Fuera del consolidado municipal</span>
+    return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:190px">
+      <strong style="display:block;font-size:17px;margin-bottom:6px">${escapeHtml(label)}</strong>
+      <span style="color:#9DB4C2;font-size:14px">No hace parte del conteo por municipio</span>
     </div>`;
   }
 
@@ -315,21 +311,19 @@ function municipalityPopupHtml(
   // hay día elegido. Con día, se estima sobre los despachos de ese corte.
   const toneladas =
     day === null ? stat.toneladas : Math.round(value * TONELADAS_POR_DESPACHO);
-  const moveLabel = "despachos";
+  const moveLabel = value === 1 ? "entrega" : "entregas";
   const sinDespacho = value === 0;
 
-  return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:190px">
-    <strong style="display:block;font-size:13px;margin-bottom:2px">${escapeHtml(label)}</strong>
-    <span style="display:block;color:#81C8EC;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Zona ${escapeHtml(stat.zone)}</span>
-    <span style="display:block;color:#9DB4C2;font-size:11px;margin-bottom:8px">${escapeHtml(describeLens(mode, day))}</span>
+  return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:200px;font-size:15px">
+    <strong style="display:block;font-size:17px;margin-bottom:4px">${escapeHtml(label)}</strong>
+    <span style="display:block;color:#81C8EC;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zone)} del Valle</span>
+    <span style="display:block;color:#9DB4C2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day))}</span>
     ${
       sinDespacho
-        ? `<span style="color:#F58A76;font-size:12px;font-weight:600">Sin despacho en este corte</span>`
-        : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
-      <div><b style="font-size:16px">${value.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">${moveLabel}</span></div>
-      <div><b style="font-size:16px">${toneladas.toLocaleString("es-CO")} t</b><span style="display:block;color:#9DB4C2">estimadas</span></div>
-      <div><b style="font-size:16px">${stat.unidades.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">unidades</span></div>
-      <div><b style="font-size:16px">${stat.renglones.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">renglones</span></div>
+        ? `<span style="color:#F58A76;font-size:14px;font-weight:600">Sin entregas en este periodo</span>`
+        : `<div style="display:grid;grid-template-columns:1fr;gap:6px">
+      <div><b style="font-size:22px">${value.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2;font-size:14px">${moveLabel}</span></div>
+      <div><b style="font-size:22px">${toneladas.toLocaleString("es-CO")} t</b><span style="display:block;color:#9DB4C2;font-size:14px">estimadas</span></div>
     </div>`
     }
   </div>`;
@@ -415,8 +409,8 @@ export function MapCanvas({
           paint: {
             // El color territorial se calcula siempre a partir del tono.
             // Si todavía no existe feature-state (primer render), usa el
-            // placeholder "sin dato" inyectado en normalizeBoundaries —
-            // nunca transparente y nunca el tono de volumen máximo.
+            // placeholder "sin dato" inyectado en normalizeBoundaries.
+            // Nunca transparente y nunca el tono de volumen máximo.
             "fill-color": [
               "case",
               ["boolean", ["feature-state", "selected"], false],
@@ -769,7 +763,7 @@ export function MapCanvas({
           // "Llegó": se dispara acá, no en el efecto que sincroniza
           // `flujos`, porque acá es donde el motor de arcos reporta el
           // frame exacto en que la línea terminó de crecer y tocó el
-          // destino — coincide con lo que la persona ve.
+          // destino, coincide con lo que la persona ve.
           if (timelineActiveRef.current) {
             frame.justSettled.forEach((arc) => {
               const destinoId = arc.key.split("::")[1] ?? "";
@@ -859,7 +853,7 @@ export function MapCanvas({
           }
         } catch (err) {
           console.error(
-            "Error renderizando un frame de animación de arcos — se salta este frame.",
+            "Error renderizando un frame de animación de arcos, se salta este frame.",
             err,
           );
         } finally {
@@ -984,7 +978,7 @@ export function MapCanvas({
       const map = mapRef.current!;
       if (!map.getSource("municipios")) {
         console.warn(
-          "[MapCanvas] fuente 'municipios' no existe — se saltea el coloreo territorial. " +
+          "[MapCanvas] fuente 'municipios' no existe, se saltea el coloreo territorial. " +
             "Revisá el error de carga de valle-municipios.json más arriba en consola.",
         );
         return;
@@ -1173,7 +1167,7 @@ export function MapCanvas({
         ref={containerRef}
         data-map-root=""
         className="absolute inset-0 h-full w-full"
-        aria-label="Mapa del Valle del Cauca con los despachos por municipio y las rutas desde los centros de acopio"
+        aria-label="Mapa de las ayudas entregadas en los municipios del Valle del Cauca"
       />
     </div>
   );
