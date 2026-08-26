@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 import { ChevronLeft, Map, Menu, X } from "lucide-react";
 
 export interface NavItem {
@@ -19,25 +19,44 @@ export function SidebarNav({ items, scrollRootId, homeId }: Props) {
   const [abierto, setAbierto] = useState(false);
   const [activo, setActivo] = useState(items[0]?.id ?? "");
 
+  const visiblesRef = useRef(new Set<string>());
+
   useEffect(() => {
     const root = document.getElementById(scrollRootId);
     if (!root) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible) setActivo(visible.target.id);
+        for (const entry of entries) {
+          if (entry.isIntersecting) visiblesRef.current.add(entry.target.id);
+          else visiblesRef.current.delete(entry.target.id);
+        }
+        // La primera sección en orden del menú que cruce la banda. Si
+        // ninguna la cruza, se conserva la última marcada en vez de
+        // dejar el menú sin sección activa.
+        const actual = items.find((i) => visiblesRef.current.has(i.id));
+        if (actual) setActivo(actual.id);
       },
-      { root, threshold: [0.25, 0.5, 0.75], rootMargin: "-20% 0px -60% 0px" },
+      {
+        root,
+        // Banda delgada a la altura del centro de la pantalla. El
+        // threshold va en 0 a propósito: con thresholds altos, una
+        // sección más alta que la banda nunca alcanza ese ratio y el
+        // callback no dispara, así que el menú se quedaba clavado en la
+        // primera sección.
+        rootMargin: "-45% 0px -50% 0px",
+        threshold: 0,
+      },
     );
 
     items.forEach((item) => {
       const el = document.getElementById(item.id);
       if (el) observer.observe(el);
     });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      visiblesRef.current.clear();
+    };
   }, [items, scrollRootId]);
 
   const inicioId = homeId ?? items[0]?.id ?? "";

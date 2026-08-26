@@ -1,80 +1,126 @@
 /**
  * Timeline.tsx
  * -----------------------------------------------------------------------
- * Selector de jornada. Componente de presentación puro: no decide fases
- * ni construye fechas, recibe la lista de fechas disponibles y el valor
- * actual, y avisa hacia arriba qué pasó.
+ * Control de jornadas del mapa. Componente de presentación puro: recibe
+ * las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
  *
- * SE ELIMINÓ LA REPRODUCCIÓN AUTOMÁTICA. Era una carrera imposible de
- * ganar: el intervalo avanzaba el día mientras la cascada de arcos
- * todavía estaba arrancando los del día anterior, así que se perdían
- * llegadas, la línea nunca tocaba el destino, el pulso nunca aparecía, y
- * el backlog terminaba reproduciéndose después de que el timeline ya
- * había llegado al final. Sin autoplay, cada avance ocurre cuando la
- * persona lo pide y la ola siempre alcanza a completarse.
+ * La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
+ * dibujadas y solo se anima si la persona toca reproducir.
  *
- * La distinción seek-vs-advance de viewState.ts se preserva y ahora hace
- * más trabajo que antes:
- *   · Avanzar UN día (botón, o arrastrar un paso) → onAdvance, que anima
- *     el crecimiento de los arcos nuevos.
- *   · Saltar VARIOS días de un tirón → onSeek, que hace snapTo sin
- *     animar. Animar un salto de seis días se lee como un error visual,
- *     no como "avanzó en el tiempo".
+ * El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
+ * que sale el presupuesto de la cascada de arcos. Una jornada dura lo
+ * que tarda su último arco en salir y llegar, así que las líneas siempre
+ * alcanzan a completarse antes de que cambie el día.
  *
- * Cómo se lee ese día, acumulado o solo esa jornada, lo decide el toggle
- * del panel de territorio, no este componente.
+ * Seek contra advance, la distinción que ya vive en viewState.ts:
+ *   · Reproducir o avanzar un día llama a onAdvance, que anima.
+ *   · Arrastrar varios días llama a onSeek, que salta sin animar.
+ *     Animar un salto de seis días se lee como un error visual.
+ *
+ * El efecto del intervalo depende solo de [playing]. Eso deja la función
+ * del tick con las props del momento en que arrancó, así que dates y
+ * currentDate se leen desde refs que se actualizan en cada render. Sin
+ * eso, cada tick recalcula el siguiente de la misma fecha inicial y la
+ * reproducción avanza una vez y se traba.
  * -----------------------------------------------------------------------
  */
-import type { ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { computeTimelineStepMs } from "./animationTiming";
 
 interface Props {
-  /** Fechas ISO únicas y ordenadas, normalmente derivadas de flujos[].porFecha en el padre. */
+  /** Fechas ISO únicas y ordenadas, derivadas de flujos[].porFecha en el padre. */
   dates: string[];
-  /** Fecha actual del playhead, o null si el timeline no está activo todavía. */
+  /** Fecha actual, o null si el mapa muestra el total. */
   currentDate: string | null;
-  /** Salto sin animación. */
   onSeek: (date: string) => void;
-  /** Avance de un día, con animación de arcos. */
   onAdvance: (date: string) => void;
-  /** Se llama con la fecha elegida cuando el timeline pasa de inactivo a activo. */
   onActivate: (firstDate: string) => void;
   onExit: () => void;
 }
 
 export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }: Props) {
-  if (dates.length === 0) return null;
+  const [playing, setPlaying] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const datesRef = useRef(dates);
+  datesRef.current = dates;
+  const currentDateRef = useRef(currentDate);
+  currentDateRef.current = currentDate;
 
   const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
   const activo = currentIndex >= 0;
+  const alFinal = activo && currentIndex === dates.length - 1;
 
-  /**
-   * Un solo lugar decide activar / animar / saltar, para que los botones
-   * y el arrastre no puedan discrepar entre sí.
-   */
-  const irA = (index: number) => {
-    const date = dates[index];
-    if (date === undefined) return;
+  useEffect(() => {
+    if (currentDate === null) setPlaying(false);
+  }, [currentDate]);
 
-    if (!activo) {
-      onActivate(date);
+  useEffect(() => {
+    if (!playing) {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+      intervalRef.current = null;
       return;
     }
-    if (index === currentIndex + 1) {
-      onAdvance(date);
-      return;
+    const stepMs = computeTimelineStepMs(datesRef.current.length);
+    intervalRef.current = setInterval(() => {
+      const freshDates = datesRef.current;
+      const freshCurrent = currentDateRef.current;
+      const idx = freshCurrent ? freshDates.indexOf(freshCurrent) : -1;
+      const next = freshDates[idx + 1];
+      if (next === undefined) {
+        setPlaying(false);
+        return;
+      }
+      onAdvance(next);
+    }, stepMs);
+    return () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates y currentDate se leen frescos vía ref dentro del tick; reiniciar el intervalo en cada fecha se vería entrecortado.
+  }, [playing]);
+
+  const alternarReproduccion = () => {
+    if (!activo && dates.length > 0) {
+      const primera = dates[0];
+      if (primera !== undefined) onActivate(primera);
+    } else if (alFinal) {
+      const primera = dates[0];
+      if (primera !== undefined) onSeek(primera);
     }
-    onSeek(date);
+    setPlaying((v) => !v);
   };
 
-  const handleScrub = (event: ChangeEvent<HTMLInputElement>) => irA(Number(event.target.value));
+  const handleScrub = (event: ChangeEvent<HTMLInputElement>) => {
+    setPlaying(false);
+    const index = Number(event.target.value);
+    const date = dates[index];
+    if (date === undefined) return;
+    if (!activo) onActivate(date);
+    else if (index === currentIndex + 1) onAdvance(date);
+    else onSeek(date);
+  };
+
+  if (dates.length === 0) return null;
 
   return (
-    <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur">
-      <PasoButton
-        direccion="anterior"
-        onClick={() => irA(activo ? currentIndex - 1 : 0)}
-        disabled={activo && currentIndex <= 0}
-      />
+    <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur">
+      <button
+        type="button"
+        onClick={alternarReproduccion}
+        aria-label={playing ? "Pausar" : "Reproducir día por día"}
+        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90"
+      >
+        {playing ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <rect x="5" y="4" width="5" height="16" rx="1" />
+            <rect x="14" y="4" width="5" height="16" rx="1" />
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M6 4l14 8-14 8V4z" />
+          </svg>
+        )}
+      </button>
 
       <input
         type="range"
@@ -83,57 +129,29 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
         step={1}
         value={currentIndex >= 0 ? currentIndex : 0}
         onChange={handleScrub}
-        aria-label="Jornada"
-        className="h-1 w-40 shrink-0 accent-foreground md:w-64"
-      />
-
-      <PasoButton
-        direccion="siguiente"
-        onClick={() => irA(activo ? currentIndex + 1 : 0)}
-        disabled={activo && currentIndex >= dates.length - 1}
+        aria-label="Día"
+        className="h-1.5 w-44 shrink-0 accent-foreground md:w-72"
       />
 
       <span
-        className="min-w-[5.5rem] shrink-0 font-mono text-xs text-muted-foreground"
+        className="min-w-[6rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground"
         aria-live="polite"
       >
-        {currentDate ?? dates[0] ?? ""}
+        {currentDate ?? dates[0]}
       </span>
 
       {activo && (
         <button
           type="button"
-          onClick={onExit}
-          className="ml-1 shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          onClick={() => {
+            setPlaying(false);
+            onExit();
+          }}
+          className="ml-1 shrink-0 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
         >
           Ver todo
         </button>
       )}
     </div>
-  );
-}
-
-function PasoButton({
-  direccion,
-  onClick,
-  disabled,
-}: {
-  direccion: "anterior" | "siguiente";
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  const esSiguiente = direccion === "siguiente";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={esSiguiente ? "Jornada siguiente" : "Jornada anterior"}
-      className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-30"
-    >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-        <path d={esSiguiente ? "M8 4l10 8-10 8V4z" : "M16 4L6 12l10 8V4z"} />
-      </svg>
-    </button>
   );
 }

@@ -78,9 +78,12 @@ export function StoryPage() {
             </h1>
 
             <p className="mt-8 max-w-2xl text-xl leading-9 text-[#315A70]">
-              Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas en el
-              Valle del Cauca. Aquí ves adónde llegaron, cuántas fueron y en qué días.
+              Después del terremoto del 10 de agosto de 2026, la Gobernación del Valle del Cauca entregó ayudas humanitarias de emergencia en los municipios.
+              </p>
+            <p className="mt-8 max-w-2xl text-xl leading-9 text-[#315A70]">
+              A continuación encontrará toda la información.
             </p>
+
 
             <p className="mt-10 font-serif text-3xl text-[#00578C] md:text-4xl">
               {MUNICIPIOS_ATENDIDOS} de los {MUNICIPIOS_TOTALES} municipios recibieron ayudas

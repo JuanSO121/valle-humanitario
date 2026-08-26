@@ -1088,7 +1088,12 @@ export function MapCanvas({
         if (coordsCacheRef.current.has(key)) validKeys.push(key);
       });
 
-      if (instantTransition) {
+      // Sin línea de tiempo activa el mapa NO se reproduce solo: las
+      // rutas aparecen ya dibujadas. La cascada de crecimiento es parte
+      // de la narración por jornada, no de la carga de la página.
+      // Mismo criterio que la rama de intensidad de más abajo, que ya
+      // fijaba el color final en este caso.
+      if (instantTransition || !timelineActive) {
         engine.snapTo(validKeys, weights, performance.now());
       } else {
         engine.sync(validKeys, weights);

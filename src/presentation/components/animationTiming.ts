@@ -50,3 +50,17 @@ export const CASCADE_STEP_MIN_MS = 60;
 
 /** Techo: con pocos arcos mantiene el ritmo "entra el siguiente cuando el anterior va por la mitad". */
 export const CASCADE_STEP_MAX_MS = 450;
+
+/**
+ * Techo de una reproducción completa, como red de seguridad. Con las 13
+ * fechas del dataset real no hace nada. Si algún día llegan muchas más,
+ * comprime el paso para que la reproducción no dure diez minutos.
+ */
+export const TIMELINE_MAX_PLAYBACK_MS = 120_000;
+
+/** Paso real entre jornadas según cuántas fechas haya. */
+export function computeTimelineStepMs(dateCount: number): number {
+  if (dateCount <= 1) return TIMELINE_STEP_MS;
+  const comprimido = TIMELINE_MAX_PLAYBACK_MS / (dateCount - 1);
+  return Math.min(TIMELINE_STEP_MS, Math.max(CASCADE_STEP_MAX_MS, comprimido));
+}

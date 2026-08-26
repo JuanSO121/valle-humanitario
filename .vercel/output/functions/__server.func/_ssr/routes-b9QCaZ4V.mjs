@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Menu, c as Lightbulb, d as ChevronDown, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dwf4o1Hs.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-b9QCaZ4V.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -243,35 +243,143 @@ var viewTransitions = {
 		} : prev;
 	}
 };
+/**
+* Ventana de una jornada: lo que la ola de arcos de un día tiene para
+* salir y llegar completa.
+*
+* Ya no hay reproducción automática (ver Timeline.tsx), así que esto no
+* dispara nada por sí solo, sigue siendo el presupuesto del que se
+* deriva la cascada, y es lo que tarda una jornada en resolverse
+* visualmente cuando alguien toca "siguiente".
+*/
+var TIMELINE_STEP_MS = 2800;
+/**
+* Techo de una reproducción completa, como red de seguridad. Con las 13
+* fechas del dataset real no hace nada. Si algún día llegan muchas más,
+* comprime el paso para que la reproducción no dure diez minutos.
+*/
+var TIMELINE_MAX_PLAYBACK_MS = 12e4;
+/** Paso real entre jornadas según cuántas fechas haya. */
+function computeTimelineStepMs(dateCount) {
+	if (dateCount <= 1) return TIMELINE_STEP_MS;
+	const comprimido = TIMELINE_MAX_PLAYBACK_MS / (dateCount - 1);
+	return Math.min(TIMELINE_STEP_MS, Math.max(450, comprimido));
+}
+/**
+* Timeline.tsx
+* -----------------------------------------------------------------------
+* Control de jornadas del mapa. Componente de presentación puro: recibe
+* las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
+*
+* La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
+* dibujadas y solo se anima si la persona toca reproducir.
+*
+* El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
+* que sale el presupuesto de la cascada de arcos. Una jornada dura lo
+* que tarda su último arco en salir y llegar, así que las líneas siempre
+* alcanzan a completarse antes de que cambie el día.
+*
+* Seek contra advance, la distinción que ya vive en viewState.ts:
+*   · Reproducir o avanzar un día llama a onAdvance, que anima.
+*   · Arrastrar varios días llama a onSeek, que salta sin animar.
+*     Animar un salto de seis días se lee como un error visual.
+*
+* El efecto del intervalo depende solo de [playing]. Eso deja la función
+* del tick con las props del momento en que arrancó, así que dates y
+* currentDate se leen desde refs que se actualizan en cada render. Sin
+* eso, cada tick recalcula el siguiente de la misma fecha inicial y la
+* reproducción avanza una vez y se traba.
+* -----------------------------------------------------------------------
+*/
 function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
-	if (dates.length === 0) return null;
+	const [playing, setPlaying] = (0, import_react.useState)(false);
+	const intervalRef = (0, import_react.useRef)(null);
+	const datesRef = (0, import_react.useRef)(dates);
+	datesRef.current = dates;
+	const currentDateRef = (0, import_react.useRef)(currentDate);
+	currentDateRef.current = currentDate;
 	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
 	const activo = currentIndex >= 0;
-	/**
-	* Un solo lugar decide activar / animar / saltar, para que los botones
-	* y el arrastre no puedan discrepar entre sí.
-	*/
-	const irA = (index) => {
+	const alFinal = activo && currentIndex === dates.length - 1;
+	(0, import_react.useEffect)(() => {
+		if (currentDate === null) setPlaying(false);
+	}, [currentDate]);
+	(0, import_react.useEffect)(() => {
+		if (!playing) {
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+			intervalRef.current = null;
+			return;
+		}
+		const stepMs = computeTimelineStepMs(datesRef.current.length);
+		intervalRef.current = setInterval(() => {
+			const freshDates = datesRef.current;
+			const freshCurrent = currentDateRef.current;
+			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
+			if (next === void 0) {
+				setPlaying(false);
+				return;
+			}
+			onAdvance(next);
+		}, stepMs);
+		return () => {
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+		};
+	}, [playing]);
+	const alternarReproduccion = () => {
+		if (!activo && dates.length > 0) {
+			const primera = dates[0];
+			if (primera !== void 0) onActivate(primera);
+		} else if (alFinal) {
+			const primera = dates[0];
+			if (primera !== void 0) onSeek(primera);
+		}
+		setPlaying((v) => !v);
+	};
+	const handleScrub = (event) => {
+		setPlaying(false);
+		const index = Number(event.target.value);
 		const date = dates[index];
 		if (date === void 0) return;
-		if (!activo) {
-			onActivate(date);
-			return;
-		}
-		if (index === currentIndex + 1) {
-			onAdvance(date);
-			return;
-		}
-		onSeek(date);
+		if (!activo) onActivate(date);
+		else if (index === currentIndex + 1) onAdvance(date);
+		else onSeek(date);
 	};
-	const handleScrub = (event) => irA(Number(event.target.value));
+	if (dates.length === 0) return null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur",
+		className: "pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasoButton, {
-				direccion: "anterior",
-				onClick: () => irA(activo ? currentIndex - 1 : 0),
-				disabled: activo && currentIndex <= 0
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: alternarReproduccion,
+				"aria-label": playing ? "Pausar" : "Reproducir día por día",
+				className: "flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90",
+				children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+					width: "14",
+					height: "14",
+					viewBox: "0 0 24 24",
+					fill: "currentColor",
+					"aria-hidden": true,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+						x: "5",
+						y: "4",
+						width: "5",
+						height: "16",
+						rx: "1"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+						x: "14",
+						y: "4",
+						width: "5",
+						height: "16",
+						rx: "1"
+					})]
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+					width: "14",
+					height: "14",
+					viewBox: "0 0 24 24",
+					fill: "currentColor",
+					"aria-hidden": true,
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 				type: "range",
@@ -280,44 +388,24 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 				step: 1,
 				value: currentIndex >= 0 ? currentIndex : 0,
 				onChange: handleScrub,
-				"aria-label": "Jornada",
-				className: "h-1 w-40 shrink-0 accent-foreground md:w-64"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PasoButton, {
-				direccion: "siguiente",
-				onClick: () => irA(activo ? currentIndex + 1 : 0),
-				disabled: activo && currentIndex >= dates.length - 1
+				"aria-label": "Día",
+				className: "h-1.5 w-44 shrink-0 accent-foreground md:w-72"
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "min-w-[5.5rem] shrink-0 font-mono text-xs text-muted-foreground",
+				className: "min-w-[6rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground",
 				"aria-live": "polite",
-				children: currentDate ?? dates[0] ?? ""
+				children: currentDate ?? dates[0]
 			}),
 			activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 				type: "button",
-				onClick: onExit,
-				className: "ml-1 shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground",
+				onClick: () => {
+					setPlaying(false);
+					onExit();
+				},
+				className: "ml-1 shrink-0 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground",
 				children: "Ver todo"
 			})
 		]
-	});
-}
-function PasoButton({ direccion, onClick, disabled }) {
-	const esSiguiente = direccion === "siguiente";
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-		type: "button",
-		onClick,
-		disabled,
-		"aria-label": esSiguiente ? "Jornada siguiente" : "Jornada anterior",
-		className: "flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition-opacity disabled:opacity-30",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-			width: "12",
-			height: "12",
-			viewBox: "0 0 24 24",
-			fill: "currentColor",
-			"aria-hidden": true,
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: esSiguiente ? "M8 4l10 8-10 8V4z" : "M16 4L6 12l10 8V4z" })
-		})
 	});
 }
 function MarcadorHUD({ toneladas, despachos, day, lens, instant = false }) {
@@ -2676,26 +2764,28 @@ function MunicipiosNuevosCallouts() {
 function SidebarNav({ items, scrollRootId, homeId }) {
 	const [abierto, setAbierto] = (0, import_react.useState)(false);
 	const [activo, setActivo] = (0, import_react.useState)(items[0]?.id ?? "");
+	const visiblesRef = (0, import_react.useRef)(/* @__PURE__ */ new Set());
 	(0, import_react.useEffect)(() => {
 		const root = document.getElementById(scrollRootId);
 		if (!root) return;
 		const observer = new IntersectionObserver((entries) => {
-			const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-			if (visible) setActivo(visible.target.id);
+			for (const entry of entries) if (entry.isIntersecting) visiblesRef.current.add(entry.target.id);
+			else visiblesRef.current.delete(entry.target.id);
+			const actual = items.find((i) => visiblesRef.current.has(i.id));
+			if (actual) setActivo(actual.id);
 		}, {
 			root,
-			threshold: [
-				.25,
-				.5,
-				.75
-			],
-			rootMargin: "-20% 0px -60% 0px"
+			rootMargin: "-45% 0px -50% 0px",
+			threshold: 0
 		});
 		items.forEach((item) => {
 			const el = document.getElementById(item.id);
 			if (el) observer.observe(el);
 		});
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			visiblesRef.current.clear();
+		};
 	}, [items, scrollRootId]);
 	const inicioId = homeId ?? items[0]?.id ?? "";
 	const irA = (id) => {
@@ -4252,7 +4342,11 @@ function StoryPage() {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
-							children: "Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas en el Valle del Cauca. Aquí ves adónde llegaron, cuántas fueron y en qué días."
+							children: "Después del terremoto del 10 de agosto de 2026, la Gobernación del Valle del Cauca entregó ayudas humanitarias de emergencia en los municipios."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
+							children: "A continuación encontrará toda la información."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 							className: "mt-10 font-serif text-3xl text-[#00578C] md:text-4xl",
