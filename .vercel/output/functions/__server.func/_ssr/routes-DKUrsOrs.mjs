@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { n as ChevronDown, t as MapPinned } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-phj2IXCq.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DKUrsOrs.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -5306,7 +5306,7 @@ var canales = [
 	{
 		id: "cali",
 		nombre: "Cali",
-		glosa: "Capital del departamento. Excluida del consolidado municipal por instrucción expresa",
+		glosa: "Capital del departamento.",
 		despachos: 55,
 		unidades: 27246,
 		renglones: 614,
@@ -5378,7 +5378,7 @@ var canales = [
 	{
 		id: "otras-ayudas-solidarias",
 		nombre: "Otras Ayudas Solidarias",
-		glosa: "Entregas a instituciones y casos puntuales. En el Drive la carpeta todavía se llama «Casos especiales»",
+		glosa: "Entregas a instituciones y casos puntuales.",
 		despachos: 18,
 		unidades: 9932,
 		renglones: 200,
