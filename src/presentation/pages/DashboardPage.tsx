@@ -1,16 +1,3 @@
-/**
- * DashboardPage.tsx
- * -----------------------------------------------------------------------
- * Junta todo: catálogos (useCatalogQueries), estado de navegación
- * (viewState.ts), el mapa (MapCanvas), el timeline (Timeline) y el panel
- * de destino (DestinoPanel). Es el único componente que conoce todas las
- * piezas a la vez — cada hook/componente que ensambla ya es independiente
- * y no sabe de los demás (MapCanvas no sabe de Timeline, Timeline no sabe
- * de destinos, DestinoPanel no sabe del timeline). Mantener ese
- * desacoplamiento es la razón de que este archivo exista en vez de que
- * cada pieza se importe entre sí.
- * -----------------------------------------------------------------------
- */
 import { useEffect, useMemo, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import {
@@ -24,19 +11,9 @@ import { MapCanvas } from "@/presentation/components/MapCanvas";
 import { Timeline } from "@/presentation/components/Timeline";
 import { FlujosLegend } from "@/presentation/components/FlujosLegend";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
+import { OrigenPanel } from "@/presentation/components/OrigenPanel";
+import { TopBar } from "@/presentation/components/TopBar";
 
-// Breakpoint único compartido con el CSS (md: en Tailwind = 768px) — no
-// existía un hook de este tipo en el proyecto viejo (ContextualPanel
-// recibía `isMobile` desde afuera, pero nunca se vio de dónde lo sacaba
-// en los archivos compartidos), así que se resuelve acá con la forma más
-// simple posible: sin librería, sin debounce, matchMedia + un listener.
-//
-// El estado inicial es SIEMPRE `false`, nunca `window.innerWidth` — esto
-// es TanStack Start con SSR real (ver router.tsx/server-entry.ts), así
-// que el primer render del cliente tiene que coincidir exactamente con
-// el HTML que ya mandó el servidor (que no tiene `window`) o React tira
-// un hydration mismatch. El valor real se aplica recién en el
-// `useEffect`, que solo corre en el cliente después de hidratar.
 function useIsMobile(breakpointPx = 768): boolean {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -57,22 +34,6 @@ export function DashboardPage() {
   const { data: destinos } = useDestinos();
   const { data: flujosResponse } = useFlujos();
 
-  // Fechas únicas para el Timeline, derivadas de flujos[].porFecha — el
-  // backend no expone una ruta de "fechas disponibles" aparte porque
-  // sería puramente derivable de un dato que ya viaja en /flujos; agregar
-  // una ruta solo para esto duplicaría una fuente de verdad sin necesidad.
-  //
-  // FIX: `f.porFecha` se trata como opcional (`?? []`), igual que ya hace
-  // useFlujosAsOf.ts. Motivo: si la implementación del Web App de Apps
-  // Script o la caché de 6h de CacheLayer.gs quedan desincronizadas del
-  // Transforms.gs actual (que sí arma porFecha), route=flujos puede servir
-  // flujos sin ese campo — AyudasApiRepository.getFlujos() ahora deja
-  // pasar esa respuesta con un console.warn en vez de rechazarla con un
-  // 502 (ver ese archivo). Sin esta guarda, un `f.porFecha.forEach(...)`
-  // sobre `undefined` tiraría un TypeError acá y esto SÍ es código de
-  // render, no una promesa: ese throw no lo atrapa React Query, tumba el
-  // componente entero. Con la guarda, el peor caso es "timeline sin
-  // fechas para reproducir" — el mapa base y los arcos siguen andando.
   const timelineDates = useMemo(() => {
     if (!flujosResponse?.flujos) return [];
     const set = new Set<string>();
@@ -82,20 +43,6 @@ export function DashboardPage() {
 
   const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
 
-  // FIX: antes se mandaba `flujosParaMapa` completo a MapCanvas, así que
-  // TODOS los arcos del dataset (as-of la fecha del timeline) entraban al
-  // motor de animación apenas resolvía la query — se veían "animarse
-  // solos" al cargar, sin que hubiera mediado ningún click. Ahora se
-  // filtra por la selección activa antes de pasarlo:
-  //   - Sin selección (level "ALL"): [] — mapa base con puntos, sin arcos.
-  //   - Origen seleccionado: solo los flujos SALIENTES desde ese origen
-  //     (a dónde se distribuyó lo que salió de ahí).
-  //   - Destino seleccionado: solo los flujos ENTRANTES a ese destino
-  //     (de dónde vino lo que llegó ahí) — puede ser más de un origen,
-  //     por eso es un .filter() y no un .find(), todas las líneas de
-  //     "de dónde vino" quedan visibles a la vez.
-  // origenId y destinoId son excluyentes en ViewState (ver viewState.ts),
-  // así que nunca hace falta decidir cuál gana si ambos estuvieran seteados.
   const flujosFiltrados = useMemo(() => {
     if (viewState.origenId) {
       return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
@@ -106,37 +53,32 @@ export function DashboardPage() {
     return [];
   }, [flujosParaMapa, viewState.origenId, viewState.destinoId]);
 
-  // MapCanvas consume `instantTransition` en el mismo commit en que
-  // cambian los `flujos` (su useEffect corre sobre las props ya
-  // actualizadas). Una vez consumido, hay que bajar la bandera para que
-  // el SIGUIENTE cambio (un "advance" del Timeline) vuelva a animar —
-  // si no se resetea acá, todo avance posterior a un seek quedaría
-  // congelado en modo instantáneo. clearInstantFlag ya es un no-op si la
-  // bandera está en false, así que este efecto es seguro de dejar
-  // corriendo en cada render.
+  const origenSeleccionado = useMemo(
+    () => origenes?.find((o) => o.id === viewState.origenId) ?? null,
+    [origenes, viewState.origenId],
+  );
+
+  // Igual que origenSeleccionado, pero para el breadcrumb: DestinoPanel
+  // hace su propio fetch de detalle (useDestinoResumen), pero el nombre
+  // para el breadcrumb ya está disponible en el catálogo `destinos` que
+  // este componente ya tiene cargado — no vale la pena esperar el fetch
+  // del panel solo para pintar la migaja de arriba.
+  const destinoSeleccionado = useMemo(
+    () => destinos?.find((d) => d.id === viewState.destinoId) ?? null,
+    [destinos, viewState.destinoId],
+  );
+
+  const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
+
   useEffect(() => {
     if (!viewState.timelineInstant) return;
     setViewState((prev) => viewTransitions.clearInstantFlag(prev));
   }, [viewState.timelineInstant, viewState.timelineDate]);
 
+  const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
+
   return (
-    // `theme-ayudas`: activa el scope de custom properties definido en
-    // theme-ayudas.css (pegado al final de src/styles.css) — ver ese
-    // archivo para el razonamiento de por qué es un tema con scope y no
-    // un :root global.
     <div className="theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background">
-      {/*
-        ClientOnly (no un simple `useEffect` + "mounted" flag casero):
-        maplibre-gl toca `document`/`window` apenas se IMPORTA el módulo
-        (MapCanvas.tsx llama `maplibregl.setWorkerUrl(...)` a nivel de
-        módulo, fuera de cualquier componente), así que ni siquiera puede
-        evaluarse ese `import` durante el render en el servidor — no es
-        solo un problema de qué se pinta, sino de qué se carga. ClientOnly
-        de TanStack Router existe exactamente para este caso: el bundle
-        del fallback se manda en el HTML servido, y el del `children`
-        (con MapCanvas y su import de maplibre-gl adentro) recién se
-        resuelve en el cliente.
-      */}
       <ClientOnly
         fallback={
           <div className="absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground">
@@ -157,13 +99,13 @@ export function DashboardPage() {
         />
       </ClientOnly>
 
-      {/*
-        Legend: card fija en desktop, botón+popover en mobile — ver
-        razonamiento en FlujosLegend.tsx. Se oculta con destino abierto en
-        AMBOS casos (ya lo hacía antes de este cambio): con el panel
-        abierto no aporta nada que el panel mismo no explique mejor.
-      */}
-      {!viewState.destinoId && <FlujosLegend compact={isMobile} />}
+      <TopBar
+        viewState={viewState}
+        seleccionNombre={seleccionNombre}
+        onGoToAll={() => setViewState((prev) => viewTransitions.toAll(prev))}
+      />
+
+      {!viewState.destinoId && !viewState.origenId && <FlujosLegend compact={isMobile} />}
 
       {viewState.level === "DESTINO" && viewState.destinoId && (
         <DestinoPanel
@@ -173,20 +115,17 @@ export function DashboardPage() {
         />
       )}
 
-      {/*
-        En desktop el panel de destino es una card lateral (top-right, ver
-        DesktopCard en ContextualPanel.tsx) que nunca toca la franja de
-        abajo — el Timeline puede quedarse visible siempre.
-        En mobile el panel es un MobileSheet anclado abajo (70vh) — mismo
-        borde de pantalla que el Timeline. Mostrar los dos a la vez los
-        hace pelear por el mismo espacio (y ambos en z-10, sin orden de
-        apilado garantizado). Se oculta el Timeline mientras haya un
-        destino abierto en mobile: es la solución más simple que no
-        requiere que DashboardPage conozca el estado interno
-        expanded/collapsed del sheet (eso vive dentro de ContextualPanel,
-        a propósito, para no acoplar los dos componentes).
-      */}
-      {!(isMobile && viewState.destinoId) && (
+      {viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && (
+        <OrigenPanel
+          origenId={viewState.origenId}
+          origenNombre={origenSeleccionado.nombre}
+          flujos={flujosFiltrados}
+          isMobile={isMobile}
+          onClose={() => setViewState((prev) => viewTransitions.toAll(prev))}
+        />
+      )}
+
+      {!hayPanelAbiertoEnMobile && (
         <div className="pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4">
           <Timeline
             dates={timelineDates}

@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CRUS8jp7.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DHkWf3QO.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -122,7 +122,45 @@ function createCatalogQuery(key, fetcher) {
 		});
 	};
 }
+var useOrigenes = createCatalogQuery("origenes", () => ayudasApiRepository.getOrigenes());
 var useFlujos = createCatalogQuery("flujos", () => ayudasApiRepository.getFlujos());
+var useDestinos = createCatalogQuery("destinos", () => ayudasApiRepository.getDestinos());
+/**
+* useFlujosAsOf.ts
+* -----------------------------------------------------------------------
+* Deriva, en el cliente y sin red, el estado acumulado de los flujos a
+* una fecha dada del timeline. useFlujos() ya trae todo el `porFecha` de
+* cada par en memoria desde el primer fetch — recalcular "cuánto se había
+* entregado al día X" es sumar un array corto, no vale la pena un fetch
+* por cada tick del scrub (arrastrar el slider generaría decenas de
+* requests por segundo contra un backend con cuota de ejecuciones).
+*
+* NOTA: depende de que `Transforms.gs` incluya `porFecha` en la respuesta
+* de route=flujos (cambio propuesto, ver conversación — un campo más en
+* la misma ruta, no una ruta nueva, para no desincronizar el TTL de
+* CacheLayer.gs entre dos vistas del mismo dataset).
+* -----------------------------------------------------------------------
+*/
+/**
+* @param flujos           salida completa de useFlujos().data.flujos
+* @param timelineDate     fecha ISO del playhead, o null para modo estático
+*                          (en cuyo caso se devuelven los flujos tal cual,
+*                          sin filtrar — mismo comportamiento que ya
+*                          existía antes de que existiera el timeline)
+*/
+function useFlujosAsOf(flujos, timelineDate) {
+	return (0, import_react.useMemo)(() => {
+		if (!Array.isArray(flujos)) return [];
+		if (timelineDate === null) return flujos;
+		return flujos.map((flujo) => {
+			const acumulado = (flujo.porFecha ?? []).filter((p) => p.fecha <= timelineDate).reduce((sum, p) => sum + p.despachosCount, 0);
+			return acumulado > 0 ? {
+				...flujo,
+				despachosCount: acumulado
+			} : null;
+		}).filter((f) => f !== null);
+	}, [flujos, timelineDate]);
+}
 var INITIAL_VIEW_STATE = {
 	level: "ALL",
 	destinoId: null,
@@ -847,18 +885,146 @@ function PanelSkeleton() {
 	});
 }
 /**
-* DashboardPage.tsx
+* OrigenPanel.tsx
 * -----------------------------------------------------------------------
-* Junta todo: catálogos (useCatalogQueries), estado de navegación
-* (viewState.ts), el mapa (MapCanvas), el timeline (Timeline) y el panel
-* de destino (DestinoPanel). Es el único componente que conoce todas las
-* piezas a la vez — cada hook/componente que ensambla ya es independiente
-* y no sabe de los demás (MapCanvas no sabe de Timeline, Timeline no sabe
-* de destinos, DestinoPanel no sabe del timeline). Mantener ese
-* desacoplamiento es la razón de que este archivo exista en vez de que
-* cada pieza se importe entre sí.
+* Equivalente a DestinoPanel pero para el punto de ORIGEN: no necesita
+* su propio hook de red porque toda la data que necesita (despachos por
+* destino alcanzado desde este origen) ya vive en `flujos`, que
+* DashboardPage arma filtrando flujosParaMapa por origenId — es el mismo
+* array que ya se le pasa a MapCanvas para dibujar los arcos, así que no
+* hay una segunda fuente de verdad ni un fetch adicional.
 * -----------------------------------------------------------------------
 */
+function OrigenPanel({ origenId, origenNombre, flujos, isMobile, onClose }) {
+	const despachosTotal = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
+	const destinosOrdenados = [...flujos].sort((a, b) => b.despachosCount - a.despachosCount);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
+		isMobile,
+		title: origenNombre,
+		subtitle: "Punto de despacho",
+		onClose,
+		transitionKey: `origen-${origenId}`,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-col",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "grid grid-cols-2 divide-x divide-border border-b border-border",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "p-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "label-caps text-[10px]",
+						children: "Despachos"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-display text-2xl font-semibold tabular-nums text-foreground",
+						children: despachosTotal.toLocaleString("es-CO")
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "p-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "label-caps text-[10px]",
+						children: "Destinos alcanzados"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "font-display text-2xl font-semibold tabular-nums text-foreground",
+						children: flujos.length.toLocaleString("es-CO")
+					})]
+				})]
+			}), flujos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "p-4 text-sm text-muted-foreground",
+				children: [
+					"No hay despachos registrados desde este origen",
+					destinosOrdenados.length === 0 ? " en la fecha seleccionada" : "",
+					"."
+				]
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "border-b border-border p-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "label-caps text-[10px]",
+					children: "Despachos por destino"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "mt-2.5 flex flex-col gap-2.5",
+					children: destinosOrdenados.map((f, i) => {
+						const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "group -mx-1.5 rounded-md px-1.5 py-0.5 transition-colors hover:bg-surface-raised",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-baseline justify-between text-xs",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-foreground",
+									children: f.destino.nombre
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "tabular-nums text-muted-foreground",
+									children: [
+										f.despachosCount.toLocaleString("es-CO"),
+										" · ",
+										Math.round(porcentaje * 100),
+										"%"
+									]
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-1 h-1.5 overflow-hidden rounded-full bg-surface-raised",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "h-1.5 origin-left rounded-full bg-primary",
+									style: {
+										width: `${Math.max(2, porcentaje * 100)}%`,
+										animation: `bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both`,
+										animationDelay: `${i * 60}ms`
+									}
+								})
+							})]
+						}, f.destino.id);
+					})
+				})]
+			})]
+		})
+	});
+}
+function Breadcrumb({ viewState, seleccionNombre, onGoToAll }) {
+	const enAll = viewState.level === "ALL";
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+		"aria-label": "Ubicación actual",
+		className: "pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Crumb, {
+			label: "Valle del Cauca",
+			active: enAll,
+			onClick: enAll ? void 0 : onGoToAll
+		}), seleccionNombre && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sep, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "max-w-[10rem] truncate text-foreground/90",
+			children: seleccionNombre
+		})] })]
+	});
+}
+function Crumb({ label, active, onClick }) {
+	const clickable = Boolean(onClick);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick,
+		disabled: !clickable,
+		className: `tap-target max-w-[10rem] truncate rounded-full px-1.5 py-0.5 transition-colors ${active ? "text-primary" : clickable ? "text-muted-foreground hover:text-foreground" : "text-foreground/90"} ${clickable ? "cursor-pointer" : "cursor-default"}`,
+		children: label
+	});
+}
+function Sep() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: "text-muted-foreground/60",
+		"aria-hidden": true,
+		children: "/"
+	});
+}
+function TopBar({ viewState, seleccionNombre, onGoToAll }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex items-center gap-2 px-4",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "pointer-events-auto flex max-w-[55vw] items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur sm:max-w-none",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "truncate",
+				children: "Ayudas Humanitarias"
+			})
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Breadcrumb, {
+			viewState,
+			seleccionNombre,
+			onGoToAll
+		})]
+	});
+}
 function useIsMobile(breakpointPx = 768) {
 	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
@@ -873,6 +1039,8 @@ function useIsMobile(breakpointPx = 768) {
 function DashboardPage() {
 	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
 	const isMobile = useIsMobile();
+	const { data: origenes } = useOrigenes();
+	const { data: destinos } = useDestinos();
 	const { data: flujosResponse } = useFlujos();
 	const timelineDates = (0, import_react.useMemo)(() => {
 		if (!flujosResponse?.flujos) return [];
@@ -880,10 +1048,24 @@ function DashboardPage() {
 		flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
 		return [...set].sort();
 	}, [flujosResponse]);
+	const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
+	const flujosFiltrados = (0, import_react.useMemo)(() => {
+		if (viewState.origenId) return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
+		if (viewState.destinoId) return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
+		return [];
+	}, [
+		flujosParaMapa,
+		viewState.origenId,
+		viewState.destinoId
+	]);
+	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
+	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
+	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
 	(0, import_react.useEffect)(() => {
 		if (!viewState.timelineInstant) return;
 		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
 	}, [viewState.timelineInstant, viewState.timelineDate]);
+	const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
 		children: [
@@ -891,13 +1073,25 @@ function DashboardPage() {
 				className: "absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground",
 				children: "Cargando mapa…"
 			}) }),
-			!viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
+				viewState,
+				seleccionNombre,
+				onGoToAll: () => setViewState((prev) => viewTransitions.toAll(prev))
+			}),
+			!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile }),
 			viewState.level === "DESTINO" && viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DestinoPanel, {
 				destinoId: viewState.destinoId,
 				isMobile,
 				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
 			}),
-			!(isMobile && viewState.destinoId) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrigenPanel, {
+				origenId: viewState.origenId,
+				origenNombre: origenSeleccionado.nombre,
+				flujos: flujosFiltrados,
+				isMobile,
+				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
+			}),
+			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
 					dates: timelineDates,

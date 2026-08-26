@@ -48,15 +48,15 @@ export function WelcomeModal({ onClose }: Props) {
 
         <ul className="mt-4 space-y-2.5 text-xs">
           <li className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX.ROJO }} />
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX["ROJO"] }} />
             Riesgo alto — se recomienda evaluación urgente
           </li>
           <li className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX.AMARILLO }} />
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX["AMARILLO"] }} />
             Riesgo medio — requiere seguimiento
           </li>
           <li className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX.VERDE }} />
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: CRITICALITY_HEX["VERDE"] }} />
             Riesgo bajo — sin afectaciones críticas
           </li>
           <li className="flex items-start gap-2 border-t border-border pt-2.5">

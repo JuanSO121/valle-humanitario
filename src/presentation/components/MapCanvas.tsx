@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, MapLayerMouseEvent } from "maplibre-gl";
+import type { Map as MapLibreMap, MapLayerMouseEvent, PointLike } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
@@ -14,15 +14,15 @@ import municipalBoundariesRaw from "@/data/valle-municipios.json";
 const OVERVIEW_CENTER: LngLat = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
 
-// Periodo del "ping" de los puntos de despacho (orígenes) — deliberadamente
-// más lento que PULSE_PERIOD_MS del engine de arcos (que vive en
-// arcAnimationEngine.ts y no se exporta): son dos pulsos con propósitos
-// distintos y no hace falta que compartan reloj. Este es el que se ve
-// SIEMPRE, haya o no un origen/destino seleccionado — es lo que hace que
-// los puntos de despacho se noten como "algo vivo" en vez de un punto
-// muerto en el mapa, sin necesidad de hacer click.
 const ORIGIN_PULSE_PERIOD_MS = 1700;
 const ORIGIN_PULSE_MAX_RADIUS_GROWTH = 22;
+
+// Tolerancia de hit-test para clicks/taps sobre los puntos de origen y
+// destino: en vez de exigir el pixel exacto del centro del círculo (que
+// en mobile, con dedos gordos sobre un círculo de 5-10px de radio, falla
+// seguido), se consulta una caja de +-8px alrededor del punto de click.
+// Mismo criterio en ambos layers de punto.
+const POINT_HIT_TOLERANCE_PX = 8;
 
 function normalizeBoundaries(geojson: unknown): maplibregl.GeoJSONSourceSpecification["data"] {
   const collection = geojson as { features?: Array<{ properties?: Record<string, unknown> }> };
@@ -55,15 +55,6 @@ const ORIGEN_DIM_COLOR: Record<string, string> = {
   "ORI-CARTAGO": "rgba(230,136,60,0.35)",
 };
 
-// Los mapas de color de arriba están indexados por el id "canónico" tal
-// como se escribe en este archivo ("ORI-CALI", "ORI-CARTAGO"). Se
-// normalizan con la misma función (normId) que ya usa
-// normalizeBoundaries() para municipalityCode, para blindar contra
-// diferencias de formato entre route=origenes y route=flujos aunque hoy
-// coincidan exactamente (ver conversación: la causa real de "no se ven
-// arcos" terminó siendo otra — route=flujos llegando vacío por un
-// contrato desactualizado en el backend — pero esta normalización no
-// sobra como defensa a futuro).
 const ORIGEN_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
   Object.entries(ORIGEN_COLOR).map(([id, color]) => [normId(id), color]),
 );
@@ -71,16 +62,6 @@ const ORIGEN_DIM_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
   Object.entries(ORIGEN_DIM_COLOR).map(([id, color]) => [normId(id), color]),
 );
 
-// FIX ("sigue todo oscuro"): el basemap vivía al 28% de opacidad con
-// saturación casi nula (-0.6) — a esa opacidad, cualquier etiqueta o calle
-// del propio tile raster de OSM queda como un fantasma casi ilegible (es
-// lo que se ve como el texto gigante y desvaído en la esquina de la
-// captura: viene horneado en la imagen del tile, no lo dibuja este código,
-// y por eso bajar el ruido visual real es subir un poco esta opacidad, no
-// esconder más el tile). Se sube lo suficiente para que calles/nombres se
-// puedan seguir como referencia, sin que el raster compita con los puntos
-// y arcos que son el foco real de esta pantalla — brightness-max también
-// sube un poco para que no se vea plano.
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -106,18 +87,9 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
 interface Props {
   origenes: Origen[];
   destinos: DestinoResumenLista[];
-  /**
-   * Flujos a DIBUJAR — ya filtrados por el padre (DashboardPage) según la
-   * selección activa (origen o destino). Este componente NO decide qué
-   * mostrar, solo anima lo que recibe: si el padre manda `[]` (nada
-   * seleccionado), no hay ningún arco en el mapa, a propósito — ver
-   * conversación: los arcos ya no se animan solos al entrar, solo al
-   * seleccionar un origen o un destino.
-   */
   flujos: Flujo[];
   instantTransition: boolean;
   selectedDestinoId: string | null;
-  /** Punto de ORIGEN resaltado en el mapa — independiente de selectedDestinoId (ver viewState.ts). */
   selectedOrigenId: string | null;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
@@ -126,17 +98,6 @@ interface Props {
 
 const flujoKey = (f: Flujo) => `${f.origenId}::${f.destino.id}`;
 
-// FIX: los tres popups (municipio/origen/destino) traían `color:#12161c`
-// hardcodeado en el HTML inyectado — pensado para cuando el popup vivía
-// sobre un fondo blanco (tema institucional claro). Con el tema
-// `.theme-ayudas` (fondo/superficies oscuras), `.maplibregl-popup-content`
-// pasa a tener `background: var(--surface)` OSCURO, pero ese inline style
-// en el hijo ignora por completo el `color: var(--foreground) !important`
-// que ya está declarado en el contenedor — un estilo inline en un
-// elemento hijo siempre gana sobre lo heredado del padre, sea o no
-// `!important` la regla del padre. Se saca el `color` de acá y se deja
-// que el texto herede del contenedor (styles.css ya lo cubre para ambos
-// temas, y además tiene una red de seguridad con `* { color: ... }`).
 function popupHtml(label: string): string {
   return `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px">
              <strong>${label}</strong>
@@ -166,6 +127,19 @@ export function MapCanvas({
   const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset });
   handlersRef.current = { onSelectDestino, onSelectOrigen, onReset };
 
+  const hoveredOrigenIdRef = useRef<string | null>(null);
+  const hoveredDestinoIdRef = useRef<string | null>(null);
+
+  // NUEVO: índice nombre-normalizado -> id de destino, para poder
+  // resolver "clickearon el municipio X" a "seleccioná el destino que
+  // corresponde a X" sin depender de un código de municipio que
+  // `DestinoResumenLista` no trae hoy (solo id/nombre/lat/lon/tipo). Se
+  // reconstruye cada vez que cambia `destinos`, junto con el efecto de
+  // sincronización del source más abajo — vive en un ref (no en el
+  // source de MapLibre) porque el click handler necesita leerlo de forma
+  // síncrona, no vía queryRenderedFeatures.
+  const destinoIdByNormNameRef = useRef<Map<string, string>>(new Map());
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = new maplibregl.Map({
@@ -193,21 +167,14 @@ export function MapCanvas({
           source: "municipios",
           paint: {
             "fill-color": "#2f6fed",
-            // FIX (legibilidad): 0.05/0.14 hacía que los límites municipales
-            // fueran casi invisibles sobre el fondo oscuro — se sube un
-            // escalón, sigue siendo sutil (no compite con los puntos/arcos)
-            // pero ahora se puede seguir el contorno sin tener que pasar el
-            // mouse encima.
             "fill-opacity": ["case", ["boolean", ["feature-state", "hovered"], false], 0.2, 0.08],
+            "fill-opacity-transition": { duration: 150, delay: 0 },
           },
         });
         map.addLayer({
           id: "municipios-line",
           type: "line",
           source: "municipios",
-          // Línea un poco más clara (antes #3d4a5c) y más opaca (antes 0.5)
-          // por el mismo motivo — a la opacidad de basemap que había, un
-          // borde tan tenue se perdía contra el ruido del raster de abajo.
           paint: { "line-color": "#5b6b85", "line-width": 0.9, "line-opacity": 0.65 },
         });
         map.addLayer({
@@ -262,51 +229,33 @@ export function MapCanvas({
 
       map.addSource("origenes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
-      // --- "burbuja" de los puntos de despacho ---------------------------
-      // Tres capas apiladas sobre la MISMA fuente "origenes", de abajo
-      // hacia arriba: glow estático (siempre visible, da presencia/peso
-      // incluso sin animación) -> anillo pulsante tipo sonar (crece y se
-      // desvanece en loop, actualizado cada frame en animate() más abajo)
-      // -> punto sólido (el dato real, siempre nítido y clickeable encima
-      // de todo lo demás). El pulso NO depende de selección: corre siempre,
-      // es lo que hace que un punto de despacho se note como "vivo" antes
-      // de que la persona haga ningún click.
       map.addLayer({
         id: "origenes-glow",
         type: "circle",
         source: "origenes",
-        paint: {
-          "circle-radius": 17,
-          "circle-color": ["get", "color"],
-          "circle-opacity": 0.18,
-          "circle-blur": 1,
-        },
+        paint: { "circle-radius": 17, "circle-color": ["get", "color"], "circle-opacity": 0.18, "circle-blur": 1 },
       });
       map.addLayer({
         id: "origenes-pulse",
         type: "circle",
         source: "origenes",
-        paint: {
-          // Valores iniciales — se sobreescriben cada frame desde
-          // animate(). Arrancan en un estado válido (no 0/oculto) para que
-          // el primer frame no se vea como un salto.
-          "circle-radius": 9,
-          "circle-color": ["get", "color"],
-          "circle-opacity": 0,
-        },
+        paint: { "circle-radius": 9, "circle-color": ["get", "color"], "circle-opacity": 0 },
       });
       map.addLayer({
         id: "origenes-point",
         type: "circle",
         source: "origenes",
         paint: {
-          // Resaltado del origen seleccionado — mismo patrón que ya usa
-          // destinos-point con su feature-state "selected". Radio/stroke
-          // subidos un poco (antes 8/11, 2/3) para que el punto en sí
-          // también se note más, no solo el pulso alrededor.
-          "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 13, 10],
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false], 13,
+            ["boolean", ["feature-state", "hover"], false], 11.5,
+            10,
+          ],
+          "circle-radius-transition": { duration: 180, delay: 0 },
           "circle-color": ["get", "color"],
           "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3.5, 2.5],
+          "circle-stroke-width-transition": { duration: 180, delay: 0 },
           "circle-stroke-color": "#0b0e14",
         },
       });
@@ -317,7 +266,13 @@ export function MapCanvas({
         type: "circle",
         source: "destinos",
         paint: {
-          "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 8, 5],
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false], 8,
+            ["boolean", ["feature-state", "hover"], false], 6.5,
+            5,
+          ],
+          "circle-radius-transition": { duration: 180, delay: 0 },
           "circle-color": "#e8ecf3",
           "circle-stroke-width": 1.4,
           "circle-stroke-color": "#0b0e14",
@@ -330,11 +285,7 @@ export function MapCanvas({
         type: "line",
         source: "arcos-creciendo",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": ["get", "width"],
-          "line-opacity": 0.9,
-        },
+        paint: { "line-color": ["get", "color"], "line-width": ["get", "width"], "line-opacity": 0.9 },
       });
 
       map.addSource("arcos-asentados", {
@@ -353,25 +304,46 @@ export function MapCanvas({
         },
       });
 
-      // --- click: origen > destino > reset ------------------------------
-      // Se prueban las capas de punto en este orden porque son las más
-      // "pequeñas" en área de hit-test — si algún día se agrega un layer
-      // que las tape, hay que revisar el orden acá. El glow/pulse de
-      // origen NO se incluyen acá a propósito: son puramente decorativos,
-      // el hit-test sigue siendo sobre "origenes-point" (el punto real).
+      // --- click: origen > destino > ÁREA de municipio > reset -----------
+      // Se agregó el tercer escalón (municipio) DESPUÉS de los puntos: si
+      // el punto de un destino cae dentro de su propio polígono (el caso
+      // normal), el click sobre el punto ya lo resuelve en el segundo
+      // escalón y nunca llega a probar el polígono — el orden importa
+      // para no hacer una consulta de más en el caso común.
       map.on("click", (e: MapLayerMouseEvent) => {
-        const origenHits = map.queryRenderedFeatures(e.point, { layers: ["origenes-point"] });
+        const hitbox: [PointLike, PointLike] = [
+          [e.point.x - POINT_HIT_TOLERANCE_PX, e.point.y - POINT_HIT_TOLERANCE_PX],
+          [e.point.x + POINT_HIT_TOLERANCE_PX, e.point.y + POINT_HIT_TOLERANCE_PX],
+        ];
+
+        const origenHits = map.queryRenderedFeatures(hitbox, { layers: ["origenes-point"] });
         if (origenHits.length > 0) {
           const id = origenHits[0]?.properties?.["id"];
           if (id != null) handlersRef.current.onSelectOrigen(String(id));
           return;
         }
-        const destinoHits = map.queryRenderedFeatures(e.point, { layers: ["destinos-point"] });
+        const destinoHits = map.queryRenderedFeatures(hitbox, { layers: ["destinos-point"] });
         if (destinoHits.length > 0) {
           const id = destinoHits[0]?.properties?.["id"];
           if (id != null) handlersRef.current.onSelectDestino(String(id));
           return;
         }
+
+        // Click en el ÁREA (no en el punto): si el municipio clickeado
+        // tiene un destino con el mismo nombre normalizado, se selecciona
+        // ese destino — mismo resultado que si hubieras tocado el punto.
+        const municipioHits = map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] });
+        if (municipioHits.length > 0) {
+          const municipioName = municipioHits[0]?.properties?.["name"];
+          if (municipioName != null) {
+            const destinoId = destinoIdByNormNameRef.current.get(normId(String(municipioName)));
+            if (destinoId != null) {
+              handlersRef.current.onSelectDestino(destinoId);
+              return;
+            }
+          }
+        }
+
         handlersRef.current.onReset();
       });
 
@@ -379,6 +351,10 @@ export function MapCanvas({
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
+        if (f.id != null) {
+          map.setFeatureState({ source: "origenes", id: f.id }, { hover: true });
+          hoveredOrigenIdRef.current = String(f.id);
+        }
         origenPopup
           .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
           .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
@@ -386,6 +362,10 @@ export function MapCanvas({
       });
       map.on("mouseleave", "origenes-point", () => {
         map.getCanvas().style.cursor = "";
+        if (hoveredOrigenIdRef.current != null) {
+          map.setFeatureState({ source: "origenes", id: hoveredOrigenIdRef.current }, { hover: false });
+          hoveredOrigenIdRef.current = null;
+        }
         origenPopup.remove();
       });
 
@@ -393,6 +373,10 @@ export function MapCanvas({
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
+        if (f.id != null) {
+          map.setFeatureState({ source: "destinos", id: f.id }, { hover: true });
+          hoveredDestinoIdRef.current = String(f.id);
+        }
         destinoPopup
           .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
           .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
@@ -400,25 +384,15 @@ export function MapCanvas({
       });
       map.on("mouseleave", "destinos-point", () => {
         map.getCanvas().style.cursor = "";
+        if (hoveredDestinoIdRef.current != null) {
+          map.setFeatureState({ source: "destinos", id: hoveredDestinoIdRef.current }, { hover: false });
+          hoveredDestinoIdRef.current = null;
+        }
         destinoPopup.remove();
       });
 
-      // --- driver de animación ---
-      // FIX: todo el cuerpo va en try/catch. Antes, cualquier excepción acá
-      // adentro (por ejemplo un `setData` con geometría inválida — ver el
-      // fix en el efecto de `flujos` más abajo, que es la causa raíz real)
-      // cortaba la función a mitad de camino y la línea final que
-      // reprograma `requestAnimationFrame` nunca se ejecutaba: el loop
-      // completo quedaba muerto para siempre (todos los arcos, no solo
-      // el que causó el error), sin ningún indicio en la UI. Con el
-      // try/catch, en el peor caso se pierde UN frame y el loop sigue.
       const animate = (now: number) => {
         try {
-          // Pulso de los puntos de despacho — corre siempre, independiente
-          // de si hay flujos seleccionados. Todos los orígenes laten en
-          // fase (mismo reloj global): se lee como "la red respirando",
-          // no como parpadeos sueltos — mismo criterio de diseño que ya se
-          // usó para pulseLoopT en los arcos asentados.
           if (map.getLayer("origenes-pulse")) {
             const originT = (now % ORIGIN_PULSE_PERIOD_MS) / ORIGIN_PULSE_PERIOD_MS;
             const eased = easeOutCubic(originT);
@@ -432,9 +406,6 @@ export function MapCanvas({
             type: "FeatureCollection" as const,
             features: frame.growing.flatMap((arc) => {
               const full = coordsCacheRef.current.get(arc.key);
-              // Guarda extra: si por lo que sea no hay geometría cacheada
-              // para esta clave, se descarta ESE arco en vez de emitir un
-              // LineString vacío (que MapLibre rechaza y tumba el loop).
               if (!full || full.length < 2) return [];
               const cut = Math.max(2, Math.floor(full.length * arc.sampleFraction));
               return [
@@ -506,9 +477,6 @@ export function MapCanvas({
           .filter((o) => o.animable && o.latitud != null && o.longitud != null)
           .map((o) => ({
             type: "Feature",
-            // `id` a nivel de Feature (no solo en properties) es lo que
-            // permite usar setFeatureState más abajo para el resaltado —
-            // mismo patrón que ya usa el source "destinos".
             id: o.id,
             properties: { id: o.id, nombre: o.nombre, color: ORIGEN_COLOR_BY_NORM_ID[normId(o.id)] ?? "#e8ecf3" },
             geometry: { type: "Point", coordinates: [o.longitud, o.latitud] },
@@ -533,6 +501,12 @@ export function MapCanvas({
           })),
       });
     });
+
+    // Índice de nombre normalizado -> id, para el click sobre el ÁREA del
+    // municipio (ver map.on("click", ...) más arriba). Se reconstruye acá
+    // junto con el setData de arriba para no tener un tercer efecto que
+    // dependa de `destinos` por separado.
+    destinoIdByNormNameRef.current = new Map(destinos.map((d) => [normId(d.nombre), d.id]));
   }, [destinos]);
 
   useEffect(() => {
@@ -553,34 +527,11 @@ export function MapCanvas({
     });
   }, [selectedOrigenId, origenes]);
 
-  // --- flujos: sincroniza el motor cada vez que cambia el dataset ---------
-  // Nota: `flujos` ya viene FILTRADO por selección desde DashboardPage —
-  // sin origen/destino seleccionado, el padre manda `[]` y acá no hay
-  // nada que registrar (por eso ya no se ve ningún arco "solo al entrar").
   useEffect(() => {
     whenReady(() => {
       const engine = engineRef.current;
       const weights: Record<string, number> = {};
-
-      // Índice de orígenes por id normalizado — ver nota junto a
-      // ORIGEN_COLOR_BY_NORM_ID más arriba.
       const origenesPorId = new Map(origenes.map((o) => [normId(o.id), o]));
-
-      // FIX previo (ver arcAnimationEngine.ts / MapCanvas.tsx original):
-      // antes, `keys` salía de `flujos.map(flujoKey)` sin condición, así
-      // que un flujo cuyo origen o destino no trae lat/lon (dato
-      // incompleto — pasa en producción) quedaba igual registrado en el
-      // motor de animación aunque nunca lograra una entrada en
-      // `coordsCacheRef`. Ese arco llegaba a `animate()` con
-      // `coordinates: []`, `source.setData()` tira una excepción de
-      // MapLibre por geometría inválida, y como `animate()` no tenía
-      // try/catch, esa excepción abortaba la función ANTES de reprogramar
-      // el siguiente `requestAnimationFrame` — bastaba un solo flujo mal
-      // geolocalizado para congelar TODA la animación (todos los arcos)
-      // en el primer frame en que apareciera. Ahora solo se registran en
-      // el motor los flujos que sí tienen (o logran calcular acá) una
-      // geometría válida; el resto se ignora para efectos de animación
-      // sin tumbar nada más.
       const validKeys: string[] = [];
 
       flujos.forEach((f) => {
