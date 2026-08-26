@@ -65,7 +65,7 @@ export const canales: Canal[] = [
   {
     id: "otras-ayudas-solidarias",
     nombre: "Otras Ayudas Solidarias",
-    glosa: "Entregas a instituciones y casos puntuales. En el Drive la carpeta todavía se llama «Casos especiales»",
+    glosa: "Entregas a instituciones y casos puntuales.",
     despachos: 18,
     unidades: 9932,
     renglones: 200,
