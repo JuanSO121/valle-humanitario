@@ -3,63 +3,38 @@
  * -----------------------------------------------------------------------
  * Componente de presentación puro: no decide fases ni construye fechas —
  * solo recibe la lista de fechas disponibles y el valor actual, y avisa
- * hacia arriba (onSeek/onAdvance/onTogglePlay) qué pasó. La distinción
- * seek-vs-advance que ya está en viewState.ts (seekTimeline nunca anima,
- * advanceTimeline sí) se preserva acá: arrastrar el handle llama
- * onSeek(), el intervalo de reproducción automática llama onAdvance().
+ * hacia arriba (onSeek/onAdvance) qué pasó. La distinción seek-vs-advance
+ * que ya está en viewState.ts (seekTimeline nunca anima, advanceTimeline
+ * sí) se preserva acá: arrastrar el handle llama onSeek(), el intervalo
+ * de reproducción automática llama onAdvance().
  *
- * VELOCIDAD (fix "va demasiado rápido"): antes el paso era un valor fijo
- * (650ms) sin importar cuántas fechas hubiera — con datasets de muchas
- * fechas la reproducción completa terminaba en un parpadeo. Ahora el paso
- * se calcula repartiendo una duración TOTAL objetivo entre el número de
- * saltos que hay entre la primera y la última fecha (dates.length - 1),
- * con un piso y un techo para no volverse absurdo en los extremos (un
- * dataset de 2 fechas no debería tardar 20s en dar un solo paso, y uno de
- * 200 fechas no debería tardar 3 minutos completos).
+ * VELOCIDAD: el paso ya no se calcula acá. Antes repartía 20 s entre las
+ * fechas, lo que con el dataset real daba 1.667 ms por jornada — mientras
+ * la cascada de arcos necesitaba 9.000 ms solo para arrancar el último
+ * arco del día. El día cambiaba cinco veces antes de que las líneas
+ * llegaran. Ahora el paso sale de animationTiming.ts, que es el mismo
+ * módulo del que sale el presupuesto de la cascada: una jornada dura lo
+ * que tarda su último arco en salir y llegar.
  *
  * FIX (bug "el timeline se queda pegado en la segunda fecha"): el efecto
  * que arma el `setInterval` depende solo de `[playing]` a propósito —
  * cada play/pause reinicia el conteo desde cero, en vez de reiniciar el
- * intervalo (y por lo tanto el conteo del paso) en CADA cambio de fecha,
- * lo que se vería entrecortado. Pero eso significa que la función que
- * corre en el intervalo se crea UNA sola vez por cada play, y JavaScript
- * la deja con el `dates`/`currentDate` de ESE momento capturados por
- * closure — no se actualizan solos aunque lleguen props nuevas en cada
- * render. El código anterior leía `dates`/`currentDate` directo de los
- * props dentro del callback del intervalo, así que en cada tick seguía
- * viendo la fecha con la que arrancó la reproducción, nunca la fecha a
- * la que ya se había avanzado — el resultado observable era "avanza una
- * vez y después se traba", porque cada tick volvía a calcular el mismo
- * "siguiente" de la fecha original. La solución estándar de React para
- * esto es leer los valores desde un `ref` que se actualiza en cada
- * render (sin pasar por el ciclo de efectos): el intervalo sigue
- * viviendo el mismo tiempo total, pero en cada tick lee el valor de
- * verdad más reciente, no el que tenía al nacer.
+ * intervalo en CADA cambio de fecha, lo que se vería entrecortado. Pero
+ * eso significa que la función del intervalo se crea UNA sola vez por
+ * play, con el `dates`/`currentDate` de ESE momento capturados por
+ * closure. Por eso ambos se leen desde un `ref` que se actualiza en cada
+ * render: el intervalo vive lo mismo, pero cada tick lee el valor de
+ * verdad más reciente.
  *
  * NOTA aparte (no es un bug de este archivo): si en desarrollo el
  * timeline solo avanza limpiando la caché del navegador, es casi seguro
  * Fast Refresh de Vite — agregar/quitar refs cambia la forma de los
- * hooks del componente, y Fast Refresh no siempre remonta con eso limpio;
- * puede quedar vivo un closure viejo hasta un reload completo
- * (Ctrl+Shift+R). En producción, revisar que el documento HTML raíz no
- * se sirva con cache-control largo (los assets con hash sí pueden).
+ * hooks, y puede quedar vivo un closure viejo hasta un reload completo
+ * (Ctrl+Shift+R).
  * -----------------------------------------------------------------------
  */
 import { useEffect, useRef, useState } from "react";
-
-/** Duración total objetivo de una reproducción completa, de la primera a la última fecha. */
-const TOTAL_PLAYBACK_DURATION_MS = 20_000;
-/** Piso: ningún paso individual debería sentirse más rápido que esto, sin importar cuántas fechas haya. */
-const MIN_STEP_MS = 450;
-/** Techo: ningún paso individual debería sentirse tan lento que parezca trabado, sin importar cuán pocas fechas haya. */
-const MAX_STEP_MS = 2200;
-
-function computeStepMs(dateCount: number): number {
-  if (dateCount <= 1) return MIN_STEP_MS;
-  const steps = dateCount - 1;
-  const raw = TOTAL_PLAYBACK_DURATION_MS / steps;
-  return Math.min(MAX_STEP_MS, Math.max(MIN_STEP_MS, raw));
-}
+import { computeTimelineStepMs } from "./animationTiming";
 
 interface Props {
   /** Fechas ISO únicas y ordenadas — normalmente derivadas de flujos[].porFecha en el padre. */
@@ -78,9 +53,8 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Espejo por ref de los props que el intervalo necesita leer FRESCOS en
-  // cada tick, sin que su valor quede fijo al closure del momento en que
-  // arrancó `setInterval` (ver comentario largo arriba). Se actualizan en
-  // cada render, de forma síncrona.
+  // cada tick, sin que queden fijos al closure del momento en que arrancó
+  // `setInterval` (ver comentario largo arriba).
   const datesRef = useRef(dates);
   datesRef.current = dates;
   const currentDateRef = useRef(currentDate);
@@ -99,12 +73,10 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
       intervalRef.current = null;
       return;
     }
-    // El paso se calcula UNA vez al arrancar la reproducción, a partir de
-    // cuántas fechas hay en ese momento — no dentro del tick (eso
-    // reiniciaría el timer en cada avance) ni en las deps del efecto
-    // (eso reiniciaría el conteo de 650ms-ahora-variable en cada cambio
-    // de fecha, el mismo problema que ya evita el `[playing]` de abajo).
-    const stepMs = computeStepMs(datesRef.current.length);
+    // El paso se fija UNA vez al arrancar la reproducción — no dentro del
+    // tick (reiniciaría el timer en cada avance) ni en las deps del
+    // efecto (reiniciaría el conteo en cada cambio de fecha).
+    const stepMs = computeTimelineStepMs(datesRef.current.length);
     intervalRef.current = setInterval(() => {
       const freshDates = datesRef.current;
       const freshCurrent = currentDateRef.current;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { useOrigenes, useDestinos, useFlujos } from "@/application/hooks/useCatalogQueries";
-import { useFlujosAsOf } from "@/application/hooks/useFlujosAsOf";
+import { useFlujosPorLente } from "@/application/hooks/useFlujosPorLente";
 import {
   INITIAL_VIEW_STATE,
   viewTransitions,
@@ -9,20 +9,24 @@ import {
 } from "@/presentation/state/viewState";
 import { MapCanvas } from "@/presentation/components/MapCanvas";
 import { Timeline } from "@/presentation/components/Timeline";
-import { TimelineStatsHUD } from "@/presentation/components/TimelineStatsHUD";
+import { MarcadorHUD } from "@/presentation/components/MarcadorHUD";
 import { FlujosLegend } from "@/presentation/components/FlujosLegend";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
 import { TopBar } from "@/presentation/components/TopBar";
 import {
-  TERRITORY_DAYS,
   getTerritoryStat,
   territoryMunicipalities,
   type TerritoryMapMode,
   type TerritoryRoutesMode,
   type TerritoryZone,
 } from "@/presentation/data/territoryData";
-import { jornadas } from "@/presentation/data/movimientoData";
+import {
+  dayFromIsoDate,
+  describeLens,
+  territoryValue,
+  toneladasMovilizadas,
+} from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
 
 function useIsMobile(breakpointPx = 768): boolean {
@@ -44,8 +48,19 @@ interface DashboardPageProps {
 export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const [viewState, setViewState] = useState<ViewState>(INITIAL_VIEW_STATE);
   const [linesDismissed, setLinesDismissed] = useState(false);
-  const [territoryMode, setTerritoryMode] = useState<TerritoryMapMode>("acumulado");
-  const [territoryDay, setTerritoryDay] = useState(TERRITORY_DAYS[0] ?? "11");
+
+  /**
+   * `lens` es CÓMO se lee el día que marca el timeline, no un segundo
+   * reloj. Antes esto era `territoryMode` y venía con su propio slider de
+   * jornada, independiente del timeline: se podía tener los arcos en el
+   * día 14 y los polígonos pintados con el total final de la operación.
+   * Ahora hay un solo control temporal —el Timeline— y este toggle solo
+   * decide si ese día se lee como acumulado o como jornada suelta.
+   *
+   * Por defecto acumulado: mover una línea de tiempo normalmente
+   * significa "mostrame cómo iba", no "mostrame solo ese día".
+   */
+  const [lens, setLens] = useState<TerritoryMapMode>("acumulado");
   const [territoryZone, setTerritoryZone] = useState<TerritoryZone | "todas">("todas");
   const [routesMode, setRoutesMode] = useState<TerritoryRoutesMode>("visibles");
 
@@ -68,20 +83,29 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
     return [...set].sort();
   }, [flujosResponse]);
 
-  const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
+  /** El único reloj. Todo lo temporal del mapa se deriva de acá. */
+  const isoDate = viewState.timelineDate;
+  const territoryDay = useMemo(() => dayFromIsoDate(isoDate), [isoDate]);
 
-  // Total "primera plana" para TimelineStatsHUD: suma de despachos de
-  // TODOS los flujos visibles a la fecha actual del timeline.
+  const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
+
   const totalDespachosAsOf = useMemo(
     () => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0),
     [flujosParaMapa],
   );
 
-  const totalToneladasAsOf = useMemo(() => {
-    if (!viewState.timelineDate) return jornadas.at(-1)?.acumuladoToneladas ?? 0;
-    const day = viewState.timelineDate.slice(-2);
-    return jornadas.find((j) => j.dia === day)?.acumuladoToneladas ?? 0;
-  }, [viewState.timelineDate]);
+  /**
+   * Toneladas del HUD, con el mismo lente que todo lo demás.
+   *
+   * OJO: la serie de `jornadas` es DEPARTAMENTAL —incluye Cali, el acopio
+   * de Cartago y las otras ayudas solidarias—, mientras que `totalDespachosAsOf`
+   * cuenta solo los flujos visibles en el mapa. Las dos cifras del HUD no
+   * son divisibles entre sí.
+   */
+  const totalToneladasAsOf = useMemo(
+    () => toneladasMovilizadas(lens, territoryDay),
+    [lens, territoryDay],
+  );
 
   const flujosFiltrados = useMemo(() => {
     if (linesDismissed && !viewState.origenId && !viewState.destinoId) {
@@ -120,21 +144,14 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
 
   /**
-   * Control de aparición de las notificaciones.
-   *
-   * El engine puede producir varios frames mientras siguen llegando despachos.
-   * Si una tarjeta acaba de aparecer, no la reemplazamos durante 1200 ms.
-   * Esto evita el parpadeo y hace que la notificación se sienta más efímera,
-   * tipo Instagram Story.
+   * Control de aparición de las notificaciones. El engine puede producir
+   * varios frames mientras siguen llegando despachos; si una tarjeta
+   * acaba de aparecer, no la reemplazamos durante 1200 ms.
    */
   const handleActivity = (frame: ActivityFrame | null) => {
     const now = performance.now();
 
-    if (
-      frame &&
-      now - lastShownAtRef.current < MIN_GAP_BETWEEN_POPS_MS &&
-      visibleActivity
-    ) {
+    if (frame && now - lastShownAtRef.current < MIN_GAP_BETWEEN_POPS_MS && visibleActivity) {
       return;
     }
 
@@ -172,10 +189,10 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           destinos={destinos ?? []}
           flujos={flujosParaRutas}
           instantTransition={viewState.timelineInstant}
-          timelineActive={viewState.timelineDate !== null}
+          timelineActive={isoDate !== null}
           selectedDestinoId={viewState.destinoId}
           selectedOrigenId={viewState.origenId}
-          territoryMode={territoryMode}
+          territoryMode={lens}
           territoryDay={territoryDay}
           territoryZone={territoryZone}
           routesMode={routesMode}
@@ -195,10 +212,13 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         />
       </ClientOnly>
 
-      <TimelineStatsHUD
-        totalDespachos={totalDespachosAsOf}
-        totalToneladas={totalToneladasAsOf}
-        currentDate={viewState.timelineDate}
+      {/* Reemplaza a TimelineStatsHUD: la cifra que la gente sigue es la
+          tonelada, y tiene que verse subir. Ver MarcadorHUD. */}
+      <MarcadorHUD
+        toneladas={totalToneladasAsOf}
+        despachos={totalDespachosAsOf}
+        day={territoryDay}
+        lens={lens}
         instant={viewState.timelineInstant}
       />
 
@@ -215,12 +235,11 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
       {!hayPanelAbiertoEnMobile && (
         <TerritoryControls
-          mode={territoryMode}
+          lens={lens}
           day={territoryDay}
           zone={territoryZone}
           routesMode={routesMode}
-          onModeChange={setTerritoryMode}
-          onDayChange={setTerritoryDay}
+          onLensChange={setLens}
           onZoneChange={setTerritoryZone}
           onRoutesModeChange={setRoutesMode}
         />
@@ -273,12 +292,12 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 }
 
 interface TerritoryControlsProps {
-  mode: TerritoryMapMode;
-  day: string;
+  lens: TerritoryMapMode;
+  /** Derivado del timeline. null = toda la operación. */
+  day: string | null;
   zone: TerritoryZone | "todas";
   routesMode: TerritoryRoutesMode;
-  onModeChange: (mode: TerritoryMapMode) => void;
-  onDayChange: (day: string) => void;
+  onLensChange: (lens: TerritoryMapMode) => void;
   onZoneChange: (zone: TerritoryZone | "todas") => void;
   onRoutesModeChange: (mode: TerritoryRoutesMode) => void;
 }
@@ -286,25 +305,23 @@ interface TerritoryControlsProps {
 const ZONES: Array<TerritoryZone | "todas"> = ["todas", "Norte", "Centro", "Sur", "Pacífico"];
 
 function TerritoryControls({
-  mode,
+  lens,
   day,
   zone,
   routesMode,
-  onModeChange,
-  onDayChange,
+  onLensChange,
   onZoneChange,
   onRoutesModeChange,
 }: TerritoryControlsProps) {
-  const dayIndex = Math.max(0, TERRITORY_DAYS.indexOf(day));
-  const activeDayStat = jornadas.find((j) => j.dia === day);
-
   const visibleMunicipalities =
     zone === "todas"
       ? territoryMunicipalities
       : territoryMunicipalities.filter((m) => m.zone === zone);
 
+  // Mismo lente que el mapa: si el panel dijera otra cosa que los
+  // polígonos, volveríamos al problema que este cambio vino a arreglar.
   const totalDespachos = visibleMunicipalities.reduce(
-    (sum, m) => sum + (mode === "acumulado" ? m.despachos : m.dias[day] ?? 0),
+    (sum, m) => sum + territoryValue(m, lens, day),
     0,
   );
 
@@ -314,49 +331,34 @@ function TerritoryControls({
         <div>
           <span className="label-caps text-[10px]">Territorio</span>
           <p className="mt-1 text-sm font-semibold text-foreground">
-            {totalDespachos.toLocaleString("es-CO")} despachos · {visibleMunicipalities.length} municipios
+            {plural(totalDespachos, "despacho", "despachos")} ·{" "}
+            {plural(visibleMunicipalities.length, "municipio", "municipios")}
           </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{describeLens(lens, day)}</p>
         </div>
-
-        {activeDayStat && mode === "jornada" && (
-          <div className="text-right">
-            <span className="label-caps text-[10px]">Toneladas</span>
-            <p className="text-lg font-semibold tabular-nums text-foreground">
-              {activeDayStat.toneladas} t
-            </p>
-          </div>
-        )}
       </div>
 
+      {/* El slider de jornada se eliminó: era un segundo control temporal
+          que competía con el timeline de abajo. Este toggle ya no elige
+          un día, elige cómo leer el que marca el timeline. */}
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1">
-        <ToggleButton active={mode === "acumulado"} onClick={() => onModeChange("acumulado")}>
+        <ToggleButton active={lens === "acumulado"} onClick={() => onLensChange("acumulado")}>
           Acumulado
         </ToggleButton>
-        <ToggleButton active={mode === "jornada"} onClick={() => onModeChange("jornada")}>
-          Por jornada
+        <ToggleButton
+          active={lens === "jornada"}
+          onClick={() => onLensChange("jornada")}
+          disabled={day === null}
+          title={day === null ? "Movés el timeline para elegir una jornada" : undefined}
+        >
+          Solo la jornada
         </ToggleButton>
       </div>
 
-      {mode === "jornada" && (
-        <div className="mt-3">
-          <div className="mb-1.5 flex justify-between text-[11px] text-muted-foreground">
-            <span>Día {day} de agosto</span>
-            <span>{activeDayStat?.despachos ?? 0} despachos</span>
-          </div>
-
-          <input
-            type="range"
-            min={0}
-            max={TERRITORY_DAYS.length - 1}
-            step={1}
-            value={dayIndex}
-            onChange={(event) =>
-              onDayChange(TERRITORY_DAYS[Number(event.target.value)] ?? day)
-            }
-            aria-label="Día de jornada para colorear municipios"
-            className="h-1 w-full accent-primary"
-          />
-        </div>
+      {day === null && lens === "acumulado" && (
+        <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+          Mové la línea de tiempo para ver cómo se fue llenando el mapa.
+        </p>
       )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -374,16 +376,10 @@ function TerritoryControls({
         >
           Rutas visibles
         </ToggleButton>
-        <ToggleButton
-          active={routesMode === "solo"}
-          onClick={() => onRoutesModeChange("solo")}
-        >
+        <ToggleButton active={routesMode === "solo"} onClick={() => onRoutesModeChange("solo")}>
           Solo selección
         </ToggleButton>
-        <ToggleButton
-          active={routesMode === "color"}
-          onClick={() => onRoutesModeChange("color")}
-        >
+        <ToggleButton active={routesMode === "color"} onClick={() => onRoutesModeChange("color")}>
           Solo color
         </ToggleButton>
       </div>
@@ -391,20 +387,32 @@ function TerritoryControls({
   );
 }
 
+/** "1 municipio" y no "1 municipios". */
+function plural(n: number, uno: string, varios: string): string {
+  return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
+}
+
 function ToggleButton({
   active,
   onClick,
   children,
+  disabled = false,
+  title,
 }: {
   active: boolean;
   onClick: () => void;
   children: ReactNode;
+  disabled?: boolean;
+  title?: string | undefined;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded px-2 py-1.5 text-[11px] font-medium transition ${
+      disabled={disabled}
+      title={title}
+      aria-pressed={active}
+      className={`rounded px-2 py-1.5 text-[11px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"

@@ -10,20 +10,20 @@ import { buildArcCoordinates, buildPulseGradient, easeOutCubic, type LngLat } fr
 import { createArcAnimationEngine } from "./arcAnimationEngine";
 
 import { normId } from "@/lib/id";
+import { sameMunicipality } from "@/lib/municipalityName";
 import municipalBoundariesRaw from "@/data/valle-municipios.json";
 import { createArrivalPulseEngine } from "./arrivalPulseEngine";
 import { createDispatchActivityEngine, type ActivityFrame } from "./dispatchActivityEngine";
 
 import {
   TERRITORY_BLUE_RAMP,
-  getTerritoryStat,
   getTerritoryStatByCode,
   territoryToneIndex,
-  territoryValueFor,
   type TerritoryMapMode,
   type TerritoryRoutesMode,
   type TerritoryZone,
 } from "@/presentation/data/territoryData";
+import { describeLens, territoryValue } from "@/presentation/data/territoryTime";
 
 const OVERVIEW_CENTER: LngLat = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
@@ -35,26 +35,67 @@ const ORIGIN_PULSE_MAX_RADIUS_GROWTH = 22;
 // destino: en vez de exigir el pixel exacto del centro del círculo (que
 // en mobile, con dedos gordos sobre un círculo de 5-10px de radio, falla
 // seguido), se consulta una caja de +-8px alrededor del punto de click.
-// Mismo criterio en ambos layers de punto.
 const POINT_HIT_TOLERANCE_PX = 8;
+
+/**
+ * Municipio sin despacho documentado. NO es "el tono más bajo de la
+ * rampa": es una categoría aparte, igual que `DATA.sinDato` en el
+ * tablero HTML de referencia. Por eso territoryToneIndex devuelve null
+ * para valor 0 y no 0 — ver territoryColorForTone.
+ */
+const TERRITORY_NO_DATA = "#162936";
+
+/**
+ * Santiago de Cali: excluida del consolidado municipal por instrucción
+ * expresa (ver panoramaData / nivel "Canales"). Se pinta con un gris
+ * propio para que no se lea ni como "sin datos" ni como un volumen bajo,
+ * y no es clickeable.
+ */
+const TERRITORY_EXCLUDED = "#2A3D4A";
+const CALI_DANE = "76001";
+
+/**
+ * Razón toneladas/despacho de toda la operación (531 t / 397 despachos).
+ * Es la MISMA constante documentada en territoryData.toneladas — se
+ * repite acá para estimar toneladas del modo "jornada", donde no hay un
+ * acumulado por municipio que consultar. Antes este archivo usaba 1.75,
+ * que venía de otra fuente y no cuadraba con el catálogo.
+ */
+const TONELADAS_POR_DESPACHO = 1.34;
 
 /**
  * Umbral heurístico de "verde pleno" para el mapa de calor de destinos.
  * No hay un campo de meta esperada por destino en el backend (Flujo /
  * DestinoResumenLista no lo traen — ver entities.ts), así que se usa un
  * número fijo documentado acá en vez de inventar un campo que el backend
- * no devuelve. Si el día de mañana agregan una meta real por destino,
- * se reemplaza esta constante por ese campo sin tocar nada más del mapa.
+ * no devuelve.
  */
 const INTENSITY_FULL_THRESHOLD = 5;
+
+const EMPTY_COLLECTION: maplibregl.GeoJSONSourceSpecification["data"] = {
+  type: "FeatureCollection",
+  features: [],
+};
 
 function intensityFor(totalWeight: number): number {
   return Math.max(0, Math.min(1, totalWeight / INTENSITY_FULL_THRESHOLD));
 }
 
-function municipalityNameFromProperties(
-  properties: Record<string, unknown> | undefined,
-): string {
+/**
+ * tone es el índice devuelto por territoryToneIndex: entra DIRECTO a la
+ * rampa, sin invertir. TERRITORY_BLUE_RAMP ya está ordenada de menos a
+ * más volumen (oscuro → claro), igual que DATA.rampa del HTML.
+ */
+function territoryColorForTone(tone: number | null): string {
+  if (tone === null) return TERRITORY_NO_DATA;
+  const i = Math.max(0, Math.min(TERRITORY_BLUE_RAMP.length - 1, tone));
+  // El `??` es por noUncheckedIndexedAccess: aunque `i` ya está acotado
+  // al rango de la rampa, indexar con una variable devuelve
+  // `string | undefined`. El fallback nunca debería alcanzarse.
+  return TERRITORY_BLUE_RAMP[i] ?? TERRITORY_NO_DATA;
+}
+
+function municipalityNameFromProperties(properties: Record<string, unknown> | undefined): string {
   if (!properties) return "";
   const candidates = [
     properties["name"],
@@ -67,9 +108,7 @@ function municipalityNameFromProperties(
   return String(candidates.find((value) => value != null && String(value).trim() !== "") ?? "");
 }
 
-function municipalityCodeFromProperties(
-  properties: Record<string, unknown> | undefined,
-): string {
+function municipalityCodeFromProperties(properties: Record<string, unknown> | undefined): string {
   if (!properties) return "";
   const candidates = [
     properties["municipalityCode"],
@@ -83,15 +122,47 @@ function municipalityCodeFromProperties(
   return normId(String(candidates.find((value) => value != null && String(value).trim() !== "") ?? ""));
 }
 
-function normalizeBoundaries(
-  geojson: unknown,
-): maplibregl.GeoJSONSourceSpecification["data"] {
-  const collection = geojson as {
-    features?: Array<{
-      id?: string | number;
-      properties?: Record<string, unknown>;
-    }>;
-  };
+/**
+ * Centro del bounding box del anillo exterior. Sirve como ancla de
+ * etiqueta: no es el centroide real (un municipio en forma de C puede
+ * caer fuera del polígono) pero para los 42 del Valle, que son convexos
+ * o casi, alcanza — y evita meter turf.js solo por esto.
+ */
+function ringCenter(geometry: unknown): LngLat | null {
+  const geo = geometry as { type?: string; coordinates?: unknown };
+  const ring =
+    geo?.type === "Polygon"
+      ? (geo.coordinates as number[][][] | undefined)?.[0]
+      : geo?.type === "MultiPolygon"
+        ? (geo.coordinates as number[][][][] | undefined)?.[0]?.[0]
+        : null;
+
+  if (!Array.isArray(ring) || ring.length === 0) return null;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const point of ring) {
+    const [x, y] = point as [number, number];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
+  return [(minX + maxX) / 2, (minY + maxY) / 2];
+}
+
+interface BoundaryFeature {
+  id?: string | number;
+  geometry?: unknown;
+  properties?: Record<string, unknown>;
+}
+
+function normalizeBoundaries(geojson: unknown): maplibregl.GeoJSONSourceSpecification["data"] {
+  const collection = geojson as { features?: BoundaryFeature[] };
 
   if (!collection?.features) {
     return geojson as maplibregl.GeoJSONSourceSpecification["data"];
@@ -101,15 +172,9 @@ function normalizeBoundaries(
     ...(collection as object),
     features: collection.features.map((feature) => {
       const properties = feature.properties ?? {};
-      const code =
-        normId(String(feature.id ?? "")) ||
-        municipalityCodeFromProperties(properties);
-
+      const code = normId(String(feature.id ?? "")) || municipalityCodeFromProperties(properties);
       const name = municipalityNameFromProperties(properties);
-
-      const stat = getTerritoryStat(name);
-      const initialValue = territoryValueFor(stat, "acumulado", "11");
-      const initialTone = territoryToneIndex(initialValue, "acumulado");
+      const center = ringCenter(feature.geometry);
 
       return {
         ...feature,
@@ -118,7 +183,13 @@ function normalizeBoundaries(
           ...properties,
           municipalityCode: code,
           name: name || properties["name"],
-          territoryToneColor: TERRITORY_BLUE_RAMP[TERRITORY_BLUE_RAMP.length - 1], // placeholder; el efecto de coloreo lo pisa apenas el mapa carga
+          labelLng: center?.[0] ?? null,
+          labelLat: center?.[1] ?? null,
+          // Placeholder hasta que corra el efecto de coloreo. Antes acá
+          // se inyectaba el tono MÁS CLARO de la rampa, lo que producía
+          // un frame inicial donde todo el departamento se veía como si
+          // tuviera el volumen máximo.
+          territoryToneColor: TERRITORY_NO_DATA,
         },
       };
     }),
@@ -126,17 +197,8 @@ function normalizeBoundaries(
 }
 
 const municipalBoundaries = normalizeBoundaries(municipalBoundariesRaw);
-
-function territoryBlueForTone(tone: number | null | undefined): string {
-  const index = Math.max(0, Math.min(TERRITORY_BLUE_RAMP.length - 1, tone ?? 0));
-  return TERRITORY_BLUE_RAMP[TERRITORY_BLUE_RAMP.length - 1 - index] ?? TERRITORY_BLUE_RAMP[5];
-}
-
-function territoryToneFromValue(value: number, maxValue: number): number {
-  if (!Number.isFinite(value) || value <= 0 || maxValue <= 0) return 0;
-  const ratio = Math.max(0, Math.min(1, value / maxValue));
-  return Math.min(TERRITORY_BLUE_RAMP.length - 1, Math.floor(ratio * TERRITORY_BLUE_RAMP.length));
-}
+const boundaryFeatures: BoundaryFeature[] =
+  (municipalBoundaries as { features?: BoundaryFeature[] }).features ?? [];
 
 function weightToLineWidth(weight: number): number {
   return 1.6 + Math.sqrt(Math.max(0, weight)) * 1.1;
@@ -170,13 +232,17 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
     },
   },
   layers: [
-    { id: "bg", type: "background", paint: { "background-color": "#0B2233" } },
+    // Gris niebla azulado: el fondo tiene que LEERSE como fondo. Antes
+    // era #0B2233, el mismo azul profundo de la rampa territorial, así
+    // que los municipios de menor volumen se confundían con el mar y con
+    // los departamentos vecinos.
+    { id: "bg", type: "background", paint: { "background-color": "#586A78" } },
     {
       id: "osm",
       type: "raster",
       source: "osm",
       paint: {
-        "raster-opacity": 0.1,
+        "raster-opacity": 0.14,
         "raster-saturation": -0.7,
         "raster-brightness-min": 0.25,
         "raster-brightness-max": 0.8,
@@ -193,16 +259,19 @@ interface Props {
   /**
    * true cuando viewState.timelineDate !== null en DashboardPage. Gatea
    * el mapa de calor incremental y los pulsos de llegada: solo tienen
-   * sentido narrativo durante la reproducción del timeline. Con el
-   * timeline apagado, `flujos` representa el total sin filtrar, así que
-   * la intensidad de cada destino se fija directo al valor final (sin
-   * animar) en vez de ir subiendo despacho a despacho.
+   * sentido narrativo durante la reproducción del timeline.
    */
   timelineActive: boolean;
   selectedDestinoId: string | null;
   selectedOrigenId: string | null;
+  /** Cómo se lee el día elegido: acumulado hasta él, o solo ese día. */
   territoryMode: TerritoryMapMode;
-  territoryDay: string;
+  /**
+   * Día de agosto en dos dígitos, derivado del timeline. null = toda la
+   * operación. Antes era un `string` con su propio slider, y por eso los
+   * polígonos podían mostrar el total mientras los arcos iban por el 14.
+   */
+  territoryDay: string | null;
   territoryZone: TerritoryZone | "todas";
   routesMode: TerritoryRoutesMode;
   onSelectDestino: (id: string) => void;
@@ -213,35 +282,57 @@ interface Props {
 
 const flujoKey = (f: Flujo) => `${f.origenId}::${f.destino.id}`;
 
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  );
+}
+
 function popupHtml(label: string): string {
   return `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px">
-             <strong>${label}</strong>
+             <strong>${escapeHtml(label)}</strong>
            </div>`;
 }
 
-function municipalityPopupHtml(label: string, codigoDane: string, mode: TerritoryMapMode, day: string): string {
+function municipalityPopupHtml(
+  label: string,
+  codigoDane: string,
+  mode: TerritoryMapMode,
+  day: string | null,
+): string {
   const stat = getTerritoryStatByCode(codigoDane);
-  if (!stat) return popupHtml(label);
-  const value = territoryValueFor(stat, mode, day);
-  const toneladas = mode === "acumulado" ? stat.toneladas : Math.round(value * 1.75);
-  const moveLabel = mode === "acumulado" ? "despachos" : `despachos el ${day}`;
+  if (!stat) {
+    // Cali y cualquier polígono fuera del catálogo caen acá: se dice por
+    // qué no hay cifras, en vez de mostrar un popup vacío.
+    return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:170px">
+      <strong style="display:block;font-size:13px;margin-bottom:4px">${escapeHtml(label)}</strong>
+      <span style="color:#9DB4C2;font-size:11.5px">Fuera del consolidado municipal</span>
+    </div>`;
+  }
+
+  const value = territoryValue(stat, mode, day);
+  // stat.toneladas es el total FINAL del municipio: solo sirve cuando no
+  // hay día elegido. Con día, se estima sobre los despachos de ese corte.
+  const toneladas =
+    day === null ? stat.toneladas : Math.round(value * TONELADAS_POR_DESPACHO);
+  const moveLabel = "despachos";
+  const sinDespacho = value === 0;
 
   return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:190px">
-    <strong style="display:block;font-size:13px;margin-bottom:2px">${label}</strong>
-    <span style="display:block;color:#81C8EC;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Zona ${stat.zone}</span>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+    <strong style="display:block;font-size:13px;margin-bottom:2px">${escapeHtml(label)}</strong>
+    <span style="display:block;color:#81C8EC;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Zona ${escapeHtml(stat.zone)}</span>
+    <span style="display:block;color:#9DB4C2;font-size:11px;margin-bottom:8px">${escapeHtml(describeLens(mode, day))}</span>
+    ${
+      sinDespacho
+        ? `<span style="color:#F58A76;font-size:12px;font-weight:600">Sin despacho en este corte</span>`
+        : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
       <div><b style="font-size:16px">${value.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">${moveLabel}</span></div>
       <div><b style="font-size:16px">${toneladas.toLocaleString("es-CO")} t</b><span style="display:block;color:#9DB4C2">estimadas</span></div>
       <div><b style="font-size:16px">${stat.unidades.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">unidades</span></div>
       <div><b style="font-size:16px">${stat.renglones.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2">renglones</span></div>
-    </div>
+    </div>`
+    }
   </div>`;
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c),
-  );
 }
 
 export function MapCanvas({
@@ -275,9 +366,9 @@ export function MapCanvas({
   const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset, onActivity });
   handlersRef.current = { onSelectDestino, onSelectOrigen, onReset, onActivity };
 
-  // Igual que handlersRef: timelineActive puede cambiar mientras el rAF
+  // Igual que handlersRef: estos props pueden cambiar mientras el rAF
   // loop (armado una sola vez en el efecto de montaje) sigue vivo, así
-  // que se lee vía ref dentro de animate(), no capturado por closure.
+  // que se leen vía ref dentro de animate(), no capturados por closure.
   const timelineActiveRef = useRef(timelineActive);
   timelineActiveRef.current = timelineActive;
   const territoryModeRef = useRef(territoryMode);
@@ -290,30 +381,10 @@ export function MapCanvas({
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
 
-  // Índice nombre-normalizado -> id de destino, para poder resolver
-  // "clickearon el municipio X" a "seleccioná el destino que corresponde
-  // a X" sin depender de un código de municipio que `DestinoResumenLista`
-  // no trae hoy (solo id/nombre/lat/lon/tipo).
   const destinoIdByNormNameRef = useRef<Map<string, string>>(new Map());
-
-  // Coordenada por id de destino — la usan tanto el índice de arriba como
-  // el render de pulsos de llegada (renderPulseFrames).
   const destinoCoordsByIdRef = useRef<Map<string, LngLat>>(new Map());
   const destinoMetaByIdRef = useRef<Map<string, { nombre: string; coords: LngLat }>>(new Map());
-
-  // Peso previo por arco `key`, para detectar "este arco ya existía y su
-  // despachosCount subió" (weight bump) al avanzar el timeline. El caso
-  // de un arco NUEVO no se lee acá: se maneja en animate(), vía
-  // engine.tick().justSettled, en el frame exacto en que la línea termina
-  // de crecer y toca el destino.
   const prevWeightsRef = useRef<Map<string, number>>(new Map());
-
-  // Peso TOTAL acumulado por destino (suma de despachos de todos los
-  // orígenes que ya "tocaron" ese punto) — es lo que alimenta el
-  // feature-state `intensity` del mapa de calor. Se actualiza de a
-  // incrementos reales (weight-bump o justSettled), no de una sola vez,
-  // para que el punto vaya pasando de rojo a amarillo a verde AL RITMO en
-  // que las líneas realmente llegan, no antes de que se vea nada.
   const destinoAcumuladoRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
@@ -328,36 +399,14 @@ export function MapCanvas({
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    const destinoPopup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 10,
-    });
-    const origenPopup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 10,
-    });
-    const municipalityPopup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false,
-      offset: 8,
-    });
+    const destinoPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+    const origenPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+    const municipalityPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
 
     map.on("load", () => {
       let hoveredMunicipalityId: string | null = null;
       try {
         map.addSource("municipios", { type: "geojson", data: municipalBoundaries });
-
-        // TEMPORAL — borrar después de diagnosticar
-          const feats = (municipalBoundaries as any).features ?? [];
-          console.log("[debug] total features:", feats.length);
-          console.log("[debug] primeras 5 props:", feats.slice(0, 5).map((f: any) => f.properties));
-          console.log("[debug] ids asignados:", feats.slice(0, 5).map((f: any) => f.id));
-          console.log(
-            "[debug] nombres sin match en territoryData:",
-            feats.filter((f: any) => !getTerritoryStat(f.properties?.name)).map((f: any) => f.properties?.name),
-          );
 
         map.addLayer({
           id: "municipios-fill",
@@ -366,16 +415,16 @@ export function MapCanvas({
           paint: {
             // El color territorial se calcula siempre a partir del tono.
             // Si todavía no existe feature-state (primer render), usa el
-            // `territoryTone` que se inyectó en normalizeBoundaries.
-            // El valor por defecto es 0 (azul más claro), nunca transparente.
-              "fill-color": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                "#F0B102",
-                ["boolean", ["feature-state", "filteredOut"], false],
-                "#102332",
-                ["coalesce", ["feature-state", "territoryToneColor"], ["get", "territoryToneColor"]],
-              ],
+            // placeholder "sin dato" inyectado en normalizeBoundaries —
+            // nunca transparente y nunca el tono de volumen máximo.
+            "fill-color": [
+              "case",
+              ["boolean", ["feature-state", "selected"], false],
+              "#F0B102",
+              ["boolean", ["feature-state", "filteredOut"], false],
+              "#102332",
+              ["coalesce", ["feature-state", "territoryToneColor"], ["get", "territoryToneColor"]],
+            ],
             "fill-opacity": [
               "case",
               ["boolean", ["feature-state", "filteredOut"], false],
@@ -394,19 +443,40 @@ export function MapCanvas({
           source: "municipios",
           paint: { "line-color": "#CBE4F2", "line-width": 0.9, "line-opacity": 0.32 },
         });
+
+        // Etiquetas: fuente propia de PUNTOS, no la de polígonos. El
+        // conteo tiene que cambiar al mover el slider de jornada y
+        // `text-field` no puede leer feature-state, así que la única vía
+        // es regenerar los datos (ver el efecto de etiquetas más abajo).
+        map.addSource("municipios-etq", { type: "geojson", data: EMPTY_COLLECTION });
         map.addLayer({
-          id: "municipios-label",
+          id: "municipios-etq-nombre",
           type: "symbol",
-          source: "municipios",
-          minzoom: 7.8,
+          source: "municipios-etq",
+          minzoom: 7.4,
           layout: {
             "text-field": ["get", "name"],
             "text-font": ["Noto Sans Regular"],
-            "text-size": 10,
+            "text-size": 10.5,
+            "text-offset": [0, -0.35],
             "text-transform": "uppercase",
-            "text-letter-spacing": 0.05,
+            "text-letter-spacing": 0.04,
           },
-          paint: { "text-color": "#D7EDF8", "text-halo-color": "#0B2233", "text-halo-width": 1.2 },
+          paint: { "text-color": "#EAF4FA", "text-halo-color": "#08202E", "text-halo-width": 1.8 },
+        });
+        map.addLayer({
+          id: "municipios-etq-valor",
+          type: "symbol",
+          source: "municipios-etq",
+          minzoom: 7.4,
+          filter: [">", ["get", "value"], 0],
+          layout: {
+            "text-field": ["to-string", ["get", "value"]],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": 11,
+            "text-offset": [0, 0.8],
+          },
+          paint: { "text-color": "#FFD103", "text-halo-color": "#08202E", "text-halo-width": 1.8 },
         });
 
         map.on("mousemove", "municipios-fill", (e: MapLayerMouseEvent) => {
@@ -418,10 +488,7 @@ export function MapCanvas({
             return;
           }
           if (hoveredMunicipalityId != null) {
-            map.setFeatureState(
-              { source: "municipios", id: hoveredMunicipalityId },
-              { hovered: false },
-            );
+            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
           }
           if (nextId != null) {
             map.setFeatureState({ source: "municipios", id: nextId }, { hovered: true });
@@ -429,7 +496,9 @@ export function MapCanvas({
             const codigoDane = String(feature?.properties?.["municipalityCode"] ?? "");
             municipalityPopup
               .setLngLat(e.lngLat)
-              .setHTML(municipalityPopupHtml(name, codigoDane, territoryModeRef.current, territoryDayRef.current))
+              .setHTML(
+                municipalityPopupHtml(name, codigoDane, territoryModeRef.current, territoryDayRef.current),
+              )
               .addTo(map);
           }
           hoveredMunicipalityId = nextId;
@@ -437,10 +506,7 @@ export function MapCanvas({
         map.on("mouseleave", "municipios-fill", () => {
           map.getCanvas().style.cursor = "";
           if (hoveredMunicipalityId != null) {
-            map.setFeatureState(
-              { source: "municipios", id: hoveredMunicipalityId },
-              { hovered: false },
-            );
+            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
             hoveredMunicipalityId = null;
           }
           municipalityPopup.remove();
@@ -453,10 +519,7 @@ export function MapCanvas({
         );
       }
 
-      map.addSource("origenes", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      map.addSource("origenes", { type: "geojson", data: EMPTY_COLLECTION });
 
       map.addLayer({
         id: "origenes-glow",
@@ -490,21 +553,13 @@ export function MapCanvas({
           ],
           "circle-radius-transition": { duration: 180, delay: 0 },
           "circle-color": ["get", "color"],
-          "circle-stroke-width": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            3.5,
-            2.5,
-          ],
+          "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3.5, 2.5],
           "circle-stroke-width-transition": { duration: 180, delay: 0 },
           "circle-stroke-color": "#0b0e14",
         },
       });
 
-      map.addSource("destinos", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      map.addSource("destinos", { type: "geojson", data: EMPTY_COLLECTION });
       map.addLayer({
         id: "destinos-point",
         type: "circle",
@@ -519,11 +574,26 @@ export function MapCanvas({
             5,
           ],
           "circle-radius-transition": { duration: 180, delay: 0 },
+          // Acá se CONSUME el feature-state `intensity` que alimentan
+          // justSettled y el weight-bump. Sin esta expresión todo ese
+          // motor incremental corría sin producir nada visible: era el
+          // bug por el que los destinos nunca cambiaban de color al
+                    // avanzar el timeline.
           "circle-color": [
             "case",
             ["boolean", ["feature-state", "selected"], false],
             "#F0B102",
-            "#e8ecf3",
+            [
+              "interpolate",
+              ["linear"],
+              ["coalesce", ["feature-state", "intensity"], 0],
+              0,
+              "#F26049",
+              0.5,
+              "#FFD103",
+              1,
+              "#5CC46B",
+            ],
           ],
           "circle-color-transition": { duration: 450, delay: 0 },
           "circle-stroke-width": 1.4,
@@ -534,16 +604,8 @@ export function MapCanvas({
       // Anillo de "pop": una sola capa nativa de MapLibre, alimentada en
       // cada frame de animate() desde arrivalPulseEngine.tick(). Cada
       // feature trae su propio radio/opacidad como PROPIEDAD (no
-      // feature-state) porque cambian todos los frames — mismo patrón que
-      // ya usan arcos-creciendo/arcos-asentados más abajo. Reemplaza al
-      // <div> imperativo posicionado a mano que tenía el toast de texto:
-      // acá no hace falta media_type overlay porque el pulso vive en su
-      // propia coordenada geográfica, no compite por espacio en pantalla
-      // aunque "popeen" cien destinos a la vez.
-      map.addSource("arrivals", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      // feature-state) porque cambian todos los frames.
+      map.addSource("arrivals", { type: "geojson", data: EMPTY_COLLECTION });
       map.addLayer({
         id: "arrivals-pulse",
         type: "circle",
@@ -557,10 +619,7 @@ export function MapCanvas({
         },
       });
 
-      map.addSource("arcos-creciendo", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
+      map.addSource("arcos-creciendo", { type: "geojson", data: EMPTY_COLLECTION });
       map.addLayer({
         id: "arcos-creciendo-line",
         type: "line",
@@ -576,7 +635,7 @@ export function MapCanvas({
       map.addSource("arcos-asentados", {
         type: "geojson",
         lineMetrics: true,
-        data: { type: "FeatureCollection", features: [] },
+        data: EMPTY_COLLECTION,
       });
       map.addLayer({
         id: "arcos-asentados-line",
@@ -595,11 +654,6 @@ export function MapCanvas({
       });
 
       // --- click: origen > destino > ÁREA de municipio > reset -----------
-      // Se agregó el tercer escalón (municipio) DESPUÉS de los puntos: si
-      // el punto de un destino cae dentro de su propio polígono (el caso
-      // normal), el click sobre el punto ya lo resuelve en el segundo
-      // escalón y nunca llega a probar el polígono — el orden importa
-      // para no hacer una consulta de más en el caso común.
       map.on("click", (e: MapLayerMouseEvent) => {
         const hitbox: [PointLike, PointLike] = [
           [e.point.x - POINT_HIT_TOLERANCE_PX, e.point.y - POINT_HIT_TOLERANCE_PX],
@@ -619,25 +673,25 @@ export function MapCanvas({
           return;
         }
 
-        // Click en el ÁREA (no en el punto): si el municipio clickeado
-        // tiene un destino con el mismo nombre normalizado, se selecciona
-        // ese destino — mismo resultado que si hubieras tocado el punto.
-        // La capa puede no existir si valle-municipios.json falló al cargar.
-        // Nunca consultar una capa inexistente: MapLibre lanza una excepción.
         const municipioHits = map.getLayer("municipios-fill")
           ? map.queryRenderedFeatures(e.point, { layers: ["municipios-fill"] })
           : [];
         if (municipioHits.length > 0) {
           const municipio = municipioHits[0];
+          const municipioCode = String(
+            municipio?.properties?.["municipalityCode"] ?? municipio?.id ?? "",
+          );
+
+          // Cali no abre panel: está fuera del consolidado municipal, no
+          // tiene fila en el catálogo y abrir un panel vacío se lee como
+          // un bug. Se traga el click sin resetear la vista.
+          if (normId(municipioCode) === CALI_DANE) return;
+
           const municipioName = municipio?.properties?.["name"];
-          const municipioCode = municipio?.properties?.["municipalityCode"] ?? municipio?.id;
           const destinoId =
             (municipioName != null
               ? destinoIdByNormNameRef.current.get(normId(String(municipioName)))
-              : undefined) ??
-            (municipioCode != null
-              ? destinoIdByNormNameRef.current.get(normId(String(municipioCode)))
-              : undefined);
+              : undefined) ?? destinoIdByNormNameRef.current.get(normId(municipioCode));
           if (destinoId != null) {
             handlersRef.current.onSelectDestino(destinoId);
             return;
@@ -663,10 +717,7 @@ export function MapCanvas({
       map.on("mouseleave", "origenes-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredOrigenIdRef.current != null) {
-          map.setFeatureState(
-            { source: "origenes", id: hoveredOrigenIdRef.current },
-            { hover: false },
-          );
+          map.setFeatureState({ source: "origenes", id: hoveredOrigenIdRef.current }, { hover: false });
           hoveredOrigenIdRef.current = null;
         }
         origenPopup.remove();
@@ -688,10 +739,7 @@ export function MapCanvas({
       map.on("mouseleave", "destinos-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredDestinoIdRef.current != null) {
-          map.setFeatureState(
-            { source: "destinos", id: hoveredDestinoIdRef.current },
-            { hover: false },
-          );
+          map.setFeatureState({ source: "destinos", id: hoveredDestinoIdRef.current }, { hover: false });
           hoveredDestinoIdRef.current = null;
         }
         destinoPopup.remove();
@@ -710,7 +758,9 @@ export function MapCanvas({
             map.setPaintProperty(
               "origenes-pulse",
               "circle-opacity",
-              routesModeRef.current === "color" ? 0 : (1 - originT) ** 2 * 0.55,
+              routesModeRef.current === "color" || territoryModeRef.current === "jornada"
+                ? 0
+                : (1 - originT) ** 2 * 0.55,
             );
           }
 
@@ -719,10 +769,7 @@ export function MapCanvas({
           // "Llegó": se dispara acá, no en el efecto que sincroniza
           // `flujos`, porque acá es donde el motor de arcos reporta el
           // frame exacto en que la línea terminó de crecer y tocó el
-          // destino — coincide con lo que la persona ve, no con cuándo
-          // llegaron los props nuevos. Gateado por timelineActiveRef:
-          // fuera del modo timeline no tiene sentido narrativo animar
-          // "llegadas" (ver comentario de la prop).
+          // destino — coincide con lo que la persona ve.
           if (timelineActiveRef.current) {
             frame.justSettled.forEach((arc) => {
               const destinoId = arc.key.split("::")[1] ?? "";
@@ -743,17 +790,19 @@ export function MapCanvas({
 
           const arrivalsCollection = {
             type: "FeatureCollection" as const,
-            features: pulseEngineRef.current.tick(now).flatMap((p: { destinoId: string; progress: number; }) => {
-              const coords = destinoCoordsByIdRef.current.get(p.destinoId);
-              if (!coords) return [];
-              return [
-                {
-                  type: "Feature" as const,
-                  properties: { radius: 5 + p.progress * 28, opacity: (1 - p.progress) * 0.85 },
-                  geometry: { type: "Point" as const, coordinates: coords },
-                },
-              ];
-            }),
+            features: pulseEngineRef.current
+              .tick(now)
+              .flatMap((p: { destinoId: string; progress: number }) => {
+                const coords = destinoCoordsByIdRef.current.get(p.destinoId);
+                if (!coords) return [];
+                return [
+                  {
+                    type: "Feature" as const,
+                    properties: { radius: 5 + p.progress * 28, opacity: (1 - p.progress) * 0.85 },
+                    geometry: { type: "Point" as const, coordinates: coords },
+                  },
+                ];
+              }),
           };
           (map.getSource("arrivals") as maplibregl.GeoJSONSource | undefined)?.setData(
             arrivalsCollection,
@@ -826,6 +875,7 @@ export function MapCanvas({
     });
 
     const pulseEngine = pulseEngineRef.current;
+    const activityEngine = activityEngineRef.current;
 
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -833,7 +883,7 @@ export function MapCanvas({
       origenPopup.remove();
       municipalityPopup.remove();
       pulseEngine.clear();
-      activityEngineRef.current.clear();
+      activityEngine.clear();
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
@@ -877,21 +927,12 @@ export function MapCanvas({
             geometry: { type: "Point", coordinates: [d.longitud, d.latitud] },
           })),
       });
-      // Arranque de feature-state para intensity: lo que ya se sepa
-      // acumulado (si el efecto de `flujos` corrió antes) o 0. Sin esto,
-      // ["feature-state","intensity"] es undefined en el primer frame y
-      // la expresión de interpolación cae al valor del primer stop (rojo)
-      // igual, pero mejor dejarlo explícito.
       destinos.forEach((d) => {
         const total = destinoAcumuladoRef.current.get(d.id) ?? 0;
         map.setFeatureState({ source: "destinos", id: d.id }, { intensity: intensityFor(total) });
       });
     });
 
-    // Índice de nombre normalizado -> id, para el click sobre el ÁREA del
-    // municipio (ver map.on("click", ...) más arriba). Se reconstruye acá
-    // junto con el setData de arriba para no tener un tercer efecto que
-    // dependa de `destinos` por separado.
     destinoIdByNormNameRef.current = new Map(
       destinos.flatMap((d) => [
         [normId(d.nombre), d.id],
@@ -899,39 +940,20 @@ export function MapCanvas({
       ]),
     );
 
-    // Coordenada por id, para anclar los pulsos de llegada (renderPulseFrames
-    // en animate() la lee vía destinoCoordsByIdRef).
+    const conCoordenada = destinos.filter(
+      (d): d is DestinoResumenLista & { latitud: number; longitud: number } =>
+        d.latitud != null && d.longitud != null,
+    );
+
     destinoCoordsByIdRef.current = new Map(
-      destinos
-        .filter(
-          (d): d is DestinoResumenLista & { latitud: number; longitud: number } =>
-            d.latitud != null && d.longitud != null,
-        )
-        .map((d) => [d.id, [d.longitud, d.latitud] as LngLat]),
+      conCoordenada.map((d) => [d.id, [d.longitud, d.latitud] as LngLat]),
     );
 
     destinoMetaByIdRef.current = new Map(
-      destinos
-        .filter(
-          (d): d is DestinoResumenLista & { latitud: number; longitud: number } =>
-            d.latitud != null && d.longitud != null,
-        )
-        .map((d) => [
-          d.id,
-          {
-            nombre: d.nombre,
-            coords: [d.longitud, d.latitud] as LngLat,
-          },
-        ]),
-    );
-
-    destinoMetaByIdRef.current = new Map(
-      destinos
-        .filter(
-          (d): d is DestinoResumenLista & { latitud: number; longitud: number } =>
-            d.latitud != null && d.longitud != null,
-        )
-        .map((d) => [d.id, { nombre: d.nombre, coords: [d.longitud, d.latitud] as LngLat }]),
+      conCoordenada.map((d) => [
+        d.id,
+        { nombre: d.nombre, coords: [d.longitud, d.latitud] as LngLat },
+      ]),
     );
   }, [destinos]);
 
@@ -951,14 +973,12 @@ export function MapCanvas({
     whenReady(() => {
       const map = mapRef.current!;
       origenes.forEach((o) => {
-        map.setFeatureState(
-          { source: "origenes", id: o.id },
-          { selected: o.id === selectedOrigenId },
-        );
+        map.setFeatureState({ source: "origenes", id: o.id }, { selected: o.id === selectedOrigenId });
       });
     });
   }, [selectedOrigenId, origenes]);
 
+  // --- coloreo territorial ------------------------------------------------
   useEffect(() => {
     whenReady(() => {
       const map = mapRef.current!;
@@ -970,51 +990,77 @@ export function MapCanvas({
         return;
       }
       const selectedDestinoName = destinos.find((d) => d.id === selectedDestinoId)?.nombre;
-      const features =
-        (municipalBoundaries as { features?: Array<{ id?: string | number; properties?: Record<string, unknown> }> })
-          .features ?? [];
-
-      // El tono se calcula de forma relativa al máximo REAL de ayudas del
-      // conjunto visible en el modo/día actual. Así, un municipio con más
-      // ayudas siempre queda más oscuro y no dependemos de umbrales fijos
-      // que pueden dejar casi todos los municipios en el mismo tono.
-      const values = features.map((feature) => {
-        const code = String(feature.id ?? feature.properties?.["municipalityCode"] ?? "");
-        const stat = getTerritoryStatByCode(code);
-        return territoryValueFor(stat, territoryMode, territoryDay);
-      });
-      const maxValue = Math.max(0, ...values);
 
       if (import.meta.env.DEV) {
-        const sinMatch = features
+        const sinMatch = boundaryFeatures
           .map((f) => String(f.id ?? f.properties?.["municipalityCode"] ?? ""))
-          .filter((code) => code && !getTerritoryStatByCode(code));
+          .filter((code) => code && code !== CALI_DANE && !getTerritoryStatByCode(code));
         if (sinMatch.length > 0) {
           console.warn("[MapCanvas] códigos DANE sin match en territoryData:", [...new Set(sinMatch)]);
         }
       }
 
-      features.forEach((feature) => {
+      boundaryFeatures.forEach((feature) => {
         const id = feature.id ?? feature.properties?.["municipalityCode"];
         if (id == null || String(id).trim() === "") return;
-        const stat = getTerritoryStatByCode(String(id));
-        const value = territoryValueFor(stat, territoryMode, territoryDay);
-        const tone = territoryToneFromValue(value, maxValue);
+
+        const code = String(id);
+        const esCali = normId(code) === CALI_DANE;
+        const stat = getTerritoryStatByCode(code);
+        const tone = territoryToneIndex(territoryValue(stat, territoryMode, territoryDay), territoryMode);
 
         map.setFeatureState(
-          { source: "municipios", id: String(id) },
+          { source: "municipios", id: code },
           {
-            territoryToneColor: territoryBlueForTone(tone),
+            territoryToneColor: esCali ? TERRITORY_EXCLUDED : territoryColorForTone(tone),
+            // Cali no tiene zona en el catálogo, así que se atenúa junto
+            // con el resto apenas se filtra por una zona concreta.
             filteredOut: territoryZone !== "todas" && stat?.zone !== territoryZone,
-            selected:
-              selectedDestinoName != null &&
-              stat != null &&
-              normId(selectedDestinoName) === normId(stat.name), // este SÍ puede seguir por nombre — ver nota abajo
+            // Este SÍ va por nombre (el destino no trae código DANE),
+            // pero con un normalizador que hace case-fold y saca tildes:
+            // normId no lo hacía y "Riofrío" nunca matcheaba "RIOFRIO".
+            selected: !esCali && stat != null && sameMunicipality(selectedDestinoName, stat.name),
           },
         );
       });
     });
   }, [destinos, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
+
+  // --- etiquetas de municipio (nombre + conteo) ---------------------------
+  useEffect(() => {
+    whenReady(() => {
+      const map = mapRef.current!;
+      const source = map.getSource("municipios-etq") as maplibregl.GeoJSONSource | undefined;
+      if (!source) return;
+
+      source.setData({
+        type: "FeatureCollection",
+        features: boundaryFeatures.flatMap((feature) => {
+          const props = feature.properties ?? {};
+          const lng = props["labelLng"];
+          const lat = props["labelLat"];
+          if (typeof lng !== "number" || typeof lat !== "number") return [];
+
+          const code = String(feature.id ?? props["municipalityCode"] ?? "");
+          if (normId(code) === CALI_DANE) return [];
+
+          const stat = getTerritoryStatByCode(code);
+          if (territoryZone !== "todas" && stat?.zone !== territoryZone) return [];
+
+          return [
+            {
+              type: "Feature" as const,
+              properties: {
+                name: String(props["name"] ?? ""),
+                value: territoryValue(stat, territoryMode, territoryDay),
+              },
+              geometry: { type: "Point" as const, coordinates: [lng, lat] },
+            },
+          ];
+        }),
+      });
+    });
+  }, [territoryMode, territoryDay, territoryZone]);
 
   useEffect(() => {
     whenReady(() => {
@@ -1056,10 +1102,6 @@ export function MapCanvas({
       }
 
       if (instantTransition || !timelineActive) {
-        // Seek o timeline apagado: `flujos` ya representa el total (sin
-        // filtrar por fecha, o saltado directo a una fecha) — la
-        // intensidad de cada destino se fija de una, sin animar,
-        // consistente con que el motor de arcos tampoco anima un salto.
         const totales = new Map<string, number>();
         flujos.forEach((f) => {
           totales.set(f.destino.id, (totales.get(f.destino.id) ?? 0) + f.despachosCount);
@@ -1073,13 +1115,6 @@ export function MapCanvas({
         activityEngineRef.current.clear();
         handlersRef.current.onActivity?.(null);
       } else {
-        // Timeline avanzando paso a paso: solo procesa acá los arcos que
-        // YA estaban asentados y cuyo peso subió (weight bump) — sube el
-        // acumulado y dispara un pop, igual que un arco nuevo, pero sin
-        // volver a crecer la línea (ver arcAnimationEngine.bumpWeight).
-        // El caso de un arco NUEVO se maneja en animate(), vía
-        // justSettled, para que el pop ocurra cuando la línea
-        // visiblemente toca el destino, no antes de que se vea nada.
         validKeys.forEach((key) => {
           const prev = prevWeightsRef.current.get(key);
           if (prev === undefined) return; // arco nuevo, lo maneja justSettled en animate()
@@ -1102,24 +1137,44 @@ export function MapCanvas({
     });
   }, [flujos, instantTransition, origenes, destinos, timelineActive]);
 
+  // --- visibilidad de puntos y rutas --------------------------------------
   useEffect(() => {
     whenReady(() => {
       const map = mapRef.current!;
-      const pointOpacity = routesMode === "color" ? 0 : 1;
+      // En modo jornada los nodos estorban: el municipio ya lleva su
+      // propio número y la lectura es el color del área, no el punto.
+      // Mismo criterio que el `#capa-nodos { opacity: 0 }` del HTML.
+      const hideNodes = routesMode === "color" || territoryMode === "jornada";
+      const pointOpacity = hideNodes ? 0 : 1;
       const routeOpacity = routesMode === "color" ? 0 : 1;
 
-      if (map.getLayer("origenes-glow")) map.setPaintProperty("origenes-glow", "circle-opacity", pointOpacity * 0.18);
-      if (map.getLayer("origenes-point")) map.setPaintProperty("origenes-point", "circle-opacity", pointOpacity);
-      if (map.getLayer("destinos-point")) map.setPaintProperty("destinos-point", "circle-opacity", pointOpacity);
-      if (map.getLayer("arrivals-pulse")) map.setPaintProperty("arrivals-pulse", "circle-stroke-opacity", pointOpacity === 0 ? 0 : ["get", "opacity"]);
-      if (map.getLayer("arcos-creciendo-line")) map.setPaintProperty("arcos-creciendo-line", "line-opacity", routeOpacity * 0.9);
-      if (map.getLayer("arcos-asentados-line")) map.setPaintProperty("arcos-asentados-line", "line-opacity", routeOpacity);
+      if (map.getLayer("origenes-glow"))
+        map.setPaintProperty("origenes-glow", "circle-opacity", pointOpacity * 0.18);
+      if (map.getLayer("origenes-point"))
+        map.setPaintProperty("origenes-point", "circle-opacity", pointOpacity);
+      if (map.getLayer("destinos-point"))
+        map.setPaintProperty("destinos-point", "circle-opacity", pointOpacity);
+      if (map.getLayer("arrivals-pulse"))
+        map.setPaintProperty(
+          "arrivals-pulse",
+          "circle-stroke-opacity",
+          pointOpacity === 0 ? 0 : ["get", "opacity"],
+        );
+      if (map.getLayer("arcos-creciendo-line"))
+        map.setPaintProperty("arcos-creciendo-line", "line-opacity", routeOpacity * 0.9);
+      if (map.getLayer("arcos-asentados-line"))
+        map.setPaintProperty("arcos-asentados-line", "line-opacity", routeOpacity);
     });
-  }, [routesMode]);
+  }, [routesMode, territoryMode]);
 
   return (
     <div className="absolute inset-0 h-full w-full">
-      <div ref={containerRef} data-map-root="" className="absolute inset-0 h-full w-full" aria-label="..." />
+      <div
+        ref={containerRef}
+        data-map-root=""
+        className="absolute inset-0 h-full w-full"
+        aria-label="Mapa del Valle del Cauca con los despachos por municipio y las rutas desde los centros de acopio"
+      />
     </div>
   );
 }
