@@ -2,12 +2,22 @@
  * dispatchToastEngine.ts
  * -----------------------------------------------------------------------
  * Motor puro para las notificaciones "llegó un despacho" que se muestran
- * ancladas a un destino en el mapa (ver MapCanvas). Mismo principio que
- * arcAnimationEngine.ts: sin dependencia de MapLibre/React, reloj
- * inyectado, testeable con expect(...) directo, sin navegador.
+ * ancladas a un destino en el mapa (ver MapCanvas). Sin dependencia de
+ * MapLibre/React, reloj inyectado, testeable con expect(...) directo.
  * MapCanvas.tsx solo llama spawn()/tick() y traduce el resultado a
- * posición de pantalla vía map.project() — nunca decide fases ni tiempos
- * acá.
+ * posición + ícono en pantalla — nunca decide fases ni tiempos acá.
+ *
+ * ÍCONO POR CATEGORÍA: el motor NO conoce la lista de categorías ni sus
+ * íconos — eso es una decisión de presentación (igual que color/glyph),
+ * así que vive en MapCanvas, no acá. Este archivo solo transporta
+ * `categoria` desde spawn() hasta el ToastFrame, de punta a punta, sin
+ * interpretarla. HOY nadie llama spawn() con una categoría real —
+ * `Flujo` (entities.ts) no trae ese campo, solo existe en
+ * `DespachoLogistico.categoriaPrincipal` (endpoint destino-logistica, por
+ * destino individual) — así que en la práctica `categoria` llega `null`
+ * y MapCanvas cae en el ícono genérico. El día que route=flujos incluya
+ * categoría por despacho, alcanza con pasarla acá; no hace falta tocar
+ * este motor.
  * -----------------------------------------------------------------------
  */
 
@@ -16,6 +26,7 @@ interface ToastRecord {
   destinoId: string;
   destinoNombre: string;
   count: number;
+  categoria: string | null;
   createdAt: number;
 }
 
@@ -30,6 +41,8 @@ export interface ToastFrame {
   destinoId: string;
   destinoNombre: string;
   count: number;
+  /** Categoría cruda del despacho, o null si no está disponible (ver nota de arriba). MapCanvas la traduce a ícono. */
+  categoria: string | null;
   /** 0 = la más reciente. MapCanvas lo usa para el offset vertical del apilado. */
   stackIndex: number;
   /** 0..1 dentro de su fase actual — MapCanvas lo traduce a opacity/scale/translateY. */
@@ -44,12 +57,13 @@ export function createDispatchToastEngine() {
   /**
    * Encola una notificación. No hace nada si count <= 0 — evita
    * "notificaciones" vacías por ruido de redondeo o por un re-sync que no
-   * trae despachos nuevos de verdad.
+   * trae despachos nuevos de verdad. `categoria` es opcional a propósito:
+   * ver nota de cabecera, hoy ningún caller la tiene disponible.
    */
-  function spawn(destinoId: string, destinoNombre: string, count: number, now: number) {
+  function spawn(destinoId: string, destinoNombre: string, count: number, now: number, categoria: string | null = null) {
     if (count <= 0) return;
     counter += 1;
-    records.push({ id: `toast-${counter}`, destinoId, destinoNombre, count, createdAt: now });
+    records.push({ id: `toast-${counter}`, destinoId, destinoNombre, count, categoria, createdAt: now });
   }
 
   /**
@@ -93,6 +107,7 @@ export function createDispatchToastEngine() {
             destinoId: r.destinoId,
             destinoNombre: r.destinoNombre,
             count: r.count,
+            categoria: r.categoria,
             stackIndex,
             progress: Math.max(0, Math.min(1, progress)),
             phase,

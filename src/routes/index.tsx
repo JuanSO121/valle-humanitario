@@ -13,10 +13,10 @@
  * -----------------------------------------------------------------------
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { DashboardPage } from "@/presentation/pages/DashboardPage";
+import { StoryPage } from "@/presentation/pages/StoryPage";
 
 export const Route = createFileRoute("/")({
-  component: DashboardPage,
+  component: StoryPage,
   head: () => ({
     meta: [
       { title: "Ayudas Humanitarias — Terremoto Valle del Cauca | Gobernación del Valle" },
@@ -28,7 +28,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Ayudas Humanitarias — Terremoto Valle del Cauca" },
       {
         property: "og:description",
-        content: "Distribución de ayudas por municipio y categoría, actualizada al corte de datos vigente.",
+        content:
+          "Distribución de ayudas por municipio y categoría, actualizada al corte de datos vigente.",
       },
       { property: "og:type", content: "website" },
       { name: "theme-color", content: "#0b0e14" },

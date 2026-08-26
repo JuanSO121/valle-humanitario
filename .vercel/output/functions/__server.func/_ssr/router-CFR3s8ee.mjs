@@ -2,8 +2,8 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-afO8n2Bq.js
-var router_afO8n2Bq_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-CFR3s8ee.js
+var router_CFR3s8ee_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
 	head: () => ({ meta: [{ charSet: "utf-8" }, {
@@ -39,7 +39,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-kaJ05xsw.mjs");
+var $$splitComponentImporter = () => import("./routes-CMjef2vf.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -81,4 +81,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_afO8n2Bq_exports as t };
+export { getRouter, router_CFR3s8ee_exports as t };
