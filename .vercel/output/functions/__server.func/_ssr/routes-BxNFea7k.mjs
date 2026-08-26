@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Menu, c as Lightbulb, d as ChevronDown, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-b9QCaZ4V.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BxNFea7k.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -4342,7 +4342,7 @@ function StoryPage() {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
-							children: "Después del terremoto del 10 de agosto de 2026, la Gobernación del Valle del Cauca entregó ayudas humanitarias de emergencia en los municipios."
+							children: "Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas humanitarias de emergencia en los municipios en el Valle del Cauca."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
