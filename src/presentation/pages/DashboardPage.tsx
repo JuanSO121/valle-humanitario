@@ -61,14 +61,50 @@ export function DashboardPage() {
   // backend no expone una ruta de "fechas disponibles" aparte porque
   // sería puramente derivable de un dato que ya viaja en /flujos; agregar
   // una ruta solo para esto duplicaría una fuente de verdad sin necesidad.
+  //
+  // FIX: `f.porFecha` se trata como opcional (`?? []`), igual que ya hace
+  // useFlujosAsOf.ts. Motivo: si la implementación del Web App de Apps
+  // Script o la caché de 6h de CacheLayer.gs quedan desincronizadas del
+  // Transforms.gs actual (que sí arma porFecha), route=flujos puede servir
+  // flujos sin ese campo — AyudasApiRepository.getFlujos() ahora deja
+  // pasar esa respuesta con un console.warn en vez de rechazarla con un
+  // 502 (ver ese archivo). Sin esta guarda, un `f.porFecha.forEach(...)`
+  // sobre `undefined` tiraría un TypeError acá y esto SÍ es código de
+  // render, no una promesa: ese throw no lo atrapa React Query, tumba el
+  // componente entero. Con la guarda, el peor caso es "timeline sin
+  // fechas para reproducir" — el mapa base y los arcos siguen andando.
   const timelineDates = useMemo(() => {
     if (!flujosResponse?.flujos) return [];
     const set = new Set<string>();
-    flujosResponse.flujos.forEach((f) => f.porFecha.forEach((p) => set.add(p.fecha)));
+    flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
     return [...set].sort();
   }, [flujosResponse]);
 
   const flujosParaMapa = useFlujosAsOf(flujosResponse?.flujos, viewState.timelineDate);
+
+  // FIX: antes se mandaba `flujosParaMapa` completo a MapCanvas, así que
+  // TODOS los arcos del dataset (as-of la fecha del timeline) entraban al
+  // motor de animación apenas resolvía la query — se veían "animarse
+  // solos" al cargar, sin que hubiera mediado ningún click. Ahora se
+  // filtra por la selección activa antes de pasarlo:
+  //   - Sin selección (level "ALL"): [] — mapa base con puntos, sin arcos.
+  //   - Origen seleccionado: solo los flujos SALIENTES desde ese origen
+  //     (a dónde se distribuyó lo que salió de ahí).
+  //   - Destino seleccionado: solo los flujos ENTRANTES a ese destino
+  //     (de dónde vino lo que llegó ahí) — puede ser más de un origen,
+  //     por eso es un .filter() y no un .find(), todas las líneas de
+  //     "de dónde vino" quedan visibles a la vez.
+  // origenId y destinoId son excluyentes en ViewState (ver viewState.ts),
+  // así que nunca hace falta decidir cuál gana si ambos estuvieran seteados.
+  const flujosFiltrados = useMemo(() => {
+    if (viewState.origenId) {
+      return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
+    }
+    if (viewState.destinoId) {
+      return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
+    }
+    return [];
+  }, [flujosParaMapa, viewState.origenId, viewState.destinoId]);
 
   // MapCanvas consume `instantTransition` en el mismo commit en que
   // cambian los `flujos` (su useEffect corre sobre las props ya
@@ -111,10 +147,12 @@ export function DashboardPage() {
         <MapCanvas
           origenes={origenes ?? []}
           destinos={destinos ?? []}
-          flujos={flujosParaMapa}
+          flujos={flujosFiltrados}
           instantTransition={viewState.timelineInstant}
           selectedDestinoId={viewState.destinoId}
+          selectedOrigenId={viewState.origenId}
           onSelectDestino={(id) => setViewState((prev) => viewTransitions.toDestino(id, prev))}
+          onSelectOrigen={(id) => setViewState((prev) => viewTransitions.toOrigen(id, prev))}
           onReset={() => setViewState((prev) => viewTransitions.toAll(prev))}
         />
       </ClientOnly>

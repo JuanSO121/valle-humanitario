@@ -256,6 +256,24 @@
   border-top-color: var(--surface) !important;
   border-bottom-color: var(--surface) !important;
 }
+/*
+ * FIX (bug "texto oscuro sobre UI oscura"): el `color` de arriba solo
+ * cubre lo que el CONTENEDOR del popup hereda hacia adentro. El HTML que
+ * arma MapCanvas.tsx vía `.setHTML(...)` inyecta un `<div>` propio, y si
+ * ese `<div>` (u otro futuro) trae un `style="color:..."` inline, ese
+ * inline SIEMPRE gana sobre lo heredado del padre — el `!important` de
+ * arriba no alcanza a pisarlo porque no es la misma declaración
+ * compitiendo, es herencia vs. valor explícito en el hijo. La causa raíz
+ * ya se corrigió en MapCanvas.tsx (se sacó el `color:#12161c`
+ * hardcodeado de los tres popups), pero esta regla queda como red de
+ * seguridad: fuerza el color en TODOS los descendientes del popup, sin
+ * importar qué inline style traiga el HTML inyectado. Así un `setHTML`
+ * nuevo (de este componente o de otro) no puede volver a introducir el
+ * mismo bug en silencio.
+ */
+.maplibregl-popup-content * {
+  color: var(--foreground) !important;
+}
 
 /*
  * Desktop: los controles +/- de zoom de MapLibre viven por defecto en la
@@ -291,6 +309,17 @@
  * border-border, text-muted-foreground, bg-primary, text-primary) — nada
  * de eso cambia, solo el VALOR que esas utilidades resuelven dentro de
  * este scope.
+ *
+ * FIX: el override original solo cubría background/foreground/surface/
+ * primary/secondary/muted/accent/destructive. Quedaban SIN override
+ * --sidebar-*, --cluster*, --chart-* y --critical/--warning/--safe/
+ * --unknown — si algún componente de chrome (ej. un primitive de
+ * shadcn/ui Sidebar, o un chart reutilizado de la pantalla institucional)
+ * los usa dentro de este tema, heredaría los valores CLAROS de :root
+ * (pensados para fondo blanco) sobre este fondo oscuro — mismo tipo de
+ * bug que el de los popups, por la misma razón (una parte de la UI que
+ * no se enteró del cambio de tema). Se completan acá para que ningún
+ * token del sistema quede "huérfano" dentro de `.theme-ayudas`.
  * -----------------------------------------------------------------------
  */
 
@@ -345,6 +374,49 @@
 
   --destructive: oklch(0.62 0.21 25);
   --destructive-foreground: oklch(0.98 0.01 25);
+
+  /* --- tokens que antes quedaban sin override dentro de este tema --- */
+
+  /* Sidebar: mismo criterio que --surface/--card — vidrio oscuro, no
+     tarjeta blanca. Reusa los mismos valores de superficie/borde del
+     tema para no introducir una tercera escala de grises. */
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Cluster/agrupación: no hay semántica de "agrupación" en este dominio
+     (ver comentario del token en :root, es propio de la pantalla de
+     criticidad sísmica), pero se completa por si algún componente
+     compartido lo referencia — reusa el mismo azul de Cali/primary en vez
+     de introducir un tercer azul sin uso claro acá. */
+  --cluster: var(--primary);
+  --cluster-foreground: var(--primary-foreground);
+
+  /* Riesgo sísmico (critical/warning/safe/unknown): este dominio no tiene
+     estados de riesgo, pero si quedan sin override y algo los usa,
+     mostrarían los valores del tema institucional CLARO (pensados para
+     fondo blanco) sobre este fondo oscuro. Se ajustan de brillo/saturación
+     para que, en caso de aparecer, al menos sean legibles sobre superficie
+     oscura — mismos hue que en :root, solo más claros/saturados como ya
+     hace .dark más arriba. */
+  --critical: oklch(0.62 0.2 27);
+  --critical-foreground: oklch(0.98 0.01 27);
+  --warning: oklch(0.78 0.15 78);
+  --warning-foreground: oklch(0.2 0.03 78);
+  --safe: oklch(0.68 0.15 152);
+  --safe-foreground: oklch(0.18 0.03 152);
+  --unknown: oklch(0.62 0.012 255);
+
+  --chart-1: var(--primary);
+  --chart-2: var(--accent);
+  --chart-3: var(--safe);
+  --chart-4: var(--warning);
+  --chart-5: var(--critical);
 }
 
 /* MapLibre chrome: mismo criterio que el bloque original del archivo,

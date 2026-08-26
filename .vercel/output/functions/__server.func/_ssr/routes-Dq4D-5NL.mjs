@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DxYCTOBh.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dq4D-5NL.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -53,7 +53,7 @@ var AyudasApiRepository = class {
 			if (!Array.isArray(obj["flujos"])) return "falta el campo \"flujos\" (array)";
 			if (!Array.isArray(obj["excluidos"])) return "falta el campo \"excluidos\" (array)";
 			const primerFlujo = obj["flujos"][0];
-			if (primerFlujo && !Array.isArray(primerFlujo["porFecha"])) return "los flujos no traen \"porFecha\" (array) — contrato desactualizado";
+			if (primerFlujo && !Array.isArray(primerFlujo["porFecha"])) console.warn("route=flujos: los flujos no traen \"porFecha\" (array) — probablemente la implementación del Web App de Apps Script está desactualizada respecto a Transforms.gs, o CacheLayer.gs sirvió una respuesta vieja (TTL 6h). El mapa y los arcos funcionan igual; el timeline no va a tener fechas para reproducir hasta que se re-implemente (\"Nueva versión\") y/o se corra limpiarCache().");
 			return null;
 		});
 	}
@@ -126,22 +126,36 @@ var useFlujos = createCatalogQuery("flujos", () => ayudasApiRepository.getFlujos
 var INITIAL_VIEW_STATE = {
 	level: "ALL",
 	destinoId: null,
+	origenId: null,
 	timelineDate: null,
 	timelineInstant: false
 };
 var viewTransitions = {
+	/** Click en un destino — muestra sus flujos entrantes (de dónde vino lo que llegó ahí). */
 	toDestino(destinoId, prev) {
 		return {
 			...prev,
 			level: "DESTINO",
-			destinoId
+			destinoId,
+			origenId: null
 		};
 	},
+	/** Click en un origen — muestra sus flujos salientes (a dónde se distribuyó desde ahí). */
+	toOrigen(origenId, prev) {
+		return {
+			...prev,
+			level: "ORIGEN",
+			origenId,
+			destinoId: null
+		};
+	},
+	/** Click en vacío / reset — sin selección, sin arcos (ver MapCanvas: flujos=[] no dibuja nada). */
 	toAll(prev) {
 		return {
 			...prev,
 			level: "ALL",
-			destinoId: null
+			destinoId: null,
+			origenId: null
 		};
 	},
 	/** Arrancar o reanudar la reproducción — primer frame, se trata como salto instantáneo a esa fecha. */
@@ -867,7 +881,7 @@ function DashboardPage() {
 	const timelineDates = (0, import_react.useMemo)(() => {
 		if (!flujosResponse?.flujos) return [];
 		const set = /* @__PURE__ */ new Set();
-		flujosResponse.flujos.forEach((f) => f.porFecha.forEach((p) => set.add(p.fecha)));
+		flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
 		return [...set].sort();
 	}, [flujosResponse]);
 	(0, import_react.useEffect)(() => {

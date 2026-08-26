@@ -45,6 +45,22 @@ const ORIGEN_DIM_COLOR: Record<string, string> = {
   "ORI-CARTAGO": "rgba(230,136,60,0.35)",
 };
 
+// Los mapas de color de arriba están indexados por el id "canónico" tal
+// como se escribe en este archivo ("ORI-CALI", "ORI-CARTAGO"). Se
+// normalizan con la misma función (normId) que ya usa
+// normalizeBoundaries() para municipalityCode, para blindar contra
+// diferencias de formato entre route=origenes y route=flujos aunque hoy
+// coincidan exactamente (ver conversación: la causa real de "no se ven
+// arcos" terminó siendo otra — route=flujos llegando vacío por un
+// contrato desactualizado en el backend — pero esta normalización no
+// sobra como defensa a futuro).
+const ORIGEN_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(ORIGEN_COLOR).map(([id, color]) => [normId(id), color]),
+);
+const ORIGEN_DIM_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
+  Object.entries(ORIGEN_DIM_COLOR).map(([id, color]) => [normId(id), color]),
+);
+
 const BASE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
@@ -70,14 +86,47 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
 interface Props {
   origenes: Origen[];
   destinos: DestinoResumenLista[];
+  /**
+   * Flujos a DIBUJAR — ya filtrados por el padre (DashboardPage) según la
+   * selección activa (origen o destino). Este componente NO decide qué
+   * mostrar, solo anima lo que recibe: si el padre manda `[]` (nada
+   * seleccionado), no hay ningún arco en el mapa, a propósito — ver
+   * conversación: los arcos ya no se animan solos al entrar, solo al
+   * seleccionar un origen o un destino.
+   */
   flujos: Flujo[];
   instantTransition: boolean;
   selectedDestinoId: string | null;
+  /** Punto de ORIGEN resaltado en el mapa — independiente de selectedDestinoId (ver viewState.ts). */
+  selectedOrigenId: string | null;
   onSelectDestino: (id: string) => void;
+  onSelectOrigen: (id: string) => void;
   onReset: () => void;
 }
 
 const flujoKey = (f: Flujo) => `${f.origenId}::${f.destino.id}`;
+
+// FIX: los tres popups (municipio/origen/destino) traían `color:#12161c`
+// hardcodeado en el HTML inyectado — pensado para cuando el popup vivía
+// sobre un fondo blanco (tema institucional claro). Con el tema
+// `.theme-ayudas` (fondo/superficies oscuras), `.maplibregl-popup-content`
+// pasa a tener `background: var(--surface)` OSCURO, pero ese inline style
+// en el hijo ignora por completo el `color: var(--foreground) !important`
+// que ya está declarado en el contenedor — un estilo inline en un
+// elemento hijo siempre gana sobre lo heredado del padre, sea o no
+// `!important` la regla del padre. Resultado: texto casi negro sobre un
+// fondo casi negro, invisible.
+//
+// Se saca el `color` de acá y se deja que el texto herede del contenedor
+// (`.maplibregl-popup-content { color: var(--foreground) !important }`,
+// ya definido en styles.css para ambos temas). Así el popup se ve bien
+// tanto en el tema institucional claro como en `.theme-ayudas` oscuro,
+// sin duplicar la decisión de color en dos lugares.
+function popupHtml(label: string): string {
+  return `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px">
+             <strong>${label}</strong>
+           </div>`;
+}
 
 export function MapCanvas({
   origenes,
@@ -85,7 +134,9 @@ export function MapCanvas({
   flujos,
   instantTransition,
   selectedDestinoId,
+  selectedOrigenId,
   onSelectDestino,
+  onSelectOrigen,
   onReset,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,8 +148,8 @@ export function MapCanvas({
   const engineRef = useRef(createArcAnimationEngine());
   const rafRef = useRef<number | null>(null);
   const coordsCacheRef = useRef<Map<string, LngLat[]>>(new Map());
-  const handlersRef = useRef({ onSelectDestino, onReset });
-  handlersRef.current = { onSelectDestino, onReset };
+  const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset });
+  handlersRef.current = { onSelectDestino, onSelectOrigen, onReset };
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -113,6 +164,7 @@ export function MapCanvas({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
     const destinoPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+    const origenPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
     const municipalityPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
 
     map.on("load", () => {
@@ -163,15 +215,8 @@ export function MapCanvas({
           }
           if (nextId != null) {
             map.setFeatureState({ source: "municipios", id: nextId }, { hovered: true });
-            const name = feature?.properties?.["name"] ?? "";
-            municipalityPopup
-              .setLngLat(e.lngLat)
-              .setHTML(
-                `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c">
-                   <strong>${name}</strong>
-                 </div>`,
-              )
-              .addTo(map);
+            const name = String(feature?.properties?.["name"] ?? "");
+            municipalityPopup.setLngLat(e.lngLat).setHTML(popupHtml(name)).addTo(map);
           }
           hoveredMunicipalityId = nextId;
         });
@@ -198,9 +243,11 @@ export function MapCanvas({
         type: "circle",
         source: "origenes",
         paint: {
-          "circle-radius": 8,
+          // Resaltado del origen seleccionado — mismo patrón que ya usa
+          // destinos-point con su feature-state "selected".
+          "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 11, 8],
           "circle-color": ["get", "color"],
-          "circle-stroke-width": 2,
+          "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
           "circle-stroke-color": "#0b0e14",
         },
       });
@@ -247,7 +294,17 @@ export function MapCanvas({
         },
       });
 
+      // --- click: origen > destino > reset ------------------------------
+      // Se prueban las capas de punto en este orden porque son las más
+      // "pequeñas" en área de hit-test — si algún día se agrega un layer
+      // que las tape, hay que revisar el orden acá.
       map.on("click", (e: MapLayerMouseEvent) => {
+        const origenHits = map.queryRenderedFeatures(e.point, { layers: ["origenes-point"] });
+        if (origenHits.length > 0) {
+          const id = origenHits[0]?.properties?.["id"];
+          if (id != null) handlersRef.current.onSelectOrigen(String(id));
+          return;
+        }
         const destinoHits = map.queryRenderedFeatures(e.point, { layers: ["destinos-point"] });
         if (destinoHits.length > 0) {
           const id = destinoHits[0]?.properties?.["id"];
@@ -257,17 +314,27 @@ export function MapCanvas({
         handlersRef.current.onReset();
       });
 
+      map.on("mouseenter", "origenes-point", (e: MapLayerMouseEvent) => {
+        map.getCanvas().style.cursor = "pointer";
+        const f = e.features?.[0];
+        if (!f) return;
+        origenPopup
+          .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
+          .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
+          .addTo(map);
+      });
+      map.on("mouseleave", "origenes-point", () => {
+        map.getCanvas().style.cursor = "";
+        origenPopup.remove();
+      });
+
       map.on("mouseenter", "destinos-point", (e: MapLayerMouseEvent) => {
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
         destinoPopup
           .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
-          .setHTML(
-            `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#12161c">
-               <strong>${f.properties?.["nombre"] ?? ""}</strong>
-             </div>`,
-          )
+          .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
           .addTo(map);
       });
       map.on("mouseleave", "destinos-point", () => {
@@ -348,6 +415,7 @@ export function MapCanvas({
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       destinoPopup.remove();
+      origenPopup.remove();
       municipalityPopup.remove();
       map.remove();
       mapRef.current = null;
@@ -365,7 +433,11 @@ export function MapCanvas({
           .filter((o) => o.animable && o.latitud != null && o.longitud != null)
           .map((o) => ({
             type: "Feature",
-            properties: { id: o.id, nombre: o.nombre, color: ORIGEN_COLOR[o.id] ?? "#e8ecf3" },
+            // `id` a nivel de Feature (no solo en properties) es lo que
+            // permite usar setFeatureState más abajo para el resaltado —
+            // mismo patrón que ya usa el source "destinos".
+            id: o.id,
+            properties: { id: o.id, nombre: o.nombre, color: ORIGEN_COLOR_BY_NORM_ID[normId(o.id)] ?? "#e8ecf3" },
             geometry: { type: "Point", coordinates: [o.longitud, o.latitud] },
           })),
       });
@@ -399,13 +471,29 @@ export function MapCanvas({
     });
   }, [selectedDestinoId, destinos]);
 
+  useEffect(() => {
+    whenReady(() => {
+      const map = mapRef.current!;
+      origenes.forEach((o) => {
+        map.setFeatureState({ source: "origenes", id: o.id }, { selected: o.id === selectedOrigenId });
+      });
+    });
+  }, [selectedOrigenId, origenes]);
+
   // --- flujos: sincroniza el motor cada vez que cambia el dataset ---------
+  // Nota: `flujos` ya viene FILTRADO por selección desde DashboardPage —
+  // sin origen/destino seleccionado, el padre manda `[]` y acá no hay
+  // nada que registrar (por eso ya no se ve ningún arco "solo al entrar").
   useEffect(() => {
     whenReady(() => {
       const engine = engineRef.current;
       const weights: Record<string, number> = {};
 
-      // FIX (causa raíz del bug "no se muestran las animaciones"):
+      // Índice de orígenes por id normalizado — ver nota junto a
+      // ORIGEN_COLOR_BY_NORM_ID más arriba.
+      const origenesPorId = new Map(origenes.map((o) => [normId(o.id), o]));
+
+      // FIX previo (ver arcAnimationEngine.ts / MapCanvas.tsx original):
       // antes, `keys` salía de `flujos.map(flujoKey)` sin condición, así
       // que un flujo cuyo origen o destino no trae lat/lon (dato
       // incompleto — pasa en producción) quedaba igual registrado en el
@@ -426,11 +514,16 @@ export function MapCanvas({
         const key = flujoKey(f);
         weights[key] = f.despachosCount;
         if (!coordsCacheRef.current.has(key)) {
-          const origen = origenes.find((o) => o.id === f.origenId);
-          if (origen?.latitud != null && origen.longitud != null && f.destino.latitud != null && f.destino.longitud != null) {
+          const origenMatch = origenesPorId.get(normId(f.origenId));
+          if (
+            origenMatch?.latitud != null &&
+            origenMatch.longitud != null &&
+            f.destino.latitud != null &&
+            f.destino.longitud != null
+          ) {
             coordsCacheRef.current.set(
               key,
-              buildArcCoordinates([origen.longitud, origen.latitud], [f.destino.longitud, f.destino.latitud]),
+              buildArcCoordinates([origenMatch.longitud, origenMatch.latitud], [f.destino.longitud, f.destino.latitud]),
             );
           }
         }
@@ -458,5 +551,6 @@ export function MapCanvas({
 
 function colorForKey(key: string): string {
   const origenId = key.split("::")[0] ?? "";
-  return ORIGEN_COLOR[origenId] ?? ORIGEN_DIM_COLOR[origenId] ?? "#e8ecf3";
+  const norm = normId(origenId);
+  return ORIGEN_COLOR_BY_NORM_ID[norm] ?? ORIGEN_DIM_COLOR_BY_NORM_ID[norm] ?? "#e8ecf3";
 }

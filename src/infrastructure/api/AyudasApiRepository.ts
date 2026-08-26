@@ -121,10 +121,34 @@ export class AyudasApiRepository {
       const obj = p as Record<string, unknown>;
       if (!Array.isArray(obj["flujos"])) return 'falta el campo "flujos" (array)';
       if (!Array.isArray(obj["excluidos"])) return 'falta el campo "excluidos" (array)';
+
+      // "porFecha" SÍ es parte del contrato (Transforms.gs.buildFlujos_ ya
+      // lo arma), pero se valida como advertencia no bloqueante en vez de
+      // rechazar toda la respuesta con un 502. Motivo: ya pasó en
+      // producción que la implementación (deployment) del Web App o la
+      // caché de 6h de CacheLayer.gs quedaron desincronizadas del código
+      // fuente y sirvieron flujos SIN porFecha — con el chequeo estricto
+      // anterior, eso tumbaba la query de flujos COMPLETA (React Query
+      // queda en error, flujosResponse === undefined) y con ella el mapa
+      // base entero, incluidos los arcos y su animación, que no dependen
+      // en absoluto de porFecha (solo el scrubber del timeline lo usa).
+      // useFlujosAsOf ya trata porFecha como opcional (`?? []`) y
+      // DashboardPage.timelineDates hace lo mismo — así que degradar acá
+      // a "sin fechas de timeline disponibles" es seguro y no rompe nada
+      // río abajo. El console.warn deja rastro para diagnosticar el
+      // deployment/caché desincronizados sin bloquear al usuario.
       const primerFlujo = obj["flujos"][0];
       if (primerFlujo && !Array.isArray((primerFlujo as Record<string, unknown>)["porFecha"])) {
-        return 'los flujos no traen "porFecha" (array) — contrato desactualizado';
+        // eslint-disable-next-line no-console
+        console.warn(
+          'route=flujos: los flujos no traen "porFecha" (array) — probablemente la ' +
+            "implementación del Web App de Apps Script está desactualizada respecto a " +
+            "Transforms.gs, o CacheLayer.gs sirvió una respuesta vieja (TTL 6h). El mapa " +
+            "y los arcos funcionan igual; el timeline no va a tener fechas para reproducir " +
+            'hasta que se re-implemente ("Nueva versión") y/o se corra limpiarCache().',
+        );
       }
+
       return null;
     });
   }
