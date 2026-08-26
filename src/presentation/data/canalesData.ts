@@ -33,7 +33,7 @@ export const canales: Canal[] = [
   {
     id: "cali",
     nombre: "Cali",
-    glosa: "Capital del departamento. Excluida del consolidado municipal por instrucción expresa",
+    glosa: "Capital del departamento.",
     despachos: 55,
     unidades: 27246,
     renglones: 614,
