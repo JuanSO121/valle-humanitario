@@ -50,26 +50,26 @@ export function EvolucionHeatmap({
   return (
     <section>
       <SectionLabel>Qué municipio recibió cada día</SectionLabel>
-      <p className="mt-3 max-w-2xl text-lg leading-8 text-[#4E6B7C]">
+      <p className="mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]">
         Cada casilla es un día. Más azul, más entregas ese día.
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-white/12 bg-[#0B2233] p-4 sm:p-5">
+      <div className="mt-6 overflow-x-auto rounded-md bg-[#0079C1] p-4 sm:p-5">
         <div className="min-w-[660px] [--col-nombre:96px] sm:[--col-nombre:112px]">
           <Fila
             dias={dias}
             etiqueta=""
             celdas={dias.map((d) => (
-              <span key={d} className="text-center text-sm text-[#7E9AAD]">
+              <span key={d} className="text-center text-sm text-[#6B93AA]">
                 {d}
               </span>
             ))}
-            total={<span className="text-sm text-[#7E9AAD]">total</span>}
+            total={<span className="text-sm text-[#6B93AA]">total</span>}
           />
 
           {porZona.map(({ zona, filas }) => (
             <div key={zona}>
-              <p className="mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#81C8EC]">
+              <p className="mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#22ABE2]">
                 {zona}
               </p>
               {filas.map((m) => (
@@ -77,7 +77,7 @@ export function EvolucionHeatmap({
                   key={m.destinoId}
                   type="button"
                   onClick={() => onSelect?.(m)}
-                  className="block w-full rounded transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#81C8EC]"
+                  className="block w-full rounded transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#22ABE2]"
                 >
                   <Fila
                     dias={dias}
@@ -90,7 +90,7 @@ export function EvolucionHeatmap({
                           title={`${m.nombre}, día ${d}: ${
                             v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`
                           }`}
-                          className="flex h-[22px] items-center justify-center rounded-sm text-[11px] font-bold text-[#06202F]"
+                          className="flex h-[22px] items-center justify-center rounded-sm text-[11px] font-bold text-[#123E5C]"
                           style={{ background: celdaColor(v) }}
                         >
                           {v > 0 ? v : ""}
@@ -129,7 +129,7 @@ function Fila({
       className="grid items-center gap-[2px] py-[1px]"
       style={{ gridTemplateColumns: `var(--col-nombre) repeat(${dias.length}, 1fr) 42px` }}
     >
-      <span className="truncate pr-1.5 text-left text-[15px] text-[#A9C2D2]">{etiqueta}</span>
+      <span className="truncate pr-1.5 text-left text-[15px] text-[#CFEAF7]">{etiqueta}</span>
       {celdas}
       {total}
     </div>

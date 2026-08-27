@@ -48,7 +48,7 @@ export const canales: Canal[] = [
   },
   {
     id: "acopio-cartago",
-    nombre: "Centro de acopio Cartago",
+    nombre: "Centro de distribución Cartago",
     glosa: "Bodega del norte que despacha a varios municipios",
     despachos: 35,
     unidades: 17106,

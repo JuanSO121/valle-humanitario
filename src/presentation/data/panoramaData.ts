@@ -85,7 +85,7 @@ export const puenteSteps: PuenteRow[] = [
     delta: -113,
     detail: [
       { label: "Cali", value: 56, note: "Excluida del consolidado por instrucción expresa" },
-      { label: "Centro de acopio Cartago", value: 35, note: "Bodega: es la misma ayuda vista desde el origen" },
+      { label: "Centro de distribución Cartago", value: 35, note: "Bodega: es la misma ayuda vista desde el origen" },
       { label: "Otras Ayudas Solidarias", value: 19, note: "Entregas a instituciones, no a un municipio" },
       { label: "Inciva", value: 1, note: "Entrega institucional" },
       { label: "Centro de Protección", value: 1, note: "Entrega institucional" },

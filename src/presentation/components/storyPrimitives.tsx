@@ -19,19 +19,21 @@
 import type { ReactNode } from "react";
 
 export function SectionLabel({ children }: { children: ReactNode }) {
-  return <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#006A87]">{children}</p>;
+  return (
+    <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00639F]">{children}</p>
+  );
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mt-3 max-w-3xl font-serif text-4xl leading-[1.12] text-[#0B2233] md:text-5xl">
+    <h2 className="mt-3 max-w-3xl font-serif text-4xl leading-[1.12] text-[#123E5C] md:text-5xl">
       {children}
     </h2>
   );
 }
 
 export function SectionIntro({ children }: { children: ReactNode }) {
-  return <p className="mt-5 max-w-2xl text-lg leading-8 text-[#4E6B7C]">{children}</p>;
+  return <p className="mt-5 max-w-2xl text-lg leading-8 text-[#35708F]">{children}</p>;
 }
 
 interface BarProps {
@@ -41,10 +43,10 @@ interface BarProps {
 }
 
 /** Barra proporcional. */
-export function Bar({ ratio, color = "#00578C" }: BarProps) {
+export function Bar({ ratio, color = "#0079C1" }: BarProps) {
   const pct = Math.max(0, Math.min(1, ratio)) * 100;
   return (
-    <div className="h-[6px] overflow-hidden rounded-full bg-[#E6F0F7]">
+    <div className="h-[6px] overflow-hidden rounded-full bg-[#DDF0FA]">
       <i
         className="block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
         style={{ width: `${pct}%`, background: color }}
@@ -68,11 +70,11 @@ export function MiniList({ rows }: { rows: MiniRow[] }) {
     <ul className="flex flex-col gap-2">
       {rows.map((r) => (
         <li key={r.label} className="flex items-center gap-3 text-base">
-          <span className="min-w-0 flex-1 truncate text-[#4E6B7C]">{r.label}</span>
-          <span className="w-[38%] shrink-0">
+          <span className="min-w-0 flex-1 truncate text-[#35708F]">{r.label}</span>
+          <span className="w-[30%] shrink-0 sm:w-[38%]">
             <Bar ratio={r.value / max} color={r.color} />
           </span>
-          <b className="w-20 shrink-0 text-right tabular-nums text-[#0B2233]">
+          <b className="w-20 shrink-0 text-right tabular-nums text-[#123E5C]">
             {r.value.toLocaleString("es-CO")}
             {r.suffix ?? ""}
           </b>
@@ -84,14 +86,14 @@ export function MiniList({ rows }: { rows: MiniRow[] }) {
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-lg border border-[#00578C]/12 bg-white p-6 ${className}`}>{children}</div>
+    <div className={`rounded-lg border border-[#0079C1]/12 bg-white p-6 ${className}`}>{children}</div>
   );
 }
 
 /** Aviso metodológico. Amarillo, porque siempre dice qué NO se puede afirmar. */
 export function Aviso({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-[#F0B102]/40 border-l-[3px] border-l-[#F0B102] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]">
+    <div className="rounded-lg border border-[#FFD400]/40 border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]">
       {children}
     </div>
   );

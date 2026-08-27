@@ -218,18 +218,30 @@ var House = createLucideIcon("house", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var Lightbulb = createLucideIcon("lightbulb", [
+var List = createLucideIcon("list", [
 	["path", {
-		d: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5",
-		key: "1gvzjb"
+		d: "M3 5h.01",
+		key: "18ugdj"
 	}],
 	["path", {
-		d: "M9 18h6",
-		key: "x1upvd"
+		d: "M3 12h.01",
+		key: "nlz23k"
 	}],
 	["path", {
-		d: "M10 22h4",
-		key: "ceow96"
+		d: "M3 19h.01",
+		key: "noohij"
+	}],
+	["path", {
+		d: "M8 5h13",
+		key: "1pao27"
+	}],
+	["path", {
+		d: "M8 12h13",
+		key: "1za7za"
+	}],
+	["path", {
+		d: "M8 19h13",
+		key: "m83p4d"
 	}]
 ]);
 /**
@@ -388,4 +400,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { Menu as a, Lightbulb as c, ChevronLeft as d, CalendarDays as f, PackageCheck as i, House as l, Truck as n, Map as o, Package as r, MapPin as s, X as t, FileText as u };
+export { Menu as a, List as c, ChevronLeft as d, CalendarDays as f, PackageCheck as i, House as l, Truck as n, Map as o, Package as r, MapPin as s, X as t, FileText as u };

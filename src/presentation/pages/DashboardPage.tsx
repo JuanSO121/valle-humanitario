@@ -25,7 +25,6 @@ import {
 import {
   dayFromIsoDate,
   describeLens,
-  toneladasEstimadas,
   valorTemporal,
 } from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
@@ -88,6 +87,8 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const isoDate = viewState.timelineDate;
   const territoryDay = useMemo(() => dayFromIsoDate(isoDate), [isoDate]);
 
+  const operacion = useOperacion();
+
   const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
 
   /**
@@ -96,7 +97,6 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    * zona y el código de los municipios que todavía no registran
    * entregas, para que aparezcan en gris y no desaparezcan del mapa.
    */
-  const operacion = useOperacion();
   const municipiosMapa = useMemo(() => {
     const mapa = new Map<string, MunicipioMapa>();
 
@@ -130,17 +130,6 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const totalDespachosAsOf = useMemo(
     () => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0),
     [flujosParaMapa],
-  );
-
-  /**
-   * Toneladas estimadas sobre los despachos que el mapa está mostrando.
-   * Se deriva, no se cruza contra la hoja TONELADAS, para que el
-   * marcador y el mapa nunca digan cosas distintas. Ver
-   * TONELADAS_POR_DESPACHO.
-   */
-  const totalToneladasAsOf = useMemo(
-    () => toneladasEstimadas(totalDespachosAsOf),
-    [totalDespachosAsOf],
   );
 
   const flujosFiltrados = useMemo(() => {
@@ -250,7 +239,6 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
       </ClientOnly>
 
       <MarcadorHUD
-        toneladas={totalToneladasAsOf}
         despachos={totalDespachosAsOf}
         day={territoryDay}
         lens={lens}

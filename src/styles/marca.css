@@ -1,0 +1,308 @@
+/**
+ * marca.css
+ * -----------------------------------------------------------------------
+ * Sistema visual de la campaña, tomado de las piezas de diseño.
+ *
+ * CÓMO SE INSTALA
+ *
+ * 1. En styles.css, junto a los demás @import y ANTES de cualquier
+ *    regla. CSS exige que todos los @import precedan a las reglas, y
+ *    lightningcss falla el build si no es así:
+ *
+ *        @import "tailwindcss";
+ *        @import "./styles/marca.css";
+ *
+ * 2. Poppins se carga en la cabecera del documento, no acá. Un @import
+ *    de fuente dentro de este archivo termina, al empaquetar, después de
+ *    las reglas de Tailwind y rompe el build con ese mismo error. Ver
+ *    RECURSOS-MARCA.md para las etiquetas <link>.
+ *
+ * Los tokens --vc-* son la fuente de verdad del color. Las utilidades de
+ * abajo existen para no repetir la misma combinación de clases en cada
+ * sección, sobre todo el resaltado amarillo de los titulares, que en las
+ * piezas aparece en casi todas.
+ * -----------------------------------------------------------------------
+ */
+
+/**
+ * Agenda ExtraCondensed Bold, la tipografía de los titulares de la
+ * campaña. Poppins queda para el texto corrido.
+ *
+ * Los archivos van en public/fonts/, con el nombre en minúscula y sin
+ * espacios. "Agenda ExtraCondensed Bold.otf" obliga a escapar la URL y
+ * en algunos servidores falla, así que se renombra.
+ *
+ * El .otf funciona y está declarado último, para que el sitio ande sin
+ * convertir nada. Pero conviene generar el woff2: pesa entre tres y
+ * cinco veces menos y el navegador elige el primer formato que entiende,
+ * así que apenas exista deja de bajar el .otf sin tocar este archivo.
+ *
+ *   https://transfonter.org   o   npx fontsquirrel-cli
+ *
+ * `font-display: swap` muestra el titular con la tipografía de respaldo
+ * mientras la fuente descarga, en vez de dejar un hueco en blanco. En un
+ * titular grande el hueco se nota mucho más que el cambio de fuente.
+ *
+ * OJO CON LA LICENCIA. Agenda es una fuente comercial y el uso web se
+ * licencia aparte del de escritorio. Confirmar con comunicaciones que la
+ * Gobernación tiene la licencia web antes de publicar, porque el archivo
+ * queda descargable desde el sitio.
+ */
+@font-face {
+  font-family: "Agenda ExtraCondensed";
+  src:
+    url("/fonts/agenda-extracondensed-bold.woff2") format("woff2"),
+    url("/fonts/agenda-extracondensed-bold.woff") format("woff"),
+    url("/fonts/agenda-extracondensed-bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Paleta, tomada de las piezas */
+  --vc-crema: #fbf8c6;
+  --vc-amarillo: #ffd400;
+  --vc-cyan: #22abe2;
+  --vc-azul: #0079c1;
+  --vc-azul-oscuro: #00639f;
+  --vc-navy: #123e5c;
+
+  /* Texto */
+  --vc-tinta: #123e5c;
+  --vc-tinta-media: #35708f;
+  --vc-tinta-suave: #6b93aa;
+
+  /* Superficies claras */
+  --vc-blanco: #ffffff;
+  --vc-hueso: #f2fafd;
+}
+
+/**
+ * Poppins reemplaza a las tres familias anteriores. Las piezas usan una
+ * sola tipografía en todos los pesos, así que mantener display, sans y
+ * mono separadas solo introducía inconsistencia.
+ */
+body,
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/**
+ * Respaldo cuando Agenda no está disponible. Poppins es mucho más ancha,
+ * así que sin esto el titular ocupa cerca de un 30 por ciento más y
+ * rompe la composición de dos líneas.
+ */
+@supports not (font-family: "Agenda ExtraCondensed") {
+  .vc-titular {
+    letter-spacing: -0.03em;
+  }
+}
+
+/* ── Titulares ─────────────────────────────────────────────────────── */
+
+/**
+ * Los titulares de la campaña van en mayúscula, peso 800 y muy
+ * apretados. Sin el tracking negativo, Poppins queda mucho más suelta
+ * que la tipografía de las piezas.
+ */
+.vc-titular {
+  /* Agenda ya es extra condensada, así que no necesita el tracking
+     negativo que compensaba a Poppins. Si la fuente no carga, el
+     respaldo lo recupera. */
+  font-family: "Agenda ExtraCondensed", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 0.95;
+  letter-spacing: 0;
+
+  /* Un titular en mayúscula y muy apretado desborda con facilidad en
+     pantallas angostas. Estas dos reglas lo parten antes de que se salga
+     de su contenedor, en vez de generar scroll horizontal en toda la
+     página. */
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/**
+ * El resaltado amarillo detrás de una parte del titular. En las piezas
+ * el bloque sobresale un poco del texto, por eso el padding y el
+ * box-decoration-break, que lo mantiene parejo cuando el titular corta
+ * en dos líneas.
+ */
+.vc-resaltado,
+.vc-resaltado-crema {
+  color: var(--vc-azul);
+  padding: 0.1em 0.22em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.vc-resaltado {
+  background: var(--vc-amarillo);
+}
+
+.vc-resaltado-crema {
+  background: var(--vc-crema);
+}
+
+/**
+ * Un titular que contiene un resaltado necesita más aire entre líneas.
+ *
+ * El bloque de color crece con el padding, pero la altura de línea del
+ * titular es 0.95: el amarillo de una línea terminaba montándose sobre
+ * las letras de la de arriba. Se corrige con `:has()`, así que aplica
+ * solo cuando hay resaltado y los titulares sin él conservan su
+ * compresión.
+ */
+.vc-titular:has(.vc-resaltado),
+.vc-titular:has(.vc-resaltado-crema) {
+  line-height: 1.22;
+}
+
+/**
+ * Respaldo para navegadores sin `:has()`. Se pone a mano en el titular
+ * junto a .vc-titular cuando haga falta.
+ */
+.vc-titular-aireado {
+  line-height: 1.22;
+}
+
+/* ── Secciones con imagen de fondo ─────────────────────────────────── */
+
+/**
+ * Para las piezas que se usan como fondo.
+ *
+ * La imagen va en background y NO como <img>, para que el contenido real
+ * quede encima y siga siendo texto seleccionable y legible por un lector
+ * de pantalla. `background-size: cover` con un color de respaldo evita
+ * que la sección quede en blanco mientras la imagen carga o si falla.
+ *
+ * En pantallas angostas la imagen se oculta y queda solo el color: una
+ * pieza diseñada a 16:9 recortada a 9:16 no se entiende, y el contenido
+ * de encima ya carga el mensaje.
+ */
+.vc-fondo {
+  background-color: var(--vc-azul);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+@media (max-width: 900px) {
+  .vc-fondo {
+    background-image: none !important;
+  }
+}
+
+/**
+ * Velo para cuando el texto cae sobre una zona clara de la pieza. Se
+ * aplica al contenedor del contenido, no a la sección, para no teñir la
+ * imagen entera.
+ */
+.vc-velo {
+  background: color-mix(in srgb, var(--vc-azul) 82%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+/* ── Tarjetas ──────────────────────────────────────────────────────── */
+
+.vc-tarjeta {
+  background: var(--vc-blanco);
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--vc-azul) 14%, transparent);
+}
+
+.vc-tarjeta-crema {
+  background: var(--vc-crema);
+  border-radius: 0.5rem;
+}
+
+/* ── Cintas de sección ─────────────────────────────────────────────── */
+
+/**
+ * La barra superior de cada pieza, cyan con el logo a la izquierda y el
+ * lockup a la derecha. Ver MarcaHeader.tsx.
+ */
+.vc-cinta {
+  background: var(--vc-cyan);
+  color: var(--vc-crema);
+}
+
+/* ── Tema del mapa ─────────────────────────────────────────────────── */
+
+/**
+ * El mapa mantiene fondo oscuro porque los arcos y la rampa de color
+ * necesitan contraste, pero se reencuadra en el navy de la campaña en
+ * vez del gris azulado anterior, y el acento pasa al amarillo de marca.
+ */
+.theme-ayudas {
+  --background: oklch(0.22 0.05 240);
+  --surface: oklch(0.29 0.055 240);
+  --surface-raised: oklch(0.35 0.055 240);
+  --foreground: oklch(0.96 0.03 100);
+  --primary: oklch(0.62 0.15 240);
+  --primary-foreground: oklch(0.99 0.01 240);
+  --accent: oklch(0.86 0.17 95);
+  --accent-foreground: oklch(0.25 0.06 240);
+  --border: oklch(1 0 0 / 14%);
+  --muted-foreground: oklch(0.78 0.03 230);
+}
+
+/* ── Ajuste a la pantalla ──────────────────────────────────────────── */
+
+/**
+ * Para titulares que deben caber en una sección de alto fijo.
+ *
+ * El error a evitar es dimensionar solo con vw: en un monitor ancho, un
+ * clamp de 13vw da más de 240 px por línea y empuja el resto de la
+ * sección fuera del pliegue. `min(vw, vh)` limita por los dos lados, así
+ * que el texto se achica cuando la ventana es baja aunque sea ancha.
+ */
+.vc-titular-pantalla {
+  font-size: clamp(2rem, min(10vw, 13vh), 7rem);
+}
+
+/**
+ * Ninguna sección debe producir scroll horizontal. Las rejillas con
+ * mínimos fijos y los titulares largos son las dos causas habituales.
+ */
+.vc-seccion {
+  overflow-x: hidden;
+}
+
+/* ── Piezas gráficas en modo marco ─────────────────────────────────── */
+
+/**
+ * La pieza como fondo de una sección con datos encima. Ver
+ * PiezaGrafica.tsx.
+ *
+ * Va en CSS y no en línea porque una media query no se puede escribir en
+ * el atributo style. Las dos rutas llegan como variables desde el
+ * componente.
+ *
+ * `cover` acá sí está bien: en este modo la pieza es decoración y la
+ * información vive en el HTML de encima, así que recortar unos píxeles
+ * del borde no pierde nada.
+ */
+.vc-pieza-marco {
+  background-image: var(--pieza-escritorio);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 767px) {
+  .vc-pieza-marco {
+    background-image: var(--pieza-movil);
+  }
+}

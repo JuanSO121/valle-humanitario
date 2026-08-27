@@ -52,14 +52,14 @@ export function PodioMunicipios({ onSelect }: SelectableProps) {
             <button
               type="button"
               onClick={() => onSelect?.(m)}
-              className="flex w-full items-center gap-3.5 rounded-lg border border-[#00578C]/12 bg-white p-4 text-left transition hover:border-[#00578C]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00578C]"
+              className="flex w-full items-center gap-3.5 rounded-lg border border-[#0079C1]/12 bg-white p-4 text-left transition hover:border-[#0079C1]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]"
             >
-              <span className="min-w-7 text-center font-serif text-[27px] leading-none text-[#81C8EC]">
+              <span className="min-w-7 text-center font-serif text-[27px] leading-none text-[#22ABE2]">
                 {i + 1}
               </span>
               <span className="min-w-0 flex-1">
-                <b className="block truncate text-lg text-[#0B2233]">{m.nombre}</b>
-                <span className="mt-0.5 mb-2 block text-[15px] text-[#6E8B9E]">
+                <b className="block truncate text-lg text-[#123E5C]">{m.nombre}</b>
+                <span className="mt-0.5 mb-2 block text-[15px] text-[#6B93AA]">
                   {plural(m.entregas, "entrega", "entregas")} · {m.toneladas} toneladas
                 </span>
                 <Bar ratio={m.entregas / max} />
@@ -87,23 +87,23 @@ export function CoberturaPorZona() {
           const ratio = z.total > 0 ? z.atendidos / z.total : 0;
           const completa = z.atendidos === z.total;
           return (
-            <div key={z.zona} className="rounded-lg border border-[#00578C]/12 bg-white p-5">
-              <span className="text-base font-bold uppercase tracking-[0.08em] text-[#6E8B9E]">
+            <div key={z.zona} className="rounded-lg border border-[#0079C1]/12 bg-white p-5">
+              <span className="text-base font-bold uppercase tracking-[0.08em] text-[#6B93AA]">
                 {z.zona}
               </span>
-              <p className="mt-1 font-serif text-[38px] leading-none text-[#00578C]">
+              <p className="mt-1 font-serif text-[38px] leading-none text-[#0079C1]">
                 {z.atendidos}
-                <small className="text-base font-normal text-[#6E8B9E]"> de {z.total}</small>
+                <small className="text-base font-normal text-[#6B93AA]"> de {z.total}</small>
               </p>
               <div className="mt-3.5">
-                <Bar ratio={ratio} color={completa ? "#039A39" : "#F0B102"} />
+                <Bar ratio={ratio} color={completa ? "#2E9E4F" : "#FFD400"} />
               </div>
-              <p className="mt-2 text-base text-[#5E7789]">
+              <p className="mt-2 text-base text-[#35708F]">
                 {completa
                   ? "Todos recibieron ayudas"
                   : `${z.total - z.atendidos} sin entregas todavía`}
               </p>
-              <p className="mt-1 text-base text-[#6E8B9E]">
+              <p className="mt-1 text-base text-[#6B93AA]">
                 {plural(z.entregas, "entrega", "entregas")} en total
               </p>
             </div>
@@ -167,8 +167,8 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
             aria-pressed={zona === z}
             className={`rounded-full border px-3.5 py-1.5 text-base font-semibold transition ${
               zona === z
-                ? "border-[#00578C] bg-[#00578C] text-white"
-                : "border-[#00578C]/20 bg-white text-[#4E6B7C] hover:border-[#00578C]/50 hover:text-[#00578C]"
+                ? "border-[#0079C1] bg-[#0079C1] text-white"
+                : "border-[#0079C1]/20 bg-white text-[#35708F] hover:border-[#0079C1]/50 hover:text-[#0079C1]"
             }`}
           >
             {z === TODAS ? "Todas las zonas" : z}
@@ -182,17 +182,17 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Buscar municipio…"
         aria-label="Buscar municipio"
-        className="mt-3 w-full rounded-lg border border-[#00578C]/20 bg-white px-3.5 py-2.5 text-base text-[#0B2233] outline-none transition placeholder:text-[#8FAABC] focus:border-[#00578C]"
+        className="mt-3 w-full rounded-lg border border-[#0079C1]/20 bg-white px-3.5 py-2.5 text-base text-[#123E5C] outline-none transition placeholder:text-[#6B93AA] focus:border-[#0079C1]"
       />
 
-      <p className="mt-3 text-base text-[#6E8B9E]" aria-live="polite">
+      <p className="mt-3 text-base text-[#6B93AA]" aria-live="polite">
         {visibles.length === todos.length
           ? plural(visibles.length, "municipio", "municipios")
           : `${visibles.length} de ${todos.length} municipios`}
       </p>
 
       {visibles.length === 0 ? (
-        <p className="mt-6 rounded-lg border border-dashed border-[#00578C]/25 p-8 text-center text-base text-[#6E8B9E]">
+        <p className="mt-6 rounded-lg border border-dashed border-[#0079C1]/25 p-8 text-center text-base text-[#6B93AA]">
           Ningún municipio coincide. Prueba con otro nombre o quita el filtro de zona.
         </p>
       ) : (
@@ -202,13 +202,13 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
               key={m.destinoId}
               type="button"
               onClick={() => onSelect?.(m)}
-              className="rounded-lg border border-[#00578C]/12 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#00578C]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00578C] motion-reduce:hover:translate-y-0"
+              className="rounded-lg border border-[#0079C1]/12 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#0079C1]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] motion-reduce:hover:translate-y-0"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <b className="min-w-0 truncate text-lg text-[#0B2233]">{m.nombre}</b>
+                <b className="min-w-0 truncate text-lg text-[#123E5C]">{m.nombre}</b>
                 <span
                   className={`font-serif text-2xl ${
-                    m.entregas === 0 ? "text-[#6E8B9E]" : "text-[#00578C]"
+                    m.entregas === 0 ? "text-[#6B93AA]" : "text-[#0079C1]"
                   }`}
                 >
                   {m.entregas}
@@ -219,7 +219,7 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
                 <Bar ratio={m.entregas / max} color={BARRA_COLOR} />
               </div>
 
-              <div className="flex justify-between text-[15px] text-[#6E8B9E]">
+              <div className="flex justify-between text-[15px] text-[#6B93AA]">
                 <span>{m.toneladas} toneladas</span>
                 <span>{plural(m.entregas, "entrega", "entregas")}</span>
               </div>

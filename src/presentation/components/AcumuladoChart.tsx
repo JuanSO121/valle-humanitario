@@ -34,7 +34,7 @@ export function AcumuladoChart() {
   const gridValues = [0, Math.round(maxAcum / 2), maxAcum];
 
   return (
-    <div className="rounded-lg border border-[#00578C]/12 bg-white p-5 sm:p-6">
+    <div className="rounded-lg border border-[#0079C1]/12 bg-white p-5 sm:p-6">
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="w-full"
@@ -43,8 +43,8 @@ export function AcumuladoChart() {
       >
         <defs>
           <linearGradient id="acumulado-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#006BAC" stopOpacity="0.3" />
-            <stop offset="1" stopColor="#006BAC" stopOpacity="0.02" />
+            <stop offset="0" stopColor="#0079C1" stopOpacity="0.3" />
+            <stop offset="1" stopColor="#0079C1" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
@@ -55,17 +55,17 @@ export function AcumuladoChart() {
               x2={WIDTH - PAD_RIGHT}
               y1={yFor(v)}
               y2={yFor(v)}
-              stroke="#00578C"
+              stroke="#0079C1"
               strokeOpacity="0.08"
             />
-            <text x={PAD_LEFT - 9} y={yFor(v) + 4} textAnchor="end" className="fill-[#7E9AAD] text-[13px]">
+            <text x={PAD_LEFT - 9} y={yFor(v) + 4} textAnchor="end" className="fill-[#6B93AA] text-[13px]">
               {v}
             </text>
           </g>
         ))}
 
         <path d={areaPath} fill="url(#acumulado-fill)" />
-        <path d={linePath} fill="none" stroke="#00578C" strokeWidth="2.6" strokeLinejoin="round" />
+        <path d={linePath} fill="none" stroke="#0079C1" strokeWidth="2.6" strokeLinejoin="round" />
 
         {jornadas.map((j, i) => (
           <circle
@@ -73,8 +73,8 @@ export function AcumuladoChart() {
             cx={xFor(i)}
             cy={yFor(j.acumuladoEntregas)}
             r={i === jornadas.length - 1 ? 6.4 : 4.2}
-            fill="#00578C"
-            stroke="#F7FBFD"
+            fill="#0079C1"
+            stroke="#F2FAFD"
             strokeWidth={i === jornadas.length - 1 ? 2.4 : 1.6}
           >
             <title>
@@ -89,7 +89,7 @@ export function AcumuladoChart() {
             x={xFor(i)}
             y={HEIGHT - 10}
             textAnchor="middle"
-            className="fill-[#7E9AAD] text-[13px]"
+            className="fill-[#6B93AA] text-[13px]"
           >
             {j.dia}
           </text>
@@ -97,7 +97,7 @@ export function AcumuladoChart() {
       </svg>
 
       {entregasSinFecha > 0 && (
-        <p className="mt-3 text-[15px] text-[#6E8B9E]">
+        <p className="mt-3 text-[15px] text-[#6B93AA]">
           {entregasSinFecha === 1
             ? "Una entrega no tiene fecha registrada, por eso no aparece en esta curva."
             : `${entregasSinFecha} entregas no tienen fecha registrada, por eso no aparecen en esta curva.`}

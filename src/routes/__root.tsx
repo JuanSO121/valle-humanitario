@@ -35,6 +35,31 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
     ],
+    /**
+     * Poppins se carga acá y NO con un @import dentro de marca.css.
+     *
+     * Al empaquetar, un @import de fuente dentro de una hoja de estilos
+     * queda después de las reglas de Tailwind, y CSS exige que todos los
+     * @import precedan a cualquier regla: lightningcss falla el build con
+     * "@import rules must precede all rules".
+     *
+     * Cargarla en la cabecera además la pide antes de que el navegador
+     * termine de leer el CSS, así que el texto no parpadea con la fuente
+     * por defecto durante el primer render.
+     *
+     * Los preconnect abren la conexión con los dos dominios de Google
+     * Fonts mientras todavía se está parseando el HTML. El de gstatic
+     * necesita crossOrigin porque de ahí salen los archivos de fuente,
+     * que se piden en modo anónimo.
+     */
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap",
+      },
+    ],
   }),
   component: RootComponent,
 });

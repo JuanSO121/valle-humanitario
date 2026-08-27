@@ -39,7 +39,7 @@ export function MovimientoStatCards() {
       valor: `${porcentaje48}%`,
       label: "Salió en las primeras 48 horas",
       nota: `${primeras48} entregas en los dos primeros días.`,
-      color: "#F0B102",
+      color: "#FFD400",
     },
     cartago && {
       valor: String(cartago.entregas),
@@ -62,20 +62,29 @@ export function MovimientoStatCards() {
       {tarjetas.slice(0, 4).map((c) => (
         <div
           key={c.label}
-          className="rounded-lg border border-[#00578C]/12 border-l-[3px] bg-white p-5"
+          className="rounded-md border-l-4 bg-[#0079C1] p-5"
           style={{ borderLeftColor: c.color }}
         >
-          <div className="font-serif text-3xl leading-none text-[#0B2233]">{c.valor}</div>
-          <p className="mt-2 text-base font-bold uppercase tracking-[0.06em] text-[#4E6B7C]">
+          <div className="text-3xl font-extrabold leading-none text-[#FBF8C6]">{c.valor}</div>
+          <p className="mt-2 text-base font-bold uppercase tracking-[0.06em] text-white/85">
             {c.label}
           </p>
-          <p className="mt-1.5 text-base leading-6 text-[#5E7789]">{c.nota}</p>
+          <p className="mt-1.5 text-base leading-6 text-white">{c.nota}</p>
         </div>
       ))}
     </div>
   );
 }
 
+/**
+ * "Así avanzó la ruta". Reproduce la pieza de diseño con datos vivos:
+ * bloques alternados en azul y crema, uno por jornada que sumó
+ * municipios. Se hace por código y no como imagen porque los nombres
+ * cambian cada vez que la ruta llega a un municipio nuevo.
+ *
+ * El camión va como imagen de fondo, decorativo, y desaparece en
+ * pantallas angostas para no robarle ancho a los nombres.
+ */
 export function MunicipiosNuevosCallouts() {
   const { jornadas } = useOperacion();
   const conNuevos = jornadas.filter((j) => j.nuevos > 0);
@@ -83,18 +92,43 @@ export function MunicipiosNuevosCallouts() {
   if (conNuevos.length === 0) return null;
 
   return (
-    <div className="mt-6 grid gap-4 md:grid-cols-3">
-      {conNuevos.map((j) => (
-        <div key={j.fecha} className="rounded-lg border-l-4 border-[#5CC46B] bg-white p-5 shadow-sm">
-          <p className="text-base font-bold uppercase tracking-[0.06em] text-[#4E6B7C]">
-            {Number(j.dia)} de agosto
-          </p>
-          <p className="mt-1 font-serif text-2xl text-[#0B2233]">
-            {j.nuevos === 1 ? "1 municipio nuevo" : `${j.nuevos} municipios nuevos`}
-          </p>
-          <p className="mt-2 text-base leading-6 text-[#5E7789]">{j.nombresNuevos.join(", ")}</p>
-        </div>
-      ))}
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start">
+      <div className="relative">
+        <h3 className="vc-titular text-[clamp(2.25rem,7vw,4.5rem)] text-[#0079C1]">
+          Así <span className="vc-resaltado-crema">avanzó</span>
+          <br />
+          la ruta
+        </h3>
+
+        <img
+          src="/marca/camion-ruta-solidaridad.png"
+          alt=""
+          aria-hidden
+          className="mt-8 hidden w-full max-w-md lg:block"
+        />
+      </div>
+
+      <ol className="flex flex-col gap-3">
+        {conNuevos.map((j, i) => {
+          const enCrema = i % 2 === 1;
+          return (
+            <li
+              key={j.fecha}
+              className={`rounded-md p-5 ${
+                enCrema ? "bg-[#FBF8C6] text-[#0079C1]" : "bg-[#0079C1] text-[#FBF8C6]"
+              }`}
+            >
+              <p className="text-lg font-bold">
+                {Number(j.dia)} de agosto / +{j.nuevos}{" "}
+                {j.nuevos === 1 ? "municipio" : "municipios"}
+              </p>
+              <p className="mt-1.5 text-lg leading-7 font-medium">
+                {j.nombresNuevos.join(", ")}.
+              </p>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

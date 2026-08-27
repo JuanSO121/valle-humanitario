@@ -2,14 +2,48 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-C0oVWLci.js
-var router_C0oVWLci_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BNzzSuek.js
+var router_BNzzSuek_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
-	head: () => ({ meta: [{ charSet: "utf-8" }, {
-		name: "viewport",
-		content: "width=device-width, initial-scale=1"
-	}] }),
+	head: () => ({
+		meta: [{ charSet: "utf-8" }, {
+			name: "viewport",
+			content: "width=device-width, initial-scale=1"
+		}],
+		/**
+		* Poppins se carga acá y NO con un @import dentro de marca.css.
+		*
+		* Al empaquetar, un @import de fuente dentro de una hoja de estilos
+		* queda después de las reglas de Tailwind, y CSS exige que todos los
+		* @import precedan a cualquier regla: lightningcss falla el build con
+		* "@import rules must precede all rules".
+		*
+		* Cargarla en la cabecera además la pide antes de que el navegador
+		* termine de leer el CSS, así que el texto no parpadea con la fuente
+		* por defecto durante el primer render.
+		*
+		* Los preconnect abren la conexión con los dos dominios de Google
+		* Fonts mientras todavía se está parseando el HTML. El de gstatic
+		* necesita crossOrigin porque de ahí salen los archivos de fuente,
+		* que se piden en modo anónimo.
+		*/
+		links: [
+			{
+				rel: "preconnect",
+				href: "https://fonts.googleapis.com"
+			},
+			{
+				rel: "preconnect",
+				href: "https://fonts.gstatic.com",
+				crossOrigin: "anonymous"
+			},
+			{
+				rel: "stylesheet",
+				href: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+			}
+		]
+	}),
 	component: RootComponent
 });
 function RootComponent() {
@@ -39,7 +73,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-BWRmky00.mjs");
+var $$splitComponentImporter = () => import("./routes-BElzwgYi.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -81,4 +115,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_C0oVWLci_exports as t };
+export { getRouter, router_BNzzSuek_exports as t };

@@ -86,6 +86,29 @@ const CALI_DANE = "76001";
  */
 const INTENSITY_FULL_THRESHOLD = 5;
 
+/**
+ * Ids de las capas de etiqueta. Se mantienen arriba de todo el resto.
+ */
+const CAPAS_ETIQUETA = ["municipios-etq-nombre", "municipios-etq-valor"] as const;
+
+/**
+ * Sube los nombres de municipio al tope del mapa.
+ *
+ * Las etiquetas se crean junto con los polígonos, o sea antes que los
+ * arcos y los puntos, así que por orden de capa quedan debajo y el
+ * relleno de los municipios las tapa. `moveLayer` sin segundo argumento
+ * las manda al final de la pila.
+ *
+ * Hay que llamarlo cada vez que se agregan o se actualizan capas, no una
+ * sola vez al cargar: cualquier capa creada después vuelve a quedar por
+ * encima.
+ */
+function subirEtiquetas(map: MapLibreMap) {
+  CAPAS_ETIQUETA.forEach((id) => {
+    if (map.getLayer(id)) map.moveLayer(id);
+  });
+}
+
 const EMPTY_COLLECTION: maplibregl.GeoJSONSourceSpecification["data"] = {
   type: "FeatureCollection",
   features: [],
@@ -247,7 +270,7 @@ const BASE_STYLE: maplibregl.StyleSpecification = {
   },
   layers: [
     // Gris niebla azulado: el fondo tiene que LEERSE como fondo. Antes
-    // era #0B2233, el mismo azul profundo de la rampa territorial, así
+    // era #123E5C, el mismo azul profundo de la rampa territorial, así
     // que los municipios de menor volumen se confundían con el mar y con
     // los departamentos vecinos.
     { id: "bg", type: "background", paint: { "background-color": "#33404B" } },
@@ -323,7 +346,7 @@ function municipalityPopupHtml(
     // qué no hay cifras, en vez de mostrar un popup vacío.
     return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:190px">
       <strong style="display:block;font-size:17px;margin-bottom:6px">${escapeHtml(label)}</strong>
-      <span style="color:#9DB4C2;font-size:14px">No hace parte del conteo por municipio</span>
+      <span style="color:#A8CFE2;font-size:14px">No hace parte del conteo por municipio</span>
     </div>`;
   }
 
@@ -337,14 +360,14 @@ function municipalityPopupHtml(
 
   return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:200px;font-size:15px">
     <strong style="display:block;font-size:17px;margin-bottom:4px">${escapeHtml(label)}</strong>
-    ${stat.zona ? `<span style="display:block;color:#81C8EC;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zona)} del Valle</span>` : ""}
-    <span style="display:block;color:#9DB4C2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day))}</span>
+    ${stat.zona ? `<span style="display:block;color:#22ABE2;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zona)} del Valle</span>` : ""}
+    <span style="display:block;color:#A8CFE2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day))}</span>
     ${
       sinDespacho
         ? `<span style="color:#F58A76;font-size:14px;font-weight:600">Sin entregas en este periodo</span>`
         : `<div style="display:grid;grid-template-columns:1fr;gap:6px">
-      <div><b style="font-size:22px">${value.toLocaleString("es-CO")}</b><span style="display:block;color:#9DB4C2;font-size:14px">${moveLabel}</span></div>
-      <div><b style="font-size:22px">${toneladas.toLocaleString("es-CO")} t</b><span style="display:block;color:#9DB4C2;font-size:14px">estimadas</span></div>
+      <div><b style="font-size:22px">${value.toLocaleString("es-CO")}</b><span style="display:block;color:#A8CFE2;font-size:14px">${moveLabel}</span></div>
+      <div><b style="font-size:22px">${toneladas.toLocaleString("es-CO")} t</b><span style="display:block;color:#A8CFE2;font-size:14px">estimadas</span></div>
     </div>`
     }
   </div>`;
@@ -441,7 +464,7 @@ export function MapCanvas({
             "fill-color": [
               "case",
               ["boolean", ["feature-state", "selected"], false],
-              "#F0B102",
+              "#FFD400",
               ["boolean", ["feature-state", "filteredOut"], false],
               "#102332",
               ["coalesce", ["feature-state", "territoryToneColor"], ["get", "territoryToneColor"]],
@@ -462,7 +485,7 @@ export function MapCanvas({
           id: "municipios-line",
           type: "line",
           source: "municipios",
-          paint: { "line-color": "#CBE4F2", "line-width": 0.9, "line-opacity": 0.32 },
+          paint: { "line-color": "#FBF8C6", "line-width": 0.9, "line-opacity": 0.32 },
         });
 
         // Etiquetas: fuente propia de PUNTOS, no la de polígonos. El
@@ -478,16 +501,28 @@ export function MapCanvas({
           layout: {
             "text-field": ["get", "name"],
             "text-font": ["Noto Sans Regular"],
-            "text-size": 10.5,
-            "text-offset": [0, -0.35],
+            "text-size": 11,
+            // El ancla del polígono es su centro geométrico, que es
+            // justo donde el relleno es más sólido y donde suele caer el
+            // arco que llega. Se sube el nombre y se baja el número, con
+            // el centro libre.
+            "text-offset": [0, -0.95],
+            "text-anchor": "bottom",
             "text-transform": "uppercase",
             "text-letter-spacing": 0.04,
+            // Sin esto, en municipios pequeños del norte las etiquetas se
+            // pisan entre sí y MapLibre esconde algunas al azar.
+            "text-padding": 4,
+            "text-allow-overlap": false,
           },
           paint: {
             "text-color": "#FFFFFF",
-            "text-halo-color": "#0B2233",
-            "text-halo-width": 2.2,
-            "text-halo-blur": 0.4,
+            // Halo grueso y oscuro: el nombre cae sobre toda la rampa
+            // territorial, del azul más profundo al más claro, y sin
+            // esto se pierde justo en los municipios de mayor volumen.
+            "text-halo-color": "#08202E",
+            "text-halo-width": 2.4,
+            "text-halo-blur": 0.3,
           },
         });
         map.addLayer({
@@ -499,14 +534,20 @@ export function MapCanvas({
           layout: {
             "text-field": ["to-string", ["get", "value"]],
             "text-font": ["Noto Sans Regular"],
-            "text-size": 11,
-            "text-offset": [0, 0.8],
+            "text-size": 12,
+            "text-offset": [0, 0.5],
+            "text-anchor": "top",
+            "text-padding": 3,
+            "text-allow-overlap": false,
+            // Si no cabe, se oculta el número antes que el nombre: sin el
+            // nombre, la cifra no le dice nada a nadie.
+            "text-optional": true,
           },
           paint: {
-            "text-color": "#FFD103",
-            "text-halo-color": "#0B2233",
-            "text-halo-width": 2.2,
-            "text-halo-blur": 0.4,
+            "text-color": "#FFD400",
+            "text-halo-color": "#08202E",
+            "text-halo-width": 2.4,
+            "text-halo-blur": 0.3,
           },
         });
 
@@ -619,7 +660,7 @@ export function MapCanvas({
           "circle-color": [
             "case",
             ["boolean", ["feature-state", "selected"], false],
-            "#F0B102",
+            "#FFD400",
             [
               "interpolate",
               ["linear"],
@@ -906,12 +947,7 @@ export function MapCanvas({
       };
       rafRef.current = requestAnimationFrame(animate);
 
-      // Los nombres de municipio se agregan junto con los polígonos, o
-      // sea antes que los arcos y los puntos, así que quedaban debajo de
-      // ellos. Se suben al tope ahora que todas las capas existen.
-      ["municipios-etq-nombre", "municipios-etq-valor"].forEach((id) => {
-        if (map.getLayer(id)) map.moveLayer(id);
-      });
+      subirEtiquetas(map);
 
       readyRef.current = true;
       pendingRef.current.forEach((fn) => fn());
@@ -1076,6 +1112,11 @@ export function MapCanvas({
           },
         );
       });
+
+      // Cada repintado es un buen momento para reasegurar el orden: si
+      // algún efecto agregó una capa entre tanto, los nombres vuelven a
+      // quedar debajo del relleno.
+      subirEtiquetas(map);
     });
   }, [destinos, municipios, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
 
@@ -1113,6 +1154,10 @@ export function MapCanvas({
           ];
         }),
       });
+
+      // Después de cada actualización, por si alguna capa se agregó
+      // encima entre tanto.
+      subirEtiquetas(map);
     });
   }, [municipios, territoryMode, territoryDay, territoryZone]);
 
