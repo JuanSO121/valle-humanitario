@@ -25,9 +25,27 @@ import {
 } from "@/presentation/data/territoryData";
 import {
   describeLens,
-  territoryValue,
   TONELADAS_POR_DESPACHO,
+  valorTemporal,
 } from "@/presentation/data/territoryTime";
+
+/**
+ * Lo que el mapa necesita saber de cada municipio. Viene de la API a
+ * través de DashboardPage, no del catálogo estático: ese quedaba viejo
+ * apenas alguien agregaba una entrega al Excel, y el panel del mapa
+ * mostraba un total distinto al del resto de la página.
+ *
+ * La zona sí sale del catálogo, porque no cambia con las entregas.
+ */
+export interface MunicipioMapa {
+  nombre: string;
+  entregas: number;
+  dias: Record<string, number>;
+  toneladas: number;
+  zona: string | null;
+}
+
+export type MunicipiosMapa = ReadonlyMap<string, MunicipioMapa>;
 
 const OVERVIEW_CENTER: LngLat = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
@@ -269,6 +287,8 @@ interface Props {
    */
   territoryDay: string | null;
   territoryZone: TerritoryZone | "todas";
+  /** Entregas por municipio, indexadas por código DANE. Vienen de la API. */
+  municipios: MunicipiosMapa;
   routesMode: TerritoryRoutesMode;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
@@ -295,8 +315,9 @@ function municipalityPopupHtml(
   codigoDane: string,
   mode: TerritoryMapMode,
   day: string | null,
+  municipios: MunicipiosMapa,
 ): string {
-  const stat = getTerritoryStatByCode(codigoDane);
+  const stat = municipios.get(codigoDane);
   if (!stat) {
     // Cali y cualquier polígono fuera del catálogo caen acá: se dice por
     // qué no hay cifras, en vez de mostrar un popup vacío.
@@ -306,7 +327,7 @@ function municipalityPopupHtml(
     </div>`;
   }
 
-  const value = territoryValue(stat, mode, day);
+  const value = valorTemporal(stat, mode, day);
   // stat.toneladas es el total FINAL del municipio: solo sirve cuando no
   // hay día elegido. Con día, se estima sobre los despachos de ese corte.
   const toneladas =
@@ -316,7 +337,7 @@ function municipalityPopupHtml(
 
   return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:200px;font-size:15px">
     <strong style="display:block;font-size:17px;margin-bottom:4px">${escapeHtml(label)}</strong>
-    <span style="display:block;color:#81C8EC;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zone)} del Valle</span>
+    ${stat.zona ? `<span style="display:block;color:#81C8EC;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zona)} del Valle</span>` : ""}
     <span style="display:block;color:#9DB4C2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day))}</span>
     ${
       sinDespacho
@@ -340,6 +361,7 @@ export function MapCanvas({
   territoryMode,
   territoryDay,
   territoryZone,
+  municipios,
   routesMode,
   onSelectDestino,
   onSelectOrigen,
@@ -371,6 +393,8 @@ export function MapCanvas({
   territoryDayRef.current = territoryDay;
   const routesModeRef = useRef(routesMode);
   routesModeRef.current = routesMode;
+  const municipiosRef = useRef(municipios);
+  municipiosRef.current = municipios;
 
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
@@ -391,7 +415,10 @@ export function MapCanvas({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    // Abajo a la izquierda: arriba a la derecha vive el marcador y arriba
+    // a la izquierda el panel de territorio. En móvil el gesto de pellizcar
+    // ya cubre el zoom, así que estos botones no compiten por el espacio.
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
 
     const destinoPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
     const origenPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
@@ -456,7 +483,12 @@ export function MapCanvas({
             "text-transform": "uppercase",
             "text-letter-spacing": 0.04,
           },
-          paint: { "text-color": "#EAF4FA", "text-halo-color": "#08202E", "text-halo-width": 1.8 },
+          paint: {
+            "text-color": "#FFFFFF",
+            "text-halo-color": "#0B2233",
+            "text-halo-width": 2.2,
+            "text-halo-blur": 0.4,
+          },
         });
         map.addLayer({
           id: "municipios-etq-valor",
@@ -470,7 +502,12 @@ export function MapCanvas({
             "text-size": 11,
             "text-offset": [0, 0.8],
           },
-          paint: { "text-color": "#FFD103", "text-halo-color": "#08202E", "text-halo-width": 1.8 },
+          paint: {
+            "text-color": "#FFD103",
+            "text-halo-color": "#0B2233",
+            "text-halo-width": 2.2,
+            "text-halo-blur": 0.4,
+          },
         });
 
         map.on("mousemove", "municipios-fill", (e: MapLayerMouseEvent) => {
@@ -491,7 +528,13 @@ export function MapCanvas({
             municipalityPopup
               .setLngLat(e.lngLat)
               .setHTML(
-                municipalityPopupHtml(name, codigoDane, territoryModeRef.current, territoryDayRef.current),
+                municipalityPopupHtml(
+                  name,
+                  codigoDane,
+                  territoryModeRef.current,
+                  territoryDayRef.current,
+                  municipiosRef.current,
+                ),
               )
               .addTo(map);
           }
@@ -863,6 +906,13 @@ export function MapCanvas({
       };
       rafRef.current = requestAnimationFrame(animate);
 
+      // Los nombres de municipio se agregan junto con los polígonos, o
+      // sea antes que los arcos y los puntos, así que quedaban debajo de
+      // ellos. Se suben al tope ahora que todas las capas existen.
+      ["municipios-etq-nombre", "municipios-etq-valor"].forEach((id) => {
+        if (map.getLayer(id)) map.moveLayer(id);
+      });
+
       readyRef.current = true;
       pendingRef.current.forEach((fn) => fn());
       pendingRef.current = [];
@@ -990,7 +1040,7 @@ export function MapCanvas({
           .map((f) => String(f.id ?? f.properties?.["municipalityCode"] ?? ""))
           .filter((code) => code && code !== CALI_DANE && !getTerritoryStatByCode(code));
         if (sinMatch.length > 0) {
-          console.warn("[MapCanvas] códigos DANE sin match en territoryData:", [...new Set(sinMatch)]);
+          console.warn("[MapCanvas] códigos DANE sin match en el catálogo:", [...new Set(sinMatch)]);
         }
       }
 
@@ -1000,8 +1050,12 @@ export function MapCanvas({
 
         const code = String(id);
         const esCali = normId(code) === CALI_DANE;
-        const stat = getTerritoryStatByCode(code);
-        const tone = territoryToneIndex(territoryValue(stat, territoryMode, territoryDay), territoryMode);
+        const vivo = municipios.get(code);
+        const zona = vivo?.zona ?? getTerritoryStatByCode(code)?.zone ?? null;
+        const tone = territoryToneIndex(
+          valorTemporal(vivo, territoryMode, territoryDay),
+          territoryMode,
+        );
 
         map.setFeatureState(
           { source: "municipios", id: code },
@@ -1009,16 +1063,21 @@ export function MapCanvas({
             territoryToneColor: esCali ? TERRITORY_EXCLUDED : territoryColorForTone(tone),
             // Cali no tiene zona en el catálogo, así que se atenúa junto
             // con el resto apenas se filtra por una zona concreta.
-            filteredOut: territoryZone !== "todas" && stat?.zone !== territoryZone,
+            filteredOut: territoryZone !== "todas" && zona !== territoryZone,
             // Este SÍ va por nombre (el destino no trae código DANE),
             // pero con un normalizador que hace case-fold y saca tildes:
             // normId no lo hacía y "Riofrío" nunca matcheaba "RIOFRIO".
-            selected: !esCali && stat != null && sameMunicipality(selectedDestinoName, stat.name),
+            selected:
+              !esCali &&
+              sameMunicipality(
+                selectedDestinoName,
+                vivo?.nombre ?? getTerritoryStatByCode(code)?.name ?? null,
+              ),
           },
         );
       });
     });
-  }, [destinos, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
+  }, [destinos, municipios, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
 
   // --- etiquetas de municipio (nombre + conteo) ---------------------------
   useEffect(() => {
@@ -1038,15 +1097,16 @@ export function MapCanvas({
           const code = String(feature.id ?? props["municipalityCode"] ?? "");
           if (normId(code) === CALI_DANE) return [];
 
-          const stat = getTerritoryStatByCode(code);
-          if (territoryZone !== "todas" && stat?.zone !== territoryZone) return [];
+          const vivo = municipios.get(code);
+          const zona = vivo?.zona ?? getTerritoryStatByCode(code)?.zone ?? null;
+          if (territoryZone !== "todas" && zona !== territoryZone) return [];
 
           return [
             {
               type: "Feature" as const,
               properties: {
                 name: String(props["name"] ?? ""),
-                value: territoryValue(stat, territoryMode, territoryDay),
+                value: valorTemporal(vivo, territoryMode, territoryDay),
               },
               geometry: { type: "Point" as const, coordinates: [lng, lat] },
             },
@@ -1054,7 +1114,7 @@ export function MapCanvas({
         }),
       });
     });
-  }, [territoryMode, territoryDay, territoryZone]);
+  }, [municipios, territoryMode, territoryDay, territoryZone]);
 
   useEffect(() => {
     whenReady(() => {

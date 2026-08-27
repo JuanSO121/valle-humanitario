@@ -82,6 +82,34 @@ export function territoryValue(
   return territoryValueAsOf(stat, day);
 }
 
+/**
+ * Lo mismo que territoryValue pero sobre cualquier objeto que tenga
+ * entregas y días. Sirve para los municipios que vienen de la API, que
+ * no son TerritoryMunicipalityStat: el mapa dejó de leer el catálogo
+ * estático y ahora recibe estos.
+ */
+export interface ValorTemporal {
+  entregas: number;
+  dias: Record<string, number>;
+}
+
+export function valorTemporal(
+  stat: ValorTemporal | undefined,
+  lens: TerritoryMapMode,
+  day: string | null,
+): number {
+  if (!stat) return 0;
+  if (day === null) return stat.entregas;
+
+  if (lens === "jornada") return stat.dias[day] ?? 0;
+
+  const limite = Number(day);
+  return Object.entries(stat.dias).reduce(
+    (sum, [d, v]) => (Number(d) <= limite ? sum + v : sum),
+    0,
+  );
+}
+
 /** Etiqueta del estado temporal, para el HUD y los popups. */
 export function describeLens(lens: TerritoryMapMode, day: string | null): string {
   if (day === null) return "Total del departamento";

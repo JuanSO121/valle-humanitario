@@ -1,69 +1,98 @@
-// src/presentation/components/PanoramaPuente.tsx
+/**
+ * PanoramaPuente.tsx
+ * -----------------------------------------------------------------------
+ * El paso a paso que va del censo de documentos al total de entregas.
+ *
+ * Sin párrafo introductorio propio: la sección de Soportes documentales
+ * ya lo trae, y tener los dos seguidos repetía la misma idea dos veces
+ * con palabras distintas.
+ *
+ * Estas cifras salen del censo del Drive, que no está expuesto por
+ * ninguna ruta de la API. Es lo único del tablero que sigue siendo
+ * manual. Ver panoramaData.ts.
+ */
+import { useOperacion } from "@/presentation/state/OperacionContext";
 import { puenteSteps, type PuenteRow } from "@/presentation/data/panoramaData";
 
-function signedLabel(row: PuenteRow) {
-  if (row.kind === "resta") return row.delta.toString(); // ya viene negativo
-  if (row.kind === "suma") return `+${row.delta}`;
-  return row.delta.toLocaleString("es-CO");
-}
-
-function rowStyles(kind: PuenteRow["kind"]) {
-  switch (kind) {
-    case "resta":
-      return "text-[#DC3514]";
-    case "suma":
-      return "text-[#039A39]";
-    case "subtotal":
-      return "bg-[#00578C]/5 rounded font-semibold";
-    case "total":
-      return "border-t-2 border-[#00578C] pt-3 mt-1 font-bold text-2xl text-[#00578C]";
-    default:
-      return "";
-  }
-}
-
 export function PanoramaPuente() {
+  const { totalEntregas } = useOperacion();
+  const totalPuente = puenteSteps.find((f) => f.kind === "total")?.delta ?? 0;
+
   return (
-    <div className="mt-10 rounded-lg border border-[#00578C]/12 bg-white p-6">
-      <p className="mb-4 max-w-3xl text-sm leading-6 text-[#4E6B7C]">
-        Cada despacho de este tablero tiene un documento detrás. No es una relación de uno a uno
-        —un formato conjunto es varias entregas y un reescaneo no es ninguna— así que la cuenta va
-        paso a paso.{" "}
-        <b className="text-[#0B2233]">Si esta suma no cuadra, el tablero no se genera.</b>
-      </p>
-
-      <div className="divide-y divide-[#00578C]/10">
-        {puenteSteps.map((row) => (
-          <div key={row.id} className={`px-2 py-2.5 ${rowStyles(row.kind)}`}>
-            <div className="flex items-baseline justify-between gap-4">
-              <span
-                className={
-                  row.kind === "total"
-                    ? "text-xs font-bold uppercase tracking-[0.12em] text-[#00578C]"
-                    : "text-sm text-[#315A70]"
-                }
-              >
-                {row.label}
-              </span>
-              <span className="shrink-0 font-serif tabular-nums">{signedLabel(row)}</span>
-            </div>
-
-            {row.detail && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {row.detail.map((d) => (
-                  <span
-                    key={d.label}
-                    className="rounded-full bg-[#00578C]/5 px-2.5 py-1 text-[11px] text-[#5E7789]"
-                    title={d.note}
-                  >
-                    <b className="text-[#315A70]">{d.value}</b> {d.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
+    <>
+      <div className="rounded-xl border border-[#00578C]/12 bg-white px-5 py-3 sm:px-7 sm:py-4">
+        {puenteSteps.map((fila) => (
+          <Fila key={fila.id} fila={fila} />
         ))}
       </div>
+
+      {/* Sin esta nota, alguien compara los dos totales de la misma
+          página y concluye que uno está mal. */}
+      {totalEntregas > 0 && totalEntregas !== totalPuente && (
+        <p className="mt-4 max-w-2xl text-base leading-7 text-[#6E8B9E]">
+          Este conteo llega a {totalPuente.toLocaleString("es-CO")} y el resto del tablero muestra{" "}
+          {totalEntregas.toLocaleString("es-CO")}. No es una diferencia de datos, son dos formas de
+          contar. Aquí se cuentan documentos del archivo. En el resto del tablero se cuenta una
+          entrega por cada municipio que recibió, así que un formato que reparte a varios municipios
+          suma varias veces.
+        </p>
+      )}
+    </>
+  );
+}
+
+function Fila({ fila }: { fila: PuenteRow }) {
+  const esTotal = fila.kind === "total";
+  const esSubtotal = fila.kind === "subtotal";
+  const signo = fila.kind === "resta" ? "-" : fila.kind === "suma" ? "+" : "";
+  const valor = Math.abs(fila.delta).toLocaleString("es-CO");
+
+  return (
+    <div
+      className={[
+        "grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1 border-b border-[#00578C]/10 py-3",
+        esTotal ? "border-b-0 border-t-2 border-t-[#00578C] pt-4" : "",
+        esSubtotal ? "-mx-3 rounded bg-[#F7FBFD] px-3" : "",
+      ].join(" ")}
+    >
+      <span
+        className={
+          esTotal
+            ? "text-sm font-bold uppercase tracking-[0.12em] text-[#00578C]"
+            : esSubtotal
+              ? "text-base font-semibold text-[#0B2233]"
+              : "text-base text-[#4E6B7C]"
+        }
+      >
+        {fila.label}
+      </span>
+
+      <span
+        className={[
+          "font-serif tabular-nums",
+          esTotal ? "text-3xl text-[#00578C]" : "text-xl",
+          fila.kind === "resta" ? "text-[#C43A20]" : "",
+          fila.kind === "suma" ? "text-[#0B6B2B]" : "",
+          esSubtotal || esTotal ? "text-[#0B2233]" : "",
+        ].join(" ")}
+      >
+        {signo}
+        {valor}
+      </span>
+
+      {fila.detail && (
+        <ul className="col-span-2 mt-1 flex flex-wrap gap-x-3 gap-y-1.5">
+          {fila.detail.map((d) => (
+            <li
+              key={d.label}
+              className="rounded-full bg-[#F4F9FC] px-3 py-1 text-sm text-[#5E7789]"
+              title={d.note}
+            >
+              <b className="text-[#0B2233]">{d.value}</b> {d.label}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

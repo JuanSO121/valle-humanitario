@@ -7,7 +7,7 @@ import {
   viewTransitions,
   type ViewState,
 } from "@/presentation/state/viewState";
-import { MapCanvas } from "@/presentation/components/MapCanvas";
+import { MapCanvas, type MunicipioMapa } from "@/presentation/components/MapCanvas";
 import { Timeline } from "@/presentation/components/Timeline";
 import { MarcadorHUD } from "@/presentation/components/MarcadorHUD";
 import { AvisoEntrega } from "@/presentation/components/AvisoEntrega";
@@ -15,9 +15,9 @@ import { FlujosLegend } from "@/presentation/components/FlujosLegend";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
 import { TopBar } from "@/presentation/components/TopBar";
+import { useOperacion } from "@/presentation/state/OperacionContext";
 import {
   getTerritoryStat,
-  territoryMunicipalities,
   type TerritoryMapMode,
   type TerritoryRoutesMode,
   type TerritoryZone,
@@ -25,8 +25,8 @@ import {
 import {
   dayFromIsoDate,
   describeLens,
-  territoryValue,
   toneladasEstimadas,
+  valorTemporal,
 } from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
 
@@ -89,6 +89,43 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const territoryDay = useMemo(() => dayFromIsoDate(isoDate), [isoDate]);
 
   const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
+
+  /**
+   * Entregas por municipio, indexadas por código DANE, para que el mapa
+   * pinte con los datos de la API. El catálogo estático solo aporta la
+   * zona y el código de los municipios que todavía no registran
+   * entregas, para que aparezcan en gris y no desaparezcan del mapa.
+   */
+  const operacion = useOperacion();
+  const municipiosMapa = useMemo(() => {
+    const mapa = new Map<string, MunicipioMapa>();
+
+    // Arranca con todos los municipios del catálogo en cero, para que
+    // los que aún no reciben aparezcan en gris en vez de desaparecer.
+    for (const cat of operacion.catalogo) {
+      mapa.set(cat.codigoDane, {
+        nombre: cat.nombre,
+        entregas: 0,
+        dias: {},
+        toneladas: 0,
+        zona: cat.zona,
+      });
+    }
+
+    for (const m of operacion.municipios) {
+      const codigo = m.codigoDane ?? getTerritoryStat(m.nombre)?.codigoDane;
+      if (!codigo) continue;
+      mapa.set(codigo, {
+        nombre: m.nombre,
+        entregas: m.entregas,
+        dias: m.dias,
+        toneladas: m.toneladas,
+        zona: m.zona ?? getTerritoryStat(m.nombre)?.zone ?? null,
+      });
+    }
+
+    return mapa;
+  }, [operacion.catalogo, operacion.municipios]);
 
   const totalDespachosAsOf = useMemo(
     () => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0),
@@ -172,7 +209,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
     <div
       className={
         embedded
-          ? "theme-ayudas relative h-full min-h-[720px] w-full overflow-hidden bg-background"
+          ? "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background"
           : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background"
       }
     >
@@ -194,6 +231,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           territoryMode={lens}
           territoryDay={territoryDay}
           territoryZone={territoryZone}
+          municipios={municipiosMapa}
           routesMode={routesMode}
           onActivity={handleActivity}
           onSelectDestino={(id) => {
@@ -234,6 +272,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
       {!hayPanelAbiertoEnMobile && (
         <TerritoryControls
+          municipios={municipiosMapa}
           lens={lens}
           day={territoryDay}
           zone={territoryZone}
@@ -263,7 +302,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
       )}
 
       {!hayPanelAbiertoEnMobile && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-4">
+        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-3">
           <Timeline
             dates={timelineDates}
             currentDate={viewState.timelineDate}
@@ -291,6 +330,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 }
 
 interface TerritoryControlsProps {
+  municipios: ReadonlyMap<string, MunicipioMapa>;
   lens: TerritoryMapMode;
   /** Derivado del timeline. null = toda la operación. */
   day: string | null;
@@ -301,9 +341,10 @@ interface TerritoryControlsProps {
   onRoutesModeChange: (mode: TerritoryRoutesMode) => void;
 }
 
-const ZONES: Array<TerritoryZone | "todas"> = ["todas", "Norte", "Centro", "Sur", "Pacífico"];
+const TODAS = "todas";
 
 function TerritoryControls({
+  municipios,
   lens,
   day,
   zone,
@@ -312,26 +353,39 @@ function TerritoryControls({
   onZoneChange,
   onRoutesModeChange,
 }: TerritoryControlsProps) {
-  const visibleMunicipalities =
-    zone === "todas"
-      ? territoryMunicipalities
-      : territoryMunicipalities.filter((m) => m.zone === zone);
+  // Los mismos datos que pinta el mapa. Antes esto sumaba el catálogo
+  // estático y el panel mostraba un total distinto al del resto de la
+  // página.
+  // Las zonas salen de los datos, no de una lista escrita a mano: si el
+  // Excel reclasifica un municipio, el filtro se actualiza solo.
+  const zonasDisponibles = [
+    ...new Set(
+      [...municipios.values()]
+        .map((m) => m.zona)
+        .filter((z): z is string => typeof z === "string" && z.length > 0),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "es"));
 
-  // Mismo lente que el mapa: si el panel dijera otra cosa que los
-  // polígonos, volveríamos al problema que este cambio vino a arreglar.
-  const totalDespachos = visibleMunicipalities.reduce(
-    (sum, m) => sum + territoryValue(m, lens, day),
-    0,
+  const visibleMunicipalities = [...municipios.values()].filter(
+    (m) => zone === "todas" || m.zona === zone,
   );
 
+  const totalDespachos = visibleMunicipalities.reduce(
+    (sum, m) => sum + valorTemporal(m, lens, day),
+    0,
+  );
+  const conEntregas = visibleMunicipalities.filter(
+    (m) => valorTemporal(m, lens, day) > 0,
+  ).length;
+
   return (
-    <aside className="pointer-events-auto absolute left-4 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 w-[min(22rem,calc(100vw-2rem))] rounded-md border border-border bg-surface/95 p-3 shadow-sm backdrop-blur">
+    <aside className="pointer-events-auto absolute inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[45dvh] overflow-y-auto rounded-lg border border-border bg-surface/95 p-4 shadow-sm backdrop-blur md:inset-x-auto md:bottom-auto md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))] md:max-h-[calc(100dvh-9rem)] md:w-[22rem]">
       <div className="flex items-start justify-between gap-3">
         <div>
           <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ayudas entregadas</span>
           <p className="mt-1.5 text-base font-semibold text-foreground">
             {plural(totalDespachos, "entrega", "entregas")} en{" "}
-            {plural(visibleMunicipalities.length, "municipio", "municipios")}
+            {plural(conEntregas, "municipio", "municipios")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{describeLens(lens, day)}</p>
         </div>
@@ -353,19 +407,23 @@ function TerritoryControls({
 
       {day === null && lens === "acumulado" && (
         <p className="mt-2.5 text-sm leading-5 text-muted-foreground">
-          Mueve la línea de tiempo y ves cómo se entregaron las ayudas día por día.
+          Mueva la línea de tiempo para ver cómo se entregaron las ayudas día por día.
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {ZONES.map((item) => (
-          <ToggleButton key={item} active={zone === item} onClick={() => onZoneChange(item)}>
-            {item === "todas" ? "Todas" : item}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {[TODAS, ...zonasDisponibles].map((item) => (
+          <ToggleButton
+            key={item}
+            active={zone === item}
+            onClick={() => onZoneChange(item as TerritoryZone | "todas")}
+          >
+            {item === TODAS ? "Todas" : item}
           </ToggleButton>
         ))}
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1">
+      <div className="mt-3 grid grid-cols-1 gap-1 rounded-md bg-background/70 p-1 sm:grid-cols-3">
         <ToggleButton
           active={routesMode === "visibles"}
           onClick={() => onRoutesModeChange("visibles")}

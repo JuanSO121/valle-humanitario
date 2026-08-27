@@ -3,17 +3,17 @@
  * -----------------------------------------------------------------------
  * Única clase que conoce la URL del Web App de Apps Script y el contrato
  * `?route=...`. Nada fuera de este archivo debería construir esa URL a
- * mano — así, si el día de mañana el backend deja de ser Apps Script,
+ * mano, así, si el día de mañana el backend deja de ser Apps Script,
  * solo se reemplaza este archivo.
  *
  * Cada método corresponde 1:1 a una ruta ya cerrada y probada. No hay
- * traducción de forma de datos acá — eso ya lo hace Transforms.gs; este
+ * traducción de forma de datos acá, eso ya lo hace Transforms.gs; este
  * archivo tipa la respuesta contra domain/entities.ts, valida errores de
  * red/HTTP, y valida el SHAPE mínimo esperado de cada respuesta.
  *
  * La validación de shape existe porque Apps Script cachea respuestas ya
  * armadas (CacheLayer.gs, TTL 6h) y las implementaciones Web App no se
- * actualizan solas al editar el código fuente — si el contrato cambia
+ * actualizan solas al editar el código fuente. Si el contrato cambia
  * (ej. route=flujos pasa de array plano a {flujos, excluidos}) y el
  * deploy o la caché quedan desincronizados con Transforms.gs, un objeto
  * con forma vieja pasaría como 200 OK válido y rompería río abajo con un
@@ -27,6 +27,8 @@ import type {
   Municipio,
   Categoria,
   FlujosResponse,
+  ToneladasResponse,
+  AyudaResponse,
   DestinoResumenLista,
   DestinoResumen,
   DestinoLogistica,
@@ -56,7 +58,12 @@ export class AyudasApiRepository {
       url.searchParams.set(key, value);
     }
 
-    const response = await fetch(url.toString());
+    // `no-store` a propósito. Apps Script responde /exec con un 302 a
+    // googleusercontent.com y esa respuesta sí se puede cachear en el
+    // navegador. El síntoma es corregir el Excel, invalidar la caché del
+    // backend, recargar y seguir viendo lo viejo. Quién decide cuánto
+    // dura el dato es React Query con su staleTime, no el HTTP cache.
+    const response = await fetch(url.toString(), { cache: "no-store" });
     if (!response.ok) {
       throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
     }
@@ -65,7 +72,7 @@ export class AyudasApiRepository {
 
     // Code.gs responde `{ error: true, status, message }` con HTTP 200
     // en varios casos (ContentService no permite fijar el status code de
-    // la respuesta) — el chequeo real de error está en el payload, no
+    // la respuesta), el chequeo real de error está en el payload, no
     // solo en response.ok.
     if (payload && typeof payload === "object" && "error" in payload && (payload as any).error) {
       const p = payload as { message?: string; status?: number };
@@ -125,30 +132,68 @@ export class AyudasApiRepository {
       // "porFecha" SÍ es parte del contrato (Transforms.gs.buildFlujos_ ya
       // lo arma), pero se valida como advertencia no bloqueante en vez de
       // rechazar toda la respuesta con un 502. Motivo: ya pasó en
-      // producción que la implementación (deployment) del Web App o la
-      // caché de 6h de CacheLayer.gs quedaron desincronizadas del código
-      // fuente y sirvieron flujos SIN porFecha — con el chequeo estricto
-      // anterior, eso tumbaba la query de flujos COMPLETA (React Query
-      // queda en error, flujosResponse === undefined) y con ella el mapa
-      // base entero, incluidos los arcos y su animación, que no dependen
-      // en absoluto de porFecha (solo el scrubber del timeline lo usa).
-      // useFlujosAsOf ya trata porFecha como opcional (`?? []`) y
-      // DashboardPage.timelineDates hace lo mismo — así que degradar acá
-      // a "sin fechas de timeline disponibles" es seguro y no rompe nada
-      // río abajo. El console.warn deja rastro para diagnosticar el
-      // deployment/caché desincronizados sin bloquear al usuario.
+      // producción que la implementación del Web App o la caché de 6h de
+      // CacheLayer.gs quedaron desincronizadas del código fuente y
+      // sirvieron flujos SIN porFecha. Con el chequeo estricto anterior,
+      // eso tumbaba la query de flujos COMPLETA (React Query queda en
+      // error, flujosResponse === undefined) y con ella el mapa base
+      // entero, incluidos los arcos y su animación, que no dependen en
+      // absoluto de porFecha.
+      //
+      // OJO: hoy porFecha pesa más que antes. Además del timeline,
+      // alimenta toda la derivación de la operación (jornadas, días con
+      // entrega, fecha de corte, cobertura por día). Sin ese campo el
+      // tablero sigue mostrando el mapa y los totales por municipio,
+      // pero las secciones de "Cuándo se entregó" y los KPI de días
+      // quedan vacíos. El console.warn es el rastro para diagnosticarlo.
       const primerFlujo = obj["flujos"][0];
       if (primerFlujo && !Array.isArray((primerFlujo as Record<string, unknown>)["porFecha"])) {
         // eslint-disable-next-line no-console
         console.warn(
-          'route=flujos: los flujos no traen "porFecha" (array) — probablemente la ' +
+          'route=flujos: los flujos no traen "porFecha" (array). Probablemente la ' +
             "implementación del Web App de Apps Script está desactualizada respecto a " +
             "Transforms.gs, o CacheLayer.gs sirvió una respuesta vieja (TTL 6h). El mapa " +
-            "y los arcos funcionan igual; el timeline no va a tener fechas para reproducir " +
-            'hasta que se re-implemente ("Nueva versión") y/o se corra limpiarCache().',
+            "y los arcos funcionan igual. Las secciones por fecha y el timeline quedan " +
+            'sin datos hasta que se re-implemente ("Nueva versión") y se corra limpiarCache().',
         );
       }
 
+      return null;
+    });
+  }
+
+  /**
+   * Serie diaria de toneladas, de la hoja TONELADAS.
+   *
+   * Puede no existir todavía: si la implementación del Web App no tiene
+   * la ruta, Code.gs responde `{ error: true, status: 404 }` con HTTP
+   * 200 y `request` lo convierte en ApiError. El tablero trata ese fallo
+   * como "sin serie medida" y cae al estimado por entregas, así que no
+   * hace falta protegerlo acá. Ver useToneladas y OperacionContext.
+   */
+  getToneladas(): Promise<ToneladasResponse> {
+    return this.request<ToneladasResponse>("toneladas", {}, (p) => {
+      if (!p || typeof p !== "object") return "se esperaba un objeto";
+      const obj = p as Record<string, unknown>;
+      if (!Array.isArray(obj["serie"])) return 'falta el campo "serie" (array)';
+      if (typeof obj["total"] !== "number") return 'falta el campo "total" (número)';
+      return null;
+    });
+  }
+
+  /**
+   * Composición de lo entregado, grupos atendidos y canales.
+   *
+   * Igual que getToneladas, puede no existir todavía. El tablero cae a
+   * las cifras del catálogo si falla.
+   */
+  getAyuda(): Promise<AyudaResponse> {
+    return this.request<AyudaResponse>("ayuda", {}, (p) => {
+      if (!p || typeof p !== "object") return "se esperaba un objeto";
+      const obj = p as Record<string, unknown>;
+      if (!Array.isArray(obj["categorias"])) return 'falta el campo "categorias" (array)';
+      if (!Array.isArray(obj["poblaciones"])) return 'falta el campo "poblaciones" (array)';
+      if (!Array.isArray(obj["canales"])) return 'falta el campo "canales" (array)';
       return null;
     });
   }
@@ -159,12 +204,12 @@ export class AyudasApiRepository {
     );
   }
 
-  /** Vista PRINCIPAL de un destino — solo ENVIOS_CATEGORIA. */
+  /** Vista PRINCIPAL de un destino, solo ENVIOS_CATEGORIA. */
   getDestino(id: string): Promise<DestinoResumen> {
     return this.request<DestinoResumen>("destino", { id });
   }
 
-  /** Vista SECUNDARIA — solo DESPACHOS. Nunca sumar contra getDestino(). */
+  /** Vista SECUNDARIA, solo DESPACHOS. Nunca sumar contra getDestino(). */
   getDestinoLogistica(id: string): Promise<DestinoLogistica> {
     return this.request<DestinoLogistica>("destino-logistica", { id });
   }

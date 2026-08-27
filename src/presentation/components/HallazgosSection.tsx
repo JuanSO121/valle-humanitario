@@ -6,9 +6,15 @@
  * a verificarla.
  * -----------------------------------------------------------------------
  */
-import { EJE_COLOR, EJE_ETIQUETA, hallazgos } from "@/presentation/data/hallazgosData";
+import { useOperacion } from "@/presentation/state/OperacionContext";
+import { useAyuda } from "@/application/hooks/useAyuda";
+import { EJE_COLOR, EJE_ETIQUETA, hallazgosDe } from "@/presentation/data/hallazgosData";
 
 export function HallazgosSection() {
+  const op = useOperacion();
+  const { data: ayuda } = useAyuda();
+  const hallazgos = hallazgosDe(op, ayuda);
+
   return (
     <div className="mx-auto max-w-6xl">
       <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#81C8EC]">
@@ -18,7 +24,7 @@ export function HallazgosSection() {
         Lo que muestran los datos
       </h2>
       <p className="mt-4 max-w-2xl text-lg leading-8 text-[#BBD6E6]">
-        Ocho lecturas sobre cómo se movió la ayuda en el departamento.
+        {hallazgos.length} lecturas sobre cómo se movió la ayuda en el departamento.
       </p>
 
       <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -41,8 +47,11 @@ export function HallazgosSection() {
       </div>
 
       <p className="mt-12 max-w-3xl text-base leading-7 text-[#9DB4C2]">
-        La información llega hasta el 25 de agosto de 2026. Estas cifras muestran las ayudas que se
-        entregaron. No miden cuánta ayuda necesita cada municipio.
+        {op.fechaCorteLarga
+          ? `La información llega hasta el ${op.fechaCorteLarga}. `
+          : ""}
+        Estas cifras muestran las ayudas que se entregaron. No miden cuánta ayuda necesita cada
+        municipio.
       </p>
     </div>
   );

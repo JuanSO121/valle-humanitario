@@ -1,56 +1,51 @@
 /**
- * EvolucionHeatmap.tsx, Nivel 5, "¿Cómo ha cambiado?"
+ * EvolucionHeatmap.tsx
  * -----------------------------------------------------------------------
- * Una casilla por municipio y jornada. Se deriva de
- * `territoryMunicipalities[].dias`, así que no hay data nueva ni riesgo
- * de que se desincronice del mapa: es literalmente la misma fuente que
- * colorea los polígonos.
- *
- * La intensidad va por opacidad sobre un azul único, no por rampa
- * discreta: acá interesa comparar dentro de la fila (¿qué día volvió a
- * recibir?), no clasificar en cortes.
- * -----------------------------------------------------------------------
+ * Una casilla por municipio y día. Todo sale de la API vía
+ * OperacionContext: los días, las entregas y las zonas se recalculan
+ * solos cuando cambia el Excel. Antes esta rejilla leía un catálogo
+ * estático y quedaba vieja apenas se agregaba una entrega.
  */
 import { useMemo } from "react";
-import {
-  TERRITORY_DAYS,
-  territoryMunicipalities,
-  type TerritoryMunicipalityStat,
-  type TerritoryZone,
-} from "@/presentation/data/territoryData";
+import { useOperacion } from "@/presentation/state/OperacionContext";
+import type { MunicipioOperacion } from "@/application/derivations/operacion";
 import { SectionLabel } from "./storyPrimitives";
 
-const ORDEN_ZONAS: TerritoryZone[] = ["Norte", "Centro", "Sur", "Pacífico"];
-
-/** Máximo de despachos en una sola casilla, fija el tope de opacidad. */
-const MAX_DIA = Math.max(
-  1,
-  ...territoryMunicipalities.flatMap((m) => Object.values(m.dias)),
-);
-
-function celdaColor(value: number): string {
-  if (value <= 0) return "rgba(255,255,255,0.055)";
-  // Piso de 0.42 para que un solo despacho ya se lea contra el fondo.
-  const alpha = 0.42 + (value / MAX_DIA) * 0.58;
-  return `rgba(129,200,236,${alpha.toFixed(2)})`;
-}
+const ORDEN_ZONAS = ["Norte", "Centro", "Sur", "Pacífico"];
 
 export function EvolucionHeatmap({
   onSelect,
 }: {
-  // `| undefined` explícito por exactOptionalPropertyTypes (ver storyPrimitives).
-  onSelect?: ((municipio: TerritoryMunicipalityStat) => void) | undefined;
+  onSelect?: ((municipio: MunicipioOperacion) => void) | undefined;
 }) {
-  const porZona = useMemo(
-    () =>
-      ORDEN_ZONAS.map((zone) => ({
-        zone,
-        filas: territoryMunicipalities
-          .filter((m) => m.zone === zone)
-          .sort((a, b) => b.despachos - a.despachos || a.name.localeCompare(b.name, "es")),
-      })).filter((g) => g.filas.length > 0),
-    [],
+  const { jornadas, municipios } = useOperacion();
+
+  const dias = useMemo(() => jornadas.map((j) => j.dia), [jornadas]);
+
+  /** Tope de la escala: la casilla más alta de toda la rejilla. */
+  const maxDia = useMemo(
+    () => Math.max(1, ...municipios.flatMap((m) => Object.values(m.dias))),
+    [municipios],
   );
+
+  const porZona = useMemo(() => {
+    const zonas = [...ORDEN_ZONAS, "Sin zona"];
+    return zonas
+      .map((zona) => ({
+        zona,
+        filas: municipios.filter((m) => (m.zona ?? "Sin zona") === zona),
+      }))
+      .filter((g) => g.filas.length > 0);
+  }, [municipios]);
+
+  if (dias.length === 0) return null;
+
+  const celdaColor = (value: number) => {
+    if (value <= 0) return "rgba(255,255,255,0.055)";
+    // Piso de 0.42 para que una sola entrega ya se lea contra el fondo.
+    const alpha = 0.42 + (value / maxDia) * 0.58;
+    return `rgba(129,200,236,${alpha.toFixed(2)})`;
+  };
 
   return (
     <section>
@@ -59,11 +54,12 @@ export function EvolucionHeatmap({
         Cada casilla es un día. Más azul, más entregas ese día.
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-lg border border-white/12 bg-[#0B2233] p-5">
-        <div className="min-w-[680px]">
+      <div className="mt-6 overflow-x-auto rounded-lg border border-white/12 bg-[#0B2233] p-4 sm:p-5">
+        <div className="min-w-[660px] [--col-nombre:96px] sm:[--col-nombre:112px]">
           <Fila
+            dias={dias}
             etiqueta=""
-            celdas={TERRITORY_DAYS.map((d) => (
+            celdas={dias.map((d) => (
               <span key={d} className="text-center text-sm text-[#7E9AAD]">
                 {d}
               </span>
@@ -71,36 +67,39 @@ export function EvolucionHeatmap({
             total={<span className="text-sm text-[#7E9AAD]">total</span>}
           />
 
-          {porZona.map(({ zone, filas }) => (
-            <div key={zone}>
+          {porZona.map(({ zona, filas }) => (
+            <div key={zona}>
               <p className="mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#81C8EC]">
-                {zone}
+                {zona}
               </p>
               {filas.map((m) => (
                 <button
-                  key={m.codigoDane}
+                  key={m.destinoId}
                   type="button"
                   onClick={() => onSelect?.(m)}
                   className="block w-full rounded transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#81C8EC]"
                 >
                   <Fila
-                    etiqueta={m.name}
-                    celdas={TERRITORY_DAYS.map((d) => {
+                    dias={dias}
+                    etiqueta={m.nombre}
+                    celdas={dias.map((d) => {
                       const v = m.dias[d] ?? 0;
                       return (
                         <span
                           key={d}
-                          title={`${m.name} · ${d} de agosto · ${v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`}`}
-                          className="flex h-[21px] items-center justify-center rounded-sm text-[9.6px] font-bold text-[#06202F]"
+                          title={`${m.nombre}, día ${d}: ${
+                            v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`
+                          }`}
+                          className="flex h-[22px] items-center justify-center rounded-sm text-[11px] font-bold text-[#06202F]"
                           style={{ background: celdaColor(v) }}
                         >
-                          {v > 1 ? v : ""}
+                          {v > 0 ? v : ""}
                         </span>
                       );
                     })}
                     total={
                       <span className="text-right font-serif text-base text-white">
-                        {m.despachos}
+                        {m.entregas}
                       </span>
                     }
                   />
@@ -115,10 +114,12 @@ export function EvolucionHeatmap({
 }
 
 function Fila({
+  dias,
   etiqueta,
   celdas,
   total,
 }: {
+  dias: string[];
   etiqueta: string;
   celdas: React.ReactNode[];
   total: React.ReactNode;
@@ -126,7 +127,7 @@ function Fila({
   return (
     <div
       className="grid items-center gap-[2px] py-[1px]"
-      style={{ gridTemplateColumns: `112px repeat(${TERRITORY_DAYS.length}, 1fr) 42px` }}
+      style={{ gridTemplateColumns: `var(--col-nombre) repeat(${dias.length}, 1fr) 42px` }}
     >
       <span className="truncate pr-1.5 text-left text-[15px] text-[#A9C2D2]">{etiqueta}</span>
       {celdas}
