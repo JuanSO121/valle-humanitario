@@ -167,16 +167,6 @@ var CalendarDays = createLucideIcon("calendar-days", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var ChevronDown = createLucideIcon("chevron-down", [["path", {
-	d: "m6 9 6 6 6-6",
-	key: "qrunsl"
-}]]);
-/**
-* @license lucide-react v0.575.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
 var ChevronLeft = createLucideIcon("chevron-left", [["path", {
 	d: "m15 18-6-6 6-6",
 	key: "1wnfg3"
@@ -370,4 +360,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { Menu as a, Lightbulb as c, ChevronDown as d, CalendarDays as f, PackageCheck as i, House as l, Truck as n, Map as o, Package as r, MapPin as s, X as t, ChevronLeft as u };
+export { Menu as a, Lightbulb as c, CalendarDays as d, PackageCheck as i, House as l, Truck as n, Map as o, Package as r, MapPin as s, X as t, ChevronLeft as u };

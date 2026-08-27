@@ -25,7 +25,7 @@
 import { useState } from "react";
 
 const ORIGENES_LEGEND = [
-  { id: "ORI-CALI", nombre: "Cali (bodega central)", color: "#2f6fed" },
+  { id: "ORI-CALI", nombre: "Centro de Acopio Antigua Licorera del Valle", color: "#2f6fed" },
   { id: "ORI-CARTAGO", nombre: "Centro de acopio Cartago", color: "#e6883c" },
 ] as const;
 

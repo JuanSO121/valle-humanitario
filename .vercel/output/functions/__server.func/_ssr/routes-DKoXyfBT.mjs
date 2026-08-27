@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { a as Menu, c as Lightbulb, d as ChevronDown, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BxNFea7k.js
+import { a as Menu, c as Lightbulb, d as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as ChevronLeft } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DKoXyfBT.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -595,7 +595,7 @@ function leerCantidad(frame) {
 */
 var ORIGENES_LEGEND = [{
 	id: "ORI-CALI",
-	nombre: "Cali (bodega central)",
+	nombre: "Centro de Acopio Antigua Licorera del Valle",
 	color: "#2f6fed"
 }, {
 	id: "ORI-CARTAGO",
@@ -2771,7 +2771,7 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 		const observer = new IntersectionObserver((entries) => {
 			for (const entry of entries) if (entry.isIntersecting) visiblesRef.current.add(entry.target.id);
 			else visiblesRef.current.delete(entry.target.id);
-			const actual = items.find((i) => visiblesRef.current.has(i.id));
+			const actual = items.find((item) => visiblesRef.current.has(item.id));
 			if (actual) setActivo(actual.id);
 		}, {
 			root,
@@ -2779,8 +2779,8 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 			threshold: 0
 		});
 		items.forEach((item) => {
-			const el = document.getElementById(item.id);
-			if (el) observer.observe(el);
+			const elemento = document.getElementById(item.id);
+			if (elemento) observer.observe(elemento);
 		});
 		return () => {
 			observer.disconnect();
@@ -2789,7 +2789,9 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 	}, [items, scrollRootId]);
 	const inicioId = homeId ?? items[0]?.id ?? "";
 	const irA = (id) => {
-		document.getElementById(id)?.scrollIntoView({
+		const elemento = document.getElementById(id);
+		if (!elemento) return;
+		elemento.scrollIntoView({
 			behavior: "smooth",
 			block: "start"
 		});
@@ -2814,7 +2816,18 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
 			"aria-label": "Secciones",
-			className: `fixed left-0 top-0 z-50 flex h-dvh flex-col border-r border-[#00578C]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}`,
+			className: `
+          fixed left-0 top-0 z-50 flex h-dvh flex-col
+          border-r border-[#00578C]/12
+          bg-white
+          py-5
+          transition-[width,transform]
+          duration-300
+          ease-out
+          motion-reduce:transition-none
+
+          ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}
+        `,
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mb-5 flex items-center gap-3 px-1",
@@ -2855,6 +2868,7 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 						type: "button",
 						onClick: () => setAbierto(true),
 						"aria-label": "Abrir menú",
+						title: "Abrir menú",
 						className: "hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#4E6B7C] transition hover:bg-[#F4F9FC] md:flex",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
 							className: "size-6",
@@ -2869,9 +2883,18 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 							type: "button",
 							onClick: () => irA(id),
-							"aria-current": esActivo ? "true" : void 0,
-							title: abierto ? void 0 : label,
-							className: `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${esActivo ? "bg-[#E8F6FC] text-[#00578C]" : "text-[#4E6B7C] hover:bg-[#F4F9FC] hover:text-[#00578C]"} ${abierto ? "" : "md:justify-center md:px-0"}`,
+							"aria-current": esActivo ? "page" : void 0,
+							title: !abierto ? label : void 0,
+							className: `
+                    flex w-full items-center gap-3
+                    rounded-xl px-3 py-3
+                    text-left text-base font-semibold
+                    transition
+
+                    ${esActivo ? "bg-[#E8F6FC] text-[#00578C]" : "text-[#4E6B7C] hover:bg-[#F4F9FC] hover:text-[#00578C]"}
+
+                    ${abierto ? "" : "md:justify-center md:px-0"}
+                  `,
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, {
 								className: "size-6 shrink-0",
 								"aria-hidden": true
@@ -2883,7 +2906,10 @@ function SidebarNav({ items, scrollRootId, homeId }) {
 					})
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: `px-2 pt-4 text-sm text-[#6E8B9E] ${abierto ? "" : "md:hidden"}`,
+					className: `
+            px-2 pt-4 text-sm text-[#6E8B9E]
+            ${abierto ? "" : "md:hidden"}
+          `,
 					children: "Información al 25 de agosto de 2026"
 				})
 			]
@@ -4258,11 +4284,6 @@ var NAV = [
 		icon: House
 	},
 	{
-		id: "mapa-de-ayudas",
-		label: "Mapa de Ayudas",
-		icon: Map$1
-	},
-	{
 		id: "resumen",
 		label: "Resumen",
 		icon: MapPin
@@ -4291,6 +4312,11 @@ var NAV = [
 		id: "conclusiones",
 		label: "Conclusiones",
 		icon: Lightbulb
+	},
+	{
+		id: "mapa-de-ayudas",
+		label: "Mapa de Ayudas",
+		icon: Map$1
 	}
 ];
 var kpis = [
@@ -4347,31 +4373,9 @@ function StoryPage() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "mt-8 max-w-2xl text-xl leading-9 text-[#315A70]",
 							children: "A continuación encontrará toda la información."
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-10 font-serif text-3xl text-[#00578C] md:text-4xl",
-							children: [
-								39,
-								" de los ",
-								41,
-								" municipios recibieron ayudas"
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
-							href: "#mapa-de-ayudas",
-							className: "mt-12 inline-flex items-center gap-3 rounded-full bg-[#00578C] px-7 py-4 text-lg font-bold text-white transition hover:bg-[#00456F]",
-							children: ["Ver el mapa", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
-								className: "size-5",
-								"aria-hidden": true
-							})]
 						})
 					]
 				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "mapa-de-ayudas",
-				className: "relative h-dvh bg-[#0B2233]",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 				id: "resumen",
@@ -4467,6 +4471,11 @@ function StoryPage() {
 				id: "conclusiones",
 				className: "bg-[#0B2233] px-5 py-20 text-white md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HallazgosSection, {})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				id: "mapa-de-ayudas",
+				className: "relative h-dvh bg-[#0B2233]",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
 				className: "bg-[#061621] px-5 py-12 text-base leading-7 text-[#9DB4C2] md:px-10",
