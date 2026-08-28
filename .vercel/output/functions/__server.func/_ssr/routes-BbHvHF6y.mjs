@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Bz15zLIX.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BbHvHF6y.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -4837,16 +4837,16 @@ function PanoramaDonuts() {
 		label: op.rangoLargo ? `Días con entregas, ${op.rangoLargo}` : "Días con entregas"
 	}];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "grid min-h-0 place-items-center gap-5 sm:grid-cols-3",
+		className: "flex min-h-0 flex-wrap items-start justify-center gap-x-10 gap-y-6 sm:gap-x-14",
 		children: donuts.map((d, i) => {
 			const proporcion = d.total > 0 ? d.valor / d.total : 0;
 			const color = COLORES[i % COLORES.length];
 			const fin = CIRCUNFERENCIA * (1 - proporcion);
 			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex min-h-0 w-full flex-col items-center text-center",
+				className: "flex min-h-0 max-w-[20rem] flex-1 basis-[15rem] flex-col items-center text-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
 					viewBox: "0 0 128 128",
-					className: "h-auto w-full max-w-[13rem] max-h-[min(13rem,20vh)] shrink",
+					className: "h-auto w-full max-h-[min(15rem,26vh)] max-w-[15rem] shrink",
 					role: "img",
 					"aria-label": `${d.valor} de ${d.total}. ${d.label}`,
 					children: [
@@ -5252,7 +5252,7 @@ function BandaRotulo({ children }) {
 function tituloCuando(diaPico, diaCobertura) {
 	if (!diaPico || !diaCobertura) return "Cómo avanzaron las entregas día a día";
 	if (diaPico === diaCobertura) return `El ${Number(diaPico)} de agosto se entregó más que ningún otro día`;
-	return `El ${Number(diaCobertura)} de agosto se llegó a más municipios y el ${Number(diaPico)} se entregó más`;
+	return `Momentos Clave`;
 }
 /**
 * routes/index.tsx

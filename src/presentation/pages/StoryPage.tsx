@@ -271,5 +271,7 @@ function tituloCuando(diaPico?: string, diaCobertura?: string): string {
   if (diaPico === diaCobertura) {
     return `El ${Number(diaPico)} de agosto se entregó más que ningún otro día`;
   }
-  return `El ${Number(diaCobertura)} de agosto se llegó a más municipios y el ${Number(diaPico)} se entregó más`;
+  return `Momentos Clave`;
 }
+
+//Debe tener eje X y eje y, donde x es dia y Y numero de entregas, de modo que visualmente represente una presentacion clara para el usuario, ademas aun tiene 
