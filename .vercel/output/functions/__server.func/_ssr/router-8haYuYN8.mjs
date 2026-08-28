@@ -2,8 +2,8 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-Bt570OFA.js
-var router_Bt570OFA_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-8haYuYN8.js
+var router_8haYuYN8_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
 	head: () => ({
@@ -41,11 +41,46 @@ var Route$1 = createRootRouteWithContext()({
 			{
 				rel: "stylesheet",
 				href: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+			},
+			{
+				rel: "icon",
+				href: "/favicon.ico"
 			}
 		]
 	}),
-	component: RootComponent
+	component: RootComponent,
+	/**
+	* Sin esto, TanStack Router muestra un `<p>Not Found</p>` suelto y
+	* avisa por consola en cada arranque. En un sitio público de una
+	* entidad territorial, una ruta equivocada tiene que devolver a la
+	* persona a algún lado, no dejarla en una página en blanco.
+	*/
+	notFoundComponent: PaginaNoEncontrada
 });
+function PaginaNoEncontrada() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
+		className: "flex min-h-dvh flex-col items-center justify-center bg-[#0079C1] px-6 text-center",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
+				children: "Página no encontrada"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+				className: "vc-titular mt-4 text-[clamp(2rem,8vw,4.5rem)] text-[#FBF8C6]",
+				children: "Esta dirección no existe"
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-6 max-w-lg text-lg leading-8 text-white",
+				children: "Revise el enlace o vuelva al inicio para ver la información de las ayudas entregadas en el Valle del Cauca."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+				href: "/",
+				className: "mt-9 inline-flex items-center rounded-full bg-[#FBF8C6] px-7 py-3.5 text-lg font-bold text-[#0079C1] transition hover:bg-white",
+				children: "Ir al inicio"
+			})
+		]
+	});
+}
 function RootComponent() {
 	const { queryClient } = Route$1.useRouteContext();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(QueryClientProvider, {
@@ -73,7 +108,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-Dmbb9gLq.mjs");
+var $$splitComponentImporter = () => import("./routes-DQ9PSOrr.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -115,4 +150,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_Bt570OFA_exports as t };
+export { getRouter, router_8haYuYN8_exports as t };

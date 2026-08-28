@@ -115,6 +115,90 @@ var createLucideIcon = (iconName, iconNode) => {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Boxes = createLucideIcon("boxes", [
+	["path", {
+		d: "M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z",
+		key: "lc1i9w"
+	}],
+	["path", {
+		d: "m7 16.5-4.74-2.85",
+		key: "1o9zyk"
+	}],
+	["path", {
+		d: "m7 16.5 5-3",
+		key: "va8pkn"
+	}],
+	["path", {
+		d: "M7 16.5v5.17",
+		key: "jnp8gn"
+	}],
+	["path", {
+		d: "M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z",
+		key: "8zsnat"
+	}],
+	["path", {
+		d: "m17 16.5-5-3",
+		key: "8arw3v"
+	}],
+	["path", {
+		d: "m17 16.5 4.74-2.85",
+		key: "8rfmw"
+	}],
+	["path", {
+		d: "M17 16.5v5.17",
+		key: "k6z78m"
+	}],
+	["path", {
+		d: "M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z",
+		key: "1xygjf"
+	}],
+	["path", {
+		d: "M12 8 7.26 5.15",
+		key: "1vbdud"
+	}],
+	["path", {
+		d: "m12 8 4.74-2.85",
+		key: "3rx089"
+	}],
+	["path", {
+		d: "M12 13.5V8",
+		key: "1io7kd"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Building2 = createLucideIcon("building-2", [
+	["path", {
+		d: "M10 12h4",
+		key: "a56b0p"
+	}],
+	["path", {
+		d: "M10 8h4",
+		key: "1sr2af"
+	}],
+	["path", {
+		d: "M14 21v-3a2 2 0 0 0-4 0v3",
+		key: "1rgiei"
+	}],
+	["path", {
+		d: "M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2",
+		key: "secmi2"
+	}],
+	["path", {
+		d: "M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16",
+		key: "16ra0t"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var CalendarDays = createLucideIcon("calendar-days", [
 	["path", {
 		d: "M8 2v4",
@@ -199,6 +283,16 @@ var FileText = createLucideIcon("file-text", [
 		key: "z1uh3a"
 	}]
 ]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var HeartHandshake = createLucideIcon("heart-handshake", [["path", {
+	d: "M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762",
+	key: "17lmqv"
+}]]);
 /**
 * @license lucide-react v0.575.0 - ISC
 *
@@ -392,6 +486,30 @@ var Truck = createLucideIcon("truck", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Warehouse = createLucideIcon("warehouse", [
+	["path", {
+		d: "M18 21V10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v11",
+		key: "pb2vm6"
+	}],
+	["path", {
+		d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 1.132-1.803l7.95-3.974a2 2 0 0 1 1.837 0l7.948 3.974A2 2 0 0 1 22 8z",
+		key: "doq5xv"
+	}],
+	["path", {
+		d: "M6 13h12",
+		key: "yf64js"
+	}],
+	["path", {
+		d: "M6 17h12",
+		key: "1jwigz"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var X = createLucideIcon("x", [["path", {
 	d: "M18 6 6 18",
 	key: "1bl5f8"
@@ -400,4 +518,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { Menu as a, List as c, ChevronLeft as d, CalendarDays as f, PackageCheck as i, House as l, Truck as n, Map as o, Package as r, MapPin as s, X as t, FileText as u };
+export { PackageCheck as a, MapPin as c, HeartHandshake as d, FileText as f, Boxes as g, Building2 as h, Package as i, List as l, CalendarDays as m, Warehouse as n, Menu as o, ChevronLeft as p, Truck as r, Map as s, X as t, House as u };

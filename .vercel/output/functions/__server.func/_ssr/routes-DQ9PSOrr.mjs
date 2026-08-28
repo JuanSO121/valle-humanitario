@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { a as Menu, c as List, d as ChevronLeft, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as FileText } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dmbb9gLq.js
+import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DQ9PSOrr.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -2850,201 +2850,6 @@ function ToggleButton({ active, onClick, children, disabled = false, title }) {
 		children
 	});
 }
-var puenteSteps = [
-	{
-		id: "base",
-		kind: "base",
-		label: "Documentos catalogados en el Drive",
-		delta: 414
-	},
-	{
-		id: "propio-canal",
-		kind: "resta",
-		label: "Carpetas que van por su propio canal",
-		delta: -113,
-		detail: [
-			{
-				label: "Cali",
-				value: 56,
-				note: "Excluida del consolidado por instrucción expresa"
-			},
-			{
-				label: "Centro de distribución Cartago",
-				value: 35,
-				note: "Bodega: es la misma ayuda vista desde el origen"
-			},
-			{
-				label: "Otras Ayudas Solidarias",
-				value: 19,
-				note: "Entregas a instituciones, no a un municipio"
-			},
-			{
-				label: "Inciva",
-				value: 1,
-				note: "Entrega institucional"
-			},
-			{
-				label: "Centro de Protección",
-				value: 1,
-				note: "Entrega institucional"
-			},
-			{
-				label: "CHOCO",
-				value: 1,
-				note: "Fuera del Valle: suma como despacho, no como municipio"
-			}
-		]
-	},
-	{
-		id: "formatos-conjuntos",
-		kind: "resta",
-		label: "Formatos conjuntos, contados por municipio",
-		delta: -7,
-		detail: [{
-			label: "Municipios múltiples",
-			value: 6,
-			note: "Un formato que reparte a varios municipios"
-		}, {
-			label: "_RAIZ",
-			value: 1,
-			note: "Formato conjunto suelto en la raíz del Drive"
-		}]
-	},
-	{
-		id: "subtotal-1",
-		kind: "subtotal",
-		label: "Archivos en carpetas de municipio",
-		delta: 294
-	},
-	{
-		id: "reescaneos",
-		kind: "resta",
-		label: "Reescaneos del mismo despacho",
-		delta: -3,
-		detail: [
-			{
-				label: "Argelia",
-				value: 1,
-				note: "12_08_2026_ARGELIA"
-			},
-			{
-				label: "Zarzal",
-				value: 1,
-				note: "12_08_2026_Zarzal"
-			},
-			{
-				label: "Yotoco",
-				value: 1,
-				note: "13_08_2026_YOTOCO PDF.pdf"
-			}
-		]
-	},
-	{
-		id: "subtotal-2",
-		kind: "subtotal",
-		label: "Despachos con documento propio",
-		delta: 291
-	},
-	{
-		id: "reparto-conjuntos",
-		kind: "suma",
-		label: "Entregas que reparten los 7 formatos conjuntos",
-		delta: 15
-	},
-	{
-		id: "subtotal-3",
-		kind: "subtotal",
-		label: "Despachos municipales",
-		delta: 306
-	},
-	{
-		id: "choco",
-		kind: "suma",
-		label: "Despacho fuera del Valle (Chocó)",
-		delta: 1
-	},
-	{
-		id: "total",
-		kind: "total",
-		label: "DESPACHOS DOCUMENTADOS",
-		delta: 307
-	}
-];
-/**
-* PanoramaPuente.tsx
-* -----------------------------------------------------------------------
-* El paso a paso que va del censo de documentos al total de entregas.
-*
-* Sin párrafo introductorio propio: la sección de Soportes documentales
-* ya lo trae, y tener los dos seguidos repetía la misma idea dos veces
-* con palabras distintas.
-*
-* Estas cifras salen del censo del Drive, que no está expuesto por
-* ninguna ruta de la API. Es lo único del tablero que sigue siendo
-* manual. Ver panoramaData.ts.
-*/
-function PanoramaPuente() {
-	const { totalEntregas } = useOperacion();
-	const totalPuente = puenteSteps.find((f) => f.kind === "total")?.delta ?? 0;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "rounded-xl border border-[#0079C1]/12 bg-white px-5 py-3 sm:px-7 sm:py-4",
-		children: puenteSteps.map((fila) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila$1, { fila }, fila.id))
-	}), totalEntregas > 0 && totalEntregas !== totalPuente && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-		className: "mt-4 max-w-2xl text-base leading-7 text-[#6B93AA]",
-		children: [
-			"Este conteo llega a ",
-			totalPuente.toLocaleString("es-CO"),
-			" y el resto del tablero muestra",
-			" ",
-			totalEntregas.toLocaleString("es-CO"),
-			". No es una diferencia de datos, son dos formas de contar. Aquí se cuentan documentos del archivo. En el resto del tablero se cuenta una entrega por cada municipio que recibió, así que un formato que reparte a varios municipios suma varias veces."
-		]
-	})] });
-}
-function Fila$1({ fila }) {
-	const esTotal = fila.kind === "total";
-	const esSubtotal = fila.kind === "subtotal";
-	const signo = fila.kind === "resta" ? "-" : fila.kind === "suma" ? "+" : "";
-	const valor = Math.abs(fila.delta).toLocaleString("es-CO");
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: [
-			"grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1 border-b border-[#0079C1]/10 py-3",
-			esTotal ? "border-b-0 border-t-2 border-t-[#0079C1] pt-4" : "",
-			esSubtotal ? "-mx-3 rounded bg-[#F2FAFD] px-3" : ""
-		].join(" "),
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: esTotal ? "text-sm font-bold uppercase tracking-[0.12em] text-[#0079C1]" : esSubtotal ? "text-base font-semibold text-[#123E5C]" : "text-base text-[#35708F]",
-				children: fila.label
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-				className: [
-					"font-bold tabular-nums",
-					esTotal ? "text-3xl text-[#0079C1]" : "text-xl",
-					fila.kind === "resta" ? "text-[#D4462A]" : "",
-					fila.kind === "suma" ? "text-[#2E9E4F]" : "",
-					esSubtotal || esTotal ? "text-[#123E5C]" : ""
-				].join(" "),
-				children: [signo, valor]
-			}),
-			fila.detail && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-				className: "col-span-2 mt-1 flex flex-wrap gap-x-3 gap-y-1.5",
-				children: fila.detail.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-					className: "rounded-full bg-[#F2FAFD] px-3 py-1 text-sm text-[#35708F]",
-					title: d.note,
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "text-[#123E5C]",
-							children: d.value
-						}),
-						" ",
-						d.label
-					]
-				}, d.label))
-			})
-		]
-	});
-}
 /**
 * JornadaBars.tsx
 * -----------------------------------------------------------------------
@@ -3096,13 +2901,13 @@ function JornadaBars() {
 * y el texto estaba escrito en el JSX, así que al cambiar los datos las
 * tarjetas seguían nombrando el día equivocado.
 */
-var ORIGEN_CARTAGO$1 = "ORI-CARTAGO";
+var ORIGEN_CARTAGO$2 = "ORI-CARTAGO";
 function MovimientoStatCards() {
 	const op = useOperacion();
 	const primeras48 = op.jornadas.slice(0, 2).reduce((sum, j) => sum + j.entregas, 0);
 	const porcentaje48 = op.totalEntregas > 0 ? Math.round(primeras48 / op.totalEntregas * 100) : 0;
 	op.diasConEntrega > 0 && (op.totalEntregas / op.diasConEntrega).toFixed(1);
-	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO$1);
+	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO$2);
 	const tarjetas = [
 		op.picoEntregas && {
 			valor: String(op.picoEntregas.entregas) + " - Entregas",
@@ -4217,8 +4022,16 @@ function AyudaSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿Qué se entregó?" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Aseo, alimentos, agua y mucho más. Conozca las ayudas que llegaron a los municipios afectados." }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué se entregó" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "La mayor parte de la ayuda es aseo, comida y agua" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-4 max-w-3xl text-lg leading-8 text-[#35708F]",
+				children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-3 max-w-2xl text-lg leading-8 text-[#35708F]",
+				children: "Seleccione una categoría para ver qué artículos incluyó."
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -4298,7 +4111,7 @@ function AyudaSection() {
 				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-					children: "Categorías - Seleccione una para consultar los artículos entregados"
+					children: "Categorías"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mt-4 grid gap-2.5 sm:grid-cols-2",
 					children: categorias.map((c, i) => {
@@ -4413,21 +4226,12 @@ function AyudaSection() {
 					]
 				}, categoria?.nombre ?? "general")]
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-6",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
-					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
-					" ",
-					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio." : "Las toneladas son una estimación a partir del número de entregas."
-				] })
-			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 						className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
-						children: "¿A quién se dirigió la ayuda?"
+						children: "A quién se dirigió la ayuda"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
@@ -4456,375 +4260,99 @@ function AyudaSection() {
 						})
 					})
 				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-6",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
+					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
+					" ",
+					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio." : "Las toneladas son una estimación a partir del número de entregas."
+				] })
 			})
 		]
 	});
 }
-var canales = [
+var canalesPresentacion = [
 	{
 		id: "cali",
 		nombre: "Cali",
-		glosa: "Capital del departamento.",
-		despachos: 55,
-		unidades: 27246,
-		renglones: 614,
-		color: "#81C8EC",
-		categorias: [
-			[
-				"Alimentos",
-				7460,
-				"#5CC46B"
-			],
-			[
-				"Protección y seguridad",
-				7416,
-				"#F0801E"
-			],
-			[
-				"Aseo personal",
-				6360,
-				"#3E9BCB"
-			],
-			[
-				"Líquidos e hidratación",
-				1874,
-				"#00C4B0"
-			],
-			[
-				"Descanso y abrigo",
-				1343,
-				"#B57BB5"
-			]
-		]
-	},
-	{
-		id: "acopio-cartago",
-		nombre: "Centro de distribución Cartago",
-		glosa: "Bodega del norte que despacha a varios municipios",
-		despachos: 35,
-		unidades: 17106,
-		renglones: 280,
-		color: "#F0801E",
-		categorias: [
-			[
-				"Líquidos e hidratación",
-				9526,
-				"#00C4B0"
-			],
-			[
-				"Alimentos",
-				3305,
-				"#5CC46B"
-			],
-			[
-				"Kits sin desagregar",
-				3037,
-				"#6E8B9E"
-			],
-			[
-				"Mascotas",
-				419,
-				"#89A32C"
-			],
-			[
-				"Ropa y calzado",
-				396,
-				"#8375A9"
-			]
-		]
-	},
-	{
-		id: "otras-ayudas-solidarias",
-		nombre: "Otras Ayudas Solidarias",
-		glosa: "Entregas a instituciones y casos puntuales.",
-		despachos: 18,
-		unidades: 9932,
-		renglones: 200,
-		color: "#B57BB5",
-		categorias: [
-			[
-				"Alimentos",
-				3505,
-				"#5CC46B"
-			],
-			[
-				"Líquidos e hidratación",
-				2090,
-				"#00C4B0"
-			],
-			[
-				"Aseo personal",
-				1860,
-				"#3E9BCB"
-			],
-			[
-				"Protección y seguridad",
-				1233,
-				"#F0801E"
-			],
-			[
-				"Sin clasificar",
-				716,
-				"#4F6B7C"
-			]
-		]
+		glosa: "Capital del departamento. Va por su propio canal, fuera del conteo por municipio.",
+		color: "#22ABE2"
 	},
 	{
 		id: "multiples",
 		nombre: "Municipios múltiples",
-		glosa: "Un formato que reparte a varios municipios a la vez",
-		despachos: 6,
-		unidades: 7490,
-		renglones: 54,
-		color: "#8375A9",
-		categorias: [
-			[
-				"Aseo personal",
-				4181,
-				"#3E9BCB"
-			],
-			[
-				"Protección y seguridad",
-				1498,
-				"#F0801E"
-			],
-			[
-				"Alimentos",
-				535,
-				"#5CC46B"
-			],
-			[
-				"Kits sin desagregar",
-				300,
-				"#6E8B9E"
-			],
-			[
-				"Mascotas",
-				238,
-				"#89A32C"
-			]
-		]
+		glosa: "Ruta de entrega que atendió a varios municipios.",
+		color: "#8375A9"
 	},
 	{
-		id: "inciva",
-		nombre: "Inciva",
-		glosa: "Instituto para la Investigación y la Preservación del Patrimonio",
-		despachos: 1,
-		unidades: 198,
-		renglones: 6,
-		color: "#B57BB5",
-		categorias: [
-			[
-				"Alimentos",
-				100,
-				"#5CC46B"
-			],
-			[
-				"Sin clasificar",
-				52,
-				"#4F6B7C"
-			],
-			[
-				"Protección y seguridad",
-				40,
-				"#F0801E"
-			],
-			[
-				"Aseo del hogar",
-				6,
-				"#2378A8"
-			]
-		]
+		id: "cartago",
+		nombre: "Centro de distribución Cartago",
+		glosa: "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
+		color: "#F7B733"
 	},
 	{
-		id: "centro-proteccion",
-		nombre: "Centro de Protección",
-		glosa: "Centro de Protección Social",
-		despachos: 1,
-		unidades: 117,
-		renglones: 4,
-		color: "#B57BB5",
-		categorias: [[
-			"Alimentos",
-			102,
-			"#5CC46B"
-		], [
-			"Sin clasificar",
-			15,
-			"#4F6B7C"
-		]]
-	},
-	{
-		id: "choco",
-		nombre: "Chocó · fuera del Valle",
-		glosa: "Ayuda enviada fuera del Valle del Cauca",
-		despachos: 1,
-		unidades: 783,
-		renglones: 25,
-		color: "#00A494",
-		categorias: [
-			[
-				"Líquidos e hidratación",
-				266,
-				"#00C4B0"
-			],
-			[
-				"Aseo personal",
-				205,
-				"#3E9BCB"
-			],
-			[
-				"Descanso y abrigo",
-				199,
-				"#B57BB5"
-			],
-			[
-				"Alimentos",
-				40,
-				"#5CC46B"
-			],
-			[
-				"Mascotas",
-				26,
-				"#89A32C"
-			]
-		]
+		id: "otras-ayudas-solidarias",
+		nombre: "Otras ayudas humanitarias",
+		glosa: "Ayudas entregadas a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
+		color: "#F0801E"
 	}
 ];
-var ORIGEN_CARTAGO = "ORI-CARTAGO";
-var ID_CALI = "cali";
-var ID_CARTAGO = "acopio-cartago";
+/** Color y glosa de un grupo, por su id. */
+function presentacionDe(id) {
+	return canalesPresentacion.find((c) => c.id === id);
+}
+var ORIGEN_CARTAGO$1 = "ORI-CARTAGO";
 function CanalesSection() {
 	const op = useOperacion();
 	const { data: ayuda } = useAyuda();
-	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
-	const entregasDe = (id, respaldo) => {
-		if (id === ID_CALI && op.entregasCali > 0) return op.entregasCali;
-		if (id === ID_CARTAGO && cartago) return cartago.entregas;
-		return respaldo;
-	};
-	const total = canales.reduce((sum, c) => sum + entregasDe(c.id, c.despachos), 0);
+	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO$1);
 	/**
-	* Toneladas por canal, estimadas.
+	* Cartago ya viene como grupo desde route=ayuda, porque en el catálogo
+	* es un destino de tipo centro_acopio: parte de la ayuda se registró a
+	* nombre de la bodega antes de repartirse.
 	*
-	* La hoja TONELADAS registra el peso POR DÍA y para todo el
-	* departamento. No hay ninguna fuente que diga cuánto pesó lo que salió
-	* por cada ruta, así que la única forma de dar esa cifra es repartir el
-	* total entre todas las entregas conocidas.
-	*
-	* El denominador incluye las municipales Y las de estos canales: si se
-	* dividiera solo entre las municipales, se le atribuiría a los
-	* municipios todo el peso del departamento y cada canal quedaría
-	* inflado.
+	* Pero sus ENTREGAS reales son las que salieron de ahí hacia los
+	* municipios, y eso solo lo sabe route=flujos agrupando por origen. Por
+	* eso esa cifra se pisa, en vez de agregar una tarjeta aparte que
+	* duplicaría la ruta.
 	*/
-	const entregasDepartamentales = op.entregasTodas > 0 ? op.entregasTodas : op.totalEntregas + total;
-	const toneladasPorEntrega = entregasDepartamentales > 0 ? op.totalToneladas / entregasDepartamentales : 0;
-	const toneladasDe = (entregas) => Math.round(entregas * toneladasPorEntrega);
+	const rutas = (ayuda?.canales ?? []).map((c) => {
+		const pres = presentacionDe(c.id);
+		const esCartago = c.id === "cartago";
+		return {
+			id: c.id,
+			nombre: pres?.nombre ?? c.nombre,
+			glosa: esCartago && cartago ? `Segunda bodega. Abastece a ${cartago.municipios} municipios del norte por una ruta propia.` : pres?.glosa ?? "",
+			color: pres?.color ?? "#22ABE2",
+			entregas: esCartago && cartago ? cartago.entregas : c.entregas,
+			unidades: c.unidades,
+			categorias: c.categorias
+		};
+	}).sort((a, b) => b.unidades - a.unidades);
+	const sinDatos = rutas.length === 0;
+	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 	/**
-	* Las categorías de cada canal salen de route=ayuda cuando existe. El
-	* catálogo queda de respaldo y como fuente del color, que es una
-	* decisión de diseño y no un dato.
+	* Toneladas por ruta, estimadas. El peso se registra por día y para
+	* todo el departamento, no por envío, así que el total se reparte
+	* entre todas las entregas conocidas.
 	*/
-	const categoriasDe = (nombre, respaldo) => {
-		const vivo = ayuda?.canales.find((c) => sameMunicipality(c.nombre, nombre) || c.nombre === nombre);
-		if (!vivo) return respaldo.map(([label, value, color]) => ({
-			label,
-			value,
-			color
-		}));
-		return vivo.categorias.map((cat) => ({
-			label: cat.nombre,
-			value: cat.unidades,
-			color: respaldo.find(([n]) => n === cat.nombre)?.[2] ?? "#6B93AA"
-		}));
-	};
-	const conEntregas = canales.map((c) => ({
-		...c,
-		entregas: entregasDe(c.id, c.despachos)
-	})).sort((a, b) => b.entregas - a.entregas);
-	const principales = conEntregas.slice(0, 2);
-	const secundarias = conEntregas.slice(2);
+	const toneladasDe = (entregas) => op.entregasTodas > 0 ? Math.round(entregas * (op.totalToneladas / op.entregasTodas)) : 0;
+	const principales = rutas.slice(0, 2);
+	const secundarias = rutas.slice(2);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿De dónde salió?" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "De dónde salió" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Además de los municipios, la ayuda salió por otras rutas" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			sinDatos ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
 				children: "El conteo por municipio deja fuera estas rutas."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-9 grid gap-4 lg:grid-cols-2",
-				children: principales.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-					style: { "--i": i },
-					className: "vc-aparece rounded-lg bg-[#123E5C] p-7 sm:p-9",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
-							children: "Ruta principal"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "vc-titular mt-3 text-[clamp(1.75rem,4.5vw,2.75rem)] text-white",
-							children: c.nombre
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-2 text-base leading-6 text-[#A8CFE2]",
-							children: c.glosa
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
-								children: c.entregas.toLocaleString("es-CO")
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "mt-1 block text-base text-[#A8CFE2]",
-								children: "entregas"
-							})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
-								children: toneladasDe(c.entregas).toLocaleString("es-CO")
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "mt-1 block text-base text-[#A8CFE2]",
-								children: "toneladas estimadas"
-							})] })]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							className: "mt-7 flex flex-col gap-3 border-t border-white/15 pt-6",
-							children: categoriasDe(c.nombre, c.categorias).map((cat, j) => {
-								const maximo = Math.max(1, ...categoriasDe(c.nombre, c.categorias).map((x) => x.value));
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-									style: { "--i": j },
-									className: "vc-aparece",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "flex items-baseline justify-between gap-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "min-w-0 truncate text-base text-white",
-											children: cat.label
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-											className: "shrink-0 tabular-nums text-[#FBF8C6]",
-											children: cat.value.toLocaleString("es-CO")
-										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-											className: "vc-crece block h-full rounded-full",
-											style: {
-												width: `${cat.value / maximo * 100}%`,
-												background: cat.color,
-												"--i": j
-											}
-										})
-									})]
-								}, cat.label);
-							})
-						})
-					]
-				}, c.id))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
-				children: secundarias.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-					style: { "--i": i },
-					className: "vc-aparece rounded-lg bg-white p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0",
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-8 grid gap-3 sm:grid-cols-3",
+				children: canalesPresentacion.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+					className: "rounded-lg bg-white p-5",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							className: "block h-1 w-10 rounded-full",
@@ -4837,30 +4365,130 @@ function CanalesSection() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "mt-1 text-[15px] leading-6 text-[#6B93AA]",
 							children: c.glosa
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-4 flex items-baseline gap-2",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "text-3xl font-extrabold leading-none text-[#0079C1]",
-								children: c.entregas
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "text-base text-[#6B93AA]",
-								children: c.entregas === 1 ? "entrega" : "entregas"
-							})]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-1 text-[15px] text-[#6B93AA]",
-							children: [toneladasDe(c.entregas).toLocaleString("es-CO"), " toneladas estimadas"]
 						})
 					]
 				}, c.id))
-			}),
+			})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
+					children: [
+						"El conteo por municipio deja fuera estas rutas. Suman ",
+						totalRutas,
+						" entregas y unas",
+						" ",
+						toneladasDe(totalRutas).toLocaleString("es-CO"),
+						" toneladas que también se movieron."
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-9 grid gap-4 lg:grid-cols-2",
+					children: principales.map((r, i) => {
+						const maximo = Math.max(1, ...r.categorias.map((c) => c.unidades));
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+							style: { "--i": i },
+							className: "vc-aparece rounded-lg bg-[#123E5C] p-7 sm:p-9",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
+									children: "Ruta principal"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+									className: "vc-titular mt-3 text-[clamp(1.75rem,4.5vw,2.75rem)] text-white",
+									children: r.nombre
+								}),
+								r.glosa && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-2 text-base leading-6 text-[#A8CFE2]",
+									children: r.glosa
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
+										children: (r.entregas > 0 ? r.entregas : r.unidades).toLocaleString("es-CO")
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "mt-1 block text-base text-[#A8CFE2]",
+										children: r.entregas > 0 ? "entregas" : "unidades"
+									})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
+										children: toneladasDe(r.entregas).toLocaleString("es-CO")
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "mt-1 block text-base text-[#A8CFE2]",
+										children: "toneladas estimadas"
+									})] })]
+								}),
+								r.categorias.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+									className: "mt-7 flex flex-col gap-3 border-t border-white/15 pt-6",
+									children: r.categorias.map((cat, j) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+										style: { "--i": j },
+										className: "vc-aparece",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "flex items-baseline justify-between gap-3",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "min-w-0 truncate text-base text-white",
+												children: cat.nombre
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+												className: "shrink-0 tabular-nums text-[#FBF8C6]",
+												children: cat.unidades.toLocaleString("es-CO")
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+												className: "vc-crece block h-full rounded-full",
+												style: {
+													width: `${cat.unidades / maximo * 100}%`,
+													background: r.color,
+													"--i": j
+												}
+											})
+										})]
+									}, cat.nombre))
+								})
+							]
+						}, r.id);
+					})
+				}),
+				secundarias.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+					children: secundarias.map((r, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+						style: { "--i": i },
+						className: "vc-aparece rounded-lg bg-white p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "block h-1 w-10 rounded-full",
+								style: { background: r.color }
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+								className: "mt-3 text-lg font-semibold text-[#123E5C]",
+								children: r.nombre
+							}),
+							r.glosa && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-1 text-[15px] leading-6 text-[#6B93AA]",
+								children: r.glosa
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-4 flex items-baseline gap-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+									className: "text-3xl font-extrabold leading-none text-[#0079C1]",
+									children: (r.entregas > 0 ? r.entregas : r.unidades).toLocaleString("es-CO")
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-base text-[#6B93AA]",
+									children: r.entregas > 0 ? r.entregas === 1 ? "entrega" : "entregas" : "unidades"
+								})]
+							}),
+							r.entregas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+								className: "mt-1 text-[15px] text-[#6B93AA]",
+								children: [toneladasDe(r.entregas).toLocaleString("es-CO"), " toneladas estimadas"]
+							})
+						]
+					}, r.id))
+				})
+			] }),
 			cartago && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-4 rounded-lg bg-[#0079C1] p-7 sm:p-9",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 						className: "vc-titular text-[clamp(1.5rem,4vw,2.25rem)] text-[#FBF8C6]",
-						children: "La red del acopio de Cartago"
+						children: "La red del centro de distribución de Cartago"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
@@ -4907,6 +4535,177 @@ function CanalesSection() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-6 max-w-3xl text-base leading-7 text-[#6B93AA]",
 				children: "Las toneladas por ruta son una estimación. El peso se registra por día y para todo el departamento, no por cada envío, así que el total se reparte entre las entregas. La ayuda enviada al Chocó cuenta como entrega, pero no como municipio del Valle."
+			})
+		]
+	});
+}
+var ORIGEN_CARTAGO = "ORI-CARTAGO";
+function BalanceFinal() {
+	const op = useOperacion();
+	const { data: ayuda } = useAyuda();
+	const entregasCartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO)?.entregas ?? 0;
+	const canalesVivos = ayuda?.canales ?? [];
+	const entregasDeGrupo = (id) => canalesVivos.filter((c) => c.id === id).reduce((sum, c) => sum + c.entregas, 0);
+	const multiples = entregasDeGrupo("multiples");
+	const unidadesMultiples = canalesVivos.filter((c) => c.id === "multiples").reduce((sum, c) => sum + c.unidades, 0);
+	const otras = canalesVivos.filter((c) => c.id !== "multiples" && c.id !== "cartago").reduce((sum, c) => sum + c.entregas, 0);
+	const rutas = [
+		{
+			id: "municipios",
+			titulo: "Municipios atendidos",
+			descripcion: "Municipios donde fueron entregadas las ayudas a las comunidades afectadas.",
+			entregas: Math.max(0, op.totalEntregas - entregasCartago),
+			unidades: 0,
+			color: "#0079C1",
+			icono: Building2
+		},
+		{
+			id: "cartago",
+			titulo: "Centro de distribución Cartago",
+			descripcion: "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
+			entregas: entregasCartago,
+			unidades: 0,
+			color: "#F0801E",
+			icono: Warehouse
+		},
+		{
+			id: "multiples",
+			titulo: "Municipios múltiples",
+			descripcion: "Ruta de entrega que atendió a varios municipios.",
+			entregas: multiples,
+			unidades: unidadesMultiples,
+			color: "#8375A9",
+			icono: Boxes
+		},
+		{
+			id: "otras",
+			titulo: "Otras ayudas humanitarias",
+			descripcion: "Ayudas entregadas a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
+			entregas: otras,
+			unidades: 0,
+			color: "#22ABE2",
+			icono: HeartHandshake
+		}
+	].filter((r) => r.entregas > 0 || r.unidades > 0);
+	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
+	const cifras = [
+		{
+			valor: totalRutas.toLocaleString("es-CO"),
+			label: "despachos en total"
+		},
+		{
+			valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
+			label: "de ayuda distribuida"
+		},
+		{
+			valor: String(rutas.length),
+			label: "rutas de distribución"
+		}
+	];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "mx-auto max-w-6xl",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Balance a la fecha" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Así se distribuyó la ayuda en el Valle del Cauca" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-9 grid gap-4 sm:grid-cols-3",
+				children: cifras.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					style: { "--i": i },
+					className: "vc-aparece rounded-lg bg-[#123E5C] p-7 text-center",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "block text-[clamp(2rem,5vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]",
+						children: c.valor
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-3 text-base text-white sm:text-lg",
+						children: c.label
+					})]
+				}, `cifra-${c.label}`))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ol", {
+				className: "relative mt-10",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					"aria-hidden": true,
+					className: "absolute inset-y-0 left-[2.25rem] w-px bg-[#0079C1]/25 md:left-1/2 md:-translate-x-1/2"
+				}), rutas.map((r, i) => {
+					const Icono = r.icono;
+					const porcentaje = totalRutas > 0 ? Math.round(r.entregas / totalRutas * 100) : 0;
+					const toneladas = op.entregasTodas > 0 ? Math.round(r.entregas * (op.totalToneladas / op.entregasTodas)) : 0;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+						style: { "--i": i },
+						className: "vc-aparece relative grid grid-cols-[4.5rem_1fr] items-center gap-4 py-2.5 md:grid-cols-[1fr_4.5rem_1fr] md:gap-0",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "order-2 md:order-1 md:pr-6",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "rounded-full px-6 py-4 text-white md:text-right",
+									style: { background: r.color },
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "block text-lg leading-tight",
+										children: r.titulo
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "mt-2 flex flex-wrap gap-x-6 gap-y-1 md:justify-end",
+										children: r.entregas > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "text-[15px] text-white/85",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+													className: "text-base font-extrabold text-white",
+													children: r.entregas.toLocaleString("es-CO")
+												}),
+												" ",
+												"despachos · ",
+												porcentaje,
+												"%"
+											]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "text-[15px] text-white/85",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+													className: "text-base font-extrabold text-white",
+													children: toneladas.toLocaleString("es-CO")
+												}),
+												" ",
+												"toneladas"
+											]
+										})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "text-[15px] text-white/85",
+											children: [
+												/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+													className: "text-base font-extrabold text-white",
+													children: r.unidades.toLocaleString("es-CO")
+												}),
+												" ",
+												"unidades sin desagregar"
+											]
+										})
+									})]
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "order-1 flex justify-center md:order-2",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "flex size-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white",
+									style: { background: r.color },
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icono, {
+										className: "size-6",
+										"aria-hidden": true
+									})
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "order-3 col-span-2 text-base leading-6 text-[#35708F] md:col-span-1 md:pl-6",
+								children: r.descripcion
+							})
+						]
+					}, `ruta-${r.id}`);
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-8 max-w-3xl text-base leading-7 text-[#6B93AA]",
+				children: "Las rutas suman el total sin repetir despachos. Municipios múltiples se mide en unidades porque sus despachos ya están contados en cada municipio que recibió. Las toneladas son una estimación: el peso se registra por día y para todo el departamento, no por cada envío."
+			}),
+			canalesVivos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]",
+				children: "Faltan las rutas de municipios múltiples y otras ayudas solidarias. Se muestran cuando el servicio de datos las devuelve."
 			})
 		]
 	});
@@ -5072,7 +4871,7 @@ function PanoramaDonuts() {
 					className: "vc-aparece mt-3 line-clamp-2 max-w-[18rem] text-[15px] leading-5 text-white sm:text-base sm:leading-6",
 					children: d.label
 				})]
-			}, d.id);
+			}, `dona-${d.id}`);
 		})
 	});
 }
@@ -5126,7 +4925,7 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							"aria-hidden": true,
 							children: "*"
-						}), "Cali: conoce su ruta"]
+						}), "Cali: conozca la ruta"]
 					})]
 				})
 			}),
@@ -5196,8 +4995,8 @@ var NAV = [
 		icon: Truck
 	},
 	{
-		id: "soportes",
-		label: "Resumen General/paola",
+		id: "balance",
+		label: "Balance a la fecha",
 		icon: FileText
 	},
 	{
@@ -5230,7 +5029,7 @@ function Contenido() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PiezaGrafica, {
 				id: "inicio",
 				escritorio: "/marca/portada-escritorio.jpg",
-				movil: "/marca/portada-movil.jpg",
+				movil: "/marca/portada-movil.jpeg",
 				fondo: "#0076BC",
 				prioritaria: true,
 				alt: "Ruta de la Solidaridad. Gobernación del Valle del Cauca. Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas humanitarias de emergencia en los municipios del Valle del Cauca. A continuación encontrará toda la información."
@@ -5286,26 +5085,9 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CanalesSection, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
-				id: "soportes",
+				id: "balance",
 				className: "bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto max-w-6xl",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Soportes documentales" }),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							className: "vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]",
-							children: "Cada entrega tiene un documento que la respalda"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-5 max-w-2xl text-base leading-7 text-[#35708F] sm:text-lg sm:leading-8",
-							children: "La información de este tablero corresponde a las entregas realizadas en los centros de acopio. Cada una cuenta con un formato físico de soporte. La cuenta va paso a paso, porque un formato conjunto reparte a varios municipios y un documento reescaneado no suma una entrega nueva."
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-10",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaPuente, {})
-						})
-					]
-				})
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BalanceFinal, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 				id: "mapa-de-ayudas",
@@ -5313,32 +5095,29 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
-				className: "bg-[#0076BC] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto max-w-6xl",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block font-serif text-xl text-[#FBF8C6]",
-							children: "Ruta de la Solidaridad"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 max-w-2xl",
-							children: [
-								"Gobernación del Valle del Cauca. Ayudas entregadas tras el terremoto del 10 de agosto de 2026",
-								op.fechaCorteLarga ? `, con información al ${op.fechaCorteLarga}` : "",
-								"."
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-4 max-w-2xl",
-							children: "Fuente de información: registros oficiales de entrega de ayudas de la Gobernación del Valle del Cauca."
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-8",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcaFooter, {})
-						})
-					]
-				})
+				className: "bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-33",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "block font-serif text-xl text-[#FBF8C6]",
+						children: "Ruta de la Solidaridad"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-3",
+						children: [
+							"Ayudas entregadas a las comunidades afectadas por el terremoto del 10 de agosto de 2026",
+							op.fechaCorteLarga ? `, con información al ${op.fechaCorteLarga}` : "",
+							"."
+						]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-4",
+						children: "Fuente: registros oficiales de entrega de ayudas de la Gobernación del Valle del Cauca."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-8",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcaFooter, {})
+					})
+				] })
 			})
 		]
 	})] });

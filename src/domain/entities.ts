@@ -129,12 +129,19 @@ export interface PoblacionAtendida {
 }
 
 export interface CanalApi {
-  destinoId: string;
+  /**
+   * Id del GRUPO, no de un destino: "cali", "multiples" o
+   * "otras-ayudas-solidarias". El agrupamiento lo decide el backend
+   * según el tipo de destino, así que una entidad nueva en el Excel entra
+   * sola sin tocar la página.
+   */
+  id: string;
   nombre: string;
-  tipo: string;
   entregas: number;
   unidades: number;
   renglones: number;
+  /** Cuántos destinos distintos cayeron en este grupo. */
+  destinos: number;
   categorias: Array<{ nombre: string; unidades: number }>;
 }
 

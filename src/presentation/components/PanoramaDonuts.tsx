@@ -77,7 +77,7 @@ export function PanoramaDonuts() {
         const fin = CIRCUNFERENCIA * (1 - proporcion);
 
         return (
-          <div key={d.id} className="flex min-h-0 w-full flex-col items-center text-center">
+          <div key={`dona-${d.id}`} className="flex min-h-0 w-full flex-col items-center text-center">
             <svg
               viewBox="0 0 128 128"
               // El SVG tiene viewBox, así que el navegador respeta

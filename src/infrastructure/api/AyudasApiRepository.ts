@@ -64,7 +64,29 @@ export class AyudasApiRepository {
     // backend, recargar y seguir viendo lo viejo. Quién decide cuánto
     // dura el dato es React Query con su staleTime, no el HTTP cache.
     const response = await fetch(url.toString(), { cache: "no-store" });
+
     if (!response.ok) {
+      /**
+       * El nombre de la ruta se registra acá porque en la consola del
+       * navegador se pierde: /exec responde con un 302 a
+       * script.googleusercontent.com, y ese error aparece sin el
+       * `?route=`, así que "404 en googleusercontent" no dice cuál falló.
+       *
+       * Un 404 en esa URL casi nunca significa que la ruta no exista.
+       * Las causas frecuentes, en orden:
+       *   1. Falta el `case` de esa ruta en Code.gs.
+       *   2. El código está en el editor pero no se republicó con Nueva
+       *      versión: /exec sirve la versión desplegada.
+       *   3. El constructor lanzó una excepción y Apps Script devolvió su
+       *      página de error en vez del JSON. Se ve con probarRutas().
+       */
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[API] route=${route} respondió HTTP ${response.status}. ` +
+            "Revisar el case en Code.gs y republicar con Nueva versión.",
+        );
+      }
       throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
     }
 

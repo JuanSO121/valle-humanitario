@@ -77,7 +77,7 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
             className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg md:mt-3 md:text-lg motion-reduce:hover:translate-y-0"
           >
             <span aria-hidden>*</span>
-            Cali: conoce su ruta
+            Cali: conozca la ruta
           </a>
         </div>
       </div>

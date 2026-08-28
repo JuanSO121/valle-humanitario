@@ -13,7 +13,6 @@ import {
 import { DashboardPage } from "@/presentation/pages/DashboardPage";
 import { OperacionProvider, useOperacion } from "@/presentation/state/OperacionContext";
 import { FocoProvider, useFoco } from "@/presentation/state/FocoContext";
-import { PanoramaPuente } from "@/presentation/components/PanoramaPuente";
 import { JornadaBars } from "../components/JornadaBars";
 import { MovimientoStatCards, MunicipiosNuevosCallouts } from "../components/MovimientoExtras";
 import { SidebarNav, type NavItem } from "../components/SidebarNav";
@@ -22,13 +21,14 @@ import { EvolucionHeatmap } from "../components/EvolucionHeatmap";
 import { AyudaSection } from "../components/AyudaSection";
 import { CanalesSection } from "../components/CanalesSection";
 import { HallazgosSection } from "../components/HallazgosSection";
+import { BalanceFinal } from "../components/BalanceFinal";
 import { SectionLabel } from "../components/storyPrimitives";
 import { MarcaFooter } from "../components/MarcaHeader";
 import { PiezaGrafica } from "../components/PiezaGrafica";
 import { IndiceSection } from "../components/IndiceSection";
-
+ 
 const SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
-
+ 
 const NAV: NavItem[] = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "indice", label: "Índice", icon: List },
@@ -36,7 +36,7 @@ const NAV: NavItem[] = [
   { id: "municipios", label: "Municipios", icon: MapPin },
   { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
   { id: "de-donde-salio", label: "¿De dónde salió?", icon: Truck },
-  { id: "soportes", label: "Resumen General/paola", icon: FileText },
+  { id: "balance", label: "Balance a la fecha", icon: FileText },
   { id: "mapa-de-ayudas", label: "Mapa de Ayudas", icon: Map },
 ];
 
@@ -86,7 +86,7 @@ function Contenido() {
         <PiezaGrafica
           id="inicio"
           escritorio="/marca/portada-escritorio.jpg"
-          movil="/marca/portada-movil.jpg"
+          movil="/marca/portada-movil.jpeg"
           fondo="#0076BC"
           prioritaria
           alt={
@@ -143,46 +143,31 @@ function Contenido() {
           <CanalesSection />
         </section>
 
-        <section id="soportes" className="bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10">
-          <div className="mx-auto max-w-6xl">
-            <SectionLabel>Soportes documentales</SectionLabel>
-            <h2 className="vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]">
-              Cada entrega tiene un documento que la respalda
-            </h2>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-[#35708F] sm:text-lg sm:leading-8">
-              La información de este tablero corresponde a las entregas realizadas en los centros de
-              acopio. Cada una cuenta con un formato físico de soporte. La cuenta va paso a paso,
-              porque un formato conjunto reparte a varios municipios y un documento reescaneado no
-              suma una entrega nueva.
-            </p>
-            <div className="mt-10">
-              <PanoramaPuente />
-            </div>
-          </div>
+        <section id="balance" className="bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10">
+          <BalanceFinal />
         </section>
 
         <section id="mapa-de-ayudas" className="relative h-dvh bg-[#123E5C]">
           <DashboardPage embedded />
         </section>
 
-        <footer className="bg-[#0076BC] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10">
-          <div className="mx-auto max-w-6xl">
-            <b className="block font-serif text-xl text-[#FBF8C6]">Ruta de la Solidaridad</b>
-            <p className="mt-3 max-w-2xl">
-              Gobernación del Valle del Cauca. Ayudas entregadas tras el terremoto del 10 de agosto
-              de 2026
-              {op.fechaCorteLarga ? `, con información al ${op.fechaCorteLarga}` : ""}.
-            </p>
-            <p className="mt-4 max-w-2xl">
-              Fuente de información: registros oficiales de entrega de ayudas de la Gobernación del
-              Valle del Cauca.
-            </p>
+<footer className="bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-33">
+  <div>
+    <b className="block font-serif text-xl text-[#FBF8C6]">Ruta de la Solidaridad</b>
+    <p className="mt-3">
+      Ayudas entregadas a las comunidades afectadas por el terremoto del 10 de agosto de 2026
+      {op.fechaCorteLarga ? `, con información al ${op.fechaCorteLarga}` : ""}.
+    </p>
+    <p className="mt-4">
+      Fuente: registros oficiales de entrega de ayudas de la Gobernación del Valle del Cauca.
+    </p>
+    <div className="mt-8">
+      <MarcaFooter />
+    </div>
+  </div>
+</footer>
 
-            <div className="mt-8">
-              <MarcaFooter />
-            </div>
-          </div>
-        </footer>
+
       </main>
     </>
   );
