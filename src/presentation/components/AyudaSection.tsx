@@ -128,7 +128,6 @@ export function AyudaSection() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionLabel>Qué se entregó</SectionLabel>
       <SectionTitle>La mayor parte de la ayuda es aseo, comida y agua</SectionTitle>
       <p className="mt-4 max-w-3xl text-lg leading-8 text-[#35708F]">
         Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las

@@ -73,9 +73,9 @@ export function EvolucionHeatmap({
 
   return (
     <section>
-      <SectionLabel>¿Qué municipio recibió cada día?</SectionLabel>
+      <SectionLabel>Cada casilla es un día. Cuanto más cálido el color, más entregas ese día.</SectionLabel>
       <p className="mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]">
-        Cada casilla es un día. Cuanto más cálido el color, más entregas ese día.
+        
       </p>
 
       <div className="mt-6 space-y-5">
@@ -85,7 +85,7 @@ export function EvolucionHeatmap({
               {/* La zona y su lista de municipios, como en la pieza. */}
               <div className="lg:w-52 lg:shrink-0">
                 <h3 className="vc-titular text-3xl text-white sm:text-4xl">{zona}</h3>
-                <p className="mt-3 text-base leading-6 text-[#A8CFE2]">
+                <p className="mt-3 text-base leading-6 text-[#ffffff]">
                   {filas.map((m) => m.nombre).join(", ")}.
                 </p>
               </div>
@@ -132,7 +132,7 @@ export function EvolucionHeatmap({
                             );
                           })}
                           total={
-                            <span className="text-right text-base font-extrabold text-[#123E5C]">
+                            <span className="text-right text-base font-extrabold text-[#ffffff]">
                               {m.entregas}
                             </span>
                           }
@@ -171,7 +171,7 @@ function Fila({
     >
       <span
         className={`truncate pr-2 text-left text-[13px] font-semibold ${
-          sobreOscuro ? "text-white" : "text-[#123E5C]"
+          sobreOscuro ? "text-white" : "text-[#fefefe]"
         }`}
       >
         {etiqueta}

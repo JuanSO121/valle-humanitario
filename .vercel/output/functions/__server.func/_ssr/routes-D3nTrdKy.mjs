@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-D_9xqxys.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-D3nTrdKy.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -2894,7 +2894,7 @@ function JornadaBars() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mb-5 text-base text-[#35708F]",
-				children: "Cada barra es un día de agosto. El amarillo marca el día de mayor volumen y los municipios que reciben ayuda por primera vez."
+				children: "Cada barra corresponde a una fecha; la barra amarilla representa el día con mayor número de entregas."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "-mx-1 overflow-x-auto px-1 pb-1",
@@ -2955,7 +2955,7 @@ function JornadaBars() {
 						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "mt-1 text-xs text-[#6B93AA]",
-						children: "Eje horizontal: día de agosto. Eje vertical: entregas. Debajo de cada día, los municipios que reciben por primera vez."
+						children: "Los números en amarillo identifica el número de municipios que reciben ayuda por primera vez."
 					})]
 				})
 			})
@@ -3005,7 +3005,7 @@ function MovimientoStatCards() {
 			color: "#F0801E"
 		},
 		op.picoCobertura && {
-			valor: String(op.picoCobertura.municipios) + " - Municipios.",
+			valor: String(op.picoCobertura.municipios) + " - Municipios",
 			label: "Día con más municipios atendidos",
 			nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
 			color: "#5CC46B"
@@ -3645,11 +3645,8 @@ function EvolucionHeatmap({ onSelect }) {
 		return ESCALA[Math.min(ESCALA.length - 1, Math.round((valor - 1) / Math.max(1, maxDia - 1) * (ESCALA.length - 1)))] ?? ESCALA[0];
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿Qué municipio recibió cada día?" }),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]",
-			children: "Cada casilla es un día. Cuanto más cálido el color, más entregas ese día."
-		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Cada casilla es un día. Cuanto más cálido el color, más entregas ese día." }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]" }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mt-6 space-y-5",
 			children: grupos.map(({ zona, filas }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -3662,7 +3659,7 @@ function EvolucionHeatmap({ onSelect }) {
 							className: "vc-titular text-3xl text-white sm:text-4xl",
 							children: zona
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-base leading-6 text-[#A8CFE2]",
+							className: "mt-3 text-base leading-6 text-[#ffffff]",
 							children: [filas.map((m) => m.nombre).join(", "), "."]
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -3700,7 +3697,7 @@ function EvolucionHeatmap({ onSelect }) {
 											}, d);
 										}),
 										total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "text-right text-base font-extrabold text-[#123E5C]",
+											className: "text-right text-base font-extrabold text-[#ffffff]",
 											children: m.entregas
 										})
 									})
@@ -3719,7 +3716,7 @@ function Fila({ dias, etiqueta, celdas, total, sobreOscuro = false }) {
 		style: { gridTemplateColumns: `108px repeat(${dias.length}, 1fr) 44px` },
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: `truncate pr-2 text-left text-[13px] font-semibold ${sobreOscuro ? "text-white" : "text-[#123E5C]"}`,
+				className: `truncate pr-2 text-left text-[13px] font-semibold ${sobreOscuro ? "text-white" : "text-[#fefefe]"}`,
 				children: etiqueta
 			}),
 			celdas,
@@ -4135,7 +4132,6 @@ function AyudaSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué se entregó" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "La mayor parte de la ayuda es aseo, comida y agua" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-3xl text-lg leading-8 text-[#35708F]",
@@ -4457,7 +4453,6 @@ function CanalesSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "De dónde salió" }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Además de los municipios, la ayuda salió por otras rutas" }),
 			sinDatos ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
@@ -4705,20 +4700,57 @@ function BalanceFinal() {
 		}
 	].filter((r) => r.entregas > 0 || r.unidades > 0);
 	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
+	/**
+	* Las ayudas recibidas van con su propia fecha porque no salen de la
+	* misma fuente que las demás: es el consolidado del centro de acopio,
+	* que se cierra unos días antes que el registro de despachos. Con una
+	* sola banda de corte al pie, esta cifra quedaba fechada tres días
+	* después de lo que realmente cubre.
+	*
+	* Las dos van juntas y a mano hasta que la API publique el dato; si se
+	* separan, la próxima actualización cambia una y deja la otra quieta.
+	*/
+	const RECIBIDAS = {
+		valor: "562 t",
+		corte: "24 de agosto de 2026"
+	};
 	const cifras = [
 		{
-			valor: "562 t",
-			label: "Ayudas recibidas"
+			valor: RECIBIDAS.valor,
+			label: "Ayudas recibidas",
+			corte: RECIBIDAS.corte
 		},
 		{
 			valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
-			label: "Ayudas distribuidas"
+			label: "Ayudas distribuidas",
+			corte: op.fechaCorteLarga
 		},
 		{
 			valor: totalRutas.toLocaleString("es-CO"),
-			label: "Despachos en total"
+			label: "Despachos en total",
+			corte: op.fechaCorteLarga
 		}
 	];
+	/**
+	* Una banda por cada grupo de cifras vecinas que comparten fecha.
+	*
+	* Se agrupa en vez de escribir las dos bandas a mano para que la
+	* maqueta siga la fuente de los datos: el día que las recibidas pasen
+	* a salir de la API con la misma fecha que el resto, las dos bandas se
+	* vuelven una sola sin tocar el JSX.
+	*/
+	const bandas = cifras.reduce((acc, c) => {
+		const ultima = acc[acc.length - 1];
+		if (ultima && ultima.corte === c.corte) {
+			ultima.columnas += 1;
+			return acc;
+		}
+		acc.push({
+			corte: c.corte ?? null,
+			columnas: 1
+		});
+		return acc;
+	}, []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
@@ -4738,16 +4770,22 @@ function BalanceFinal() {
 							children: c.label
 						})]
 					}, `cifra-${c.label}`))
-				}), op.fechaCorteLarga && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					style: { "--i": cifras.length },
-					className: "vc-aparece flex flex-col items-center justify-center gap-1 rounded-lg bg-[#FBF8C6] px-5 py-4 text-center sm:flex-row sm:gap-3",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#00639F]",
-						children: "Información con corte al"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "text-lg font-extrabold text-[#123E5C] sm:text-xl",
-						children: op.fechaCorteLarga
-					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "grid gap-2 sm:grid-cols-3",
+					children: bandas.map((b, i) => b.corte ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						style: {
+							"--i": cifras.length + i,
+							gridColumn: `span ${b.columnas}`
+						},
+						className: "vc-aparece rounded-lg bg-[#FBF8C6] px-5 py-3.5 text-center",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block text-xs font-bold uppercase tracking-[0.16em] text-[#00639F]",
+							children: "Con corte al"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg",
+							children: b.corte
+						})]
+					}, `corte-${b.corte}`) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { gridColumn: `span ${b.columnas}` } }, `corte-vacio-${i}`))
 				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ol", {
@@ -4772,7 +4810,7 @@ function BalanceFinal() {
 										style: { color: r.tinta },
 										children: ["Ruta ", i + 1]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:w-auto md:flex-none md:rounded-full md:px-6 md:text-right",
+										className: "flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:max-w-[24rem] md:flex-1 md:rounded-full md:px-6 md:text-right",
 										style: { background: r.color },
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 											"aria-hidden": true,

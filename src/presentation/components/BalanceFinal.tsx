@@ -26,10 +26,12 @@
  * más chica, el conjunto se lee como una sola unidad y no como tres
  * carteles.
  *
- * Debajo va la banda de la fecha de corte, en crema. Contrasta con el
- * navy de las tarjetas y con el fondo claro de la sección, y ocupa todo
- * el ancho: es el dato que le pone límite a todos los demás y merece
- * cerrar el bloque, no ir escondido en un pie de página.
+ * Debajo van las bandas de corte, en crema. Contrastan con el navy de
+ * las tarjetas y con el fondo claro de la sección. Son dos y no una
+ * porque las ayudas recibidas se consolidan en el centro de acopio unos
+ * días antes que el registro de despachos: cada banda abarca las
+ * columnas de las cifras que fecha, de modo que ningún número queda
+ * fechado con un corte que no le corresponde.
  *
  * SOBRE LAS DOS MAQUETAS DE LAS RUTAS
  *
@@ -170,14 +172,49 @@ export function BalanceFinal() {
 
   const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 
+  /**
+   * Las ayudas recibidas van con su propia fecha porque no salen de la
+   * misma fuente que las demás: es el consolidado del centro de acopio,
+   * que se cierra unos días antes que el registro de despachos. Con una
+   * sola banda de corte al pie, esta cifra quedaba fechada tres días
+   * después de lo que realmente cubre.
+   *
+   * Las dos van juntas y a mano hasta que la API publique el dato; si se
+   * separan, la próxima actualización cambia una y deja la otra quieta.
+   */
+  const RECIBIDAS = { valor: "562 t", corte: "24 de agosto de 2026" };
+
   const cifras = [
-    { valor: "562 t", label: "Ayudas recibidas" },
+    { valor: RECIBIDAS.valor, label: "Ayudas recibidas", corte: RECIBIDAS.corte },
     {
       valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
       label: "Ayudas distribuidas",
+      corte: op.fechaCorteLarga,
     },
-    { valor: totalRutas.toLocaleString("es-CO"), label: "Despachos en total" },
+    {
+      valor: totalRutas.toLocaleString("es-CO"),
+      label: "Despachos en total",
+      corte: op.fechaCorteLarga,
+    },
   ];
+
+  /**
+   * Una banda por cada grupo de cifras vecinas que comparten fecha.
+   *
+   * Se agrupa en vez de escribir las dos bandas a mano para que la
+   * maqueta siga la fuente de los datos: el día que las recibidas pasen
+   * a salir de la API con la misma fecha que el resto, las dos bandas se
+   * vuelven una sola sin tocar el JSX.
+   */
+  const bandas = cifras.reduce<{ corte: string | null; columnas: number }[]>((acc, c) => {
+    const ultima = acc[acc.length - 1];
+    if (ultima && ultima.corte === c.corte) {
+      ultima.columnas += 1;
+      return acc;
+    }
+    acc.push({ corte: c.corte ?? null, columnas: 1 });
+    return acc;
+  }, []);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -202,22 +239,36 @@ export function BalanceFinal() {
           ))}
         </div>
 
-        {/* La banda de corte. Solo aparece cuando la API trae la fecha:
-            una banda que dice "sin fecha" no informa nada y ocupa el
-            mismo espacio que la que sí informa. */}
-        {op.fechaCorteLarga && (
-          <div
-            style={{ "--i": cifras.length } as CSSProperties}
-            className="vc-aparece flex flex-col items-center justify-center gap-1 rounded-lg bg-[#FBF8C6] px-5 py-4 text-center sm:flex-row sm:gap-3"
-          >
-            <span className="text-sm font-bold uppercase tracking-[0.16em] text-[#00639F]">
-              Información con corte al
-            </span>
-            <b className="text-lg font-extrabold text-[#123E5C] sm:text-xl">
-              {op.fechaCorteLarga}
-            </b>
-          </div>
-        )}
+        {/* Las bandas de corte, en la misma rejilla que las tarjetas:
+            cada una abarca las columnas de las cifras que fecha, así que
+            se lee sin ambigüedad cuál corte aplica a cuál número. */}
+        <div className="grid gap-2 sm:grid-cols-3">
+          {bandas.map((b, i) =>
+            b.corte ? (
+              <div
+                key={`corte-${b.corte}`}
+                style={
+                  {
+                    "--i": cifras.length + i,
+                    gridColumn: `span ${b.columnas}`,
+                  } as CSSProperties
+                }
+                className="vc-aparece rounded-lg bg-[#FBF8C6] px-5 py-3.5 text-center"
+              >
+                <span className="block text-xs font-bold uppercase tracking-[0.16em] text-[#00639F]">
+                  Con corte al
+                </span>
+                <b className="mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg">
+                  {b.corte}
+                </b>
+              </div>
+            ) : (
+              // Sin fecha no hay banda, pero el hueco se mantiene para
+              // que las bandas vecinas no se corran de columna.
+              <div key={`corte-vacio-${i}`} style={{ gridColumn: `span ${b.columnas}` }} />
+            ),
+          )}
+        </div>
       </div>
 
       {/* Las rutas. En escritorio, una línea de tiempo: el círculo del
@@ -273,11 +324,18 @@ export function BalanceFinal() {
 
                   {/* En celular el óvalo ocupa todo el ancho de la
                       burbuja y se lleva el icono adentro, que es lo que
-                      le da escala de burbuja. En escritorio, como hijo
-                      de un flex, vuelve a medir lo que mide su
-                      contenido. */}
+                      le da escala de burbuja.
+
+                      En escritorio crece hasta un tope y se detiene ahí.
+                      Con `flex-none` medía su contenido, y "Centro de
+                      distribución Cartago" salía casi el doble de ancho
+                      que "Municipios múltiples": cuatro píldoras de
+                      largos distintos alineadas contra el mismo círculo
+                      se leen como un error de maqueta. Como las cuatro
+                      filas comparten ancho de columna, el tope las deja
+                      exactamente iguales. */}
                   <div
-                    className="flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:w-auto md:flex-none md:rounded-full md:px-6 md:text-right"
+                    className="flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:max-w-[24rem] md:flex-1 md:rounded-full md:px-6 md:text-right"
                     style={{ background: r.color }}
                   >
                     <span

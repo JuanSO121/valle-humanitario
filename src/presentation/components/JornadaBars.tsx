@@ -50,8 +50,7 @@ export function JornadaBars() {
         Entregas por día
       </figcaption>
       <p className="mb-5 text-base text-[#35708F]">
-        Cada barra es un día de agosto. El amarillo marca el día de mayor volumen y los municipios
-        que reciben ayuda por primera vez.
+        Cada barra corresponde a una fecha; la barra amarilla representa el día con mayor número de entregas.
       </p>
 
       {/* Con muchos días, apretar las columnas hasta que las etiquetas se
@@ -145,8 +144,7 @@ export function JornadaBars() {
           </div>
 
           <p className="mt-1 text-xs text-[#6B93AA]">
-            Eje horizontal: día de agosto. Eje vertical: entregas. Debajo de cada día, los
-            municipios que reciben por primera vez.
+            Los números en amarillo identifica el número de municipios que reciben ayuda por primera vez.
           </p>
         </div>
       </div>

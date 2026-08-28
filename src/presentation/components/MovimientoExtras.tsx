@@ -31,7 +31,7 @@ export function MovimientoStatCards() {
       color: "#F0801E",
     },
     op.picoCobertura && {
-      valor: String(op.picoCobertura.municipios) + " - Municipios.",
+      valor: String(op.picoCobertura.municipios) + " - Municipios",
       label: "Día con más municipios atendidos",
       nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
       color: "#5CC46B",

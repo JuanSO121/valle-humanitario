@@ -90,7 +90,6 @@ export function CanalesSection() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionLabel>De dónde salió</SectionLabel>
       <SectionTitle>Además de los municipios, la ayuda salió por otras rutas</SectionTitle>
 
       {sinDatos ? (
@@ -260,12 +259,6 @@ export function CanalesSection() {
           </ul>
         </div>
       )}
-
-      <p className="mt-6 max-w-3xl text-base leading-7 text-[#6B93AA]">
-        Las toneladas por ruta son una estimación. El peso se registra por día y para todo el
-        departamento, no por cada envío, así que el total se reparte entre las entregas. La ayuda
-        enviada al Chocó cuenta como entrega, pero no como municipio del Valle.
-      </p>
     </div>
   );
 }
