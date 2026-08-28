@@ -4,19 +4,28 @@
  * Las rutas que el conteo por municipio deja fuera.
  *
  * Cali y el centro de acopio de Cartago se calculan desde la API. Los
- * otros cinco canales no pueden: sus destinos no están atados a un
- * municipio, así que quedan fuera de route=flujos por diseño (ver
- * Catalogs.gs, precision SIN_UBICAR). Esos siguen con cifras del
- * catálogo y van marcados.
+ * otros cinco no pueden: sus destinos no están atados a un municipio, así
+ * que quedan fuera de route=flujos por diseño (ver Catalogs.gs,
+ * precision SIN_UBICAR). Esos siguen con cifras del catálogo.
  *
- * Las unidades por categoría vienen de ENVIOS_CATEGORIA, que ninguna
- * ruta expone todavía. Son las mismas para todos los canales.
+ * SOBRE LA PRESENTACIÓN
+ *
+ * Las siete rutas no pesan lo mismo. Cali y Cartago concentran la mayor
+ * parte y las otras cinco son casos puntuales, algunas de una sola
+ * entrega. Mostrarlas todas en fichas idénticas hacía parecer que un
+ * despacho a Inciva equivale al acopio que abastece al norte del
+ * departamento.
+ *
+ * Ahora las dos grandes ocupan fichas destacadas y las cinco restantes
+ * van en una fila compacta debajo.
+ * -----------------------------------------------------------------------
  */
+import { type CSSProperties } from "react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
 import { sameMunicipality } from "@/lib/municipalityName";
 import { canales } from "@/presentation/data/canalesData";
-import { Card, MiniList, SectionLabel, SectionTitle } from "./storyPrimitives";
+import { SectionLabel, SectionTitle } from "./storyPrimitives";
 
 const ORIGEN_CARTAGO = "ORI-CARTAGO";
 const ID_CALI = "cali";
@@ -26,22 +35,6 @@ export function CanalesSection() {
   const op = useOperacion();
   const { data: ayuda } = useAyuda();
   const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
-
-  /**
-   * Las categorías de cada canal salen de route=ayuda cuando existe. El
-   * catálogo queda de respaldo y como fuente del color, que es una
-   * decisión de diseño y no un dato.
-   */
-  const categoriasDe = (nombre: string, respaldo: Array<[string, number, string]>) => {
-    const vivo = ayuda?.canales.find((c) => sameMunicipality(c.nombre, nombre) || c.nombre === nombre);
-    if (!vivo) return respaldo.map(([label, value, color]) => ({ label, value, color }));
-
-    return vivo.categorias.map((cat) => ({
-      label: cat.nombre,
-      value: cat.unidades,
-      color: respaldo.find(([n]) => n === cat.nombre)?.[2] ?? "#6B93AA",
-    }));
-  };
 
   // Las dos rutas que la API sí conoce pisan su cifra del catálogo. Antes
   // la tarjeta decía 35 mientras las conclusiones decían 38, calculadas
@@ -66,9 +59,6 @@ export function CanalesSection() {
    * dividiera solo entre las municipales, se le atribuiría a los
    * municipios todo el peso del departamento y cada canal quedaría
    * inflado.
-   *
-   * Es un estimado y la sección lo dice. Si algún día se registra el peso
-   * por despacho, esto se reemplaza por el dato real.
    */
   const entregasDepartamentales = op.totalEntregas + total;
   const toneladasPorEntrega =
@@ -76,84 +66,173 @@ export function CanalesSection() {
 
   const toneladasDe = (entregas: number) => Math.round(entregas * toneladasPorEntrega);
 
+  /**
+   * Las categorías de cada canal salen de route=ayuda cuando existe. El
+   * catálogo queda de respaldo y como fuente del color, que es una
+   * decisión de diseño y no un dato.
+   */
+  const categoriasDe = (nombre: string, respaldo: Array<[string, number, string]>) => {
+    const vivo = ayuda?.canales.find(
+      (c) => sameMunicipality(c.nombre, nombre) || c.nombre === nombre,
+    );
+    if (!vivo) return respaldo.map(([label, value, color]) => ({ label, value, color }));
+
+    return vivo.categorias.map((cat) => ({
+      label: cat.nombre,
+      value: cat.unidades,
+      color: respaldo.find(([n]) => n === cat.nombre)?.[2] ?? "#6B93AA",
+    }));
+  };
+
+  const conEntregas = canales
+    .map((c) => ({ ...c, entregas: entregasDe(c.id, c.despachos) }))
+    .sort((a, b) => b.entregas - a.entregas);
+
+  const principales = conEntregas.slice(0, 2);
+  const secundarias = conEntregas.slice(2);
+
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionTitle>
-        ¿De dónde salió la ayuda?
-      </SectionTitle>
+      <SectionTitle>¿De dónde salió la ayuda?</SectionTitle>
+
       <p className="mt-5 max-w-2xl text-lg leading-8 text-[#35708F]">
-        Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales.
+        Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales. Suman {total} entregas y unas{" "}
+        {toneladasDe(total).toLocaleString("es-CO")} toneladas que también se movieron.
       </p>
 
-      <div className="mt-9 grid gap-4 md:grid-cols-2">
-        {canales.map((c) => (
+      {/* Las dos rutas grandes. */}
+      <div className="mt-9 grid gap-4 lg:grid-cols-2">
+        {principales.map((c, i) => (
           <article
             key={c.id}
-            className="rounded-lg border border-[#0079C1]/12 border-t-[3px] bg-white p-5"
-            style={{ borderTopColor: c.color }}
+            style={{ "--i": i } as CSSProperties}
+            className="vc-aparece rounded-lg bg-[#123E5C] p-7 sm:p-9"
           >
-            <h3 className="text-xl font-semibold text-[#123E5C]">{c.nombre}</h3>
-            <p className="mt-1 min-h-[34px] text-base leading-6 text-[#6B93AA]">{c.glosa}</p>
+            <span className="text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]">
+              Ruta principal
+            </span>
 
-            <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
+            <h3 className="vc-titular mt-3 text-[clamp(1.75rem,4.5vw,2.75rem)] text-white">
+              {c.nombre}
+            </h3>
+            <p className="mt-2 text-base leading-6 text-[#A8CFE2]">{c.glosa}</p>
+
+            <div className="mt-6 flex flex-wrap gap-x-10 gap-y-4">
               <div>
-                <dd className="text-[23px] font-extrabold leading-none text-[#0079C1]">
-                  {entregasDe(c.id, c.despachos).toLocaleString("es-CO")}
-                </dd>
-                <dt className="mt-1 text-sm text-[#6B93AA]">entregas</dt>
+                <b className="block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]">
+                  {c.entregas.toLocaleString("es-CO")}
+                </b>
+                <span className="mt-1 block text-base text-[#A8CFE2]">entregas</span>
               </div>
               <div>
-                <dd className="text-[23px] font-extrabold leading-none text-[#0079C1]">
-                  {toneladasDe(entregasDe(c.id, c.despachos)).toLocaleString("es-CO")}
-                </dd>
-                <dt className="mt-1 text-sm text-[#6B93AA]">toneladas estimadas</dt>
+                <b className="block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]">
+                  {toneladasDe(c.entregas).toLocaleString("es-CO")}
+                </b>
+                <span className="mt-1 block text-base text-[#A8CFE2]">toneladas estimadas</span>
               </div>
-            </dl>
-
-            <div className="mt-4">
-              <MiniList rows={categoriasDe(c.nombre, c.categorias)} />
             </div>
+
+            <ul className="mt-7 flex flex-col gap-3 border-t border-white/15 pt-6">
+              {categoriasDe(c.nombre, c.categorias).map((cat, j) => {
+                const maximo = Math.max(
+                  1,
+                  ...categoriasDe(c.nombre, c.categorias).map((x) => x.value),
+                );
+                return (
+                  <li key={cat.label} style={{ "--i": j } as CSSProperties} className="vc-aparece">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-base text-white">{cat.label}</span>
+                      <b className="shrink-0 tabular-nums text-[#FBF8C6]">
+                        {cat.value.toLocaleString("es-CO")}
+                      </b>
+                    </div>
+                    <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20">
+                      <i
+                        className="vc-crece block h-full rounded-full"
+                        style={
+                          {
+                            width: `${(cat.value / maximo) * 100}%`,
+                            background: cat.color,
+                            "--i": j,
+                          } as CSSProperties
+                        }
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </article>
+        ))}
+      </div>
+
+      {/* Las cinco restantes, compactas. Varias son de una sola entrega y
+          en fichas del mismo tamaño que las de arriba parecían pesar lo
+          mismo que el acopio que abastece al norte. */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {secundarias.map((c, i) => (
+          <article
+            key={c.id}
+            style={{ "--i": i } as CSSProperties}
+            className="vc-aparece rounded-lg bg-white p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
+          >
+            <span className="block h-1 w-10 rounded-full" style={{ background: c.color }} />
+            <h3 className="mt-3 text-lg font-semibold text-[#123E5C]">{c.nombre}</h3>
+            <p className="mt-1 text-[15px] leading-6 text-[#6B93AA]">{c.glosa}</p>
+
+            <p className="mt-4 flex items-baseline gap-2">
+              <b className="text-3xl font-extrabold leading-none text-[#0079C1]">{c.entregas}</b>
+              <span className="text-base text-[#6B93AA]">
+                {c.entregas === 1 ? "entrega" : "entregas"}
+              </span>
+            </p>
+            <p className="mt-1 text-[15px] text-[#6B93AA]">
+              {toneladasDe(c.entregas).toLocaleString("es-CO")} toneladas estimadas
+            </p>
           </article>
         ))}
       </div>
 
       {cartago && (
-        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.85fr)] lg:items-start">
-          <Card>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
-              Centro de distribución Cartago
-            </p>
-            <p className="mt-3 text-base leading-7 text-[#35708F]">
-              Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte
-              de Cali y explica cómo se abasteció el norte.
-            </p>
-            <div className="mt-4">
-              <MiniList
-                rows={cartago.destinos.map((d) => ({
-                  label: d.nombre,
-                  value: d.entregas,
-                  color: "#E2690E",
-                }))}
-              />
-            </div>
-          </Card>
+        <div className="mt-4 rounded-lg bg-[#0079C1] p-7 sm:p-9">
+          <h3 className="vc-titular text-[clamp(1.5rem,4vw,2.25rem)] text-[#FBF8C6]">
+            Centro de distribución Cartago
+          </h3>
+          <p className="mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg">
+            Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte
+            de Cali y explica cómo se abasteció el norte: {cartago.entregas} entregas hacia{" "}
+            {cartago.municipios} municipios.
+          </p>
 
-          <Card className="border-l-[3px] border-l-[#F0801E]">
-            <b className="block text-[33px] font-extrabold leading-none text-[#0079C1]">
-              {cartago.entregas}
-            </b>
-            <p className="mt-1.5 text-base font-semibold text-[#6B93AA]">Entregas desde Cartago</p>
-            <p className="mt-3 text-base leading-7 text-[#35708F]">
-              Llegaron a {cartago.municipios} municipios del norte del Valle. Se cuentan como
-              entrega municipal, igual que las que salen de Cali.
-            </p>
-            <p className="mt-3 text-base leading-7 text-[#6B93AA]">
-              La ayuda enviada al Chocó sí cuenta como entrega. No cuenta como municipio del Valle,
-              porque no pertenece al departamento.
-            </p>
-          </Card>
+          <ul className="mt-7 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+            {cartago.destinos.map((d, i) => {
+              const maximo = Math.max(1, ...cartago.destinos.map((x) => x.entregas));
+              return (
+                <li key={d.nombre} style={{ "--i": i } as CSSProperties} className="vc-aparece">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 truncate text-base text-white">{d.nombre}</span>
+                    <b className="shrink-0 text-lg font-extrabold text-[#FBF8C6]">{d.entregas}</b>
+                  </div>
+                  <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/25">
+                    <i
+                      className="vc-crece block h-full rounded-full bg-[#FFD400]"
+                      style={
+                        { width: `${(d.entregas / maximo) * 100}%`, "--i": i } as CSSProperties
+                      }
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
+
+      <p className="mt-6 max-w-3xl text-base leading-7 text-[#6B93AA]">
+        Las toneladas por ruta son una estimación. El peso se registra por día y para todo el
+        departamento, no por cada envío, así que el total se reparte entre las entregas. La ayuda
+        enviada al Chocó cuenta como entrega, pero no como municipio del Valle.
+      </p>
     </div>
   );
 }

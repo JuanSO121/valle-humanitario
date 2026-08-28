@@ -11,7 +11,7 @@
  * cada envío, no cuáles.
  * -----------------------------------------------------------------------
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   categoriasAyuda,
   familiasDeAyuda,
@@ -21,13 +21,22 @@ import {
 } from "@/presentation/data/ayudaData";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
-import { Aviso, Bar, Card, MiniList, SectionLabel, SectionTitle } from "./storyPrimitives";
+import { useFoco } from "@/presentation/state/FocoContext";
+import { Aviso, Card, SectionLabel, SectionTitle } from "./storyPrimitives";
 
 interface CategoriaVista {
   nombre: string;
   unidades: number;
-  /** Municipios del consolidado, sin Cali. Nunca pasa de 41. */
-  municipios: number;
+  /**
+   * Municipios del consolidado, sin Cali. Nunca pasa de 41.
+   *
+   * `null` cuando route=ayuda no respondió. Es deliberado: el catálogo
+   * estático solo tiene un conteo de DESTINOS, que incluye acopios,
+   * entidades y Cali, y usarlo como si fueran municipios hacía que la
+   * página dijera "llegó a 46 municipios" en un departamento de 41.
+   * Antes que mostrar un número equivocado, no se muestra ninguno.
+   */
+  municipios: number | null;
   color: string;
   productos: Array<[string, number]>;
 }
@@ -36,6 +45,7 @@ export function AyudaSection() {
   const [activa, setActiva] = useState<string | null>(null);
   const { totalToneladas, toneladasMedidas } = useOperacion();
   const { data: ayuda } = useAyuda();
+  const { enfocarCategoria } = useFoco();
 
   /**
    * Antes esta lista decía "llegó a 44 municipios" en un departamento de
@@ -47,7 +57,7 @@ export function AyudaSection() {
       return categoriasAyuda.map((c) => ({
         nombre: c.nombre,
         unidades: c.unidades,
-        municipios: c.destinos,
+        municipios: null,
         color: c.color,
         productos: c.productos,
       }));
@@ -74,6 +84,22 @@ export function AyudaSection() {
   const pct = (unidades: number) =>
     totalUnidades > 0 ? Math.round((unidades / totalUnidades) * 100) : 0;
 
+  /**
+   * Porcentaje para mostrar.
+   *
+   * Herramientas y materiales son 828 unidades de 256.650, un 0,32 por
+   * ciento, y Salud son 87, un 0,03. Redondeados dan cero, y un cero se
+   * lee como que no se entregó nada. Sí se entregó, solo que poco.
+   *
+   * "menos de 1" dice lo mismo sin mentir. Cero se reserva para cuando
+   * de verdad no hay nada.
+   */
+  const pctTexto = (unidades: number) => {
+    if (unidades <= 0) return "0%";
+    const redondeado = pct(unidades);
+    return redondeado === 0 ? "<1%" : `${redondeado}%`;
+  };
+
   const categoria = activa ? categorias.find((c) => c.nombre === activa) : undefined;
   const maxUnidades = Math.max(1, ...categorias.map((c) => c.unidades));
 
@@ -87,7 +113,16 @@ export function AyudaSection() {
     [categorias, totalUnidades],
   );
 
-  const productos = categoria
+  /**
+   * Tipo explícito, con `color` opcional.
+   *
+   * Sin él, TypeScript infiere una unión de dos formas distintas, una con
+   * color y otra sin, y solo deja leer lo que existe en las dos. El
+   * color solo aplica cuando hay categoría seleccionada: en la lista
+   * general los artículos vienen de categorías distintas y pintarlos
+   * todos igual sería mentir sobre a cuál pertenecen.
+   */
+  const productos: Array<{ label: string; value: number; color?: string }> = categoria
     ? categoria.productos.map(([label, value]) => ({ label, value, color: categoria.color }))
     : productosMasRepartidos.map(([label, value]) => ({ label, value }));
 
@@ -119,7 +154,9 @@ export function AyudaSection() {
             {categorias.map((c) => (
               <i
                 key={c.nombre}
-                title={`${c.nombre}: ${pct(c.unidades)} por ciento de la ayuda`}
+                title={`${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(
+                  c.unidades,
+                )} de la ayuda`}
                 className="block transition-opacity"
                 style={{
                   flex: c.unidades,
@@ -173,79 +210,198 @@ export function AyudaSection() {
         })}
       </ul>
 
-      <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.9fr)] lg:items-start">
-        <Card className="p-0">
-          <p className="px-6 pt-6 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
+      {/* Categorías y artículos van juntos: al elegir una categoría, la
+          lista de la derecha cambia. Son la misma lectura.
+
+          Las categorías van en rejilla de fichas y no en lista vertical:
+          catorce filas apiladas obligan a recorrer con la vista de arriba
+          abajo y hacen la sección larga y plana. En rejilla se comparan
+          de un vistazo. */}
+      <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
             Categorías
           </p>
-          <ul className="mt-3">
-            {categorias.map((c) => {
+
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+            {categorias.map((c, i) => {
               const seleccionada = activa === c.nombre;
               return (
-                <li key={c.nombre}>
-                  <button
-                    type="button"
-                    aria-pressed={seleccionada}
-                    onClick={() => setActiva(seleccionada ? null : c.nombre)}
-                    className={`w-full border-b border-[#0079C1]/10 px-6 py-3 text-left transition ${
-                      seleccionada ? "bg-[#EAF7FC]" : "hover:bg-[#F2FAFD]"
-                    }`}
-                  >
-                    <span className="flex items-baseline justify-between gap-3">
-                      <span className="flex min-w-0 items-center gap-2 text-base font-semibold text-[#123E5C]">
-                        <i
-                          className="block size-2.5 shrink-0 rounded-sm"
-                          style={{ background: c.color }}
-                        />
-                        <span className="truncate">{c.nombre}</span>
-                      </span>
-                      <span className="shrink-0 font-serif text-xl text-[#0079C1]">
-                        {pct(c.unidades)}%
-                      </span>
+                <button
+                  key={c.nombre}
+                  type="button"
+                  aria-pressed={seleccionada}
+                  onClick={() => setActiva(seleccionada ? null : c.nombre)}
+                  style={{ "--i": i } as CSSProperties}
+                  className={`vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${
+                    seleccionada
+                      ? "-translate-y-0.5 text-white shadow-lg"
+                      : "bg-white hover:-translate-y-0.5 hover:shadow-md"
+                  } motion-reduce:hover:translate-y-0`}
+                >
+                  {/* El color de la categoría llena la ficha al
+                      seleccionarla. Como es un fondo y no un borde, se
+                      reconoce sin leer. */}
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 -z-10 transition-opacity duration-200"
+                    style={{ background: c.color, opacity: seleccionada ? 1 : 0 }}
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-1"
+                    style={{ background: seleccionada ? "transparent" : c.color }}
+                  />
+
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span
+                      className={`min-w-0 truncate text-base font-semibold ${
+                        seleccionada ? "text-white" : "text-[#123E5C]"
+                      }`}
+                    >
+                      {c.nombre}
                     </span>
-                    <span className="mt-2 block">
-                      <Bar ratio={c.unidades / maxUnidades} color={c.color} />
+                    <span
+                      className={`shrink-0 text-2xl font-extrabold ${
+                        seleccionada ? "text-white" : "text-[#0079C1]"
+                      }`}
+                    >
+                      {pctTexto(c.unidades)}
                     </span>
-                    <span className="mt-2 block text-[15px] text-[#6B93AA]">
+                  </span>
+
+                  <span className="mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10">
+                    <i
+                      className="vc-crece block h-full rounded-full"
+                      style={
+                        {
+                          width: `${(c.unidades / maxUnidades) * 100}%`,
+                          background: seleccionada ? "#FFFFFF" : c.color,
+                          "--i": i,
+                        } as CSSProperties
+                      }
+                    />
+                  </span>
+
+                  {c.municipios !== null && (
+                    <span
+                      className={`mt-2.5 block text-[15px] ${
+                        seleccionada ? "text-white/85" : "text-[#6B93AA]"
+                      }`}
+                    >
                       Llegó a {c.municipios} {c.municipios === 1 ? "municipio" : "municipios"}
                     </span>
-                  </button>
-                </li>
+                  )}
+                </button>
               );
             })}
-          </ul>
-        </Card>
-
-        <div className="flex flex-col gap-5">
-          <Card>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
-              {categoria ? categoria.nombre : "Lo más entregado"}
-            </p>
-            <div className="mt-4">
-              {productos.length > 0 ? (
-                <MiniList rows={productos} />
-              ) : (
-                <p className="text-base text-[#6B93AA]">
-                  No hay detalle de artículos para esta categoría.
-                </p>
-              )}
-            </div>
-          </Card>
-
-          <Card>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
-              Grupos atendidos
-            </p>
-            <div className="mt-4">
-              <MiniList
-                rows={poblaciones.map(([label, value]) => ({ label, value, color: "#7F207F" }))}
-              />
-            </div>
-            <p className="mt-3 text-base text-[#6B93AA]">
-              Entregas que incluyeron ayuda dirigida a cada grupo.
-            </p>
-          </Card>
+          </div>
         </div>
+
+        {/* El `key` fuerza a React a remontar la lista al cambiar de
+            categoría, y con eso la animación de entrada se vuelve a
+            disparar. Sin él, los artículos se reemplazarían de golpe. */}
+        <Card key={categoria?.nombre ?? "general"} className="lg:sticky lg:top-6">
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
+            {categoria ? categoria.nombre : "Lo más entregado"}
+          </p>
+
+          {productos.length > 0 ? (
+            <ul className="mt-4 flex flex-col gap-3">
+              {productos.map((prod, i) => {
+                const maximo = Math.max(1, ...productos.map((x) => x.value));
+                return (
+                  <li
+                    key={prod.label}
+                    style={{ "--i": i } as CSSProperties}
+                    className="vc-aparece"
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-base text-[#35708F]">
+                        {prod.label}
+                      </span>
+                      <b className="shrink-0 tabular-nums text-[#123E5C]">
+                        {prod.value.toLocaleString("es-CO")}
+                      </b>
+                    </div>
+                    <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]">
+                      <i
+                        className="vc-crece block h-full rounded-full"
+                        style={
+                          {
+                            width: `${(prod.value / maximo) * 100}%`,
+                            background: prod.color ?? "#0079C1",
+                            "--i": i,
+                          } as CSSProperties
+                        }
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-4 text-base text-[#6B93AA]">
+              No hay detalle de artículos para esta categoría.
+            </p>
+          )}
+
+          {categoria && (
+            <div className="mt-6 flex flex-col gap-3 border-t border-[#0079C1]/12 pt-5">
+              {/* Llevar la categoría al mapa. La lista de artículos dice
+                  QUÉ se entregó; el mapa dice DÓNDE. Es la continuación
+                  natural de la lectura. */}
+              <button
+                type="button"
+                onClick={() => enfocarCategoria(categoria.nombre)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]"
+              >
+                Ver en el mapa dónde llegó
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiva(null)}
+                className="text-base font-semibold text-[#0079C1] underline-offset-4 hover:underline"
+              >
+                Ver lo más entregado en total
+              </button>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Grupos atendidos responde otra pregunta: no QUÉ se entregó sino
+          A QUIÉN. Va en su propio apartado, con el tratamiento en azul de
+          la campaña, para que no compita con la lectura de arriba. */}
+      <div className="mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10">
+        <h3 className="vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]">
+          A quién se dirigió la ayuda
+        </h3>
+        <p className="mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg">
+          Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar
+          varios, así que la suma es mayor que el total de entregas.
+        </p>
+
+        <ul className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+          {poblaciones.map(([nombre, entregas]) => {
+            const maximo = Math.max(1, ...poblaciones.map(([, v]) => v));
+            return (
+              <li key={nombre}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate text-base text-white sm:text-lg">{nombre}</span>
+                  <b className="shrink-0 text-xl font-extrabold text-[#FBF8C6]">{entregas}</b>
+                </div>
+                <div className="mt-2 h-[6px] overflow-hidden rounded-full bg-white/25">
+                  <i
+                    className="block h-full rounded-full bg-[#FFD400]"
+                    style={{ width: `${(entregas / maximo) * 100}%` }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       <div className="mt-6">

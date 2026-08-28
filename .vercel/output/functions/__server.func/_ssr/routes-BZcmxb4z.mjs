@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Menu, c as List, d as ChevronLeft, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as FileText } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BElzwgYi.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BZcmxb4z.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -499,14 +499,6 @@ function useToneladas() {
 		retry: false
 	});
 }
-var TERRITORY_BLUE_RAMP = [
-	"#0F3149",
-	"#175A80",
-	"#2181B4",
-	"#3FAEDC",
-	"#86D3F0",
-	"#C6ECFB"
-];
 /**
 * Datos reales extraídos de BD_Entregas_Operativa_v2.xlsx (hojas
 * RESUMEN + ENVIOS_CATEGORIA + DESPACHOS + DESPACHO_DESTINO +
@@ -2440,6 +2432,97 @@ function TopBar({ viewState, seleccionNombre, onGoToAll }) {
 		})]
 	});
 }
+/**
+* FocoContext.tsx
+* -----------------------------------------------------------------------
+* Qué está mirando la persona, compartido entre las secciones y el mapa.
+*
+* Las secciones de arriba llevan al mapa, pero hasta ahora solo hacían
+* scroll: se llegaba al mapa sin nada seleccionado y había que buscar a
+* mano el municipio en el que se venía de hacer clic.
+*
+* Este contexto guarda esa intención. Al tocar un municipio se enfoca ese
+* municipio; al tocar una categoría se enfocan todos los que la
+* recibieron. El mapa lee el foco y responde.
+*
+* Vive aparte de OperacionContext a propósito: uno son los datos, que
+* cambian cuando cambia el Excel, y el otro es la navegación, que cambia
+* con cada clic. Mezclarlos haría que todo el árbol se vuelva a dibujar
+* cada vez que alguien toca una ficha.
+* -----------------------------------------------------------------------
+*/
+var FocoContext = (0, import_react.createContext)({
+	municipio: null,
+	categoria: null,
+	enfocarMunicipio: () => {},
+	enfocarCategoria: () => {},
+	limpiar: () => {}
+});
+/** Lleva la vista al mapa. Se usa siempre junto con enfocar. */
+function irAlMapa() {
+	document.getElementById("mapa-de-ayudas")?.scrollIntoView({
+		behavior: "smooth",
+		block: "start"
+	});
+}
+function FocoProvider({ children }) {
+	const [municipio, setMunicipio] = (0, import_react.useState)(null);
+	const [categoria, setCategoria] = (0, import_react.useState)(null);
+	const enfocarMunicipio = (0, import_react.useCallback)((nombre) => {
+		setCategoria(null);
+		setMunicipio(nombre);
+		irAlMapa();
+	}, []);
+	const enfocarCategoria = (0, import_react.useCallback)((nombre) => {
+		setMunicipio(null);
+		setCategoria(nombre);
+		if (nombre) irAlMapa();
+	}, []);
+	const limpiar = (0, import_react.useCallback)(() => {
+		setMunicipio(null);
+		setCategoria(null);
+	}, []);
+	const value = (0, import_react.useMemo)(() => ({
+		municipio,
+		categoria,
+		enfocarMunicipio,
+		enfocarCategoria,
+		limpiar
+	}), [
+		municipio,
+		categoria,
+		enfocarMunicipio,
+		enfocarCategoria,
+		limpiar
+	]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocoContext.Provider, {
+		value,
+		children
+	});
+}
+function useFoco() {
+	return (0, import_react.useContext)(FocoContext);
+}
+/**
+* useAyuda.ts
+* -----------------------------------------------------------------------
+* Composición de lo entregado, desde route=ayuda.
+*
+* Mismo patrón y mismo staleTime que useCatalogQueries, y `retry: false`
+* como useToneladas: mientras la ruta no esté publicada, el backend
+* responde 404 y no tiene sentido reintentar. La sección cae a las
+* cifras del catálogo y sigue funcionando.
+*/
+/** Igual que en useCatalogQueries. Si cambia allá, cambia acá. */
+var CATALOG_STALE_TIME_MS = 3e5;
+function useAyuda() {
+	return useQuery({
+		queryKey: ["ayuda"],
+		queryFn: () => ayudasApiRepository.getAyuda(),
+		staleTime: CATALOG_STALE_TIME_MS,
+		retry: false
+	});
+}
 function useIsMobile(breakpointPx = 768) {
 	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
@@ -2483,6 +2566,8 @@ function DashboardPage({ embedded = false }) {
 	const isoDate = viewState.timelineDate;
 	const territoryDay = (0, import_react.useMemo)(() => dayFromIsoDate(isoDate), [isoDate]);
 	const operacion = useOperacion();
+	const foco = useFoco();
+	const { data: ayuda } = useAyuda();
 	const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
 	/**
 	* Entregas por municipio, indexadas por código DANE, para que el mapa
@@ -2512,6 +2597,35 @@ function DashboardPage({ embedded = false }) {
 		}
 		return mapa;
 	}, [operacion.catalogo, operacion.municipios]);
+	/**
+	* Municipios a resaltar cuando se llega desde una categoría.
+	*
+	* La ruta devuelve los NOMBRES, no los códigos, porque
+	* ENVIOS_CATEGORIA apunta a destinos y no todo destino tiene DANE. Se
+	* cruzan contra el catálogo con el comparador que ignora tildes y
+	* alias, el mismo que usa el mapa para la selección.
+	*/
+	const resaltados = (0, import_react.useMemo)(() => {
+		if (!foco.categoria) return null;
+		const nombres = (ayuda?.categorias.find((c) => c.nombre === foco.categoria))?.municipiosNombres;
+		if (!nombres || nombres.length === 0) return null;
+		const codigos = /* @__PURE__ */ new Set();
+		for (const cat of operacion.catalogo) if (nombres.some((n) => sameMunicipality(n, cat.nombre))) codigos.add(cat.codigoDane);
+		return codigos;
+	}, [
+		foco.categoria,
+		ayuda,
+		operacion.catalogo
+	]);
+	/**
+	* Al llegar desde una ficha de municipio, se selecciona solo. Antes
+	* había que buscarlo a mano en el mapa después del scroll.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!foco.municipio || !destinos) return;
+		const destino = destinos.find((d) => sameMunicipality(d.nombre, foco.municipio));
+		if (destino) setViewState((prev) => viewTransitions.toDestino(destino.id, prev));
+	}, [foco.municipio, destinos]);
 	const totalDespachosAsOf = (0, import_react.useMemo)(() => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0), [flujosParaMapa]);
 	const flujosFiltrados = (0, import_react.useMemo)(() => {
 		if (linesDismissed && !viewState.origenId && !viewState.destinoId) return [];
@@ -2549,6 +2663,25 @@ function DashboardPage({ embedded = false }) {
 				day: territoryDay,
 				lens,
 				instant: viewState.timelineInstant
+			}),
+			foco.categoria && resaltados && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "pointer-events-auto absolute inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex justify-center md:inset-x-0",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "text-base font-bold text-[#123E5C]",
+						children: [
+							resaltados.size,
+							" municipios recibieron ",
+							foco.categoria.toLowerCase()
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: foco.limpiar,
+						className: "rounded-full bg-[#123E5C] px-3 py-1 text-sm font-bold text-white transition hover:bg-[#0079C1]",
+						children: "Ver todos"
+					})]
+				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvisoEntrega, { frame: visibleActivity }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
@@ -3069,10 +3202,46 @@ function MunicipiosNuevosCallouts() {
 		})]
 	});
 }
-function SidebarNav({ items, scrollRootId, homeId, fechaCorte }) {
+function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/gobernacion-color.png" }) {
 	const [abierto, setAbierto] = (0, import_react.useState)(false);
 	const [activo, setActivo] = (0, import_react.useState)(items[0]?.id ?? "");
 	const visiblesRef = (0, import_react.useRef)(/* @__PURE__ */ new Set());
+	const navRef = (0, import_react.useRef)(null);
+	const abrirRef = (0, import_react.useRef)(null);
+	/**
+	* Cerrar al tocar fuera y con Escape, en cualquier tamaño de pantalla.
+	*
+	* Antes el velo solo existía en celular, así que en escritorio la barra
+	* abierta tapaba el contenido y la única forma de retraerla era acertar
+	* al botón de la flecha. Un panel que se abre encima de algo debe poder
+	* cerrarse tocando ese algo.
+	*
+	* Se escucha `pointerdown` y no `click`: si el elemento de abajo se
+	* mueve o desaparece entre el press y el release, el click nunca llega.
+	*
+	* Al cerrar, el foco vuelve al botón que abrió. Sin eso, quien navega
+	* con teclado queda al principio del documento después de cada cierre.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!abierto) return;
+		const alTocarFuera = (evento) => {
+			const destino = evento.target;
+			if (navRef.current?.contains(destino)) return;
+			if (abrirRef.current?.contains(destino)) return;
+			setAbierto(false);
+		};
+		const alPresionar = (evento) => {
+			if (evento.key !== "Escape") return;
+			setAbierto(false);
+			abrirRef.current?.focus();
+		};
+		document.addEventListener("pointerdown", alTocarFuera);
+		document.addEventListener("keydown", alPresionar);
+		return () => {
+			document.removeEventListener("pointerdown", alTocarFuera);
+			document.removeEventListener("keydown", alPresionar);
+		};
+	}, [abierto]);
 	(0, import_react.useEffect)(() => {
 		const root = document.getElementById(scrollRootId);
 		if (!root) return;
@@ -3108,50 +3277,41 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte }) {
 			type: "button",
 			onClick: () => setAbierto(true),
 			"aria-label": "Abrir menú",
-			className: "fixed left-4 top-4 z-50 flex size-12 items-center justify-center rounded-full bg-white text-[#00578C] shadow-lg ring-1 ring-[#00578C]/15 transition hover:bg-[#E8F6FC] md:hidden",
+			"aria-expanded": abierto,
+			ref: abrirRef,
+			className: "fixed left-4 top-4 z-50 flex size-12 items-center justify-center rounded-full bg-white text-[#0079C1] shadow-lg ring-1 ring-[#0079C1]/15 transition hover:bg-[#EAF7FC] md:hidden",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
 				className: "size-6",
 				"aria-hidden": true
 			})
 		}),
-		abierto && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-			type: "button",
-			"aria-label": "Cerrar menú",
-			onClick: () => setAbierto(false),
-			className: "fixed inset-0 z-40 bg-[#0B2233]/50 backdrop-blur-sm md:hidden"
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			"aria-hidden": true,
+			className: `fixed inset-0 z-40 bg-[#123E5C]/45 backdrop-blur-[2px] transition-opacity duration-300 motion-reduce:transition-none ${abierto ? "opacity-100" : "pointer-events-none opacity-0"}`
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+			ref: navRef,
 			"aria-label": "Secciones",
-			className: `fixed left-0 top-0 z-50 flex h-dvh flex-col border-r border-[#00578C]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}`,
+			className: `fixed left-0 top-0 z-50 shadow-xl md:shadow-none flex h-dvh flex-col border-r border-[#0079C1]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}`,
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mb-5 flex items-center gap-3 px-1",
+					className: `mb-5 ${abierto ? "flex items-center gap-3 px-1" : "flex flex-col items-center gap-2"}`,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: () => irA(inicioId),
 						"aria-label": "Volver al inicio",
 						title: "Volver al inicio",
-						className: "flex size-11 shrink-0 items-center justify-center rounded-xl bg-[#00578C] text-white transition hover:bg-[#00456F]",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Map$1, {
-							className: "size-6",
-							"aria-hidden": true
+						className: `flex shrink-0 items-center justify-center rounded-xl transition hover:bg-[#EAF7FC] ${abierto ? "h-12 px-2" : "h-11 w-full px-1"}`,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+							src: logo,
+							alt: "Gobernación del Valle del Cauca. Volver al inicio",
+							className: abierto ? "h-10 w-auto" : "h-8 w-full object-contain"
 						})
-					}), abierto ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-						type: "button",
-						onClick: () => irA(inicioId),
-						className: "min-w-0 flex-1 text-left",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block font-serif text-lg leading-tight text-[#00578C]",
-							children: "Ruta de la Solidaridad"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "block text-sm text-[#5E7789]",
-							children: "Valle del Cauca"
-						})]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					}), abierto ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 						type: "button",
 						onClick: () => setAbierto(false),
 						"aria-label": "Cerrar menú",
-						className: "flex size-9 shrink-0 items-center justify-center rounded-full text-[#4E6B7C] transition hover:bg-[#F4F9FC]",
+						className: "ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-[#35708F] transition hover:bg-[#F2FAFD]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
 							className: "size-5 md:hidden",
 							"aria-hidden": true
@@ -3159,11 +3319,11 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte }) {
 							className: "hidden size-5 md:block",
 							"aria-hidden": true
 						})]
-					})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: () => setAbierto(true),
 						"aria-label": "Abrir menú",
-						className: "hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#4E6B7C] transition hover:bg-[#F4F9FC] md:flex",
+						className: "hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#35708F] transition hover:bg-[#F2FAFD] md:flex",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
 							className: "size-6",
 							"aria-hidden": true
@@ -3179,7 +3339,7 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte }) {
 							onClick: () => irA(id),
 							"aria-current": esActivo ? "true" : void 0,
 							title: abierto ? void 0 : label,
-							className: `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${esActivo ? "bg-[#E8F6FC] text-[#00578C]" : "text-[#4E6B7C] hover:bg-[#F4F9FC] hover:text-[#00578C]"} ${abierto ? "" : "md:justify-center md:px-0"}`,
+							className: `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${esActivo ? "bg-[#EAF7FC] text-[#0079C1]" : "text-[#35708F] hover:bg-[#F2FAFD] hover:text-[#0079C1]"} ${abierto ? "" : "md:justify-center md:px-0"}`,
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icon, {
 								className: "size-6 shrink-0",
 								"aria-hidden": true
@@ -3191,7 +3351,7 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte }) {
 					})
 				}),
 				fechaCorte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					className: `px-2 pt-4 text-sm text-[#6E8B9E] ${abierto ? "" : "md:hidden"}`,
+					className: `px-2 pt-4 text-sm text-[#6B93AA] ${abierto ? "" : "md:hidden"}`,
 					children: ["Información al ", fechaCorte]
 				})
 			]
@@ -3210,47 +3370,6 @@ function SectionTitle({ children }) {
 		children
 	});
 }
-/** Barra proporcional. */
-function Bar({ ratio, color = "#0079C1" }) {
-	const pct = Math.max(0, Math.min(1, ratio)) * 100;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "h-[6px] overflow-hidden rounded-full bg-[#DDF0FA]",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-			className: "block h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none",
-			style: {
-				width: `${pct}%`,
-				background: color
-			}
-		})
-	});
-}
-/** Lista "etiqueta, barra, cifra". El máximo se calcula sobre la propia lista. */
-function MiniList({ rows }) {
-	const max = Math.max(1, ...rows.map((r) => r.value));
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-		className: "flex flex-col gap-2",
-		children: rows.map((r) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-			className: "flex items-center gap-3 text-base",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "min-w-0 flex-1 truncate text-[#35708F]",
-					children: r.label
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "w-[30%] shrink-0 sm:w-[38%]",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, {
-						ratio: r.value / max,
-						color: r.color
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", {
-					className: "w-20 shrink-0 text-right tabular-nums text-[#123E5C]",
-					children: [r.value.toLocaleString("es-CO"), r.suffix ?? ""]
-				})
-			]
-		}, r.label))
-	});
-}
 function Card({ children, className = "" }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: `rounded-lg border border-[#0079C1]/12 bg-white p-6 ${className}`,
@@ -3267,16 +3386,24 @@ function Aviso({ children }) {
 /**
 * TerritorySections.tsx
 * -----------------------------------------------------------------------
-* Podio, cobertura por zona y grilla de municipios. Todo se deriva de la
+* Podio, cobertura por zona y galería de municipios. Todo se deriva de la
 * API vía OperacionContext, así que las cifras se actualizan solas.
 *
-* La zona de cada municipio sigue viniendo del catálogo estático, porque
-* no cambia con las entregas. El total de municipios también, para poder
-* decir cuántos hay en el departamento aunque alguno todavía no aparezca
-* en los flujos.
+* SOBRE LA PRESENTACIÓN
+*
+* Antes eran tres listas del mismo peso visual, una debajo de otra. El
+* resultado era informativo y plano: nada indicaba dónde mirar primero.
+*
+* Ahora hay jerarquía. El municipio que más recibió ocupa una ficha
+* grande y oscura; los otros cinco van en fichas menores; las zonas son
+* un bloque de progreso; y los 41 municipios cierran como galería
+* filtrable. Cada nivel se lee más rápido que el anterior.
+*
+* Las animaciones son de entrada, cortas y escalonadas. Se apagan solas
+* con `prefers-reduced-motion`, que vive en marca.css.
+* -----------------------------------------------------------------------
 */
 var TODAS = "todas";
-var BARRA_COLOR = TERRITORY_BLUE_RAMP[2] ?? "#2181B4";
 var norm = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 function plural(n, uno, varios) {
 	return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
@@ -3284,74 +3411,132 @@ function plural(n, uno, varios) {
 function PodioMunicipios({ onSelect }) {
 	const { municipios } = useOperacion();
 	const top = municipios.slice(0, 6);
+	const primero = top[0];
+	const resto = top.slice(1);
 	const max = Math.max(1, ...municipios.map((m) => m.entregas));
-	if (top.length === 0) return null;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Municipios que más ayuda recibieron" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
-		className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
-		children: top.map((m, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+	if (!primero) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Municipios que más ayuda recibieron" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 			type: "button",
-			onClick: () => onSelect?.(m),
-			className: "flex w-full items-center gap-3.5 rounded-lg border border-[#0079C1]/12 bg-white p-4 text-left transition hover:border-[#0079C1]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "min-w-7 text-center font-serif text-[27px] leading-none text-[#22ABE2]",
-				children: i + 1
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-				className: "min-w-0 flex-1",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "block truncate text-lg text-[#123E5C]",
-						children: m.nombre
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "mt-0.5 mb-2 block text-[15px] text-[#6B93AA]",
-						children: [
-							plural(m.entregas, "entrega", "entregas"),
-							" · ",
-							m.toneladas,
-							" toneladas"
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, { ratio: m.entregas / max })
-				]
-			})]
-		}) }, m.destinoId))
+			onClick: () => onSelect?.(primero),
+			style: { "--i": 0 },
+			className: "vc-aparece group relative overflow-hidden rounded-lg bg-[#123E5C] p-7 text-left transition duration-200 hover:-translate-y-1 hover:shadow-xl sm:p-9 motion-reduce:hover:translate-y-0",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
+					children: "El que más recibió"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "vc-titular mt-3 text-[clamp(2rem,6vw,3.5rem)] text-white",
+					children: primero.nombre
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "block text-[clamp(2rem,5vw,3rem)] font-extrabold leading-none text-[#FBF8C6]",
+						children: primero.entregas
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "mt-1 block text-base text-[#A8CFE2]",
+						children: "entregas"
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "block text-[clamp(2rem,5vw,3rem)] font-extrabold leading-none text-[#FBF8C6]",
+						children: primero.toneladas
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "mt-1 block text-base text-[#A8CFE2]",
+						children: "toneladas"
+					})] })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-6 block h-2 overflow-hidden rounded-full bg-white/20",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "vc-crece block h-full rounded-full bg-[#FFD400]",
+						style: { width: "100%" }
+					})
+				})
+			]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+			className: "grid gap-3 sm:grid-cols-2",
+			children: resto.map((m, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: () => onSelect?.(m),
+				style: { "--i": i + 1 },
+				className: "vc-aparece flex h-full w-full items-start gap-4 rounded-lg bg-white p-5 text-left transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-0.5 text-3xl font-extrabold leading-none text-[#22ABE2]",
+					children: i + 2
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "min-w-0 flex-1",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "block truncate text-lg text-[#123E5C]",
+							children: m.nombre
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-0.5 mb-3 block text-[15px] text-[#6B93AA]",
+							children: [
+								plural(m.entregas, "entrega", "entregas"),
+								" · ",
+								m.toneladas,
+								" toneladas"
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block h-[6px] overflow-hidden rounded-full bg-[#DDF0FA]",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								className: "vc-crece block h-full rounded-full bg-[#0079C1]",
+								style: {
+									width: `${m.entregas / max * 100}%`,
+									"--i": i + 1
+								}
+							})
+						})
+					]
+				})]
+			}) }, m.destinoId))
+		})]
 	})] });
 }
 function CoberturaPorZona() {
 	const { zonas } = useOperacion();
 	if (zonas.length === 0) return null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Ayudas por zona" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
-		children: zonas.map((z) => {
+		className: "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4",
+		children: zonas.map((z, i) => {
 			const ratio = z.total > 0 ? z.atendidos / z.total : 0;
 			const completa = z.atendidos === z.total;
 			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "rounded-lg border border-[#0079C1]/12 bg-white p-5",
+				style: { "--i": i },
+				className: "vc-aparece rounded-lg bg-[#0079C1] p-6",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-base font-bold uppercase tracking-[0.08em] text-[#6B93AA]",
+						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
 						children: z.zona
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1 font-serif text-[38px] leading-none text-[#0079C1]",
-						children: [z.atendidos, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("small", {
-							className: "text-base font-normal text-[#6B93AA]",
+						className: "mt-2 text-[clamp(2.25rem,5vw,3rem)] font-extrabold leading-none text-white",
+						children: [z.atendidos, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "text-xl font-semibold text-[#A8CFE2]",
 							children: [" de ", z.total]
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-3.5",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, {
-							ratio,
-							color: completa ? "#2E9E4F" : "#FFD400"
+						className: "mt-4 h-2 overflow-hidden rounded-full bg-white/25",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+							className: "vc-crece block h-full rounded-full",
+							style: {
+								width: `${ratio * 100}%`,
+								background: completa ? "#7BE08F" : "#FFD400",
+								"--i": i
+							}
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-2 text-base text-[#35708F]",
-						children: completa ? "Todos recibieron ayudas" : `${z.total - z.atendidos} sin entregas todavía`
+						className: "mt-3 text-base text-[#FBF8C6]",
+						children: completa ? "Todos recibieron ayudas" : `${z.total - z.atendidos} sin entregas`
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1 text-base text-[#6B93AA]",
+						className: "mt-0.5 text-base text-[#A8CFE2]",
 						children: [plural(z.entregas, "entrega", "entregas"), " en total"]
 					})
 				]
@@ -3392,6 +3577,15 @@ function MunicipiosGrid({ onSelect }) {
 		zona,
 		texto
 	]);
+	const filtros = [{
+		valor: TODAS,
+		etiqueta: "Todas las zonas",
+		cantidad: todos.length
+	}, ...zonas.map((z) => ({
+		valor: z.zona,
+		etiqueta: z.zona,
+		cantidad: z.total
+	}))];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionLabel, { children: [
 			"Los ",
@@ -3399,14 +3593,20 @@ function MunicipiosGrid({ onSelect }) {
 			" municipios"
 		] }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "mt-4 flex flex-wrap gap-2",
-			children: [TODAS, ...zonas.map((z) => z.zona)].map((z) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: () => setZona(z),
-				"aria-pressed": zona === z,
-				className: `rounded-full border px-3.5 py-1.5 text-base font-semibold transition ${zona === z ? "border-[#0079C1] bg-[#0079C1] text-white" : "border-[#0079C1]/20 bg-white text-[#35708F] hover:border-[#0079C1]/50 hover:text-[#0079C1]"}`,
-				children: z === TODAS ? "Todas las zonas" : z
-			}, z))
+			className: "mt-5 flex flex-wrap items-center gap-2",
+			children: filtros.map((f) => {
+				const activo = zona === f.valor;
+				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: () => setZona(f.valor),
+					"aria-pressed": activo,
+					className: `inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${activo ? "bg-[#0079C1] text-white shadow-md" : "bg-white text-[#35708F] hover:bg-[#EAF7FC] hover:text-[#0079C1]"}`,
+					children: [f.etiqueta, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: `rounded-full px-2 py-0.5 text-sm font-bold ${activo ? "bg-white/25 text-white" : "bg-[#DDF0FA] text-[#0079C1]"}`,
+						children: f.cantidad
+					})]
+				}, f.valor);
+			})
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
 			type: "search",
@@ -3414,7 +3614,7 @@ function MunicipiosGrid({ onSelect }) {
 			onChange: (e) => setTexto(e.target.value),
 			placeholder: "Buscar municipio…",
 			"aria-label": "Buscar municipio",
-			className: "mt-3 w-full rounded-lg border border-[#0079C1]/20 bg-white px-3.5 py-2.5 text-base text-[#123E5C] outline-none transition placeholder:text-[#6B93AA] focus:border-[#0079C1]"
+			className: "mt-3 w-full rounded-lg border-2 border-transparent bg-white px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#22ABE2]"
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-3 text-base text-[#6B93AA]",
@@ -3422,128 +3622,174 @@ function MunicipiosGrid({ onSelect }) {
 			children: visibles.length === todos.length ? plural(visibles.length, "municipio", "municipios") : `${visibles.length} de ${todos.length} municipios`
 		}),
 		visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-6 rounded-lg border border-dashed border-[#0079C1]/25 p-8 text-center text-base text-[#6B93AA]",
+			className: "mt-6 rounded-lg border-2 border-dashed border-[#22ABE2]/40 p-10 text-center text-base text-[#6B93AA]",
 			children: "Ningún municipio coincide. Prueba con otro nombre o quita el filtro de zona."
 		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "mt-3 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,212px),1fr))]",
-			children: visibles.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-				type: "button",
-				onClick: () => onSelect?.(m),
-				className: "rounded-lg border border-[#0079C1]/12 bg-white p-3.5 text-left transition hover:-translate-y-0.5 hover:border-[#0079C1]/45 hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] motion-reduce:hover:translate-y-0",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex items-baseline justify-between gap-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "min-w-0 truncate text-lg text-[#123E5C]",
-							children: m.nombre
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: `font-serif text-2xl ${m.entregas === 0 ? "text-[#6B93AA]" : "text-[#0079C1]"}`,
-							children: m.entregas
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "my-2.5",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, {
-							ratio: m.entregas / max,
-							color: BARRA_COLOR
+			className: "mt-4 grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr))]",
+			children: visibles.map((m, i) => {
+				const sinEntregas = m.entregas === 0;
+				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: () => onSelect?.(m),
+					style: { "--i": Math.min(i, 24) },
+					className: `vc-aparece group relative overflow-hidden rounded-lg p-5 text-left transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0 ${sinEntregas ? "bg-[#EAF7FC]" : "bg-white"}`,
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"aria-hidden": true,
+							className: "absolute inset-x-0 top-0 h-1 transition-all duration-200 group-hover:h-1.5",
+							style: { background: sinEntregas ? "#A8CFE2" : "#0079C1" }
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex items-baseline justify-between gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "min-w-0 truncate text-lg text-[#123E5C]",
+								children: m.nombre
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: `text-3xl font-extrabold leading-none ${sinEntregas ? "text-[#A8CFE2]" : "text-[#0079C1]"}`,
+								children: m.entregas
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "my-3 h-[6px] overflow-hidden rounded-full bg-[#DDF0FA]",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								className: "vc-crece block h-full rounded-full bg-[#22ABE2]",
+								style: {
+									width: `${m.entregas / max * 100}%`,
+									"--i": Math.min(i, 24)
+								}
+							})
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "flex justify-between text-[15px] text-[#6B93AA]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: m.zona ?? "Sin zona" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: sinEntregas ? "Sin entregas" : `${m.toneladas} t` })]
 						})
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "flex justify-between text-[15px] text-[#6B93AA]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [m.toneladas, " toneladas"] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: plural(m.entregas, "entrega", "entregas") })]
-					})
-				]
-			}, m.destinoId))
-		})
+					]
+				}, m.destinoId);
+			})
+		}, `${zona}-${texto}`)
 	] });
 }
 /**
 * EvolucionHeatmap.tsx
 * -----------------------------------------------------------------------
-* Una casilla por municipio y día. Todo sale de la API vía
-* OperacionContext: los días, las entregas y las zonas se recalculan
-* solos cuando cambia el Excel. Antes esta rejilla leía un catálogo
-* estático y quedaba vieja apenas se agregaba una entrega.
+* Una casilla por municipio y día, agrupadas por zona.
+*
+* Todo sale de la API vía OperacionContext: los días, las entregas y las
+* zonas se recalculan solos cuando cambia el Excel.
+*
+* SOBRE EL COLOR
+*
+* La pieza de diseño alterna crema, amarillo, naranja, azul y blanco.
+* Ahí es decoración, porque todas las casillas dicen 1 y es una maqueta.
+* Acá el color tiene que significar algo, así que se ordenan de menos a
+* más: crema para una entrega, naranja para el día más intenso. Se usa la
+* misma paleta de la pieza, solo que en secuencia.
+*
+* El cero no es el extremo bajo de la escala, es una categoría aparte:
+* queda en azul apagado, para que un día sin entregas no se confunda con
+* un día de poca actividad.
+* -----------------------------------------------------------------------
 */
-var ORDEN_ZONAS = [
-	"Norte",
-	"Centro",
-	"Sur",
-	"Pacífico"
+/** De menos a más entregas. Tomada de la pieza. */
+var ESCALA = [
+	"#FDFBE0",
+	"#FBF8C6",
+	"#FCE07A",
+	"#F7B733",
+	"#F0801E"
 ];
+/** Día sin entregas. Categoría aparte, no el extremo de la escala. */
+var SIN_ENTREGAS = "#0A5E97";
 function EvolucionHeatmap({ onSelect }) {
-	const { jornadas, municipios } = useOperacion();
+	const { jornadas, municipios, zonas } = useOperacion();
 	const dias = (0, import_react.useMemo)(() => jornadas.map((j) => j.dia), [jornadas]);
 	/** Tope de la escala: la casilla más alta de toda la rejilla. */
 	const maxDia = (0, import_react.useMemo)(() => Math.max(1, ...municipios.flatMap((m) => Object.values(m.dias))), [municipios]);
-	const porZona = (0, import_react.useMemo)(() => {
-		return [...ORDEN_ZONAS, "Sin zona"].map((zona) => ({
-			zona,
-			filas: municipios.filter((m) => (m.zona ?? "Sin zona") === zona)
-		})).filter((g) => g.filas.length > 0);
-	}, [municipios]);
+	const grupos = (0, import_react.useMemo)(() => zonas.map((z) => ({
+		zona: z.zona,
+		filas: municipios.filter((m) => (m.zona ?? "Sin zona") === z.zona).sort((a, b) => b.entregas - a.entregas || a.nombre.localeCompare(b.nombre, "es"))
+	})).filter((g) => g.filas.length > 0), [zonas, municipios]);
 	if (dias.length === 0) return null;
-	const celdaColor = (value) => {
-		if (value <= 0) return "rgba(255,255,255,0.055)";
-		return `rgba(129,200,236,${(.42 + value / maxDia * .58).toFixed(2)})`;
+	const colorDe = (valor) => {
+		if (valor <= 0) return SIN_ENTREGAS;
+		return ESCALA[Math.min(ESCALA.length - 1, Math.round((valor - 1) / Math.max(1, maxDia - 1) * (ESCALA.length - 1)))] ?? ESCALA[0];
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué municipio recibió cada día" }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]",
-			children: "Cada casilla es un día. Más azul, más entregas ese día."
+			children: "Cada casilla es un día. Cuanto más cálido el color, más entregas ese día."
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "mt-6 overflow-x-auto rounded-md bg-[#0079C1] p-4 sm:p-5",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "min-w-[660px] [--col-nombre:96px] sm:[--col-nombre:112px]",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
-					dias,
-					etiqueta: "",
-					celdas: dias.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-center text-sm text-[#6B93AA]",
-						children: d
-					}, d)),
-					total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "text-sm text-[#6B93AA]",
-						children: "total"
-					})
-				}), porZona.map(({ zona, filas }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-3.5 mb-1.5 text-sm font-bold uppercase tracking-[0.1em] text-[#22ABE2]",
-					children: zona
-				}), filas.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: () => onSelect?.(m),
-					className: "block w-full rounded transition hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#22ABE2]",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
-						dias,
-						etiqueta: m.nombre,
-						celdas: dias.map((d) => {
-							const v = m.dias[d] ?? 0;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								title: `${m.nombre}, día ${d}: ${v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`}`,
-								className: "flex h-[22px] items-center justify-center rounded-sm text-[11px] font-bold text-[#123E5C]",
-								style: { background: celdaColor(v) },
-								children: v > 0 ? v : ""
-							}, d);
-						}),
-						total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-right font-serif text-base text-white",
-							children: m.entregas
+			className: "mt-6 space-y-5",
+			children: grupos.map(({ zona, filas }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "rounded-md bg-[#123E5C] p-4 sm:p-6",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex flex-col gap-5 lg:flex-row lg:gap-8",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "lg:w-52 lg:shrink-0",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "vc-titular text-3xl text-white sm:text-4xl",
+							children: zona
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-3 text-base leading-6 text-[#A8CFE2]",
+							children: [filas.map((m) => m.nombre).join(", "), "."]
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "min-w-0 flex-1 overflow-x-auto",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "min-w-[640px]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
+								dias,
+								etiqueta: "",
+								celdas: dias.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-center text-sm font-bold text-white",
+									children: d
+								}, d)),
+								total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "text-sm font-bold text-white",
+									children: "total"
+								}),
+								sobreOscuro: true
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-2 rounded-sm bg-[#22ABE2] p-2.5",
+								children: filas.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									onClick: () => onSelect?.(m),
+									className: "block w-full rounded-sm transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
+										dias,
+										etiqueta: m.nombre,
+										celdas: dias.map((d) => {
+											const v = m.dias[d] ?? 0;
+											return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												title: `${m.nombre}, día ${d}: ${v === 0 ? "sin entregas" : v === 1 ? "1 entrega" : `${v} entregas`}`,
+												className: "flex h-6 items-center justify-center rounded-[2px] text-[13px] font-bold text-[#0079C1]",
+												style: { background: colorDe(v) },
+												children: v > 0 ? v : ""
+											}, d);
+										}),
+										total: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "text-right text-base font-extrabold text-[#123E5C]",
+											children: m.entregas
+										})
+									})
+								}, m.destinoId))
+							})]
 						})
-					})
-				}, m.destinoId))] }, zona))]
-			})
+					})]
+				})
+			}, zona))
 		})
 	] });
 }
-function Fila({ dias, etiqueta, celdas, total }) {
+function Fila({ dias, etiqueta, celdas, total, sobreOscuro = false }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "grid items-center gap-[2px] py-[1px]",
-		style: { gridTemplateColumns: `var(--col-nombre) repeat(${dias.length}, 1fr) 42px` },
+		className: "grid items-center gap-[3px] py-[2px]",
+		style: { gridTemplateColumns: `108px repeat(${dias.length}, 1fr) 44px` },
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "truncate pr-1.5 text-left text-[15px] text-[#CFEAF7]",
+				className: `truncate pr-2 text-left text-[13px] font-semibold ${sobreOscuro ? "text-white" : "text-[#123E5C]"}`,
 				children: etiqueta
 			}),
 			celdas,
@@ -3877,26 +4123,6 @@ var familiasDeAyuda = [
 	}
 ];
 /**
-* useAyuda.ts
-* -----------------------------------------------------------------------
-* Composición de lo entregado, desde route=ayuda.
-*
-* Mismo patrón y mismo staleTime que useCatalogQueries, y `retry: false`
-* como useToneladas: mientras la ruta no esté publicada, el backend
-* responde 404 y no tiene sentido reintentar. La sección cae a las
-* cifras del catálogo y sigue funcionando.
-*/
-/** Igual que en useCatalogQueries. Si cambia allá, cambia acá. */
-var CATALOG_STALE_TIME_MS = 3e5;
-function useAyuda() {
-	return useQuery({
-		queryKey: ["ayuda"],
-		queryFn: () => ayudasApiRepository.getAyuda(),
-		staleTime: CATALOG_STALE_TIME_MS,
-		retry: false
-	});
-}
-/**
 * AyudaSection.tsx
 * -----------------------------------------------------------------------
 * Composición de la ayuda entregada. Al elegir una categoría, la lista
@@ -3913,6 +4139,7 @@ function AyudaSection() {
 	const [activa, setActiva] = (0, import_react.useState)(null);
 	const { totalToneladas, toneladasMedidas } = useOperacion();
 	const { data: ayuda } = useAyuda();
+	const { enfocarCategoria } = useFoco();
 	/**
 	* Antes esta lista decía "llegó a 44 municipios" en un departamento de
 	* 41, porque el catálogo cuenta destinos de cualquier tipo. La ruta
@@ -3922,7 +4149,7 @@ function AyudaSection() {
 		if (!ayuda) return categoriasAyuda.map((c) => ({
 			nombre: c.nombre,
 			unidades: c.unidades,
-			municipios: c.destinos,
+			municipios: null,
 			color: c.color,
 			productos: c.productos
 		}));
@@ -3940,9 +4167,33 @@ function AyudaSection() {
 	const totalUnidades = ayuda?.totalUnidades ?? 256650;
 	const poblaciones = ayuda ? ayuda.poblaciones.map((p) => [p.nombre, p.despachos]) : poblacionesFocalizadas.map(([nombre, despachos]) => [nombre, despachos]);
 	const pct = (unidades) => totalUnidades > 0 ? Math.round(unidades / totalUnidades * 100) : 0;
+	/**
+	* Porcentaje para mostrar.
+	*
+	* Herramientas y materiales son 828 unidades de 256.650, un 0,32 por
+	* ciento, y Salud son 87, un 0,03. Redondeados dan cero, y un cero se
+	* lee como que no se entregó nada. Sí se entregó, solo que poco.
+	*
+	* "menos de 1" dice lo mismo sin mentir. Cero se reserva para cuando
+	* de verdad no hay nada.
+	*/
+	const pctTexto = (unidades) => {
+		if (unidades <= 0) return "0%";
+		const redondeado = pct(unidades);
+		return redondeado === 0 ? "<1%" : `${redondeado}%`;
+	};
 	const categoria = activa ? categorias.find((c) => c.nombre === activa) : void 0;
 	const maxUnidades = Math.max(1, ...categorias.map((c) => c.unidades));
 	const waffle = (0, import_react.useMemo)(() => categorias.flatMap((c) => Array.from({ length: Math.round(c.unidades / Math.max(1, totalUnidades) * 100) }, () => c)), [categorias, totalUnidades]);
+	/**
+	* Tipo explícito, con `color` opcional.
+	*
+	* Sin él, TypeScript infiere una unión de dos formas distintas, una con
+	* color y otra sin, y solo deja leer lo que existe en las dos. El
+	* color solo aplica cuando hay categoría seleccionada: en la lista
+	* general los artículos vienen de categorías distintas y pintarlos
+	* todos igual sería mentir sobre a cuál pertenecen.
+	*/
 	const productos = categoria ? categoria.productos.map(([label, value]) => ({
 		label,
 		value,
@@ -3986,7 +4237,7 @@ function AyudaSection() {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
 						children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-							title: `${c.nombre}: ${pct(c.unidades)} por ciento de la ayuda`,
+							title: `${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(c.unidades)} de la ayuda`,
 							className: "block transition-opacity",
 							style: {
 								flex: c.unidades,
@@ -4036,88 +4287,158 @@ function AyudaSection() {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.9fr)] lg:items-start",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					className: "p-0",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "px-6 pt-6 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-						children: "Categorías"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "mt-3",
-						children: categorias.map((c) => {
-							const seleccionada = activa === c.nombre;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-								type: "button",
-								"aria-pressed": seleccionada,
-								onClick: () => setActiva(seleccionada ? null : c.nombre),
-								className: `w-full border-b border-[#0079C1]/10 px-6 py-3 text-left transition ${seleccionada ? "bg-[#EAF7FC]" : "hover:bg-[#F2FAFD]"}`,
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "flex items-baseline justify-between gap-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "flex min-w-0 items-center gap-2 text-base font-semibold text-[#123E5C]",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-												className: "block size-2.5 shrink-0 rounded-sm",
-												style: { background: c.color }
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "truncate",
-												children: c.nombre
-											})]
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "shrink-0 font-serif text-xl text-[#0079C1]",
-											children: [pct(c.unidades), "%"]
-										})]
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "mt-2 block",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Bar, {
-											ratio: c.unidades / maxUnidades,
-											color: c.color
-										})
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "mt-2 block text-[15px] text-[#6B93AA]",
-										children: [
-											"Llegó a ",
-											c.municipios,
-											" ",
-											c.municipios === 1 ? "municipio" : "municipios"
-										]
+				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+					children: "Categorías"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4 grid gap-2.5 sm:grid-cols-2",
+					children: categorias.map((c, i) => {
+						const seleccionada = activa === c.nombre;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							"aria-pressed": seleccionada,
+							onClick: () => setActiva(seleccionada ? null : c.nombre),
+							style: { "--i": i },
+							className: `vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${seleccionada ? "-translate-y-0.5 text-white shadow-lg" : "bg-white hover:-translate-y-0.5 hover:shadow-md"} motion-reduce:hover:translate-y-0`,
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									"aria-hidden": true,
+									className: "absolute inset-0 -z-10 transition-opacity duration-200",
+									style: {
+										background: c.color,
+										opacity: seleccionada ? 1 : 0
+									}
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									"aria-hidden": true,
+									className: "absolute inset-y-0 left-0 w-1",
+									style: { background: seleccionada ? "transparent" : c.color }
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "flex items-baseline justify-between gap-3",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: `min-w-0 truncate text-base font-semibold ${seleccionada ? "text-white" : "text-[#123E5C]"}`,
+										children: c.nombre
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: `shrink-0 text-2xl font-extrabold ${seleccionada ? "text-white" : "text-[#0079C1]"}`,
+										children: pctTexto(c.unidades)
+									})]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+										className: "vc-crece block h-full rounded-full",
+										style: {
+											width: `${c.unidades / maxUnidades * 100}%`,
+											background: seleccionada ? "#FFFFFF" : c.color,
+											"--i": i
+										}
 									})
-								]
-							}) }, c.nombre);
-						})
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex flex-col gap-5",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-						children: categoria ? categoria.nombre : "Lo más entregado"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-4",
-						children: productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: productos }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-base text-[#6B93AA]",
-							children: "No hay detalle de artículos para esta categoría."
-						})
-					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [
+								}),
+								c.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: `mt-2.5 block text-[15px] ${seleccionada ? "text-white/85" : "text-[#6B93AA]"}`,
+									children: [
+										"Llegó a ",
+										c.municipios,
+										" ",
+										c.municipios === 1 ? "municipio" : "municipios"
+									]
+								})
+							]
+						}, c.nombre);
+					})
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+					className: "lg:sticky lg:top-6",
+					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-							children: "Grupos atendidos"
+							children: categoria ? categoria.nombre : "Lo más entregado"
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: poblaciones.map(([label, value]) => ({
-								label,
-								value,
-								color: "#7F207F"
-							})) })
+						productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "mt-4 flex flex-col gap-3",
+							children: productos.map((prod, i) => {
+								const maximo = Math.max(1, ...productos.map((x) => x.value));
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+									style: { "--i": i },
+									className: "vc-aparece",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-baseline justify-between gap-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "min-w-0 truncate text-base text-[#35708F]",
+											children: prod.label
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+											className: "shrink-0 tabular-nums text-[#123E5C]",
+											children: prod.value.toLocaleString("es-CO")
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+											className: "vc-crece block h-full rounded-full",
+											style: {
+												width: `${prod.value / maximo * 100}%`,
+												background: prod.color ?? "#0079C1",
+												"--i": i
+											}
+										})
+									})]
+								}, prod.label);
+							})
+						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-4 text-base text-[#6B93AA]",
+							children: "No hay detalle de artículos para esta categoría."
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-base text-[#6B93AA]",
-							children: "Entregas que incluyeron ayuda dirigida a cada grupo."
+						categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-6 flex flex-col gap-3 border-t border-[#0079C1]/12 pt-5",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => enfocarCategoria(categoria.nombre),
+								className: "inline-flex items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
+								children: "Ver en el mapa dónde llegó"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+								type: "button",
+								onClick: () => setActiva(null),
+								className: "text-base font-semibold text-[#0079C1] underline-offset-4 hover:underline",
+								children: "Ver lo más entregado en total"
+							})]
 						})
-					] })]
-				})]
+					]
+				}, categoria?.nombre ?? "general")]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
+						children: "A quién se dirigió la ayuda"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
+						children: "Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar varios, así que la suma es mayor que el total de entregas."
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3",
+						children: poblaciones.map(([nombre, entregas]) => {
+							const maximo = Math.max(1, ...poblaciones.map(([, v]) => v));
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "flex items-baseline justify-between gap-3",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "min-w-0 truncate text-base text-white sm:text-lg",
+									children: nombre
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+									className: "shrink-0 text-xl font-extrabold text-[#FBF8C6]",
+									children: entregas
+								})]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-2 h-[6px] overflow-hidden rounded-full bg-white/25",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+									className: "block h-full rounded-full bg-[#FFD400]",
+									style: { width: `${entregas / maximo * 100}%` }
+								})
+							})] }, nombre);
+						})
+					})
+				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-6",
@@ -4362,20 +4683,6 @@ var canales = [
 		]
 	}
 ];
-/**
-* CanalesSection.tsx
-* -----------------------------------------------------------------------
-* Las rutas que el conteo por municipio deja fuera.
-*
-* Cali y el centro de acopio de Cartago se calculan desde la API. Los
-* otros cinco canales no pueden: sus destinos no están atados a un
-* municipio, así que quedan fuera de route=flujos por diseño (ver
-* Catalogs.gs, precision SIN_UBICAR). Esos siguen con cifras del
-* catálogo y van marcados.
-*
-* Las unidades por categoría vienen de ENVIOS_CATEGORIA, que ninguna
-* ruta expone todavía. Son las mismas para todos los canales.
-*/
 var ORIGEN_CARTAGO = "ORI-CARTAGO";
 var ID_CALI = "cali";
 var ID_CARTAGO = "acopio-cartago";
@@ -4383,24 +4690,6 @@ function CanalesSection() {
 	const op = useOperacion();
 	const { data: ayuda } = useAyuda();
 	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
-	/**
-	* Las categorías de cada canal salen de route=ayuda cuando existe. El
-	* catálogo queda de respaldo y como fuente del color, que es una
-	* decisión de diseño y no un dato.
-	*/
-	const categoriasDe = (nombre, respaldo) => {
-		const vivo = ayuda?.canales.find((c) => sameMunicipality(c.nombre, nombre) || c.nombre === nombre);
-		if (!vivo) return respaldo.map(([label, value, color]) => ({
-			label,
-			value,
-			color
-		}));
-		return vivo.categorias.map((cat) => ({
-			label: cat.nombre,
-			value: cat.unidades,
-			color: respaldo.find(([n]) => n === cat.nombre)?.[2] ?? "#6B93AA"
-		}));
-	};
 	const entregasDe = (id, respaldo) => {
 		if (id === ID_CALI && op.entregasCali > 0) return op.entregasCali;
 		if (id === ID_CARTAGO && cartago) return cartago.entregas;
@@ -4419,102 +4708,203 @@ function CanalesSection() {
 	* dividiera solo entre las municipales, se le atribuiría a los
 	* municipios todo el peso del departamento y cada canal quedaría
 	* inflado.
-	*
-	* Es un estimado y la sección lo dice. Si algún día se registra el peso
-	* por despacho, esto se reemplaza por el dato real.
 	*/
 	const entregasDepartamentales = op.totalEntregas + total;
 	const toneladasPorEntrega = entregasDepartamentales > 0 ? op.totalToneladas / entregasDepartamentales : 0;
 	const toneladasDe = (entregas) => Math.round(entregas * toneladasPorEntrega);
+	/**
+	* Las categorías de cada canal salen de route=ayuda cuando existe. El
+	* catálogo queda de respaldo y como fuente del color, que es una
+	* decisión de diseño y no un dato.
+	*/
+	const categoriasDe = (nombre, respaldo) => {
+		const vivo = ayuda?.canales.find((c) => sameMunicipality(c.nombre, nombre) || c.nombre === nombre);
+		if (!vivo) return respaldo.map(([label, value, color]) => ({
+			label,
+			value,
+			color
+		}));
+		return vivo.categorias.map((cat) => ({
+			label: cat.nombre,
+			value: cat.unidades,
+			color: respaldo.find(([n]) => n === cat.nombre)?.[2] ?? "#6B93AA"
+		}));
+	};
+	const conEntregas = canales.map((c) => ({
+		...c,
+		entregas: entregasDe(c.id, c.despachos)
+	})).sort((a, b) => b.entregas - a.entregas);
+	const principales = conEntregas.slice(0, 2);
+	const secundarias = conEntregas.slice(2);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "¿De dónde salió la ayuda?" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
-				children: "Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales."
+				children: [
+					"Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales. Suman ",
+					total,
+					" entregas y unas",
+					" ",
+					toneladasDe(total).toLocaleString("es-CO"),
+					" toneladas que también se movieron."
+				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-9 grid gap-4 md:grid-cols-2",
-				children: canales.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-					className: "rounded-lg border border-[#0079C1]/12 border-t-[3px] bg-white p-5",
-					style: { borderTopColor: c.color },
+				className: "mt-9 grid gap-4 lg:grid-cols-2",
+				children: principales.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+					style: { "--i": i },
+					className: "vc-aparece rounded-lg bg-[#123E5C] p-7 sm:p-9",
 					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]",
+							children: "Ruta principal"
+						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "text-xl font-semibold text-[#123E5C]",
+							className: "vc-titular mt-3 text-[clamp(1.75rem,4.5vw,2.75rem)] text-white",
 							children: c.nombre
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-1 min-h-[34px] text-base leading-6 text-[#6B93AA]",
+							className: "mt-2 text-base leading-6 text-[#A8CFE2]",
 							children: c.glosa
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
-							className: "mt-3 flex flex-wrap gap-x-8 gap-y-3",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
-								className: "text-[23px] font-extrabold leading-none text-[#0079C1]",
-								children: entregasDe(c.id, c.despachos).toLocaleString("es-CO")
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
-								className: "mt-1 text-sm text-[#6B93AA]",
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
+								children: c.entregas.toLocaleString("es-CO")
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-1 block text-base text-[#A8CFE2]",
 								children: "entregas"
-							})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
-								className: "text-[23px] font-extrabold leading-none text-[#0079C1]",
-								children: toneladasDe(entregasDe(c.id, c.despachos)).toLocaleString("es-CO")
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
-								className: "mt-1 text-sm text-[#6B93AA]",
+							})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
+								children: toneladasDe(c.entregas).toLocaleString("es-CO")
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-1 block text-base text-[#A8CFE2]",
 								children: "toneladas estimadas"
 							})] })]
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-4",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: categoriasDe(c.nombre, c.categorias) })
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "mt-7 flex flex-col gap-3 border-t border-white/15 pt-6",
+							children: categoriasDe(c.nombre, c.categorias).map((cat, j) => {
+								const maximo = Math.max(1, ...categoriasDe(c.nombre, c.categorias).map((x) => x.value));
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+									style: { "--i": j },
+									className: "vc-aparece",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "flex items-baseline justify-between gap-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "min-w-0 truncate text-base text-white",
+											children: cat.label
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+											className: "shrink-0 tabular-nums text-[#FBF8C6]",
+											children: cat.value.toLocaleString("es-CO")
+										})]
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/20",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+											className: "vc-crece block h-full rounded-full",
+											style: {
+												width: `${cat.value / maximo * 100}%`,
+												background: cat.color,
+												"--i": j
+											}
+										})
+									})]
+								}, cat.label);
+							})
+						})
+					]
+				}, c.id))
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+				children: secundarias.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+					style: { "--i": i },
+					className: "vc-aparece rounded-lg bg-white p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block h-1 w-10 rounded-full",
+							style: { background: c.color }
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "mt-3 text-lg font-semibold text-[#123E5C]",
+							children: c.nombre
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-1 text-[15px] leading-6 text-[#6B93AA]",
+							children: c.glosa
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-4 flex items-baseline gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "text-3xl font-extrabold leading-none text-[#0079C1]",
+								children: c.entregas
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "text-base text-[#6B93AA]",
+								children: c.entregas === 1 ? "entrega" : "entregas"
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-1 text-[15px] text-[#6B93AA]",
+							children: [toneladasDe(c.entregas).toLocaleString("es-CO"), " toneladas estimadas"]
 						})
 					]
 				}, c.id))
 			}),
 			cartago && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.85fr)] lg:items-start",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+				className: "mt-4 rounded-lg bg-[#0079C1] p-7 sm:p-9",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						className: "vc-titular text-[clamp(1.5rem,4vw,2.25rem)] text-[#FBF8C6]",
 						children: "Centro de distribución Cartago"
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-3 text-base leading-7 text-[#35708F]",
-						children: "Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte de Cali y explica cómo se abasteció el norte."
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
+						children: [
+							"Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte de Cali y explica cómo se abasteció el norte: ",
+							cartago.entregas,
+							" entregas hacia",
+							" ",
+							cartago.municipios,
+							" municipios."
+						]
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-4",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MiniList, { rows: cartago.destinos.map((d) => ({
-							label: d.nombre,
-							value: d.entregas,
-							color: "#E2690E"
-						})) })
-					})
-				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					className: "border-l-[3px] border-l-[#F0801E]",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block text-[33px] font-extrabold leading-none text-[#0079C1]",
-							children: cartago.entregas
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-1.5 text-base font-semibold text-[#6B93AA]",
-							children: "Entregas desde Cartago"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-base leading-7 text-[#35708F]",
-							children: [
-								"Llegaron a ",
-								cartago.municipios,
-								" municipios del norte del Valle. Se cuentan como entrega municipal, igual que las que salen de Cali."
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-base leading-7 text-[#6B93AA]",
-							children: "La ayuda enviada al Chocó sí cuenta como entrega. No cuenta como municipio del Valle, porque no pertenece al departamento."
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "mt-7 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3",
+						children: cartago.destinos.map((d, i) => {
+							const maximo = Math.max(1, ...cartago.destinos.map((x) => x.entregas));
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								style: { "--i": i },
+								className: "vc-aparece",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-baseline justify-between gap-3",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "min-w-0 truncate text-base text-white",
+										children: d.nombre
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "shrink-0 text-lg font-extrabold text-[#FBF8C6]",
+										children: d.entregas
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-white/25",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+										className: "vc-crece block h-full rounded-full bg-[#FFD400]",
+										style: {
+											width: `${d.entregas / maximo * 100}%`,
+											"--i": i
+										}
+									})
+								})]
+							}, d.nombre);
 						})
-					]
-				})]
+					})
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-6 max-w-3xl text-base leading-7 text-[#6B93AA]",
+				children: "Las toneladas por ruta son una estimación. El peso se registra por día y para todo el departamento, no por cada envío, así que el total se reparte entre las entregas. La ayuda enviada al Chocó cuenta como entrega, pero no como municipio del Valle."
 			})
 		]
 	});
@@ -4587,26 +4977,15 @@ function PiezaGrafica({ escritorio, movil, alt, fondo = AZUL_RELLENO, prioritari
 		})] })
 	});
 }
-/**
-* PanoramaDonuts.tsx
-* -----------------------------------------------------------------------
-* Los tres indicadores de cobertura del índice, calculados desde la API.
-*
-* Antes venían de panoramaData.ts, así que decían "13 de 15, del 11 al
-* 25" aunque el Excel ya tuviera más jornadas.
-*
-* SOBRE EL TAMAÑO
-*
-* La versión anterior fijaba el diámetro en 128 px con `size-32`. Sobre
-* una pieza a pantalla completa eso se ve diminuto, y en un monitor
-* grande queda perdido. Ahora el SVG ocupa el ancho de su columna con un
-* máximo, así que crece con la pantalla y el grosor del anillo se
-* mantiene proporcional porque está en unidades del viewBox.
-* -----------------------------------------------------------------------
-*/
 /** Radio dentro del viewBox de 128. La circunferencia sale de ahí. */
 var RADIO = 52;
 var CIRCUNFERENCIA = 2 * Math.PI * RADIO;
+/** Paleta de la campaña, del más cálido al más claro. */
+var COLORES = [
+	"#FFD400",
+	"#FBF8C6",
+	"#F0801E"
+];
 function PanoramaDonuts() {
 	const op = useOperacion();
 	if (op.municipiosAtendidos === 0) return null;
@@ -4617,33 +4996,32 @@ function PanoramaDonuts() {
 			id: "municipios",
 			valor: op.municipiosAtendidos,
 			total: op.municipiosTotales,
-			label: "Municipios con ayudas entregadas",
-			color: "#2E9E4F"
+			label: "Municipios con ayudas entregadas"
 		},
 		{
 			id: "zonas",
 			valor: zonasCompletas,
 			total: op.zonas.length,
-			label: "Zonas del Valle cubiertas por completo",
-			color: "#FFD400"
+			label: "Zonas del Valle cubiertas por completo"
 		},
 		{
 			id: "dias",
 			valor: op.diasConEntrega,
 			total: diasDelRango,
-			label: op.rangoLargo ? `Días con entregas, ${op.rangoLargo}` : "Días con entregas",
-			color: "#22ABE2"
+			label: op.rangoLargo ? `Días con entregas, ${op.rangoLargo}` : "Días con entregas"
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "grid gap-8 sm:grid-cols-3 sm:gap-6",
-		children: donuts.map((d) => {
+		className: "grid gap-6 sm:grid-cols-3",
+		children: donuts.map((d, i) => {
 			const proporcion = d.total > 0 ? d.valor / d.total : 0;
+			const color = COLORES[i % COLORES.length];
+			const fin = CIRCUNFERENCIA * (1 - proporcion);
 			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "flex flex-col items-center text-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
 					viewBox: "0 0 128 128",
-					className: "h-auto w-full max-w-[13rem] sm:max-w-[15rem]",
+					className: "h-auto w-full max-w-[min(13rem,22vh)]",
 					role: "img",
 					"aria-label": `${d.valor} de ${d.total}. ${d.label}`,
 					children: [
@@ -4652,25 +5030,31 @@ function PanoramaDonuts() {
 							cy: "64",
 							r: RADIO,
 							fill: "none",
-							stroke: "rgba(255,255,255,0.28)",
-							strokeWidth: "13"
+							stroke: "rgba(255,255,255,0.22)",
+							strokeWidth: "14"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
 							cx: "64",
 							cy: "64",
 							r: RADIO,
 							fill: "none",
-							stroke: d.color,
-							strokeWidth: "13",
+							stroke: color,
+							strokeWidth: "14",
 							strokeLinecap: "round",
-							strokeDasharray: `${proporcion * CIRCUNFERENCIA} ${CIRCUNFERENCIA}`,
-							transform: "rotate(-90 64 64)"
+							strokeDasharray: CIRCUNFERENCIA,
+							transform: "rotate(-90 64 64)",
+							className: "vc-arco",
+							style: {
+								"--arco-inicio": CIRCUNFERENCIA,
+								"--arco-fin": fin,
+								"--i": i
+							}
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("text", {
 							x: "64",
 							y: "62",
 							textAnchor: "middle",
-							className: "fill-white text-[30px] font-bold",
+							className: "fill-white text-[32px] font-extrabold",
 							children: d.valor
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("text", {
@@ -4682,7 +5066,8 @@ function PanoramaDonuts() {
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-4 max-w-[18rem] text-base leading-6 text-white sm:text-lg sm:leading-7",
+					style: { "--i": i },
+					className: "vc-aparece mt-4 max-w-[18rem] text-base leading-6 text-white",
 					children: d.label
 				})]
 			}, d.id);
@@ -4696,23 +5081,6 @@ function rangoEnDias(desde, hasta) {
 	if (Number.isNaN(ms)) return 0;
 	return Math.round(ms / 864e5) + 1;
 }
-/**
-* IndiceSection.tsx
-* -----------------------------------------------------------------------
-* La pieza "Ruta 41 municipios del Valle del Cauca", reconstruida en
-* código.
-*
-* Se hace acá y no como imagen por dos razones. La primera es que el
-* número del título es un dato: si el catálogo cambia, una imagen dice
-* 41 para siempre. La segunda es que los dos bloques azules de la pieza
-* son contenedores vacíos, pensados justamente para que adentro vayan las
-* cifras, y una imagen no puede contener nada.
-*
-* La composición sigue la pieza: fondo cyan, titular en dos líneas con la
-* segunda resaltada en amarillo, el enlace de Cali arriba a la derecha,
-* dos bloques en azul y la banda crema al pie.
-* -----------------------------------------------------------------------
-*/
 function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	const op = useOperacion();
 	const indicadores = [
@@ -4731,14 +5099,14 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		id: "indice",
-		className: "flex min-h-dvh flex-col bg-[#22ABE2]",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "mx-auto flex w-full max-w-[100rem] flex-1 flex-col gap-8 px-4 py-10 sm:px-8 sm:py-12 md:px-12",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:h-dvh lg:grid-rows-[auto_1fr_1fr_auto] lg:overflow-hidden",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-10",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-						className: "vc-titular text-[clamp(2rem,6vw,4.5rem)] text-white",
+						className: "vc-titular text-[clamp(1.75rem,5vw,4rem)] text-white",
 						children: [
 							"Ruta ",
 							op.municipiosTotales,
@@ -4752,38 +5120,52 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
 						href: enlaceCali,
-						className: "inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:bg-white md:mt-3 md:text-lg",
+						className: "inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg md:mt-3 md:text-lg motion-reduce:hover:translate-y-0",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							"aria-hidden": true,
 							children: "*"
 						}), "Cali: conoce su ruta"]
 					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "rounded-sm bg-[#0079C1] px-6 py-8 sm:px-10 sm:py-10",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "grid gap-8 text-center sm:grid-cols-3",
-						children: indicadores.map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-none text-[#FBF8C6]",
-							children: i.valor
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-base leading-6 text-white sm:text-lg sm:leading-7",
-							children: i.label
-						})] }, i.label))
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "rounded-sm bg-[#0079C1] px-6 py-8 sm:px-10 sm:py-10",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
 				})
-			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "bg-[#FBF8C6] px-4 py-5 sm:px-8 md:px-12",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mx-auto max-w-[100rem] text-center text-base font-bold text-[#0079C1] sm:text-lg",
-				children: op.fechaCorteLarga ? `Información con corte al ${op.fechaCorteLarga}.` : "Información de las entregas registradas por la Gobernación."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "grid w-full min-h-0 gap-8 text-center sm:grid-cols-3",
+						children: indicadores.map((i, idx) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							style: { "--i": idx },
+							className: "vc-aparece",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "block text-[clamp(1.75rem,4vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]",
+								children: i.valor
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-3 text-base leading-6 text-white sm:text-lg sm:leading-7",
+								children: i.label
+							})]
+						}, i.label))
+					})
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "min-h-0 w-full",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
+					})
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "bg-[#FBF8C6] px-4 py-5 sm:px-8 md:px-12",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mx-auto max-w-[100rem] text-center text-base font-bold text-[#0079C1] sm:text-lg",
+					children: op.fechaCorteLarga ? `Información con corte al ${op.fechaCorteLarga}.` : "Información de las entregas registradas por la Gobernación."
+				})
 			})
-		})]
+		]
 	});
 }
 var SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
@@ -4810,12 +5192,12 @@ var NAV = [
 	},
 	{
 		id: "que-se-entrego",
-		label: "¿Qué se entregó?",
+		label: "Qué se entregó",
 		icon: Package
 	},
 	{
 		id: "de-donde-salio",
-		label: "¿De dónde salió?",
+		label: "De dónde salió",
 		icon: Truck
 	},
 	{
@@ -4830,16 +5212,17 @@ var NAV = [
 	}
 ];
 function StoryPage() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OperacionProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenido, {}) });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OperacionProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocoProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenido, {}) }) });
 }
 function Contenido() {
 	const op = useOperacion();
-	const irAlMapa = (0, import_react.useCallback)(() => {
-		document.getElementById("mapa-de-ayudas")?.scrollIntoView({
-			behavior: "smooth",
-			block: "start"
-		});
-	}, []);
+	const { enfocarMunicipio } = useFoco();
+	/**
+	* Antes esto solo hacía scroll: se llegaba al mapa sin nada
+	* seleccionado y había que buscar a mano el municipio en el que se
+	* venía de hacer clic. Ahora lo selecciona.
+	*/
+	const irAlMapa = (0, import_react.useCallback)((municipio) => enfocarMunicipio(municipio.nombre), [enfocarMunicipio]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SidebarNav, {
 		items: NAV,
 		scrollRootId: SCROLL_ROOT_ID,
@@ -4852,7 +5235,7 @@ function Contenido() {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PiezaGrafica, {
 				id: "inicio",
 				escritorio: "/marca/portada-escritorio.jpg",
-				movil: "/marca/portada-movil.jpeg",
+				movil: "/marca/portada-movil.jpg",
 				fondo: "#0076BC",
 				prioritaria: true,
 				alt: "Ruta de la Solidaridad. Gobernación del Valle del Cauca. Después del terremoto del 10 de agosto de 2026, la Gobernación entregó ayudas humanitarias de emergencia en los municipios del Valle del Cauca. A continuación encontrará toda la información."
@@ -4935,7 +5318,7 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
-				className: "bg-[#0B3049] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10",
+				className: "bg-[#0076BC] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mx-auto max-w-6xl",
 					children: [

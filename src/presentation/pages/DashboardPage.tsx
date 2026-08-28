@@ -16,6 +16,9 @@ import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
 import { TopBar } from "@/presentation/components/TopBar";
 import { useOperacion } from "@/presentation/state/OperacionContext";
+import { useFoco } from "@/presentation/state/FocoContext";
+import { useAyuda } from "@/application/hooks/useAyuda";
+import { sameMunicipality } from "@/lib/municipalityName";
 import {
   getTerritoryStat,
   type TerritoryMapMode,
@@ -88,6 +91,8 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const territoryDay = useMemo(() => dayFromIsoDate(isoDate), [isoDate]);
 
   const operacion = useOperacion();
+  const foco = useFoco();
+  const { data: ayuda } = useAyuda();
 
   const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
 
@@ -126,6 +131,41 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
     return mapa;
   }, [operacion.catalogo, operacion.municipios]);
+
+  /**
+   * Municipios a resaltar cuando se llega desde una categoría.
+   *
+   * La ruta devuelve los NOMBRES, no los códigos, porque
+   * ENVIOS_CATEGORIA apunta a destinos y no todo destino tiene DANE. Se
+   * cruzan contra el catálogo con el comparador que ignora tildes y
+   * alias, el mismo que usa el mapa para la selección.
+   */
+  const resaltados = useMemo(() => {
+    if (!foco.categoria) return null;
+
+    const categoria = ayuda?.categorias.find((c) => c.nombre === foco.categoria);
+    const nombres = categoria?.municipiosNombres;
+    // Sin la lista, resaltar todo equivale a no resaltar nada, y es
+    // preferible a dejar el mapa entero atenuado sin explicación.
+    if (!nombres || nombres.length === 0) return null;
+
+    const codigos = new Set<string>();
+    for (const cat of operacion.catalogo) {
+      if (nombres.some((n) => sameMunicipality(n, cat.nombre))) codigos.add(cat.codigoDane);
+    }
+    return codigos;
+  }, [foco.categoria, ayuda, operacion.catalogo]);
+
+  /**
+   * Al llegar desde una ficha de municipio, se selecciona solo. Antes
+   * había que buscarlo a mano en el mapa después del scroll.
+   */
+  useEffect(() => {
+    if (!foco.municipio || !destinos) return;
+
+    const destino = destinos.find((d) => sameMunicipality(d.nombre, foco.municipio));
+    if (destino) setViewState((prev) => viewTransitions.toDestino(destino.id, prev));
+  }, [foco.municipio, destinos]);
 
   const totalDespachosAsOf = useMemo(
     () => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0),
@@ -221,6 +261,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           territoryDay={territoryDay}
           territoryZone={territoryZone}
           municipios={municipiosMapa}
+          resaltados={resaltados}
           routesMode={routesMode}
           onActivity={handleActivity}
           onSelectDestino={(id) => {
@@ -244,6 +285,23 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         lens={lens}
         instant={viewState.timelineInstant}
       />
+
+      {foco.categoria && resaltados && (
+        <div className="pointer-events-auto absolute inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex justify-center md:inset-x-0">
+          <div className="flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg">
+            <span className="text-base font-bold text-[#123E5C]">
+              {resaltados.size} municipios recibieron {foco.categoria.toLowerCase()}
+            </span>
+            <button
+              type="button"
+              onClick={foco.limpiar}
+              className="rounded-full bg-[#123E5C] px-3 py-1 text-sm font-bold text-white transition hover:bg-[#0079C1]"
+            >
+              Ver todos
+            </button>
+          </div>
+        </div>
+      )}
 
       <AvisoEntrega frame={visibleActivity} />
 

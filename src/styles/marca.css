@@ -50,10 +50,17 @@
  */
 @font-face {
   font-family: "Agenda ExtraCondensed";
-  src:
-    url("/fonts/agenda-extracondensed-bold.woff2") format("woff2"),
-    url("/fonts/agenda-extracondensed-bold.woff") format("woff"),
-    url("/fonts/agenda-extracondensed-bold.otf") format("opentype");
+  /* Solo el .otf, que es el archivo que existe.
+   *
+   * Declarar woff2 y woff "por las dudas" hace que el navegador los pida
+   * y falle dos veces en cada carga antes de llegar al .otf. No rompe
+   * nada, pero deja la consola llena de 404 que esconden los errores que
+   * sí importan.
+   *
+   * Cuando se generen los otros formatos, agregarlos ANTES de esta línea:
+   * el navegador usa el primero que entiende y el .otf deja de bajarse
+   * solo. */
+  src: url("/fonts/agenda-extracondensed-bold.otf") format("opentype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -304,5 +311,95 @@ h3 {
 @media (max-width: 767px) {
   .vc-pieza-marco {
     background-image: var(--pieza-movil);
+  }
+}
+
+/* ── Animaciones ───────────────────────────────────────────────────── */
+
+/**
+ * Entrada escalonada.
+ *
+ * Cada elemento declara su posición en `--i` y el retraso sale de ahí, en
+ * vez de escribir una clase por índice. El escalón es corto a propósito:
+ * 40 ms por elemento hace que una lista de diez entre en menos de medio
+ * segundo. Más lento se siente lento, no elegante.
+ */
+@keyframes vc-aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.vc-aparece {
+  animation: vc-aparecer 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/**
+ * Barra que crece desde la izquierda al aparecer. `scaleX` y no `width`
+ * porque la primera la resuelve el compositor y no obliga al navegador a
+ * recalcular la maqueta en cada cuadro.
+ */
+@keyframes vc-crecer {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.vc-crece {
+  transform-origin: left center;
+  animation: vc-crecer 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+/**
+ * Nadie debería marearse por una lista de categorías. Con la preferencia
+ * de movimiento reducido activada, los elementos aparecen sin
+ * desplazarse.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .vc-aparece,
+  .vc-crece {
+    animation: none;
+  }
+}
+
+/**
+ * Arco que se dibuja al aparecer.
+ *
+ * Se anima `stroke-dashoffset` y no el `stroke-dasharray`: el primero
+ * solo desplaza un patrón ya calculado, el segundo obliga al navegador a
+ * rehacer el trazo en cada cuadro.
+ *
+ * El elemento declara de dónde a dónde va en `--arco-inicio` y
+ * `--arco-fin`, porque cada dona tiene su propia proporción y una
+ * animación fija no serviría.
+ */
+@keyframes vc-arco {
+  from {
+    stroke-dashoffset: var(--arco-inicio);
+  }
+  to {
+    stroke-dashoffset: var(--arco-fin);
+  }
+}
+
+.vc-arco {
+  animation: vc-arco 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 140ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vc-arco {
+    animation: none;
+    stroke-dashoffset: var(--arco-fin);
   }
 }

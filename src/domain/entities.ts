@@ -111,6 +111,15 @@ export interface CategoriaAyudaApi {
   porcentaje: number;
   destinos: number;
   municipios: number;
+  /**
+   * Nombres de los municipios que recibieron esta categoría. Permite que
+   * al tocar una categoría el mapa resalte cuáles fueron, en vez de
+   * mostrar solo un conteo.
+   *
+   * Opcional porque una implementación anterior del Web App puede no
+   * traerlo, y eso no debe romper el tipado ni la sección.
+   */
+  municipiosNombres?: string[];
 }
 
 export interface PoblacionAtendida {

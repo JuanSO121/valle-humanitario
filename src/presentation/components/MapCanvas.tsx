@@ -312,6 +312,14 @@ interface Props {
   territoryZone: TerritoryZone | "todas";
   /** Entregas por municipio, indexadas por código DANE. Vienen de la API. */
   municipios: MunicipiosMapa;
+  /**
+   * Códigos DANE a resaltar. El resto se atenúa.
+   *
+   * Lo usa el foco por categoría: al tocar "Aseo personal" en otra
+   * sección, el mapa deja a la vista solo los municipios que la
+   * recibieron. null significa sin resaltado.
+   */
+  resaltados?: ReadonlySet<string> | null | undefined;
   routesMode: TerritoryRoutesMode;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
@@ -385,6 +393,7 @@ export function MapCanvas({
   territoryDay,
   territoryZone,
   municipios,
+  resaltados = null,
   routesMode,
   onSelectDestino,
   onSelectOrigen,
@@ -1097,9 +1106,13 @@ export function MapCanvas({
           { source: "municipios", id: code },
           {
             territoryToneColor: esCali ? TERRITORY_EXCLUDED : territoryColorForTone(tone),
-            // Cali no tiene zona en el catálogo, así que se atenúa junto
-            // con el resto apenas se filtra por una zona concreta.
-            filteredOut: territoryZone !== "todas" && zona !== territoryZone,
+            // Se atenúa por dos motivos independientes: no pertenecer a
+            // la zona filtrada, o quedar fuera del resaltado por
+            // categoría. Cali no tiene zona en el catálogo, así que cae
+            // en el primero apenas se filtra por una zona concreta.
+            filteredOut:
+              (territoryZone !== "todas" && zona !== territoryZone) ||
+              (resaltados !== null && !resaltados.has(code)),
             // Este SÍ va por nombre (el destino no trae código DANE),
             // pero con un normalizador que hace case-fold y saca tildes:
             // normId no lo hacía y "Riofrío" nunca matcheaba "RIOFRIO".
@@ -1118,7 +1131,7 @@ export function MapCanvas({
       // quedar debajo del relleno.
       subirEtiquetas(map);
     });
-  }, [destinos, municipios, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
+  }, [destinos, municipios, resaltados, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
 
   // --- etiquetas de municipio (nombre + conteo) ---------------------------
   useEffect(() => {

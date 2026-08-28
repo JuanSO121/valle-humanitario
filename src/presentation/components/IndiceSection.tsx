@@ -10,11 +10,19 @@
  * son contenedores vacíos, pensados justamente para que adentro vayan las
  * cifras, y una imagen no puede contener nada.
  *
- * La composición sigue la pieza: fondo cyan, titular en dos líneas con la
- * segunda resaltada en amarillo, el enlace de Cali arriba a la derecha,
- * dos bloques en azul y la banda crema al pie.
+ * SOBRE EL ALTO
+ *
+ * En escritorio es una rejilla de filas que suma exactamente una
+ * pantalla: encabezado, indicadores, cobertura y banda del pie. Solo las
+ * dos filas del medio son flexibles.
+ *
+ * La versión anterior usaba `min-h-dvh` con un contenedor flexible, así
+ * que en un monitor alto sobraba espacio abajo y en uno bajo el pie
+ * quedaba fuera del pliegue. En celular se conserva el crecimiento
+ * natural, porque cuatro bloques no caben en una pantalla vertical.
  * -----------------------------------------------------------------------
  */
+import { type CSSProperties } from "react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { PanoramaDonuts } from "./PanoramaDonuts";
 
@@ -49,12 +57,13 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
   ];
 
   return (
-    <section id="indice" className="flex min-h-dvh flex-col bg-[#22ABE2]">
-      <div className="mx-auto flex w-full max-w-[100rem] flex-1 flex-col gap-8 px-4 py-10 sm:px-8 sm:py-12 md:px-12">
-        {/* Encabezado. En pantallas angostas el enlace baja debajo del
-            titular en vez de comprimirlo. */}
+    <section
+      id="indice"
+      className="flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:h-dvh lg:grid-rows-[auto_1fr_1fr_auto] lg:overflow-hidden"
+    >
+      <div className="mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-10">
-          <h2 className="vc-titular text-[clamp(2rem,6vw,4.5rem)] text-white">
+          <h2 className="vc-titular text-[clamp(1.75rem,5vw,4rem)] text-white">
             Ruta {op.municipiosTotales} municipios
             <br />
             del <span className="vc-resaltado">Valle del Cauca</span>
@@ -62,19 +71,21 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
 
           <a
             href={enlaceCali}
-            className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:bg-white md:mt-3 md:text-lg"
+            className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg md:mt-3 md:text-lg motion-reduce:hover:translate-y-0"
           >
             <span aria-hidden>*</span>
             Cali: conoce su ruta
           </a>
         </div>
+      </div>
 
-        {/* Bloque uno: los indicadores. */}
-        <div className="rounded-sm bg-[#0079C1] px-6 py-8 sm:px-10 sm:py-10">
-          <div className="grid gap-8 text-center sm:grid-cols-3">
-            {indicadores.map((i) => (
-              <div key={i.label}>
-                <b className="block text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-none text-[#FBF8C6]">
+      {/* Bloque uno: los indicadores. */}
+      <div className="mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8">
+        <div className="flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
+          <div className="grid w-full min-h-0 gap-8 text-center sm:grid-cols-3">
+            {indicadores.map((i, idx) => (
+              <div key={i.label} style={{ "--i": idx } as CSSProperties} className="vc-aparece">
+                <b className="block text-[clamp(1.75rem,4vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]">
                   {i.valor}
                 </b>
                 <p className="mt-3 text-base leading-6 text-white sm:text-lg sm:leading-7">
@@ -84,10 +95,14 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
             ))}
           </div>
         </div>
+      </div>
 
-        {/* Bloque dos: la cobertura. */}
-        <div className="rounded-sm bg-[#0079C1] px-6 py-8 sm:px-10 sm:py-10">
-          <PanoramaDonuts />
+      {/* Bloque dos: la cobertura. */}
+      <div className="mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10">
+        <div className="flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
+          <div className="min-h-0 w-full">
+            <PanoramaDonuts />
+          </div>
         </div>
       </div>
 

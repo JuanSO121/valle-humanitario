@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DashboardPage } from "@/presentation/pages/DashboardPage";
 import { OperacionProvider, useOperacion } from "@/presentation/state/OperacionContext";
+import { FocoProvider, useFoco } from "@/presentation/state/FocoContext";
 import { PanoramaPuente } from "@/presentation/components/PanoramaPuente";
 import { JornadaBars } from "../components/JornadaBars";
 import { MovimientoStatCards, MunicipiosNuevosCallouts } from "../components/MovimientoExtras";
@@ -33,8 +34,8 @@ const NAV: NavItem[] = [
   { id: "indice", label: "Índice", icon: List },
   { id: "cuando", label: "Cuándo se entregó", icon: CalendarDays },
   { id: "municipios", label: "Municipios", icon: MapPin },
-  { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
-  { id: "de-donde-salio", label: "¿De dónde salió?", icon: Truck },
+  { id: "que-se-entrego", label: "Qué se entregó", icon: Package },
+  { id: "de-donde-salio", label: "De dónde salió", icon: Truck },
   { id: "soportes", label: "Soportes documentales", icon: FileText },
   { id: "mapa-de-ayudas", label: "Mapa de Ayudas", icon: Map },
 ];
@@ -42,7 +43,9 @@ const NAV: NavItem[] = [
 export function StoryPage() {
   return (
     <OperacionProvider>
-      <Contenido />
+      <FocoProvider>
+        <Contenido />
+      </FocoProvider>
     </OperacionProvider>
   );
 }
@@ -50,11 +53,17 @@ export function StoryPage() {
 function Contenido() {
   const op = useOperacion();
 
-  const irAlMapa = useCallback(() => {
-    document
-      .getElementById("mapa-de-ayudas")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, []);
+  const { enfocarMunicipio } = useFoco();
+
+  /**
+   * Antes esto solo hacía scroll: se llegaba al mapa sin nada
+   * seleccionado y había que buscar a mano el municipio en el que se
+   * venía de hacer clic. Ahora lo selecciona.
+   */
+  const irAlMapa = useCallback(
+    (municipio: { nombre: string }) => enfocarMunicipio(municipio.nombre),
+    [enfocarMunicipio],
+  );
 
   return (
     <>
@@ -77,7 +86,7 @@ function Contenido() {
         <PiezaGrafica
           id="inicio"
           escritorio="/marca/portada-escritorio.jpg"
-          movil="/marca/portada-movil.jpeg"
+          movil="/marca/portada-movil.jpg"
           fondo="#0076BC"
           prioritaria
           alt={
@@ -156,7 +165,7 @@ function Contenido() {
           <DashboardPage embedded />
         </section>
 
-        <footer className="bg-[#0B3049] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10">
+        <footer className="bg-[#0076BC] px-4 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-10">
           <div className="mx-auto max-w-6xl">
             <b className="block font-serif text-xl text-[#FBF8C6]">Ruta de la Solidaridad</b>
             <p className="mt-3 max-w-2xl">
