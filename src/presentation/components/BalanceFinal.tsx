@@ -18,19 +18,20 @@
  * Todo se deriva de la API. La lista de canales viene de route=ayuda; el
  * catálogo estático solo aporta el color, que es diseño y no dato.
  *
- * SOBRE EL PESO VISUAL DE LA FILA
+ * SOBRE EL BLOQUE DE CIFRAS
  *
- * El óvalo de color ocupaba toda la columna, de borde a borde. Cuatro
- * bandas macizas, una debajo de otra, competían con las tres cifras de
- * arriba y hacían que la línea que encadena los círculos —que es lo que
- * cuenta la secuencia— pasara desapercibida.
+ * Las tres tarjetas tenían el relleno de un bloque protagonista, y no lo
+ * son: son la entrada al balance, y abajo vienen las cuatro rutas, que
+ * es donde está el detalle. Con el relleno apretado y la cifra un punto
+ * más chica, el conjunto se lee como una sola unidad y no como tres
+ * carteles.
  *
- * El óvalo sigue ahí, pero se retrae: mide lo que mide su contenido y
- * arranca donde termina el rótulo, no en el margen. En el espacio que
- * libera va "Ruta n", en el color del óvalo y sobre el fondo de la
- * sección.
+ * Debajo va la banda de la fecha de corte, en crema. Contrasta con el
+ * navy de las tarjetas y con el fondo claro de la sección, y ocupa todo
+ * el ancho: es el dato que le pone límite a todos los demás y merece
+ * cerrar el bloque, no ir escondido en un pie de página.
  *
- * SOBRE LAS DOS MAQUETAS
+ * SOBRE LAS DOS MAQUETAS DE LAS RUTAS
  *
  * En escritorio la fila es una línea de tiempo: rótulo y óvalo a la
  * izquierda, círculo al centro sobre el hilo vertical, descripción a la
@@ -170,10 +171,10 @@ export function BalanceFinal() {
   const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 
   const cifras = [
-    { valor: "561", label: "Ayudas recibidas" },
+    { valor: "562 t", label: "Ayudas recibidas" },
     {
       valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
-      label: "Ayuda distribuida",
+      label: "Ayudas distribuidas",
     },
     { valor: totalRutas.toLocaleString("es-CO"), label: "Despachos en total" },
   ];
@@ -182,20 +183,41 @@ export function BalanceFinal() {
     <div className="mx-auto max-w-6xl">
       <SectionTitle>Así se distribuyó la ayuda en el Valle del Cauca</SectionTitle>
 
-      {/* Las tres cifras de cierre. */}
-      <div className="mt-9 grid gap-4 sm:grid-cols-3">
-        {cifras.map((c, i) => (
+      {/* Las tres cifras de cierre y, debajo, la fecha de corte. Van en
+          el mismo contenedor y con una separación menor que la del resto
+          de la sección: son un solo bloque, no dos. */}
+      <div className="mt-9 space-y-2">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {cifras.map((c, i) => (
+            <div
+              key={`cifra-${c.label}`}
+              style={{ "--i": i } as CSSProperties}
+              className="vc-aparece rounded-lg bg-[#123E5C] px-5 py-5 text-center sm:py-6"
+            >
+              <b className="block text-[clamp(1.75rem,4.5vw,2.75rem)] font-extrabold leading-none text-[#FBF8C6]">
+                {c.valor}
+              </b>
+              <p className="mt-2 text-base font-bold text-white">{c.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* La banda de corte. Solo aparece cuando la API trae la fecha:
+            una banda que dice "sin fecha" no informa nada y ocupa el
+            mismo espacio que la que sí informa. */}
+        {op.fechaCorteLarga && (
           <div
-            key={`cifra-${c.label}`}
-            style={{ "--i": i } as CSSProperties}
-            className="vc-aparece rounded-lg bg-[#123E5C] p-7 text-center"
+            style={{ "--i": cifras.length } as CSSProperties}
+            className="vc-aparece flex flex-col items-center justify-center gap-1 rounded-lg bg-[#FBF8C6] px-5 py-4 text-center sm:flex-row sm:gap-3"
           >
-            <b className="block text-[clamp(2rem,5vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]">
-              {c.valor}
+            <span className="text-sm font-bold uppercase tracking-[0.16em] text-[#00639F]">
+              Información con corte al
+            </span>
+            <b className="text-lg font-extrabold text-[#123E5C] sm:text-xl">
+              {op.fechaCorteLarga}
             </b>
-            <p className="mt-3 text-base font-bold text-white sm:text-lg">{c.label}</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Las rutas. En escritorio, una línea de tiempo: el círculo del
