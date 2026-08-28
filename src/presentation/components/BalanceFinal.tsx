@@ -123,12 +123,12 @@ export function BalanceFinal() {
   const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 
   const cifras = [
+    { valor: "X", label: "Ayudas recibidas" },
     { valor: totalRutas.toLocaleString("es-CO"), label: "despachos en total" },
     {
       valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
       label: "de ayuda distribuida",
     },
-    { valor: String(rutas.length), label: "rutas de distribución" },
   ];
 
   return (
@@ -236,12 +236,6 @@ export function BalanceFinal() {
           );
         })}
       </ol>
-
-      <p className="mt-8 max-w-3xl text-base leading-7 text-[#6B93AA]">
-        Las rutas suman el total sin repetir despachos. Municipios múltiples se mide en unidades
-        porque sus despachos ya están contados en cada municipio que recibió. Las toneladas son una
-        estimación: el peso se registra por día y para todo el departamento, no por cada envío.
-      </p>
 
       {/* Si faltan rutas, es porque route=ayuda no respondió. Decirlo es
           mejor que mostrar un balance incompleto como si fuera completo. */}

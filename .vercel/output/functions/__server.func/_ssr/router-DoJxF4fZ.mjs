@@ -2,8 +2,8 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-B8g7mdkg.js
-var router_B8g7mdkg_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-DoJxF4fZ.js
+var router_DoJxF4fZ_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
 	head: () => ({
@@ -108,7 +108,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-ChjogaOS.mjs");
+var $$splitComponentImporter = () => import("./routes-D8-ur1gg.mjs");
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -150,4 +150,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_B8g7mdkg_exports as t };
+export { getRouter, router_DoJxF4fZ_exports as t };

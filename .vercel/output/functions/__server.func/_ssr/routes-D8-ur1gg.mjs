@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-ChjogaOS.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-D8-ur1gg.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -4587,16 +4587,16 @@ function BalanceFinal() {
 	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 	const cifras = [
 		{
+			valor: "X",
+			label: "Ayudas recibidas"
+		},
+		{
 			valor: totalRutas.toLocaleString("es-CO"),
 			label: "despachos en total"
 		},
 		{
 			valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
 			label: "de ayuda distribuida"
-		},
-		{
-			valor: String(rutas.length),
-			label: "rutas de distribución"
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -4694,10 +4694,6 @@ function BalanceFinal() {
 						]
 					}, `ruta-${r.id}`);
 				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-8 max-w-3xl text-base leading-7 text-[#6B93AA]",
-				children: "Las rutas suman el total sin repetir despachos. Municipios múltiples se mide en unidades porque sus despachos ya están contados en cada municipio que recibió. Las toneladas son una estimación: el peso se registra por día y para todo el departamento, no por cada envío."
 			}),
 			canalesVivos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]",
