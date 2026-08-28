@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Menu, c as List, d as ChevronLeft, f as CalendarDays, i as PackageCheck, l as House, n as Truck, o as Map$1, r as Package, s as MapPin, t as X, u as FileText } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BZcmxb4z.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Dmbb9gLq.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -1311,6 +1311,9 @@ var OPERACION_VACIA = {
 	entregasConFecha: 0,
 	entregasSinFecha: 0,
 	totalToneladas: 0,
+	toneladasMunicipales: 0,
+	entregasTodas: 0,
+	factorMunicipal: 1,
 	municipiosAtendidos: 0,
 	municipiosTotales: territoryMunicipalities.length,
 	diasConEntrega: 0,
@@ -1462,6 +1465,9 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		zona,
 		...acc
 	})).sort((a, b) => b.total - a.total || a.zona.localeCompare(b.zona, "es"));
+	const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
+	const factorMunicipal = entregasTodas > 0 ? totalEntregas / entregasTodas : 1;
+	const toneladasMunicipales = Math.round(acumuladoToneladas * factorMunicipal);
 	const primeraFecha = fechas[0] ?? null;
 	const ultimaFecha = fechas.at(-1) ?? null;
 	const picoEntregas = jornadas.reduce((mejor, j) => mejor === null || j.entregas > mejor.entregas ? j : mejor, null);
@@ -1474,6 +1480,9 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		entregasConFecha: acumuladoEntregas,
 		entregasSinFecha: totalEntregas - acumuladoEntregas,
 		totalToneladas: acumuladoToneladas,
+		toneladasMunicipales,
+		entregasTodas,
+		factorMunicipal,
 		toneladasMedidas: hayMedidas,
 		municipiosAtendidos: porDestino.size,
 		municipiosTotales: catalogoFinal.length,
@@ -1571,12 +1580,10 @@ function useOperacion() {
 * escala.
 *
 * Advertencia sobre las dos cifras, que no son divisibles entre sí:
-*   · Toneladas viene de la hoja TONELADAS del workbook, que es
-*     DEPARTAMENTAL: incluye Cali, el acopio de Cartago y las otras
-*     ayudas solidarias.
-*   · Despachos cuenta los flujos visibles en el mapa, que son solo los
-*     municipales.
-* Dividir una por otra no da toneladas por despacho.
+* Las dos cifras son municipales, para que se puedan leer juntas. La
+* hoja TONELADAS registra el peso por día y para todo el departamento,
+* así que la parte municipal se estima repartiéndolo según qué
+* proporción de las entregas llegó a un municipio.
 * -----------------------------------------------------------------------
 */
 function MarcadorHUD({ despachos, day, lens, instant = false }) {
@@ -1590,12 +1597,19 @@ function MarcadorHUD({ despachos, day, lens, instant = false }) {
 	* pasó: el mapa seguía estimando cuando la ruta de toneladas ya
 	* respondía el dato medido.
 	*/
-	const { jornadas, totalToneladas } = useOperacion();
+	const { jornadas, toneladasMunicipales, factorMunicipal } = useOperacion();
+	/**
+	* El mapa dibuja entregas municipales, así que muestra la tonelada
+	* municipal. La serie de jornadas trae el peso departamental, que
+	* incluye Cali y las rutas institucionales, y se reparte con el mismo
+	* factor que usa el resto del tablero.
+	*/
 	const toneladas = (() => {
-		if (!day) return totalToneladas;
+		if (!day) return toneladasMunicipales;
 		const jornada = jornadas.find((j) => j.dia === day);
-		if (!jornada) return totalToneladas;
-		return lens === "jornada" ? jornada.toneladas : jornada.acumuladoToneladas;
+		if (!jornada) return toneladasMunicipales;
+		const departamental = lens === "jornada" ? jornada.toneladas : jornada.acumuladoToneladas;
+		return Math.round(departamental * factorMunicipal);
 	})();
 	const corte = day === null ? "Total del departamento" : lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -3045,8 +3059,8 @@ function JornadaBars() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mt-6 rounded-md bg-[#0079C1] p-5 sm:p-6",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mb-4 text-sm font-bold uppercase tracking-[0.1em] text-[#FBF8C6]",
-			children: "Entregas por día. En verde, los municipios que reciben por primera vez"
+			className: "mb-4 text-sm font-bold uppercase tracking-widest text-[#FBF8C6]",
+			children: "Entregas por día. En amarillo, los municipios que reciben por primera vez"
 		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "flex h-56 items-end gap-1.5 sm:gap-2",
 			children: jornadas.map((j) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -3087,18 +3101,18 @@ function MovimientoStatCards() {
 	const op = useOperacion();
 	const primeras48 = op.jornadas.slice(0, 2).reduce((sum, j) => sum + j.entregas, 0);
 	const porcentaje48 = op.totalEntregas > 0 ? Math.round(primeras48 / op.totalEntregas * 100) : 0;
-	const promedio = op.diasConEntrega > 0 ? (op.totalEntregas / op.diasConEntrega).toFixed(1) : "0";
+	op.diasConEntrega > 0 && (op.totalEntregas / op.diasConEntrega).toFixed(1);
 	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO$1);
 	const tarjetas = [
 		op.picoEntregas && {
-			valor: String(op.picoEntregas.entregas),
+			valor: String(op.picoEntregas.entregas) + " - Entregas",
 			label: "Día con más entregas",
 			nota: `El ${Number(op.picoEntregas.dia)} de agosto, hacia ${op.picoEntregas.municipios} municipios.`,
 			color: "#F0801E"
 		},
 		op.picoCobertura && {
-			valor: String(op.picoCobertura.municipios),
-			label: "Día con más municipios",
+			valor: String(op.picoCobertura.municipios) + " - Municipios.",
+			label: "Día con más municipios atendidos",
 			nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
 			color: "#5CC46B"
 		},
@@ -3113,12 +3127,6 @@ function MovimientoStatCards() {
 			label: "Entregas desde Cartago",
 			nota: `Segundo centro de acopio, hacia ${cartago.municipios} municipios.`,
 			color: "#B57BB5"
-		},
-		{
-			valor: promedio,
-			label: "Entregas por día",
-			nota: `Promedio de los ${op.diasConEntrega} días con entregas.`,
-			color: "#3E9BCB"
 		}
 	].filter(Boolean);
 	if (tarjetas.length === 0) return null;
@@ -3183,7 +3191,7 @@ function MunicipiosNuevosCallouts() {
 			children: conNuevos.map((j, i) => {
 				const enCrema = i % 2 === 1;
 				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-					className: `rounded-md p-5 ${enCrema ? "bg-[#FBF8C6] text-[#0079C1]" : "bg-[#0079C1] text-[#FBF8C6]"}`,
+					className: `rounded-md p-5 ${enCrema ? "bg-[#ffffff] text-[#0079C1]" : "bg-[#0079C1] text-[#FBF8C6]"}`,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "text-lg font-bold",
 						children: [
@@ -3514,10 +3522,14 @@ function CoberturaPorZona() {
 						children: z.zona
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-2 text-[clamp(2.25rem,5vw,3rem)] font-extrabold leading-none text-white",
+						className: "mt-2 text-[clamp(2.25rem,5vw,2.3rem)] font-extrabold leading-none text-white",
 						children: [z.atendidos, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 							className: "text-xl font-semibold text-[#A8CFE2]",
-							children: [" de ", z.total]
+							children: [
+								" de ",
+								z.total,
+								" - Municipios"
+							]
 						})]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -3715,7 +3727,7 @@ function EvolucionHeatmap({ onSelect }) {
 		return ESCALA[Math.min(ESCALA.length - 1, Math.round((valor - 1) / Math.max(1, maxDia - 1) * (ESCALA.length - 1)))] ?? ESCALA[0];
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué municipio recibió cada día" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿Qué municipio recibió cada día?" }),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]",
 			children: "Cada casilla es un día. Cuanto más cálido el color, más entregas ese día."
@@ -4205,12 +4217,8 @@ function AyudaSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Qué se entregó" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "La mayor parte de la ayuda es aseo, comida y agua" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-4 max-w-2xl text-lg leading-8 text-[#35708F]",
-				children: "Seleccione una categoría para ver qué artículos incluyó."
-			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿Qué se entregó?" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Aseo, alimentos, agua y mucho más. Conozca las ayudas que llegaron a los municipios afectados." }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -4226,7 +4234,7 @@ function AyudaSection() {
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							className: "mt-2 block text-base leading-6 text-[#6B93AA]",
-							children: toneladasMedidas ? "entregadas en todo el departamento" : "estimadas a partir del número de entregas"
+							children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
 						})
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
@@ -4290,7 +4298,7 @@ function AyudaSection() {
 				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-					children: "Categorías"
+					children: "Categorías - Seleccione una para consultar los artículos entregados"
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mt-4 grid gap-2.5 sm:grid-cols-2",
 					children: categorias.map((c, i) => {
@@ -4405,12 +4413,21 @@ function AyudaSection() {
 					]
 				}, categoria?.nombre ?? "general")]
 			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-6",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
+					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
+					" ",
+					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio." : "Las toneladas son una estimación a partir del número de entregas."
+				] })
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 						className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
-						children: "A quién se dirigió la ayuda"
+						children: "¿A quién se dirigió la ayuda?"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
@@ -4439,15 +4456,6 @@ function AyudaSection() {
 						})
 					})
 				]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-6",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
-					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
-					" ",
-					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio." : "Las toneladas son una estimación a partir del número de entregas."
-				] })
 			})
 		]
 	});
@@ -4709,7 +4717,7 @@ function CanalesSection() {
 	* municipios todo el peso del departamento y cada canal quedaría
 	* inflado.
 	*/
-	const entregasDepartamentales = op.totalEntregas + total;
+	const entregasDepartamentales = op.entregasTodas > 0 ? op.entregasTodas : op.totalEntregas + total;
 	const toneladasPorEntrega = entregasDepartamentales > 0 ? op.totalToneladas / entregasDepartamentales : 0;
 	const toneladasDe = (entregas) => Math.round(entregas * toneladasPorEntrega);
 	/**
@@ -4739,17 +4747,11 @@ function CanalesSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "¿De dónde salió la ayuda?" }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿De dónde salió?" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Además de los municipios, la ayuda salió por otras rutas" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
-				children: [
-					"Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales. Suman ",
-					total,
-					" entregas y unas",
-					" ",
-					toneladasDe(total).toLocaleString("es-CO"),
-					" toneladas que también se movieron."
-				]
+				children: "El conteo por municipio deja fuera estas rutas."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-9 grid gap-4 lg:grid-cols-2",
@@ -4858,7 +4860,7 @@ function CanalesSection() {
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 						className: "vc-titular text-[clamp(1.5rem,4vw,2.25rem)] text-[#FBF8C6]",
-						children: "Centro de distribución Cartago"
+						children: "La red del acopio de Cartago"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
@@ -5012,16 +5014,16 @@ function PanoramaDonuts() {
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "grid gap-6 sm:grid-cols-3",
+		className: "grid min-h-0 place-items-center gap-5 sm:grid-cols-3",
 		children: donuts.map((d, i) => {
 			const proporcion = d.total > 0 ? d.valor / d.total : 0;
 			const color = COLORES[i % COLORES.length];
 			const fin = CIRCUNFERENCIA * (1 - proporcion);
 			return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-col items-center text-center",
+				className: "flex min-h-0 w-full flex-col items-center text-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
 					viewBox: "0 0 128 128",
-					className: "h-auto w-full max-w-[min(13rem,22vh)]",
+					className: "h-auto w-full max-w-[13rem] max-h-[min(13rem,20vh)] shrink",
 					role: "img",
 					"aria-label": `${d.valor} de ${d.total}. ${d.label}`,
 					children: [
@@ -5067,7 +5069,7 @@ function PanoramaDonuts() {
 					]
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					style: { "--i": i },
-					className: "vc-aparece mt-4 max-w-[18rem] text-base leading-6 text-white",
+					className: "vc-aparece mt-3 line-clamp-2 max-w-[18rem] text-[15px] leading-5 text-white sm:text-base sm:leading-6",
 					children: d.label
 				})]
 			}, d.id);
@@ -5093,13 +5095,13 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 			label: "entregas llegaron a los municipios"
 		},
 		{
-			valor: `${op.totalToneladas.toLocaleString("es-CO")} toneladas`,
-			label: op.toneladasMedidas ? "de ayuda salieron del departamento" : "estimadas según el número de entregas"
+			valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} toneladas`,
+			label: "llegaron a esos municipios"
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		id: "indice",
-		className: "flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:h-dvh lg:grid-rows-[auto_1fr_1fr_auto] lg:overflow-hidden",
+		className: "flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:min-h-dvh lg:grid-rows-[auto_1fr_1fr_auto]",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10",
@@ -5131,9 +5133,9 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					className: "flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "grid w-full min-h-0 gap-8 text-center sm:grid-cols-3",
+						className: "grid min-h-0 w-full gap-8 text-center sm:grid-cols-3",
 						children: indicadores.map((i, idx) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							style: { "--i": idx },
 							className: "vc-aparece",
@@ -5151,18 +5153,11 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					className: "flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "min-h-0 w-full",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
 					})
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "bg-[#FBF8C6] px-4 py-5 sm:px-8 md:px-12",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mx-auto max-w-[100rem] text-center text-base font-bold text-[#0079C1] sm:text-lg",
-					children: op.fechaCorteLarga ? `Información con corte al ${op.fechaCorteLarga}.` : "Información de las entregas registradas por la Gobernación."
 				})
 			})
 		]
@@ -5182,7 +5177,7 @@ var NAV = [
 	},
 	{
 		id: "cuando",
-		label: "Cuándo se entregó",
+		label: "¿Cuándo se entregó?",
 		icon: CalendarDays
 	},
 	{
@@ -5192,17 +5187,17 @@ var NAV = [
 	},
 	{
 		id: "que-se-entrego",
-		label: "Qué se entregó",
+		label: "¿Qué se entregó?",
 		icon: Package
 	},
 	{
 		id: "de-donde-salio",
-		label: "De dónde salió",
+		label: "¿De dónde salió?",
 		icon: Truck
 	},
 	{
 		id: "soportes",
-		label: "Soportes documentales",
+		label: "Resumen General/paola",
 		icon: FileText
 	},
 	{
@@ -5247,7 +5242,7 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mx-auto max-w-6xl",
 					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Cuándo se entregó" }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "¿Cuándo se entregó?" }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 							className: "vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]",
 							children: tituloCuando(op.picoEntregas?.dia, op.picoCobertura?.dia)
@@ -5272,7 +5267,7 @@ function Contenido() {
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Municipios" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 							className: "vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]",
-							children: "Cuánta ayuda recibió cada municipio"
+							children: "¿Cuánta ayuda recibió cada municipio?"
 						})] }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PodioMunicipios, { onSelect: irAlMapa }),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CoberturaPorZona, {}),

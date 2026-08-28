@@ -67,17 +67,25 @@ export function PanoramaDonuts() {
   ];
 
   return (
-    <div className="grid gap-6 sm:grid-cols-3">
+    // `min-h-0` en la rejilla y en cada celda: sin eso, un hijo de una
+    // fila flexible reclama su alto natural en vez de encogerse, y el
+    // conjunto de dona y etiqueta se sale del bloque azul.
+    <div className="grid min-h-0 place-items-center gap-5 sm:grid-cols-3">
       {donuts.map((d, i) => {
         const proporcion = d.total > 0 ? d.valor / d.total : 0;
         const color = COLORES[i % COLORES.length];
         const fin = CIRCUNFERENCIA * (1 - proporcion);
 
         return (
-          <div key={d.id} className="flex flex-col items-center text-center">
+          <div key={d.id} className="flex min-h-0 w-full flex-col items-center text-center">
             <svg
               viewBox="0 0 128 128"
-              className="h-auto w-full max-w-[min(13rem,22vh)]"
+              // El SVG tiene viewBox, así que el navegador respeta
+              // `max-height` conservando la proporción: se encoge solo
+              // cuando la fila es baja, en vez de quedar recortado por el
+              // contenedor. `max-w` cubre el caso contrario, una columna
+              // angosta en un monitor alto.
+              className="h-auto w-full max-w-[13rem] max-h-[min(13rem,20vh)] shrink"
               role="img"
               aria-label={`${d.valor} de ${d.total}. ${d.label}`}
             >
@@ -123,7 +131,10 @@ export function PanoramaDonuts() {
 
             <p
               style={{ "--i": i } as CSSProperties}
-              className="vc-aparece mt-4 max-w-[18rem] text-base leading-6 text-white"
+              // Dos líneas como máximo: la etiqueta de los días incluye
+              // el rango de fechas y en una columna angosta se iba a
+              // cuatro, empujando la dona fuera del bloque.
+              className="vc-aparece mt-3 line-clamp-2 max-w-[18rem] text-[15px] leading-5 text-white sm:text-base sm:leading-6"
             >
               {d.label}
             </p>

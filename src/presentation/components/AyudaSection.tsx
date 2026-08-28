@@ -128,11 +128,8 @@ export function AyudaSection() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionLabel>Qué se entregó</SectionLabel>
-      <SectionTitle>La mayor parte de la ayuda es aseo, comida y agua</SectionTitle>
-      <p className="mt-4 max-w-2xl text-lg leading-8 text-[#35708F]">
-        Seleccione una categoría para ver qué artículos incluyó.
-      </p>
+      <SectionLabel>¿Qué se entregó?</SectionLabel>
+      <SectionTitle>Aseo, alimentos, agua y mucho más. Conozca las ayudas que llegaron a los municipios afectados.</SectionTitle>
 
       <div className="mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center">
         <div className="text-center">
@@ -142,7 +139,7 @@ export function AyudaSection() {
           <span className="mt-3 block text-lg text-[#35708F]">toneladas de ayuda</span>
           <span className="mt-2 block text-base leading-6 text-[#6B93AA]">
             {toneladasMedidas
-              ? "entregadas en todo el departamento"
+              ? "entregadas en todo el departamento, por todas las rutas"
               : "estimadas a partir del número de entregas"}
           </span>
         </div>
@@ -220,7 +217,7 @@ export function AyudaSection() {
       <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]">
-            Categorías
+            Categorías - Seleccione una para consultar los artículos entregados
           </p>
 
           <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
@@ -371,12 +368,22 @@ export function AyudaSection() {
         </Card>
       </div>
 
+      <div className="mt-6">
+        <Aviso>
+          <b>Cómo leer estas cifras.</b> Los porcentajes comparan cuánta ayuda de cada tipo se
+          entregó.{" "}
+          {toneladasMedidas
+            ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio."
+            : "Las toneladas son una estimación a partir del número de entregas."}
+        </Aviso>
+      </div>
+
       {/* Grupos atendidos responde otra pregunta: no QUÉ se entregó sino
           A QUIÉN. Va en su propio apartado, con el tratamiento en azul de
           la campaña, para que no compita con la lectura de arriba. */}
       <div className="mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10">
         <h3 className="vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]">
-          A quién se dirigió la ayuda
+          ¿A quién se dirigió la ayuda?
         </h3>
         <p className="mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg">
           Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar
@@ -402,16 +409,6 @@ export function AyudaSection() {
             );
           })}
         </ul>
-      </div>
-
-      <div className="mt-6">
-        <Aviso>
-          <b>Cómo leer estas cifras.</b> Los porcentajes comparan cuánta ayuda de cada tipo se
-          entregó.{" "}
-          {toneladasMedidas
-            ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio."
-            : "Las toneladas son una estimación a partir del número de entregas."}
-        </Aviso>
       </div>
     </div>
   );

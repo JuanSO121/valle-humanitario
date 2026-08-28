@@ -12,12 +12,10 @@
  * escala.
  *
  * Advertencia sobre las dos cifras, que no son divisibles entre sí:
- *   · Toneladas viene de la hoja TONELADAS del workbook, que es
- *     DEPARTAMENTAL: incluye Cali, el acopio de Cartago y las otras
- *     ayudas solidarias.
- *   · Despachos cuenta los flujos visibles en el mapa, que son solo los
- *     municipales.
- * Dividir una por otra no da toneladas por despacho.
+ * Las dos cifras son municipales, para que se puedan leer juntas. La
+ * hoja TONELADAS registra el peso por día y para todo el departamento,
+ * así que la parte municipal se estima repartiéndolo según qué
+ * proporción de las entregas llegó a un municipio.
  * -----------------------------------------------------------------------
  */
 import { useOperacion } from "@/presentation/state/OperacionContext";
@@ -44,14 +42,23 @@ export function MarcadorHUD({ despachos, day, lens, instant = false }: Props) {
    * pasó: el mapa seguía estimando cuando la ruta de toneladas ya
    * respondía el dato medido.
    */
-  const { jornadas, totalToneladas } = useOperacion();
+  const { jornadas, toneladasMunicipales, factorMunicipal } = useOperacion();
 
+  /**
+   * El mapa dibuja entregas municipales, así que muestra la tonelada
+   * municipal. La serie de jornadas trae el peso departamental, que
+   * incluye Cali y las rutas institucionales, y se reparte con el mismo
+   * factor que usa el resto del tablero.
+   */
   const toneladas = (() => {
-    if (!day) return totalToneladas;
+    if (!day) return toneladasMunicipales;
+
     const jornada = jornadas.find((j) => j.dia === day);
     // Un día sin fila propia no significa cero toneladas acumuladas.
-    if (!jornada) return totalToneladas;
-    return lens === "jornada" ? jornada.toneladas : jornada.acumuladoToneladas;
+    if (!jornada) return toneladasMunicipales;
+
+    const departamental = lens === "jornada" ? jornada.toneladas : jornada.acumuladoToneladas;
+    return Math.round(departamental * factorMunicipal);
   })();
 
   const corte =

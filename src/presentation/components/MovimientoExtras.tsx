@@ -21,17 +21,18 @@ export function MovimientoStatCards() {
     op.diasConEntrega > 0 ? (op.totalEntregas / op.diasConEntrega).toFixed(1) : "0";
 
   const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
-
+  
   const tarjetas = [
     op.picoEntregas && {
-      valor: String(op.picoEntregas.entregas),
+      valor: String(op.picoEntregas.entregas) + " - Entregas",
+      //subtitulo: ` - Entregas.`, debe ser pequeño es mas una alclaracion y toca ver como acomodarlo para no ser redundante
       label: "Día con más entregas",
       nota: `El ${Number(op.picoEntregas.dia)} de agosto, hacia ${op.picoEntregas.municipios} municipios.`,
       color: "#F0801E",
     },
     op.picoCobertura && {
-      valor: String(op.picoCobertura.municipios),
-      label: "Día con más municipios",
+      valor: String(op.picoCobertura.municipios) + " - Municipios.",
+      label: "Día con más municipios atendidos",
       nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
       color: "#5CC46B",
     },
@@ -47,12 +48,7 @@ export function MovimientoStatCards() {
       nota: `Segundo centro de acopio, hacia ${cartago.municipios} municipios.`,
       color: "#B57BB5",
     },
-    {
-      valor: promedio,
-      label: "Entregas por día",
-      nota: `Promedio de los ${op.diasConEntrega} días con entregas.`,
-      color: "#3E9BCB",
-    },
+
   ].filter(Boolean) as Array<{ valor: string; label: string; nota: string; color: string }>;
 
   if (tarjetas.length === 0) return null;
@@ -115,7 +111,7 @@ export function MunicipiosNuevosCallouts() {
             <li
               key={j.fecha}
               className={`rounded-md p-5 ${
-                enCrema ? "bg-[#FBF8C6] text-[#0079C1]" : "bg-[#0079C1] text-[#FBF8C6]"
+                enCrema ? "bg-[#ffffff] text-[#0079C1]" : "bg-[#0079C1] text-[#FBF8C6]"
               }`}
             >
               <p className="text-lg font-bold">

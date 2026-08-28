@@ -100,7 +100,26 @@ export interface Operacion {
    */
   entregasConFecha: number;
   entregasSinFecha: number;
+  /**
+   * Toneladas de TODO el departamento. Incluye Cali, el centro de acopio
+   * de Cartago y las otras ayudas solidarias, porque así se registra el
+   * peso en la hoja: por día y para toda la operación.
+   */
   totalToneladas: number;
+  /**
+   * Toneladas que corresponden solo a los municipios del consolidado.
+   *
+   * Es un estimado: el peso no se registra por envío, así que el total
+   * departamental se reparte según qué proporción de las entregas fue
+   * municipal. Sin esto, una tarjeta que dice "39 de 41 municipios"
+   * quedaba al lado de una cifra que incluye Cali y las rutas
+   * institucionales.
+   */
+  toneladasMunicipales: number;
+  /** Entregas de todas las rutas con coordenada, municipales o no. */
+  entregasTodas: number;
+  /** Proporción de las entregas que fue municipal. Reparte el peso. */
+  factorMunicipal: number;
   municipiosAtendidos: number;
   municipiosTotales: number;
   diasConEntrega: number;
@@ -143,6 +162,9 @@ export const OPERACION_VACIA: Operacion = {
   entregasConFecha: 0,
   entregasSinFecha: 0,
   totalToneladas: 0,
+  toneladasMunicipales: 0,
+  entregasTodas: 0,
+  factorMunicipal: 1,
   municipiosAtendidos: 0,
   municipiosTotales: territoryMunicipalities.length,
   diasConEntrega: 0,
@@ -347,6 +369,12 @@ export function derivarOperacion(
     .map(([zona, acc]) => ({ zona, ...acc }))
     .sort((a, b) => b.total - a.total || a.zona.localeCompare(b.zona, "es"));
 
+  // Todas las entregas con coordenada, municipales o no. Es el
+  // denominador para repartir el peso departamental.
+  const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
+  const factorMunicipal = entregasTodas > 0 ? totalEntregas / entregasTodas : 1;
+  const toneladasMunicipales = Math.round(acumuladoToneladas * factorMunicipal);
+
   const primeraFecha = fechas[0] ?? null;
   const ultimaFecha = fechas.at(-1) ?? null;
 
@@ -367,6 +395,9 @@ export function derivarOperacion(
     entregasConFecha: acumuladoEntregas,
     entregasSinFecha: totalEntregas - acumuladoEntregas,
     totalToneladas: acumuladoToneladas,
+    toneladasMunicipales,
+    entregasTodas,
+    factorMunicipal,
     toneladasMedidas: hayMedidas,
     municipiosAtendidos: porDestino.size,
     municipiosTotales: catalogoFinal.length,

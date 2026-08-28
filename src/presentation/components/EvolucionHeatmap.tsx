@@ -73,7 +73,7 @@ export function EvolucionHeatmap({
 
   return (
     <section>
-      <SectionLabel>Qué municipio recibió cada día</SectionLabel>
+      <SectionLabel>¿Qué municipio recibió cada día?</SectionLabel>
       <p className="mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]">
         Cada casilla es un día. Cuanto más cálido el color, más entregas ese día.
       </p>

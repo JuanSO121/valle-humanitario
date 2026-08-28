@@ -32,11 +32,11 @@ const SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
 const NAV: NavItem[] = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "indice", label: "Índice", icon: List },
-  { id: "cuando", label: "Cuándo se entregó", icon: CalendarDays },
+  { id: "cuando", label: "¿Cuándo se entregó?", icon: CalendarDays },
   { id: "municipios", label: "Municipios", icon: MapPin },
-  { id: "que-se-entrego", label: "Qué se entregó", icon: Package },
-  { id: "de-donde-salio", label: "De dónde salió", icon: Truck },
-  { id: "soportes", label: "Soportes documentales", icon: FileText },
+  { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
+  { id: "de-donde-salio", label: "¿De dónde salió?", icon: Truck },
+  { id: "soportes", label: "Resumen General/paola", icon: FileText },
   { id: "mapa-de-ayudas", label: "Mapa de Ayudas", icon: Map },
 ];
 
@@ -108,7 +108,7 @@ function Contenido() {
           className="bg-[#FBF8C6] px-4 py-14 sm:px-6 sm:py-20 md:px-10"
         >
           <div className="mx-auto max-w-6xl">
-            <SectionLabel>Cuándo se entregó</SectionLabel>
+            <SectionLabel>¿Cuándo se entregó?</SectionLabel>
             <h2 className="vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]">
               {tituloCuando(op.picoEntregas?.dia, op.picoCobertura?.dia)}
             </h2>
@@ -126,7 +126,7 @@ function Contenido() {
             <div>
               <SectionLabel>Municipios</SectionLabel>
               <h2 className="vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]">
-                Cuánta ayuda recibió cada municipio
+                ¿Cuánta ayuda recibió cada municipio?
               </h2>
             </div>
             <PodioMunicipios onSelect={irAlMapa} />

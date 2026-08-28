@@ -60,7 +60,7 @@ export function CanalesSection() {
    * municipios todo el peso del departamento y cada canal quedaría
    * inflado.
    */
-  const entregasDepartamentales = op.totalEntregas + total;
+  const entregasDepartamentales = op.entregasTodas > 0 ? op.entregasTodas : op.totalEntregas + total;
   const toneladasPorEntrega =
     entregasDepartamentales > 0 ? op.totalToneladas / entregasDepartamentales : 0;
 
@@ -93,11 +93,11 @@ export function CanalesSection() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionTitle>¿De dónde salió la ayuda?</SectionTitle>
+      <SectionLabel>¿De dónde salió?</SectionLabel>
+      <SectionTitle>Además de los municipios, la ayuda salió por otras rutas</SectionTitle>
 
       <p className="mt-5 max-w-2xl text-lg leading-8 text-[#35708F]">
-        Además de los municipios, la ayuda se distribuyó a través de 5 rutas adicionales. Suman {total} entregas y unas{" "}
-        {toneladasDe(total).toLocaleString("es-CO")} toneladas que también se movieron.
+        El conteo por municipio deja fuera estas rutas.
       </p>
 
       {/* Las dos rutas grandes. */}
@@ -196,7 +196,7 @@ export function CanalesSection() {
       {cartago && (
         <div className="mt-4 rounded-lg bg-[#0079C1] p-7 sm:p-9">
           <h3 className="vc-titular text-[clamp(1.5rem,4vw,2.25rem)] text-[#FBF8C6]">
-            Centro de distribución Cartago
+            La red del acopio de Cartago
           </h3>
           <p className="mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg">
             Esta bodega registra a qué municipio salió cada entrega. Es la única ruta que no parte

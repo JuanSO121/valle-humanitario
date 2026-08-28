@@ -12,14 +12,16 @@
  *
  * SOBRE EL ALTO
  *
- * En escritorio es una rejilla de filas que suma exactamente una
- * pantalla: encabezado, indicadores, cobertura y banda del pie. Solo las
- * dos filas del medio son flexibles.
+ * En escritorio es una rejilla de cuatro filas: encabezado,
+ * indicadores, cobertura y banda del pie. Solo las dos del medio son
+ * flexibles y se reparten el espacio sobrante, así que en un monitor
+ * alto no queda un hueco abajo.
  *
- * La versión anterior usaba `min-h-dvh` con un contenedor flexible, así
- * que en un monitor alto sobraba espacio abajo y en uno bajo el pie
- * quedaba fuera del pliegue. En celular se conserva el crecimiento
- * natural, porque cuatro bloques no caben en una pantalla vertical.
+ * El alto es `min-h-dvh` y no `h-dvh` con recorte. Recortar era peor que
+ * el problema que resolvía: cuando el contenido no cabía, las donas
+ * quedaban cortadas por la mitad. Ahora se encogen solas por su propio
+ * `max-height`, y si aun así no caben, la sección crece unos píxeles en
+ * vez de mutilar el contenido.
  * -----------------------------------------------------------------------
  */
 import { type CSSProperties } from "react";
@@ -49,17 +51,18 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
       label: "entregas llegaron a los municipios",
     },
     {
-      valor: `${op.totalToneladas.toLocaleString("es-CO")} toneladas`,
-      label: op.toneladasMedidas
-        ? "de ayuda salieron del departamento"
-        : "estimadas según el número de entregas",
+      // La tonelada municipal, no la departamental. Al lado de "39 de 41
+      // municipios", las 557 toneladas de toda la operación incluían
+      // Cali y las rutas institucionales y no correspondían.
+      valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} toneladas`,
+      label: "llegaron a esos municipios",
     },
   ];
 
   return (
     <section
       id="indice"
-      className="flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:h-dvh lg:grid-rows-[auto_1fr_1fr_auto] lg:overflow-hidden"
+      className="flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:min-h-dvh lg:grid-rows-[auto_1fr_1fr_auto]"
     >
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10">
         <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-10">
@@ -81,8 +84,8 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
 
       {/* Bloque uno: los indicadores. */}
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8">
-        <div className="flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
-          <div className="grid w-full min-h-0 gap-8 text-center sm:grid-cols-3">
+        <div className="flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
+          <div className="grid min-h-0 w-full gap-8 text-center sm:grid-cols-3">
             {indicadores.map((i, idx) => (
               <div key={i.label} style={{ "--i": idx } as CSSProperties} className="vc-aparece">
                 <b className="block text-[clamp(1.75rem,4vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]">
@@ -99,21 +102,14 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
 
       {/* Bloque dos: la cobertura. */}
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10">
-        <div className="flex h-full min-h-0 items-center overflow-hidden rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
+        {/* Sin `overflow-hidden`: recortar era el problema, no la
+            solución. Las donas se limitan por su propio `max-height`, así
+            que se encogen antes de tocar el borde del bloque. */}
+        <div className="flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
           <div className="min-h-0 w-full">
             <PanoramaDonuts />
           </div>
         </div>
-      </div>
-
-      {/* Banda crema al pie, como en la pieza. Lleva la fecha de corte,
-          que es lo que más se pregunta al ver cifras de una emergencia. */}
-      <div className="bg-[#FBF8C6] px-4 py-5 sm:px-8 md:px-12">
-        <p className="mx-auto max-w-[100rem] text-center text-base font-bold text-[#0079C1] sm:text-lg">
-          {op.fechaCorteLarga
-            ? `Información con corte al ${op.fechaCorteLarga}.`
-            : "Información de las entregas registradas por la Gobernación."}
-        </p>
       </div>
     </section>
   );

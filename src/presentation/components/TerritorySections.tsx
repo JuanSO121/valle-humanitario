@@ -156,9 +156,9 @@ export function CoberturaPorZona() {
                 {z.zona}
               </span>
 
-              <p className="mt-2 text-[clamp(2.25rem,5vw,3rem)] font-extrabold leading-none text-white">
+              <p className="mt-2 text-[clamp(2.25rem,5vw,2.3rem)] font-extrabold leading-none text-white">
                 {z.atendidos}
-                <span className="text-xl font-semibold text-[#A8CFE2]"> de {z.total}</span>
+                <span className="text-xl font-semibold text-[#A8CFE2]"> de {z.total} - Municipios</span>
               </p>
 
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/25">

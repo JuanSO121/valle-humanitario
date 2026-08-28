@@ -15,8 +15,8 @@ export function JornadaBars() {
 
   return (
     <div className="mt-6 rounded-md bg-[#0079C1] p-5 sm:p-6">
-      <p className="mb-4 text-sm font-bold uppercase tracking-[0.1em] text-[#FBF8C6]">
-        Entregas por día. En verde, los municipios que reciben por primera vez
+      <p className="mb-4 text-sm font-bold uppercase tracking-widest text-[#FBF8C6]">
+        Entregas por día. En amarillo, los municipios que reciben por primera vez
       </p>
       <div className="flex h-56 items-end gap-1.5 sm:gap-2">
         {jornadas.map((j) => (
