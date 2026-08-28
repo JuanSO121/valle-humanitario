@@ -17,13 +17,44 @@
  *
  * Todo se deriva de la API. La lista de canales viene de route=ayuda; el
  * catálogo estático solo aporta el color, que es diseño y no dato.
+ *
+ * SOBRE EL PESO VISUAL DE LA FILA
+ *
+ * El óvalo de color ocupaba toda la columna, de borde a borde. Cuatro
+ * bandas macizas, una debajo de otra, competían con las tres cifras de
+ * arriba y hacían que la línea que encadena los círculos —que es lo que
+ * cuenta la secuencia— pasara desapercibida.
+ *
+ * El óvalo sigue ahí, pero se retrae: mide lo que mide su contenido y
+ * arranca donde termina el rótulo, no en el margen. En el espacio que
+ * libera va "Ruta n", en el color del óvalo y sobre el fondo de la
+ * sección.
+ *
+ * SOBRE LAS DOS MAQUETAS
+ *
+ * En escritorio la fila es una línea de tiempo: rótulo y óvalo a la
+ * izquierda, círculo al centro sobre el hilo vertical, descripción a la
+ * derecha. Esa composición necesita tres columnas y en un teléfono no
+ * cabe: el óvalo quedaba con dos palabras por línea y la descripción,
+ * arrinconada contra el margen.
+ *
+ * En celular cada ruta se cierra como una burbuja: una tarjeta con el
+ * rótulo arriba, el óvalo de color con el icono adentro y la descripción
+ * debajo. Se lee de arriba abajo, que es como se lee un teléfono, y cada
+ * ruta queda separada de la siguiente sin depender del hilo, que ahí se
+ * oculta.
+ *
+ * El cambio entre las dos maquetas lo hace `md:contents` en el envoltorio
+ * de la burbuja: en escritorio ese div se disuelve y sus tres hijos pasan
+ * a ser celdas de la rejilla del `li`. Así el HTML es uno solo y no hay
+ * bloques duplicados que después se desincronicen.
  * -----------------------------------------------------------------------
  */
 import { type CSSProperties } from "react";
 import { Boxes, Building2, HeartHandshake, Warehouse } from "lucide-react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
-import { SectionLabel, SectionTitle } from "./storyPrimitives";
+import { SectionTitle } from "./storyPrimitives";
 
 const ORIGEN_CARTAGO = "ORI-CARTAGO";
 
@@ -42,7 +73,19 @@ interface Ruta {
    * desagregar por municipio.
    */
   unidades: number;
+  /** Color de identidad de la ruta: el óvalo y el círculo del icono. */
   color: string;
+  /**
+   * La versión del color que puede ir como texto sobre fondo claro.
+   *
+   * Va aparte y no se calcula porque los cuatro colores no se comportan
+   * igual: el cyan #22ABE2 contrasta 2.4 a 1 contra el fondo de la
+   * sección y el naranja #E2690E, 3.2 a 1, así que como rótulo se
+   * volverían ilegibles. Estas variantes conservan el tono y pasan de 5
+   * a 1. El óvalo y el círculo se quedan con el color vivo: ahí el color
+   * es un fondo, no un soporte de lectura.
+   */
+  tinta: string;
   icono: typeof Building2;
 }
 
@@ -84,6 +127,7 @@ export function BalanceFinal() {
       entregas: Math.max(0, op.totalEntregas - entregasCartago),
       unidades: 0,
       color: "#0079C1",
+      tinta: "#00639F",
       icono: Building2,
     },
     {
@@ -94,6 +138,7 @@ export function BalanceFinal() {
       entregas: entregasCartago,
       unidades: 0,
       color: "#E2690E",
+      tinta: "#A34C00",
       icono: Warehouse,
     },
     {
@@ -103,6 +148,7 @@ export function BalanceFinal() {
       entregas: multiples,
       unidades: unidadesMultiples,
       color: "#7F207F",
+      tinta: "#7F207F",
       icono: Boxes,
     },
     {
@@ -113,6 +159,7 @@ export function BalanceFinal() {
       entregas: otras,
       unidades: 0,
       color: "#22ABE2",
+      tinta: "#0F6E96",
       icono: HeartHandshake,
     },
     // Se muestra una ruta si movió entregas O unidades. Filtrar solo por
@@ -123,12 +170,12 @@ export function BalanceFinal() {
   const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 
   const cifras = [
-    { valor: "X", label: "Ayudas recibidas" },
-    { valor: totalRutas.toLocaleString("es-CO"), label: "despachos en total" },
+    { valor: "561", label: "Ayudas recibidas" },
     {
       valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
-      label: "de ayuda distribuida",
+      label: "Ayuda distribuida",
     },
+    { valor: totalRutas.toLocaleString("es-CO"), label: "Despachos en total" },
   ];
 
   return (
@@ -146,20 +193,22 @@ export function BalanceFinal() {
             <b className="block text-[clamp(2rem,5vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]">
               {c.valor}
             </b>
-            <p className="mt-3 text-base text-white sm:text-lg">{c.label}</p>
+            <p className="mt-3 text-base font-bold text-white sm:text-lg">{c.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Las rutas, una por fila. El círculo del centro las encadena, como
-          en la referencia de diseño: la línea vertical que lo atraviesa
-          hace leer las cuatro como una sola secuencia. */}
-      <ol className="relative mt-10">
-        {/* La línea que une los círculos. Decorativa, así que se oculta a
-            los lectores de pantalla. */}
+      {/* Las rutas. En escritorio, una línea de tiempo: el círculo del
+          centro las encadena y el hilo vertical hace leer las cuatro como
+          una sola secuencia. En celular, cuatro burbujas apiladas. */}
+      <ol className="relative mt-10 space-y-4 md:mt-12 md:space-y-0">
+        {/* El hilo que une los círculos. Decorativo, así que se oculta a
+            los lectores de pantalla. Y se oculta también en celular: ahí
+            no hay círculos que unir y la línea cruzaría las burbujas por
+            la mitad. */}
         <span
           aria-hidden
-          className="absolute inset-y-0 left-[2.25rem] w-px bg-[#0079C1]/25 md:left-1/2 md:-translate-x-1/2"
+          className="absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-[#0079C1]/25 md:block"
         />
 
         {rutas.map((r, i) => {
@@ -178,60 +227,91 @@ export function BalanceFinal() {
             <li
               key={`ruta-${r.id}`}
               style={{ "--i": i } as CSSProperties}
-              className="vc-aparece relative grid grid-cols-[4.5rem_1fr] items-center gap-4 py-2.5 md:grid-cols-[1fr_4.5rem_1fr] md:gap-0"
+              className="vc-aparece relative md:grid md:grid-cols-[1fr_4.5rem_1fr] md:items-center md:py-2.5"
             >
-              {/* Bloque de color con el título. En escritorio va a la
-                  izquierda del círculo; en celular pasa a la derecha,
-                  debajo del anterior, porque dos columnas de texto en un
-                  teléfono no se leen. */}
-              <div className="order-2 md:order-1 md:pr-6">
-                <div
-                  className="rounded-full px-6 py-4 text-white md:text-right"
-                  style={{ background: r.color }}
-                >
-                  <b className="block text-lg leading-tight">{r.titulo}</b>
+              {/* La burbuja. En escritorio se disuelve con `md:contents`
+                  y sus tres hijos pasan a ser las celdas de la rejilla
+                  de arriba, así que la tarjeta existe solo en celular
+                  sin duplicar una línea de HTML. */}
+              <div className="overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 md:contents">
+                {/* Rótulo y óvalo. En celular se apilan; en escritorio
+                    comparten línea y el `justify-between` separa el
+                    rótulo, anclado a la izquierda, del óvalo, que queda
+                    junto al círculo. Ese aire entre los dos es lo que
+                    hace que los cuatro "Ruta n" caigan sobre el mismo
+                    eje vertical: pegados al óvalo se moverían con el
+                    largo de cada título. */}
+                <div className="flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4 md:pr-6">
+                  <span
+                    className="shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-widest md:min-w-24"
+                    style={{ color: r.tinta }}
+                  >
+                    Ruta {i + 1}
+                  </span>
 
-                  <span className="mt-2 flex flex-wrap gap-x-6 gap-y-1 md:justify-end">
-                    {r.entregas > 0 ? (
-                      <>
-                        <span className="text-[15px] text-white/85">
-                          <b className="text-base font-extrabold text-white">
-                            {r.entregas.toLocaleString("es-CO")}
-                          </b>{" "}
-                          despachos · {porcentaje}%
-                        </span>
-                        <span className="text-[15px] text-white/85">
-                          <b className="text-base font-extrabold text-white">
-                            {toneladas.toLocaleString("es-CO")}
-                          </b>{" "}
-                          toneladas
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[15px] text-white/85">
-                        <b className="text-base font-extrabold text-white">
-                          {r.unidades.toLocaleString("es-CO")}
-                        </b>{" "}
-                        unidades sin desagregar
+                  {/* En celular el óvalo ocupa todo el ancho de la
+                      burbuja y se lleva el icono adentro, que es lo que
+                      le da escala de burbuja. En escritorio, como hijo
+                      de un flex, vuelve a medir lo que mide su
+                      contenido. */}
+                  <div
+                    className="flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:w-auto md:flex-none md:rounded-full md:px-6 md:text-right"
+                    style={{ background: r.color }}
+                  >
+                    <span
+                      aria-hidden
+                      className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/20 md:hidden"
+                    >
+                      <Icono className="size-5" />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <b className="block text-lg leading-tight">{r.titulo}</b>
+
+                      <span className="mt-2 flex flex-wrap gap-x-6 gap-y-1 md:justify-end">
+                        {r.entregas > 0 ? (
+                          <>
+                            <span className="text-[15px] font-bold text-white/90">
+                              <b className="text-base font-extrabold text-white">
+                                {r.entregas.toLocaleString("es-CO")}
+                              </b>{" "}
+                              despachos · {porcentaje}%
+                            </span>
+                            <span className="text-[15px] font-bold text-white/90">
+                              <b className="text-base font-extrabold text-white">
+                                {toneladas.toLocaleString("es-CO")}
+                              </b>{" "}
+                              toneladas
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[15px] font-bold text-white/90">
+                            <b className="text-base font-extrabold text-white">
+                              {r.unidades.toLocaleString("es-CO")}
+                            </b>{" "}
+                            unidades sin desagregar
+                          </span>
+                        )}
                       </span>
-                    )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* El círculo del hilo. En celular no aparece: su copia
+                    ya viaja dentro del óvalo. */}
+                <div className="hidden justify-center md:flex">
+                  <span
+                    className="flex size-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white"
+                    style={{ background: r.color }}
+                  >
+                    <Icono className="size-6" aria-hidden />
                   </span>
                 </div>
-              </div>
 
-              {/* El círculo con el icono. */}
-              <div className="order-1 flex justify-center md:order-2">
-                <span
-                  className="flex size-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white"
-                  style={{ background: r.color }}
-                >
-                  <Icono className="size-6" aria-hidden />
-                </span>
+                <p className="mt-3 text-[15px] leading-6 text-[#35708F] md:mt-0 md:pl-6 md:text-base">
+                  {r.descripcion}
+                </p>
               </div>
-
-              <p className="order-3 col-span-2 text-base leading-6 text-[#35708F] md:col-span-1 md:pl-6">
-                {r.descripcion}
-              </p>
             </li>
           );
         })}

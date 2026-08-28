@@ -14,6 +14,26 @@
  * un bloque de progreso; y los 41 municipios cierran como galería
  * filtrable. Cada nivel se lee más rápido que el anterior.
  *
+ * SOBRE EL RÓTULO
+ *
+ * Los tres bloques traen su propio `SectionLabel`, que es lo correcto
+ * cuando se usan sueltos. Pero en la sección "¿Cuánta ayuda recibió cada
+ * municipio?" el rótulo vive en una banda azul a sangre, como en las
+ * piezas de la campaña, y ahí el bloque no debe repetirlo. De eso se
+ * encarga `conRotulo`, que por defecto queda en `true` para no alterar
+ * ningún uso existente.
+ *
+ * SOBRE EL COLOR DE LAS TARJETAS DE ZONA
+ *
+ * Eran azul #0079C1. Dentro de la banda azul de la sección quedaban azul
+ * sobre azul y el borde de la tarjeta desaparecía, así que pasan a
+ * blanco. El cambio arrastra los tres colores de adentro: la pista de la
+ * barra, que era blanco translúcido e invisible sobre blanco; y el verde
+ * y el amarillo de marca, que sobre azul contrastaban de sobra y sobre
+ * blanco caían a 1.6:1. Los sustituye una pareja más oscura que conserva
+ * la misma lectura —verde completo, ámbar pendiente— y pasa el 3:1 que
+ * pide un elemento gráfico.
+ *
  * Las animaciones son de entrada, cortas y escalonadas. Se apagan solas
  * con `prefers-reduced-motion`, que vive en marca.css.
  * -----------------------------------------------------------------------
@@ -24,6 +44,10 @@ import type { MunicipioOperacion } from "@/application/derivations/operacion";
 import { SectionLabel } from "./storyPrimitives";
 
 const TODAS = "todas";
+
+/** Verde y ámbar para barras sobre fondo claro. Ver la nota de arriba. */
+const VERDE_COMPLETO = "#2E9E4F";
+const AMBAR_PENDIENTE = "#E8A200";
 
 const norm = (s: string) =>
   s
@@ -36,13 +60,21 @@ function plural(n: number, uno: string, varios: string): string {
   return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
 }
 
-interface SelectableProps {
+interface RotulableProps {
+  /**
+   * `false` cuando la sección que contiene el bloque ya puso el rótulo
+   * en una banda de color y repetirlo daría dos encabezados seguidos.
+   */
+  conRotulo?: boolean;
+}
+
+interface SelectableProps extends RotulableProps {
   onSelect?: ((municipio: MunicipioOperacion) => void) | undefined;
 }
 
 /* ── Podio ──────────────────────────────────────────────────────────── */
 
-export function PodioMunicipios({ onSelect }: SelectableProps) {
+export function PodioMunicipios({ onSelect, conRotulo = true }: SelectableProps) {
   const { municipios } = useOperacion();
 
   const top = municipios.slice(0, 6);
@@ -54,9 +86,15 @@ export function PodioMunicipios({ onSelect }: SelectableProps) {
 
   return (
     <section>
-      <SectionLabel>Municipios que más ayuda recibieron</SectionLabel>
+      {conRotulo && <SectionLabel>Municipios que más ayuda recibieron</SectionLabel>}
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)]">
+      {/* El margen superior cuelga del rótulo: sin rótulo no hay de qué
+          separarse, y la banda de la sección ya puso su propio aire. */}
+      <div
+        className={`grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)] ${
+          conRotulo ? "mt-5" : ""
+        }`}
+      >
         {/* El primer puesto ocupa su propia ficha, en navy y a otra
             escala. Un ranking donde todos los puestos se ven igual no es
             un ranking, es una lista. */}
@@ -97,11 +135,14 @@ export function PodioMunicipios({ onSelect }: SelectableProps) {
         <ol className="grid gap-3 sm:grid-cols-2">
           {resto.map((m, i) => (
             <li key={m.destinoId}>
+              {/* El filete `ring-1` es lo que le da canto a la ficha
+                  blanca cuando cae sobre el crema de la sección: blanco
+                  sobre #FBF8C6 contrasta 1.1:1 y el borde se difumina. */}
               <button
                 type="button"
                 onClick={() => onSelect?.(m)}
                 style={{ "--i": i + 1 } as CSSProperties}
-                className="vc-aparece flex h-full w-full items-start gap-4 rounded-lg bg-white p-5 text-left transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
+                className="vc-aparece flex h-full w-full items-start gap-4 rounded-lg bg-white p-5 text-left ring-1 ring-[#123E5C]/10 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0"
               >
                 <span className="mt-0.5 text-3xl font-extrabold leading-none text-[#22ABE2]">
                   {i + 2}
@@ -132,16 +173,18 @@ export function PodioMunicipios({ onSelect }: SelectableProps) {
 
 /* ── Cobertura por zona ─────────────────────────────────────────────── */
 
-export function CoberturaPorZona() {
+export function CoberturaPorZona({ conRotulo = true }: RotulableProps) {
   const { zonas } = useOperacion();
 
   if (zonas.length === 0) return null;
 
   return (
     <section>
-      <SectionLabel>Ayudas por zona</SectionLabel>
+      {conRotulo && <SectionLabel>Ayudas por zona</SectionLabel>}
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-4 ${conRotulo ? "mt-5" : ""}`}
+      >
         {zonas.map((z, i) => {
           const ratio = z.total > 0 ? z.atendidos / z.total : 0;
           const completa = z.atendidos === z.total;
@@ -150,34 +193,39 @@ export function CoberturaPorZona() {
             <div
               key={z.zona}
               style={{ "--i": i } as CSSProperties}
-              className="vc-aparece rounded-lg bg-[#0079C1] p-6"
+              className="vc-aparece rounded-lg bg-white p-6 shadow-sm"
             >
-              <span className="text-sm font-bold uppercase tracking-[0.16em] text-[#FFD400]">
+              <span className="text-sm font-bold uppercase tracking-[0.16em] text-[#6B93AA]">
                 {z.zona}
               </span>
 
-              <p className="mt-2 text-[clamp(2.25rem,5vw,2.3rem)] font-extrabold leading-none text-white">
+              <p className="mt-2 text-[clamp(2.25rem,5vw,2.3rem)] font-extrabold leading-none text-[#123E5C]">
                 {z.atendidos}
-                <span className="text-xl font-semibold text-[#A8CFE2]"> de {z.total} - Municipios</span>
+                <span className="text-xl font-semibold text-[#8FAABC]">
+                  {" "}
+                  de {z.total} - Municipios
+                </span>
               </p>
 
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/25">
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#DDF0FA]">
                 <i
                   className="vc-crece block h-full rounded-full"
                   style={
                     {
                       width: `${ratio * 100}%`,
-                      background: completa ? "#7BE08F" : "#FFD400",
+                      background: completa ? VERDE_COMPLETO : AMBAR_PENDIENTE,
                       "--i": i,
                     } as CSSProperties
                   }
                 />
               </div>
 
-              <p className="mt-3 text-base text-[#FBF8C6]">
+              {/* El estado va en azul y en semibold: es la línea que
+                  responde la pregunta de la tarjeta, no un pie. */}
+              <p className="mt-3 text-base font-semibold text-[#0079C1]">
                 {completa ? "Todos recibieron ayudas" : `${z.total - z.atendidos} sin entregas`}
               </p>
-              <p className="mt-0.5 text-base text-[#A8CFE2]">
+              <p className="mt-0.5 text-base text-[#6B93AA]">
                 {plural(z.entregas, "entrega", "entregas")} en total
               </p>
             </div>
@@ -190,7 +238,7 @@ export function CoberturaPorZona() {
 
 /* ── Galería de municipios ──────────────────────────────────────────── */
 
-export function MunicipiosGrid({ onSelect }: SelectableProps) {
+export function MunicipiosGrid({ onSelect, conRotulo = true }: SelectableProps) {
   const { municipios, catalogo, zonas } = useOperacion();
   const [zona, setZona] = useState<string>(TODAS);
   const [texto, setTexto] = useState("");
@@ -235,9 +283,11 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
 
   return (
     <section>
-      <SectionLabel>Los {todos.length} municipios</SectionLabel>
+      {conRotulo && <SectionLabel>Los {todos.length} municipios</SectionLabel>}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div
+        className={`flex flex-wrap items-center gap-2 ${conRotulo ? "mt-5" : ""}`}
+      >
         {filtros.map((f) => {
           const activo = zona === f.valor;
           return (
@@ -249,7 +299,7 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${
                 activo
                   ? "bg-[#0079C1] text-white shadow-md"
-                  : "bg-white text-[#35708F] hover:bg-[#EAF7FC] hover:text-[#0079C1]"
+                  : "bg-white text-[#35708F] ring-1 ring-[#123E5C]/10 hover:bg-[#EAF7FC] hover:text-[#0079C1]"
               }`}
             >
               {f.etiqueta}
@@ -271,18 +321,18 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Buscar municipio…"
         aria-label="Buscar municipio"
-        className="mt-3 w-full rounded-lg border-2 border-transparent bg-white px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#22ABE2]"
+        className="mt-3 w-full rounded-lg border-2 border-[#123E5C]/10 bg-white px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#0079C1]"
       />
 
-      <p className="mt-3 text-base text-[#6B93AA]" aria-live="polite">
+      <p className="mt-3 text-base text-[#35708F]" aria-live="polite">
         {visibles.length === todos.length
           ? plural(visibles.length, "municipio", "municipios")
           : `${visibles.length} de ${todos.length} municipios`}
       </p>
 
       {visibles.length === 0 ? (
-        <p className="mt-6 rounded-lg border-2 border-dashed border-[#22ABE2]/40 p-10 text-center text-base text-[#6B93AA]">
-          Ningún municipio coincide. Prueba con otro nombre o quita el filtro de zona.
+        <p className="mt-6 rounded-lg border-2 border-dashed border-[#0079C1]/40 bg-white/60 p-10 text-center text-base text-[#35708F]">
+          Ningún municipio coincide. Pruebe con otro nombre o quite el filtro de zona.
         </p>
       ) : (
         /* El `key` remonta la galería al cambiar de filtro, y con eso la
@@ -303,7 +353,7 @@ export function MunicipiosGrid({ onSelect }: SelectableProps) {
                 // seguir sumando retraso haría esperar casi dos segundos
                 // a las últimas.
                 style={{ "--i": Math.min(i, 24) } as CSSProperties}
-                className={`vc-aparece group relative overflow-hidden rounded-lg p-5 text-left transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0 ${
+                className={`vc-aparece group relative overflow-hidden rounded-lg p-5 text-left ring-1 ring-[#123E5C]/10 transition duration-200 hover:-translate-y-1 hover:shadow-lg motion-reduce:hover:translate-y-0 ${
                   sinEntregas ? "bg-[#EAF7FC]" : "bg-white"
                 }`}
               >
