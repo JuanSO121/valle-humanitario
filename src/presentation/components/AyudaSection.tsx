@@ -369,7 +369,7 @@ export function AyudaSection() {
                 onClick={() => setActiva(null)}
                 className="text-base font-semibold text-[#0079C1] underline-offset-4 hover:underline"
               >
-                Ver lo más entregado en total
+                Ver las ayudas mas entregadas
               </button>
             </div>
           )}

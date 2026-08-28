@@ -46,12 +46,7 @@ export function PanoramaDonuts() {
   const zonasCompletas = op.zonas.filter((z) => z.total > 0 && z.atendidos === z.total).length;
 
   const donuts: Donut[] = [
-    {
-      id: "municipios",
-      valor: op.municipiosAtendidos,
-      total: op.municipiosTotales,
-      label: "Municipios con ayudas entregadas",
-    },
+
     {
       id: "zonas",
       valor: zonasCompletas,

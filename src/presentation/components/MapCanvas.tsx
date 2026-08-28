@@ -10,7 +10,7 @@ import { buildArcCoordinates, buildPulseGradient, easeOutCubic, type LngLat } fr
 import { createArcAnimationEngine } from "./arcAnimationEngine";
 
 import { normId } from "@/lib/id";
-import { sameMunicipality } from "@/lib/municipalityName";
+import { normMunicipalityName, sameMunicipality } from "@/lib/municipalityName";
 import municipalBoundariesRaw from "@/data/valle-municipios.json";
 import { createArrivalPulseEngine } from "./arrivalPulseEngine";
 import { createDispatchActivityEngine, type ActivityFrame } from "./dispatchActivityEngine";
@@ -335,9 +335,10 @@ function escapeHtml(s: string): string {
   );
 }
 
-function popupHtml(label: string): string {
-  return `<div style="font-family:'IBM Plex Sans',sans-serif;font-size:12px">
-             <strong>${escapeHtml(label)}</strong>
+function popupHtml(label: string, pista?: string): string {
+  return `<div style="font-family:Poppins,sans-serif;font-size:14px;min-width:150px">
+             <strong style="display:block">${escapeHtml(label)}</strong>
+             ${pista ? `<span style="display:block;margin-top:4px;color:#0079C1;font-size:13px">${escapeHtml(pista)}</span>` : ""}
            </div>`;
 }
 
@@ -350,11 +351,13 @@ function municipalityPopupHtml(
 ): string {
   const stat = municipios.get(codigoDane);
   if (!stat) {
-    // Cali y cualquier polígono fuera del catálogo caen acá: se dice por
-    // qué no hay cifras, en vez de mostrar un popup vacío.
-    return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:190px">
+    // Cali y cualquier polígono fuera del catálogo municipal caen acá.
+    // Se explica por qué no tiene cifras de cobertura, pero SÍ se puede
+    // abrir: Cali recibió sus propios despachos y tiene panel.
+    return `<div style="font-family:Poppins,sans-serif;min-width:200px">
       <strong style="display:block;font-size:17px;margin-bottom:6px">${escapeHtml(label)}</strong>
-      <span style="color:#A8CFE2;font-size:14px">No hace parte del conteo por municipio</span>
+      <span style="display:block;color:#6B93AA;font-size:14px;line-height:1.35">No hace parte del conteo por municipio</span>
+      <span style="display:block;margin-top:6px;color:#0079C1;font-size:13px">Toca para ver lo que recibió</span>
     </div>`;
   }
 
@@ -432,6 +435,10 @@ export function MapCanvas({
   const hoveredDestinoIdRef = useRef<string | null>(null);
 
   const destinoIdByNormNameRef = useRef<Map<string, string>>(new Map());
+  // El handler de click se registra una sola vez, así que la lista de
+  // destinos se lee por ref para no quedar fija al primer render.
+  const destinosRef = useRef(destinos);
+  destinosRef.current = destinos;
   const destinoCoordsByIdRef = useRef<Map<string, LngLat>>(new Map());
   const destinoMetaByIdRef = useRef<Map<string, { nombre: string; coords: LngLat }>>(new Map());
   const prevWeightsRef = useRef<Map<string, number>>(new Map());
@@ -740,7 +747,16 @@ export function MapCanvas({
         },
       });
 
-      // --- click: origen > destino > ÁREA de municipio > reset -----------
+      /**
+       * Orden de prioridad del clic: origen, destino, ÁREA, reset.
+       *
+       * En Cali y en Cartago el punto de origen queda encima del punto de
+       * destino, porque la bodega está en la misma coordenada que el
+       * municipio. No hace falta separarlos: el punto abre el centro de
+       * acopio y el ÁREA abre el municipio. Son dos gestos distintos para
+       * dos cosas distintas, y el mapa ya no necesita trucos de
+       * desplazamiento.
+       */
       map.on("click", (e: MapLayerMouseEvent) => {
         const hitbox: [PointLike, PointLike] = [
           [e.point.x - POINT_HIT_TOLERANCE_PX, e.point.y - POINT_HIT_TOLERANCE_PX],
@@ -769,19 +785,39 @@ export function MapCanvas({
             municipio?.properties?.["municipalityCode"] ?? municipio?.id ?? "",
           );
 
-          // Cali no abre panel: está fuera del consolidado municipal, no
-          // tiene fila en el catálogo y abrir un panel vacío se lee como
-          // un bug. Se traga el click sin resetear la vista.
-          if (normId(municipioCode) === CALI_DANE) return;
-
           const municipioName = municipio?.properties?.["name"];
+
+          // Se prueba por nombre del polígono, por el nombre que trae el
+          // catálogo vivo para ese código DANE, y por el código. El
+          // segundo cubre los casos donde el GeoJSON escribe el municipio
+          // distinto del Excel, como Buga y Guadalajara de Buga.
+          const nombreCatalogo = municipiosRef.current.get(normId(municipioCode))?.nombre;
+
           const destinoId =
             (municipioName != null
-              ? destinoIdByNormNameRef.current.get(normId(String(municipioName)))
-              : undefined) ?? destinoIdByNormNameRef.current.get(normId(municipioCode));
+              ? destinoIdByNormNameRef.current.get(normMunicipalityName(String(municipioName)))
+              : undefined) ??
+            (nombreCatalogo != null
+              ? destinoIdByNormNameRef.current.get(normMunicipalityName(nombreCatalogo))
+              : undefined) ??
+            destinoIdByNormNameRef.current.get(normId(municipioCode)) ??
+            // Último recurso: comparación tolerante contra cada destino,
+            // que además resuelve los alias como Buga.
+            destinosRef.current.find(
+              (d) =>
+                sameMunicipality(d.nombre, municipioName == null ? null : String(municipioName)) ||
+                sameMunicipality(d.nombre, nombreCatalogo ?? null),
+            )?.id;
           if (destinoId != null) {
             handlersRef.current.onSelectDestino(destinoId);
             return;
+          }
+
+          if (import.meta.env.DEV) {
+            console.warn(
+              `[MapCanvas] el clic en "${String(municipioName)}" (DANE ${municipioCode}) no ` +
+                "encontró un destino. Probablemente ese municipio todavía no registra entregas.",
+            );
           }
         }
 
@@ -798,7 +834,15 @@ export function MapCanvas({
         }
         origenPopup
           .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
-          .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
+          .setHTML(
+            popupHtml(
+              String(f.properties?.["nombre"] ?? ""),
+              // Sin esta pista, el punto de origen parece decorativo: no
+              // hay nada que indique que al tocarlo el mapa deja solo lo
+              // que salió de ahí.
+              "Toca para ver solo sus despachos",
+            ),
+          )
           .addTo(map);
       });
       map.on("mouseleave", "origenes-point", () => {
@@ -820,7 +864,7 @@ export function MapCanvas({
         }
         destinoPopup
           .setLngLat((f.geometry as { coordinates: LngLat }).coordinates)
-          .setHTML(popupHtml(String(f.properties?.["nombre"] ?? "")))
+          .setHTML(popupHtml(String(f.properties?.["nombre"] ?? ""), "Toca para ver el detalle"))
           .addTo(map);
       });
       map.on("mouseleave", "destinos-point", () => {
@@ -1022,9 +1066,19 @@ export function MapCanvas({
       });
     });
 
+    /**
+     * Índice para resolver el destino al hacer clic en el ÁREA de un
+     * municipio.
+     *
+     * Antes las llaves se armaban con normId, que no hace case-fold ni
+     * quita tildes: solo recorta ceros de ids numéricos. Con el GeoJSON
+     * diciendo "RIOFRIO" y el destino "Riofrío" no había coincidencia, el
+     * clic no encontraba nada y caía en el reset. Por eso solo funcionaba
+     * el punto.
+     */
     destinoIdByNormNameRef.current = new Map(
       destinos.flatMap((d) => [
-        [normId(d.nombre), d.id],
+        [normMunicipalityName(d.nombre), d.id],
         [normId(d.id), d.id],
       ]),
     );

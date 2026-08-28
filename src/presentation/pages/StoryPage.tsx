@@ -31,12 +31,12 @@ const SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
  
 const NAV: NavItem[] = [
   { id: "inicio", label: "Inicio", icon: Home },
+  { id: "balance", label: "Balance a la fecha", icon: FileText },
   { id: "indice", label: "Índice", icon: List },
-  { id: "cuando", label: "¿Cuándo se entregó?", icon: CalendarDays },
+  { id: "cuando", label: "Analisis de entrega", icon: CalendarDays },
   { id: "municipios", label: "Municipios", icon: MapPin },
   { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
   { id: "de-donde-salio", label: "¿De dónde salió?", icon: Truck },
-  { id: "balance", label: "Balance a la fecha", icon: FileText },
   { id: "mapa-de-ayudas", label: "Mapa de Ayudas", icon: Map },
 ];
 
@@ -83,6 +83,7 @@ function Contenido() {
             alt reproduce lo que dice la imagen: sin eso, la primera
             pantalla del sitio es invisible para un lector de pantalla y
             para un buscador. */}
+
         <PiezaGrafica
           id="inicio"
           escritorio="/marca/portada-escritorio.jpg"
@@ -97,6 +98,11 @@ function Contenido() {
           }
         />
 
+        
+        <section id="balance" className="bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10">
+          <BalanceFinal />
+        </section>
+
         <IndiceSection />
 
         {/* Fondo crema con bloques azules y texto blanco, como la pieza.
@@ -108,7 +114,6 @@ function Contenido() {
           className="bg-[#FBF8C6] px-4 py-14 sm:px-6 sm:py-20 md:px-10"
         >
           <div className="mx-auto max-w-6xl">
-            <SectionLabel>¿Cuándo se entregó?</SectionLabel>
             <h2 className="vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]">
               {tituloCuando(op.picoEntregas?.dia, op.picoCobertura?.dia)}
             </h2>
@@ -141,10 +146,6 @@ function Contenido() {
 
         <section id="de-donde-salio" className="bg-white px-4 py-14 sm:px-6 sm:py-20 md:px-10">
           <CanalesSection />
-        </section>
-
-        <section id="balance" className="bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10">
-          <BalanceFinal />
         </section>
 
         <section id="mapa-de-ayudas" className="relative h-dvh bg-[#123E5C]">

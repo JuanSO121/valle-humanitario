@@ -39,7 +39,6 @@ export const CIRCUMFERENCE = 326.7;
  *     por DESPACHOS, que es la tabla de hechos.)
  */
 export const panoramaDonuts: DonutStat[] = [
-  { id: "municipios", value: 39, total: 41, label: "Municipios con ayudas entregadas", color: "#039A39" },
   { id: "jornadas", value: 13, total: 15, label: "Días con entregas, del 11 al 25", color: "#81C8EC" },
 ];
 

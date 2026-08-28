@@ -314,7 +314,14 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         }}
       />
 
-      {!viewState.destinoId && !viewState.origenId && <FlujosLegend compact={isMobile} />}
+      {/* Leyenda de orígenes arriba a la izquierda, donde antes estaba
+          el panel de territorio. Es lo primero que hay que entender: de
+          dónde sale cada línea. */}
+      {!viewState.destinoId && !viewState.origenId && (
+        <div className="pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-10 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]">
+          <FlujosLegend compact={isMobile} />
+        </div>
+      )}
 
       {!hayPanelAbiertoEnMobile && (
         <TerritoryControls
@@ -425,19 +432,21 @@ function TerritoryControls({
   ).length;
 
   return (
-    <aside className="pointer-events-auto absolute inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[45dvh] overflow-y-auto rounded-lg border border-border bg-surface/95 p-4 shadow-sm backdrop-blur md:inset-x-auto md:bottom-auto md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))] md:max-h-[calc(100dvh-9rem)] md:w-[22rem]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Ayudas entregadas</span>
-          <p className="mt-1.5 text-base font-semibold text-foreground">
-            {plural(totalDespachos, "entrega", "entregas")} en{" "}
-            {plural(conEntregas, "municipio", "municipios")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">{describeLens(lens, day)}</p>
-        </div>
-      </div>
+    /* Esquina inferior izquierda. Antes iba arriba a la izquierda, donde
+       ahora está la leyenda de orígenes: primero se entiende de dónde
+       sale cada línea y después se filtra el territorio. */
+    <aside className="pointer-events-auto absolute inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[45dvh] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:inset-x-auto md:left-4 md:max-h-[52dvh] md:w-[20rem]">
+      {/* Dos datos en una línea. La cifra grande ya vive en el marcador,
+          así que acá alcanza con decir qué se está viendo. */}
+      <p className="text-[15px] leading-tight text-foreground">
+        <b className="font-semibold">
+          {plural(totalDespachos, "despacho", "despachos")}
+        </b>{" "}
+        en {plural(conEntregas, "municipio", "municipios")}
+        <span className="text-muted-foreground"> · {describeLens(lens, day)}</span>
+      </p>
 
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1">
+      <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1">
         <ToggleButton active={lens === "acumulado"} onClick={() => onLensChange("acumulado")}>
           Todo lo entregado
         </ToggleButton>
@@ -452,12 +461,12 @@ function TerritoryControls({
       </div>
 
       {day === null && lens === "acumulado" && (
-        <p className="mt-2.5 text-sm leading-5 text-muted-foreground">
+        <p className="mt-2 text-sm leading-5 text-muted-foreground">
           Mueva la línea de tiempo para ver cómo se entregaron las ayudas día por día.
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap gap-1.5">
         {[TODAS, ...zonasDisponibles].map((item) => (
           <ToggleButton
             key={item}
@@ -469,18 +478,18 @@ function TerritoryControls({
         ))}
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-1 rounded-md bg-background/70 p-1 sm:grid-cols-3">
+      <div className="mt-2 grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1">
         <ToggleButton
           active={routesMode === "visibles"}
           onClick={() => onRoutesModeChange("visibles")}
         >
-          Rutas visibles
+          Ver rutas
         </ToggleButton>
         <ToggleButton active={routesMode === "solo"} onClick={() => onRoutesModeChange("solo")}>
-          Solo selección
+          Solo lo elegido
         </ToggleButton>
         <ToggleButton active={routesMode === "color"} onClick={() => onRoutesModeChange("color")}>
-          Solo color
+          Sin rutas
         </ToggleButton>
       </div>
     </aside>
@@ -512,7 +521,7 @@ function ToggleButton({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`rounded px-2.5 py-2 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"

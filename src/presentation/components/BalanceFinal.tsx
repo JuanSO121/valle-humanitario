@@ -93,7 +93,7 @@ export function BalanceFinal() {
         "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
       entregas: entregasCartago,
       unidades: 0,
-      color: "#F0801E",
+      color: "#E2690E",
       icono: Warehouse,
     },
     {
@@ -102,7 +102,7 @@ export function BalanceFinal() {
       descripcion: "Ruta de entrega que atendió a varios municipios.",
       entregas: multiples,
       unidades: unidadesMultiples,
-      color: "#8375A9",
+      color: "#7F207F",
       icono: Boxes,
     },
     {
@@ -128,11 +128,11 @@ export function BalanceFinal() {
       valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
       label: "de ayuda distribuida",
     },
+    { valor: String(rutas.length), label: "rutas de distribución" },
   ];
 
   return (
     <div className="mx-auto max-w-6xl">
-      <SectionLabel>Balance a la fecha</SectionLabel>
       <SectionTitle>Así se distribuyó la ayuda en el Valle del Cauca</SectionTitle>
 
       {/* Las tres cifras de cierre. */}
