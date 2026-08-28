@@ -54,7 +54,7 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
       // La tonelada municipal, no la departamental. Al lado de "39 de 41
       // municipios", las 557 toneladas de toda la operación incluían
       // Cali y las rutas institucionales y no correspondían.
-      valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} toneladas`,
+      valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} t`,
       label: "llegaron a esos municipios",
     },
   ];
