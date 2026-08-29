@@ -285,50 +285,67 @@ export function MunicipiosGrid({ onSelect, conRotulo = true }: SelectableProps) 
     <section>
       {conRotulo && <SectionLabel>Los {todos.length} municipios</SectionLabel>}
 
+      {/* Filtros, buscador y contador viven en un mismo panel.
+          Flotando sobre el fondo se leían como tres elementos sin
+          relación entre sí, y el contador —que es la respuesta a lo que
+          el usuario acaba de hacer— quedaba a diez píxeles de la primera
+          ficha, como si fuera parte de la rejilla. */}
       <div
-        className={`flex flex-wrap items-center gap-2 ${conRotulo ? "mt-5" : ""}`}
+        className={`rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-5 ${
+          conRotulo ? "mt-5" : ""
+        }`}
       >
-        {filtros.map((f) => {
-          const activo = zona === f.valor;
-          return (
-            <button
-              key={f.valor}
-              type="button"
-              onClick={() => setZona(f.valor)}
-              aria-pressed={activo}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${
-                activo
-                  ? "bg-[#0079C1] text-white shadow-md"
-                  : "bg-white text-[#35708F] ring-1 ring-[#123E5C]/10 hover:bg-[#EAF7FC] hover:text-[#0079C1]"
-              }`}
-            >
-              {f.etiqueta}
-              <span
-                className={`rounded-full px-2 py-0.5 text-sm font-bold ${
-                  activo ? "bg-white/25 text-white" : "bg-[#DDF0FA] text-[#0079C1]"
+        <div className="flex flex-wrap items-center gap-2">
+          {filtros.map((f) => {
+            const activo = zona === f.valor;
+            return (
+              <button
+                key={f.valor}
+                type="button"
+                onClick={() => setZona(f.valor)}
+                aria-pressed={activo}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${
+                  activo
+                    ? "bg-[#0079C1] text-white shadow-md"
+                    : // Dentro del panel blanco, una pastilla blanca
+                      // desaparecía. El celeste la separa del papel sin
+                      // competir con la activa.
+                      "bg-[#EAF7FC] text-[#35708F] hover:bg-[#DDF0FA] hover:text-[#0079C1]"
                 }`}
               >
-                {f.cantidad}
-              </span>
-            </button>
-          );
-        })}
+                {f.etiqueta}
+                <span
+                  className={`rounded-full px-2 py-0.5 text-sm font-bold ${
+                    activo ? "bg-white/25 text-white" : "bg-white text-[#0079C1]"
+                  }`}
+                >
+                  {f.cantidad}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            type="search"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Buscar municipio…"
+            aria-label="Buscar municipio"
+            className="min-w-0 flex-1 rounded-lg border-2 border-transparent bg-[#F2FAFD] px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#0079C1] focus:bg-white"
+          />
+
+          <p
+            className="shrink-0 text-base font-semibold text-[#35708F] sm:text-right"
+            aria-live="polite"
+          >
+            {visibles.length === todos.length
+              ? plural(visibles.length, "municipio", "municipios")
+              : `${visibles.length} de ${todos.length} municipios`}
+          </p>
+        </div>
       </div>
-
-      <input
-        type="search"
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="Buscar municipio…"
-        aria-label="Buscar municipio"
-        className="mt-3 w-full rounded-lg border-2 border-[#123E5C]/10 bg-white px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#0079C1]"
-      />
-
-      <p className="mt-3 text-base text-[#35708F]" aria-live="polite">
-        {visibles.length === todos.length
-          ? plural(visibles.length, "municipio", "municipios")
-          : `${visibles.length} de ${todos.length} municipios`}
-      </p>
 
       {visibles.length === 0 ? (
         <p className="mt-6 rounded-lg border-2 border-dashed border-[#0079C1]/40 bg-white/60 p-10 text-center text-base text-[#35708F]">
@@ -386,9 +403,18 @@ export function MunicipiosGrid({ onSelect, conRotulo = true }: SelectableProps) 
                   />
                 </div>
 
-                <div className="flex justify-between text-[15px] text-[#6B93AA]">
-                  <span>{m.zona ?? "Sin zona"}</span>
-                  <span>{sinEntregas ? "Sin entregas" : `${m.toneladas} t`}</span>
+                {/* La zona pasa a pastilla y el peso queda como texto.
+                    Antes eran dos líneas de gris del mismo peso a lado y
+                    lado, y ninguna de las dos se leía: la zona es una
+                    categoría —se reconoce de un golpe— y las toneladas
+                    son una cifra que se lee. */}
+                <div className="flex items-center justify-between gap-2 text-[15px]">
+                  <span className="rounded-full bg-[#EAF7FC] px-2.5 py-1 text-[13px] font-semibold text-[#35708F]">
+                    {m.zona ?? "Sin zona"}
+                  </span>
+                  <span className={sinEntregas ? "text-[#8FAABC]" : "font-semibold text-[#35708F]"}>
+                    {sinEntregas ? "Sin entregas" : `${m.toneladas} t`}
+                  </span>
                 </div>
               </button>
             );

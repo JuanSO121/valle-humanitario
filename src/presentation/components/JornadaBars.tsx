@@ -45,10 +45,8 @@ export function JornadaBars() {
   const marcas = Array.from({ length: DIVISIONES + 1 }, (_, i) => (tope / DIVISIONES) * (DIVISIONES - i));
 
   return (
+    
     <figure className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-7">
-      <figcaption className="mb-1 text-sm font-bold uppercase tracking-widest text-[#00639F]">
-        Entregas por día
-      </figcaption>
       <p className="mb-5 text-base text-[#35708F]">
         Cada barra corresponde a una fecha; la barra amarilla representa el día con mayor número de entregas.
       </p>

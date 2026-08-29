@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-D3nTrdKy.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DX1LYdUI.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -3260,21 +3260,58 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/go
 		})
 	] });
 }
-function SectionLabel({ children }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-		className: "text-sm font-bold uppercase tracking-[0.16em] text-[#00639F]",
+/** Tonos sobre los que el texto va claro. Decide el color por defecto. */
+var OSCURO = {
+	cyan: true,
+	azul: true,
+	navy: true,
+	crema: false,
+	hueso: false,
+	blanco: false
+};
+/**
+* El rótulo de un bloque.
+*
+* En las piezas no es un eyebrow diminuto sino una línea de peso, en
+* Agenda ExtraCondensed y con una palabra resaltada en amarillo. Usa
+* `.vc-rotulo` y no `.vc-titular` porque este último fuerza mayúscula y
+* los rótulos de la campaña van en caja mixta.
+*
+* El tamaño es mayor de lo que pediría en Poppins: Agenda es extra
+* condensada y a igual cuerpo ocupa cerca de un tercio menos de ancho.
+*/
+function SectionLabel({ children, tono = "hueso" }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+		className: `vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] ${OSCURO[tono] ? "text-white" : "text-[#0079C1]"}`,
 		children
 	});
 }
-function SectionTitle({ children }) {
+/**
+* El titular de una sección.
+*
+* Agenda ExtraCondensed en mayúscula, vía `.vc-titular`. El `clamp` lo
+* dimensiona entre 28 y 52 px según el ancho, que es el mismo rango que
+* usan las secciones escritas a mano: así un titular de primitiva y uno
+* de sección se ven iguales.
+*/
+function SectionTitle({ children, tono = "hueso" }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-		className: "mt-3 max-w-3xl font-serif text-4xl leading-[1.12] text-[#123E5C] md:text-5xl",
+		className: `vc-titular max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] ${OSCURO[tono] ? "text-[#FBF8C6]" : "text-[#0079C1]"}`,
 		children
 	});
 }
+/**
+* Tarjeta blanca.
+*
+* El canto pasó de `border` a `ring`, que es lo que usan las fichas de
+* Territorio: sobre el crema de la campaña, blanco contra #FBF8C6
+* contrasta 1.1 a 1 y sin filete el borde de la tarjeta se difumina.
+* `ring` además no ocupa espacio de maqueta, así que dos tarjetas
+* vecinas no se descuadran por un píxel.
+*/
 function Card({ children, className = "" }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: `rounded-lg border border-[#0079C1]/12 bg-white p-6 ${className}`,
+		className: `rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#123E5C]/10 ${className}`,
 		children
 	});
 }
@@ -3522,34 +3559,38 @@ function MunicipiosGrid({ onSelect, conRotulo = true }) {
 			todos.length,
 			" municipios"
 		] }),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: `flex flex-wrap items-center gap-2 ${conRotulo ? "mt-5" : ""}`,
-			children: filtros.map((f) => {
-				const activo = zona === f.valor;
-				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-					type: "button",
-					onClick: () => setZona(f.valor),
-					"aria-pressed": activo,
-					className: `inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${activo ? "bg-[#0079C1] text-white shadow-md" : "bg-white text-[#35708F] ring-1 ring-[#123E5C]/10 hover:bg-[#EAF7FC] hover:text-[#0079C1]"}`,
-					children: [f.etiqueta, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: `rounded-full px-2 py-0.5 text-sm font-bold ${activo ? "bg-white/25 text-white" : "bg-[#DDF0FA] text-[#0079C1]"}`,
-						children: f.cantidad
-					})]
-				}, f.valor);
-			})
-		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-			type: "search",
-			value: texto,
-			onChange: (e) => setTexto(e.target.value),
-			placeholder: "Buscar municipio…",
-			"aria-label": "Buscar municipio",
-			className: "mt-3 w-full rounded-lg border-2 border-[#123E5C]/10 bg-white px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#0079C1]"
-		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 text-base text-[#35708F]",
-			"aria-live": "polite",
-			children: visibles.length === todos.length ? plural(visibles.length, "municipio", "municipios") : `${visibles.length} de ${todos.length} municipios`
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: `rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-5 ${conRotulo ? "mt-5" : ""}`,
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "flex flex-wrap items-center gap-2",
+				children: filtros.map((f) => {
+					const activo = zona === f.valor;
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: () => setZona(f.valor),
+						"aria-pressed": activo,
+						className: `inline-flex items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 ${activo ? "bg-[#0079C1] text-white shadow-md" : "bg-[#EAF7FC] text-[#35708F] hover:bg-[#DDF0FA] hover:text-[#0079C1]"}`,
+						children: [f.etiqueta, /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: `rounded-full px-2 py-0.5 text-sm font-bold ${activo ? "bg-white/25 text-white" : "bg-white text-[#0079C1]"}`,
+							children: f.cantidad
+						})]
+					}, f.valor);
+				})
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "mt-3 flex flex-col gap-3 sm:flex-row sm:items-center",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					type: "search",
+					value: texto,
+					onChange: (e) => setTexto(e.target.value),
+					placeholder: "Buscar municipio…",
+					"aria-label": "Buscar municipio",
+					className: "min-w-0 flex-1 rounded-lg border-2 border-transparent bg-[#F2FAFD] px-4 py-3 text-base text-[#123E5C] outline-none transition placeholder:text-[#8FAABC] focus:border-[#0079C1] focus:bg-white"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "shrink-0 text-base font-semibold text-[#35708F] sm:text-right",
+					"aria-live": "polite",
+					children: visibles.length === todos.length ? plural(visibles.length, "municipio", "municipios") : `${visibles.length} de ${todos.length} municipios`
+				})]
+			})]
 		}),
 		visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 			className: "mt-6 rounded-lg border-2 border-dashed border-[#0079C1]/40 bg-white/60 p-10 text-center text-base text-[#35708F]",
@@ -3590,8 +3631,14 @@ function MunicipiosGrid({ onSelect, conRotulo = true }) {
 							})
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex justify-between text-[15px] text-[#6B93AA]",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: m.zona ?? "Sin zona" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: sinEntregas ? "Sin entregas" : `${m.toneladas} t` })]
+							className: "flex items-center justify-between gap-2 text-[15px]",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "rounded-full bg-[#EAF7FC] px-2.5 py-1 text-[13px] font-semibold text-[#35708F]",
+								children: m.zona ?? "Sin zona"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: sinEntregas ? "text-[#8FAABC]" : "font-semibold text-[#35708F]",
+								children: sinEntregas ? "Sin entregas" : `${m.toneladas} t`
+							})]
 						})
 					]
 				}, m.destinoId);
@@ -4055,11 +4102,51 @@ var familiasDeAyuda = [
 * Composición de la ayuda entregada. Al elegir una categoría, la lista
 * de la derecha cambia a los artículos que la componen.
 *
-* Las cifras vienen de route=ayuda. El catálogo estático queda como
-* respaldo mientras esa ruta no exista, y como fuente de dos cosas que
-* el workbook no tiene: el color de cada categoría y los nombres de
-* producto. ENVIOS_CATEGORIA guarda cuántos productos distintos trae
-* cada envío, no cuáles.
+* QUÉ VIENE DE LA BASE Y QUÉ NO
+*
+* De route=ayuda: unidades, porcentaje, municipios por categoría, y las
+* poblaciones atendidas. De route=toneladas: el peso. Todo eso se
+* actualiza solo cuando cambia el Excel.
+*
+* De ayudaData.ts, a mano: el color de cada categoría, que es una
+* decisión de diseño, y los NOMBRES DE PRODUCTO de la lista de la
+* derecha. Esos últimos no se pueden conectar: ENVIOS_CATEGORIA guarda
+* cuántos productos distintos trae cada envío, no cuáles. Mientras esa
+* lista siga siendo una transcripción, hay que revisarla a mano cuando
+* cambie el inventario.
+*
+* OJO CON EL RESPALDO. `TOTAL_UNIDADES` de ayudaData.ts quedó viejo:
+* declara 256.650 unidades y el Excel tiene 96.360. Solo se usa si
+* route=ayuda no responde, pero en ese caso la página muestra
+* porcentajes falsos en vez de no mostrar ninguno. Conviene actualizarlo
+* o, mejor, quitar el respaldo y no dibujar los porcentajes sin datos.
+*
+* TRES CAMBIOS DE ESTA VERSIÓN
+*
+* 1. El panel grande responde a la selección, con datos reales.
+*
+*    Las toneladas NO se desagregan por categoría, y estimarlas
+*    repartiendo el total proporcional a las unidades sería inventarlas:
+*    esa columna mezcla mercados, paquetes, kilos y pacas, así que
+*    asumiría que un mercado pesa lo mismo que un paquete de pañales.
+*
+*    En vez de eso, al elegir una categoría la cifra grande pasa a ser
+*    las unidades de esa categoría, con su porcentaje y sus municipios.
+*    El peso queda abajo, con la aclaración de que es del departamento
+*    entero. Se gana la sensación de respuesta sin inventar un número.
+*
+* 2. Al elegir una categoría, la vista baja hasta la lista de artículos.
+*
+*    En móvil la tarjeta queda debajo de la rejilla, así que al tocar la
+*    última categoría no pasaba nada visible. Se usa block "nearest": en
+*    escritorio, donde la tarjeta es sticky y ya está a la vista, no se
+*    mueve nada.
+*
+* 3. Cerrar es una X en la esquina, no un botón de texto abajo.
+*
+*    "Ver las ayudas mas entregadas" describía el destino en vez de la
+*    acción, y estaba al final de una lista larga: para volver había que
+*    recorrer toda la tarjeta. La X está donde se la busca.
 * -----------------------------------------------------------------------
 */
 function AyudaSection() {
@@ -4067,6 +4154,7 @@ function AyudaSection() {
 	const { totalToneladas, toneladasMedidas } = useOperacion();
 	const { data: ayuda } = useAyuda();
 	const { enfocarCategoria } = useFoco();
+	const panelRef = (0, import_react.useRef)(null);
 	/**
 	* Antes esta lista decía "llegó a 44 municipios" en un departamento de
 	* 41, porque el catálogo cuenta destinos de cualquier tipo. La ruta
@@ -4097,8 +4185,8 @@ function AyudaSection() {
 	/**
 	* Porcentaje para mostrar.
 	*
-	* Herramientas y materiales son 828 unidades de 256.650, un 0,32 por
-	* ciento, y Salud son 87, un 0,03. Redondeados dan cero, y un cero se
+	* Herramientas y materiales son 851 unidades de 96.360, un 0,88 por
+	* ciento, y Salud son 87, un 0,09. Redondeados dan cero, y un cero se
 	* lee como que no se entregó nada. Sí se entregó, solo que poco.
 	*
 	* "menos de 1" dice lo mismo sin mentir. Cero se reserva para cuando
@@ -4111,6 +4199,25 @@ function AyudaSection() {
 	};
 	const categoria = activa ? categorias.find((c) => c.nombre === activa) : void 0;
 	const maxUnidades = Math.max(1, ...categorias.map((c) => c.unidades));
+	/**
+	* Al elegir una categoría, llevar la vista a la lista de artículos.
+	*
+	* `block: "nearest"` es la pieza importante: si la tarjeta ya está
+	* visible, como en escritorio donde es sticky, el navegador no
+	* desplaza nada. El salto ocurre solo cuando hace falta, que es en
+	* pantallas angostas.
+	*
+	* No se hace al deseleccionar: ahí el foco vuelve a la rejilla y
+	* moverse sería desorientador.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!activa || !panelRef.current) return;
+		const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		panelRef.current.scrollIntoView({
+			behavior: prefiereQuieto ? "auto" : "smooth",
+			block: "nearest"
+		});
+	}, [activa]);
 	const waffle = (0, import_react.useMemo)(() => categorias.flatMap((c) => Array.from({ length: Math.round(c.unidades / Math.max(1, totalUnidades) * 100) }, () => c)), [categorias, totalUnidades]);
 	/**
 	* Tipo explícito, con `color` opcional.
@@ -4132,7 +4239,7 @@ function AyudaSection() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "La mayor parte de la ayuda es aseo, comida y agua" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: tituloComposicion(categorias, totalUnidades) }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-3xl text-lg leading-8 text-[#35708F]",
 				children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
@@ -4143,9 +4250,39 @@ function AyudaSection() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "text-center",
-					children: [
+					children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
+							children: categoria.unidades.toLocaleString("es-CO")
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-3 block text-lg text-[#35708F]",
+							children: ["unidades de ", categoria.nombre.toLowerCase()]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-2 block text-base leading-6 text-[#6B93AA]",
+							children: [
+								pctTexto(categoria.unidades),
+								" de toda la ayuda",
+								categoria.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+									" · ",
+									categoria.municipios,
+									" ",
+									categoria.municipios === 1 ? "municipio" : "municipios"
+								] })
+							]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-4 block border-t border-[#0079C1]/12 pt-3 text-[15px] leading-6 text-[#6B93AA]",
+							children: [
+								"El peso se registra por día y para todo el departamento",
+								toneladasMedidas ? ` (${totalToneladas.toLocaleString("es-CO")} t)` : "",
+								", no por categoría."
+							]
+						})
+					] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 							className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
 							children: totalToneladas.toLocaleString("es-CO")
@@ -4158,7 +4295,7 @@ function AyudaSection() {
 							className: "mt-2 block text-base leading-6 text-[#6B93AA]",
 							children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
 						})
-					]
+					] })
 				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 						className: "text-xl font-semibold text-[#123E5C]",
@@ -4278,62 +4415,71 @@ function AyudaSection() {
 							]
 						}, c.nombre);
 					})
-				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-					className: "lg:sticky lg:top-6",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-							children: categoria ? categoria.nombre : "Lo más entregado"
-						}),
-						productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							className: "mt-4 flex flex-col gap-3",
-							children: productos.map((prod, i) => {
-								const maximo = Math.max(1, ...productos.map((x) => x.value));
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-									style: { "--i": i },
-									className: "vc-aparece",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "flex items-baseline justify-between gap-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "min-w-0 truncate text-base text-[#35708F]",
-											children: prod.label
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-											className: "shrink-0 tabular-nums text-[#123E5C]",
-											children: prod.value.toLocaleString("es-CO")
-										})]
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-										className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-											className: "vc-crece block h-full rounded-full",
-											style: {
-												width: `${prod.value / maximo * 100}%`,
-												background: prod.color ?? "#0079C1",
-												"--i": i
-											}
-										})
-									})]
-								}, prod.label);
-							})
-						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-4 text-base text-[#6B93AA]",
-							children: "No hay detalle de artículos para esta categoría."
-						}),
-						categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "mt-6 flex flex-col gap-3 border-t border-[#0079C1]/12 pt-5",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-								type: "button",
-								onClick: () => enfocarCategoria(categoria.nombre),
-								className: "inline-flex items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
-								children: "Ver en el mapa dónde llegó"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					ref: panelRef,
+					className: "scroll-mt-6 lg:sticky lg:top-6",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+						className: "relative",
+						children: [
+							categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 								type: "button",
 								onClick: () => setActiva(null),
-								className: "text-base font-semibold text-[#0079C1] underline-offset-4 hover:underline",
-								children: "Ver las ayudas mas entregadas"
-							})]
-						})
-					]
-				}, categoria?.nombre ?? "general")]
+								"aria-label": `Cerrar ${categoria.nombre} y volver a lo más entregado`,
+								className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+									className: "size-5",
+									"aria-hidden": true
+								})
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "pr-10 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+								children: categoria ? categoria.nombre : "Lo más entregado"
+							}),
+							productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+								className: "mt-4 flex flex-col gap-3",
+								children: productos.map((prod, i) => {
+									const maximo = Math.max(1, ...productos.map((x) => x.value));
+									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+										style: { "--i": i },
+										className: "vc-aparece",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+											className: "flex items-baseline justify-between gap-3",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: "min-w-0 truncate text-base text-[#35708F]",
+												children: prod.label
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+												className: "shrink-0 tabular-nums text-[#123E5C]",
+												children: prod.value.toLocaleString("es-CO")
+											})]
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+												className: "vc-crece block h-full rounded-full",
+												style: {
+													width: `${prod.value / maximo * 100}%`,
+													background: prod.color ?? "#0079C1",
+													"--i": i
+												}
+											})
+										})]
+									}, prod.label);
+								})
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-4 text-base text-[#6B93AA]",
+								children: "No hay detalle de artículos para esta categoría."
+							}),
+							categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-6 border-t border-[#0079C1]/12 pt-5",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									onClick: () => enfocarCategoria(categoria.nombre),
+									className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
+									children: "Ver en el mapa dónde llegó"
+								})
+							})
+						]
+					}, categoria?.nombre ?? "general")
+				})]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
@@ -4376,11 +4522,30 @@ function AyudaSection() {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
 					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
 					" ",
-					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio." : "Las toneladas son una estimación a partir del número de entregas."
+					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría." : "Las toneladas son una estimación a partir del número de entregas."
 				] })
 			})
 		]
 	});
+}
+/**
+* El titular nombra las categorías reales, así que cambia con los datos.
+*
+* El anterior estaba escrito a mano y decía "aseo, comida y agua", pero
+* aseo personal es la sexta categoría con el 8 por ciento. Las tres
+* primeras hoy son alimentos, descanso y abrigo, y protección y
+* seguridad. Un titular a mano en una página que se actualiza sola
+* envejece sin que nadie se entere.
+*/
+function tituloComposicion(categorias, totalUnidades) {
+	const conDatos = categorias.filter((c) => c.unidades > 0);
+	if (conDatos.length < 3 || totalUnidades <= 0) return "De qué está hecha la ayuda entregada";
+	const top = [...conDatos].sort((a, b) => b.unidades - a.unidades).slice(0, 3);
+	const suma = top.reduce((acc, c) => acc + c.unidades, 0);
+	const porcentaje = Math.round(suma / totalUnidades * 100);
+	const nombres = top.map((c) => c.nombre.toLowerCase());
+	const lista = `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
+	return `${lista.charAt(0).toUpperCase()}${lista.slice(1)} son el ${porcentaje}% de la ayuda`;
 }
 var canalesPresentacion = [
 	{
@@ -4390,16 +4555,16 @@ var canalesPresentacion = [
 		color: "#22ABE2"
 	},
 	{
-		id: "multiples",
-		nombre: "Municipios múltiples",
-		glosa: "Ruta de entrega que atendió a varios municipios.",
-		color: "#8375A9"
-	},
-	{
 		id: "cartago",
 		nombre: "Centro de distribución Cartago",
-		glosa: "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
+		glosa: "Segunda bodega. Lo que salió de acá ya está contado en los municipios del norte que lo recibieron.",
 		color: "#F7B733"
+	},
+	{
+		id: "multiples",
+		nombre: "Municipios múltiples",
+		glosa: "Formatos que repartieron a varios municipios sin desagregar cuál recibió qué.",
+		color: "#8375A9"
 	},
 	{
 		id: "otras-ayudas-solidarias",
@@ -4413,6 +4578,14 @@ function presentacionDe(id) {
 	return canalesPresentacion.find((c) => c.id === id);
 }
 var ORIGEN_CARTAGO$1 = "ORI-CARTAGO";
+/** Rutas con identidad propia. Van como tarjeta grande, en este orden. */
+var RUTAS_PRINCIPALES = ["cali", "cartago"];
+/**
+* Grupos cuyas entregas NO aparecen en route=flujos, porque sus destinos
+* no tienen coordenada. Hacen falta para completar el denominador de la
+* estimación de toneladas.
+*/
+var FUERA_DEL_MAPA = ["multiples", "otras-ayudas-solidarias"];
 function CanalesSection() {
 	const op = useOperacion();
 	const { data: ayuda } = useAyuda();
@@ -4439,17 +4612,25 @@ function CanalesSection() {
 			unidades: c.unidades,
 			categorias: c.categorias
 		};
-	}).sort((a, b) => b.unidades - a.unidades);
+	});
 	const sinDatos = rutas.length === 0;
-	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 	/**
-	* Toneladas por ruta, estimadas. El peso se registra por día y para
-	* todo el departamento, no por envío, así que el total se reparte
-	* entre todas las entregas conocidas.
+	* Lo que el consolidado municipal realmente deja fuera. Cartago no
+	* entra: sus entregas llegaron a municipios que ya están contados.
 	*/
-	const toneladasDe = (entregas) => op.entregasTodas > 0 ? Math.round(entregas * (op.totalToneladas / op.entregasTodas)) : 0;
-	const principales = rutas.slice(0, 2);
-	const secundarias = rutas.slice(2);
+	const rutasFueraDelConteo = rutas.filter((r) => r.id !== "cartago");
+	const entregasFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
+	const unidadesFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.unidades, 0);
+	/**
+	* Toneladas por ruta, estimadas. El peso se reparte entre TODAS las
+	* entregas conocidas: las que el mapa dibuja más las que no tienen
+	* coordenada y por eso no llegan a route=flujos.
+	*/
+	const entregasSinCoordenada = rutas.filter((r) => FUERA_DEL_MAPA.includes(r.id)).reduce((sum, r) => sum + r.entregas, 0);
+	const baseEntregas = op.entregasTodas + entregasSinCoordenada;
+	const toneladasDe = (entregas) => baseEntregas > 0 ? Math.round(entregas * (op.totalToneladas / baseEntregas)) : 0;
+	const principales = RUTAS_PRINCIPALES.map((id) => rutas.find((r) => r.id === id)).filter((r) => r !== void 0);
+	const secundarias = rutas.filter((r) => !RUTAS_PRINCIPALES.includes(r.id)).sort((a, b) => b.unidades - a.unidades);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: "mx-auto max-w-6xl",
 		children: [
@@ -4480,12 +4661,19 @@ function CanalesSection() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 					className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
 					children: [
-						"El conteo por municipio deja fuera estas rutas. Suman ",
-						totalRutas,
-						" entregas y unas",
-						" ",
-						toneladasDe(totalRutas).toLocaleString("es-CO"),
-						" toneladas que también se movieron."
+						"El conteo por municipio deja fuera ",
+						unidadesFuera.toLocaleString("es-CO"),
+						" unidades",
+						entregasFuera > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+							" ",
+							"repartidas en ",
+							entregasFuera.toLocaleString("es-CO"),
+							" entregas, unas",
+							" ",
+							toneladasDe(entregasFuera).toLocaleString("es-CO"),
+							" toneladas"
+						] }) : null,
+						". Cartago aparece acá como ruta, pero lo suyo ya está contado en los municipios que recibieron."
 					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -4512,17 +4700,23 @@ function CanalesSection() {
 									className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
-										children: (r.entregas > 0 ? r.entregas : r.unidades).toLocaleString("es-CO")
+										children: r.unidades.toLocaleString("es-CO")
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "mt-1 block text-base text-[#A8CFE2]",
-										children: r.entregas > 0 ? "entregas" : "unidades"
+										children: "unidades"
+									})] }), r.entregas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
+										children: r.entregas.toLocaleString("es-CO")
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "mt-1 block text-base text-[#A8CFE2]",
+										children: r.entregas === 1 ? "entrega" : "entregas"
 									})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
 										children: toneladasDe(r.entregas).toLocaleString("es-CO")
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "mt-1 block text-base text-[#A8CFE2]",
 										children: "toneladas estimadas"
-									})] })]
+									})] })] })]
 								}),
 								r.categorias.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 									className: "mt-7 flex flex-col gap-3 border-t border-white/15 pt-6",
@@ -4577,15 +4771,23 @@ function CanalesSection() {
 								className: "mt-4 flex items-baseline gap-2",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 									className: "text-3xl font-extrabold leading-none text-[#0079C1]",
-									children: (r.entregas > 0 ? r.entregas : r.unidades).toLocaleString("es-CO")
+									children: r.unidades.toLocaleString("es-CO")
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 									className: "text-base text-[#6B93AA]",
-									children: r.entregas > 0 ? r.entregas === 1 ? "entrega" : "entregas" : "unidades"
+									children: "unidades"
 								})]
 							}),
 							r.entregas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 								className: "mt-1 text-[15px] text-[#6B93AA]",
-								children: [toneladasDe(r.entregas).toLocaleString("es-CO"), " toneladas estimadas"]
+								children: [
+									r.entregas.toLocaleString("es-CO"),
+									" ",
+									r.entregas === 1 ? "entrega" : "entregas",
+									" ·",
+									" ",
+									toneladasDe(r.entregas).toLocaleString("es-CO"),
+									" toneladas estimadas"
+								]
 							})
 						]
 					}, r.id))
@@ -4639,10 +4841,6 @@ function CanalesSection() {
 						})
 					})
 				]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-6 max-w-3xl text-base leading-7 text-[#6B93AA]",
-				children: "Las toneladas por ruta son una estimación. El peso se registra por día y para todo el departamento, no por cada envío, así que el total se reparte entre las entregas. La ayuda enviada al Chocó cuenta como entrega, pero no como municipio del Valle."
 			})
 		]
 	});
@@ -5061,7 +5259,7 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 			label: "entregas llegaron a los municipios"
 		},
 		{
-			valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} toneladas`,
+			valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} t`,
 			label: "llegaron a esos municipios"
 		}
 	];
@@ -5134,20 +5332,45 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 * -----------------------------------------------------------------------
 * El relato completo de la Ruta de la Solidaridad, de la portada al mapa.
 *
-* SOBRE LA SECCIÓN DE MUNICIPIOS
+* SOBRE LA ESTRUCTURA POR BANDAS
 *
-* Estaba en blanco, con el titular en azul y los tres bloques uno debajo
-* de otro. Era legible, pero no se parecía a las piezas de la campaña:
-* ahí el color no es un fondo, es la estructura. Cada pieza avanza por
-* bandas horizontales a sangre —cyan para el titular, azul para el
-* rótulo del bloque, crema para el contenido— y el lector sabe en qué
-* capítulo está por el color de la franja, no por la distancia entre
-* párrafos.
+* En las piezas de la campaña el color no es un fondo, es la estructura.
+* Cada pieza avanza por franjas horizontales a sangre —cyan para el
+* titular, azul para el rótulo del bloque, crema para el contenido— y el
+* lector sabe en qué capítulo está por el color de la franja, no por la
+* distancia entre párrafos.
 *
-* Así quedó armada esta sección. Las bandas van a sangre y el ancho
-* máximo se controla adentro con `max-w-6xl`: al revés, con una caja de
-* color centrada, la pieza deja de leerse como sistema y parece una
-* tarjeta suelta en medio de la página.
+* Las dos secciones de análisis, "¿Cuándo llegaron las ayudas?" y
+* "¿Cuánta ayuda recibió cada municipio?", están armadas así. Las bandas
+* van a sangre y el ancho máximo se controla adentro con `max-w-6xl`: al
+* revés, con una caja de color centrada, la pieza deja de leerse como
+* sistema y parece una tarjeta suelta en medio de la página.
+*
+* SOBRE LA TIPOGRAFÍA DE LAS BANDAS
+*
+* Titular y rótulo van los dos en Agenda ExtraCondensed, la tipografía
+* de la campaña. El titular usa `.vc-titular`, que fuerza mayúscula; el
+* rótulo usa `.vc-rotulo`, que es la misma familia en caja mixta, porque
+* en las piezas los rótulos se leen "Municipios que más ayuda
+* recibieron" y no en versales.
+*
+* Los dos cuerpos son mayores de lo que pedirían en Poppins: Agenda es
+* extra condensada y a igual tamaño en píxeles ocupa cerca de un tercio
+* menos de ancho, así que un rótulo que en Poppins se veía bien a 20 px
+* acá se queda corto.
+*
+* SOBRE EL TITULAR DE "CUÁNDO"
+*
+* Era la frase del hallazgo del día, generada con los datos. Ahora es
+* una pregunta fija y el hallazgo bajó al rótulo de la banda azul, con
+* la fecha resaltada en amarillo.
+*
+* El cambio es de jerarquía, no de estética. Un titular que cambia con
+* los datos no se puede componer: unos días es una línea, otros tres, la
+* banda cyan crece y encoge en cada corte, y nunca se le puede aplicar
+* el salto de línea a mano que hace respirar la pregunta. Un titular
+* fijo compone siempre igual, y el dato variable queda en el renglón
+* donde una línea de más no rompe nada.
 * -----------------------------------------------------------------------
 */
 var SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
@@ -5228,24 +5451,61 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BalanceFinal, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(IndiceSection, {}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 				id: "cuando",
-				className: "bg-[#FBF8C6] px-4 py-14 sm:px-6 sm:py-20 md:px-10",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mx-auto max-w-6xl",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						className: "vc-titular mt-4 max-w-4xl text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#0079C1]",
-						children: tituloCuando(op.picoEntregas?.dia, op.picoCobertura?.dia)
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-12 space-y-14",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MovimientoStatCards, {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(JornadaBars, {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })
-						]
-					})]
-				})
+				className: "vc-seccion bg-[#FBF8C6]",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mx-auto max-w-6xl",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+								className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] text-[#FBF8C6]",
+								children: "Momentos Clave"
+							})
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(BandaRotulo, { children: momentoClave(op.picoEntregas?.dia, op.picoCobertura?.dia) }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "px-4 py-12 sm:px-6 sm:py-14 md:px-10",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mx-auto max-w-6xl",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MovimientoStatCards, {})
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "bg-[#0079C1] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mx-auto max-w-6xl",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-white",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "vc-resaltado",
+									children: "Ritmo"
+								}), " de la operación"]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-8",
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(JornadaBars, {})
+							})]
+						})
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "mx-auto max-w-6xl",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
+								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-[#0079C1]",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "vc-resaltado",
+									children: "Municipios"
+								}), " que se van sumando"]
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "mt-8 space-y-14",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })]
+							})]
+						})
+					})
+				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 				id: "municipios",
@@ -5292,7 +5552,7 @@ function Contenido() {
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "mx-auto max-w-6xl",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-								className: "text-[clamp(1.25rem,3vw,2rem)] font-bold leading-[1.7] text-white",
+								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-white",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 									className: "vc-resaltado",
 									children: "Rutas"
@@ -5304,19 +5564,15 @@ function Contenido() {
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
+						className: "bg-[#F2FAFD] px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "mx-auto max-w-6xl",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-								className: "text-[clamp(1.25rem,3vw,2rem)] font-bold leading-[1.7] text-[#0079C1]",
-								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "vc-resaltado-crema bg-white",
-										children: ["Los ", op.municipiosTotales]
-									}),
-									" ",
-									"municipios"
-								]
+								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-[#0079C1]",
+								children: ["Los ", /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "vc-resaltado",
+									children: [op.municipiosTotales, " municipios"]
+								})]
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "mt-6",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosGrid, {
@@ -5330,7 +5586,7 @@ function Contenido() {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 				id: "que-se-entrego",
-				className: "bg-[#F2FAFD] px-4 py-14 sm:px-6 sm:py-20 md:px-10",
+				className: "vc-seccion bg-[#F2FAFD]",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AyudaSection, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
@@ -5375,27 +5631,60 @@ function Contenido() {
 * La banda azul con el rótulo de un bloque.
 *
 * Va como componente y no como una clase suelta porque el rótulo tiene
-* tres cosas que se pierden al copiar y pegar: el `leading-[1.7]`, sin
-* el cual los recuadros amarillos de `.vc-resaltado` —que crecen con su
-* propio padding— se montan entre líneas cuando el rótulo parte en dos;
-* el `max-w-6xl`, que lo alinea con el contenido de las demás bandas; y
-* el `<h3>`, que es lo que hace que un lector de pantalla lo anuncie
-* como encabezado y no como un párrafo decorativo.
+* tres cosas que se pierden al copiar y pegar: la clase `.vc-rotulo`,
+* que trae Agenda ExtraCondensed y la interlínea alta que necesitan los
+* recuadros de `.vc-resaltado` para no montarse entre líneas; el
+* `max-w-6xl`, que lo alinea con el contenido de las demás bandas; y el
+* `<h3>`, que es lo que hace que un lector de pantalla lo anuncie como
+* encabezado y no como un párrafo decorativo.
 */
 function BandaRotulo({ children }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "bg-[#0079C1] px-4 py-7 sm:px-6 md:px-10",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-			className: "mx-auto max-w-6xl text-[clamp(1.25rem,3vw,2rem)] font-bold leading-[1.7] text-white",
+			className: "vc-rotulo mx-auto max-w-6xl text-[clamp(1.5rem,3.6vw,2.5rem)] text-white",
 			children
 		})
 	});
 }
-/** El titular nombra los días reales, así que cambia con los datos. */
-function tituloCuando(diaPico, diaCobertura) {
-	if (!diaPico || !diaCobertura) return "Cómo avanzaron las entregas día a día";
-	if (diaPico === diaCobertura) return `El ${Number(diaPico)} de agosto se entregó más que ningún otro día`;
-	return `Momentos Clave`;
+/**
+* El hallazgo del calendario, para el rótulo de la banda azul.
+*
+* Devuelve nodos y no una cadena porque el día va dentro de un recuadro
+* amarillo: es el único dato variable del rótulo y es lo que el lector
+* tiene que retener.
+*
+* Los dos casos son distintos de verdad. Cuando el día de más entregas
+* es también el de más municipios nuevos, hubo un solo pico y decirlo en
+* una frase es más claro. Cuando son días distintos, el dato es
+* justamente que el volumen y la cobertura no se movieron juntos.
+*/
+function momentoClave(diaPico, diaCobertura) {
+	if (!diaPico || !diaCobertura) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: "vc-resaltado",
+		children: "Día a día"
+	}), " de la operación"] });
+	if (diaPico === diaCobertura) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		"El ",
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			className: "vc-resaltado",
+			children: [Number(diaPico), " de agosto"]
+		}),
+		" se entregó más que ningún otro día"
+	] });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		"El ",
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			className: "vc-resaltado",
+			children: [Number(diaCobertura), " de agosto"]
+		}),
+		" se llegó a más municipios y el ",
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "vc-resaltado",
+			children: Number(diaPico)
+		}),
+		" se entregó más"
+	] });
 }
 /**
 * routes/index.tsx

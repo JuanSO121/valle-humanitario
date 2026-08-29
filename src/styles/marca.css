@@ -403,3 +403,45 @@ h3 {
     stroke-dashoffset: var(--arco-fin);
   }
 }
+
+/* ── Rótulos de bloque ─────────────────────────────────────────────── */
+/* Pegar en marca.css, justo después del bloque "── Titulares ──" y antes
+ * de las reglas de .vc-resaltado. */
+
+/**
+ * El rótulo de bloque: Agenda ExtraCondensed en caja mixta.
+ *
+ * Comparte familia con el titular pero no su clase, porque `.vc-titular`
+ * fuerza mayúscula y en las piezas los rótulos van en caja mixta:
+ * "Municipios que más ayuda recibieron", no "MUNICIPIOS QUE MÁS AYUDA
+ * RECIBIERON".
+ *
+ * El `line-height` alto es obligatorio y no una preferencia de aire: el
+ * recuadro de `.vc-resaltado` crece con su propio padding, y a interlínea
+ * normal el amarillo de una línea se monta sobre las letras de la de
+ * arriba cuando el rótulo parte en dos.
+ *
+ * Ojo con el cuerpo al usarla: Agenda es extra condensada y a igual
+ * tamaño en píxeles ocupa cerca de un tercio menos de ancho que Poppins,
+ * así que un rótulo que se veía bien a 20 px en Poppins se queda corto
+ * acá. En los componentes va con `clamp(1.5rem, 3.6vw, 2.5rem)`.
+ */
+.vc-rotulo {
+  font-family: "Agenda ExtraCondensed", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+}
+
+/**
+ * Respaldo cuando Agenda no está disponible. Poppins es mucho más ancha,
+ * así que sin esto un rótulo de dos palabras resaltadas se pasa a dos
+ * líneas y la banda azul crece de alto en el momento en que falla la
+ * fuente, que es justo cuando menos se quiere que salte la maqueta.
+ */
+@supports not (font-family: "Agenda ExtraCondensed") {
+  .vc-rotulo {
+    letter-spacing: -0.02em;
+  }
+}
