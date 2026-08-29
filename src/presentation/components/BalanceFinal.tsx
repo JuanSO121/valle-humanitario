@@ -315,12 +315,14 @@ export function BalanceFinal() {
                     eje vertical: pegados al óvalo se moverían con el
                     largo de cada título. */}
                 <div className="flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4 md:pr-6">
-                  <span
-                    className="shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-widest md:min-w-24"
-                    style={{ color: r.tinta }}
-                  >
-                    Ruta {i + 1}
-                  </span>
+<span
+  className="shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-tight md:min-w-24"
+  style={{ color: r.tinta }}
+>
+  Ruta {i + 1}
+</span>
+
+
 
                   {/* En celular el óvalo ocupa todo el ancho de la
                       burbuja y se lleva el icono adentro, que es lo que

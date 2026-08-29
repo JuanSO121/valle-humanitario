@@ -28,6 +28,17 @@ import { type CSSProperties } from "react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { PanoramaDonuts } from "./PanoramaDonuts";
 
+/**
+ * El ícono de mano haciendo clic del botón de Cali.
+ *
+ * El archivo es de 512 por 512 con fondo transparente, pero el dibujo
+ * ocupa 474 por 372 centrado, así que sobra cerca de un 14 por ciento de
+ * aire arriba y abajo. Por eso la caja va más grande de lo que parecería
+ * necesario: a 28 px de caja la mano mide unos 20 px de alto, que es lo
+ * que corresponde al lado de un texto de 16 a 18 px.
+ */
+const ICONO_CLICK = "/marca/boton_cali_conozca.png";
+
 interface Props {
   /**
    * A dónde lleva "Cali: conoce su ruta".
@@ -44,18 +55,18 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
   const indicadores = [
     {
       valor: `${op.municipiosAtendidos} de ${op.municipiosTotales}`,
-      label: "municipios recibieron ayudas",
+      label: "Municipios recibieron ayudas",
     },
     {
       valor: op.totalEntregas.toLocaleString("es-CO"),
-      label: "entregas llegaron a los municipios",
+      label: "Entregas llegaron a los municipios",
     },
     {
       // La tonelada municipal, no la departamental. Al lado de "39 de 41
       // municipios", las 557 toneladas de toda la operación incluían
       // Cali y las rutas institucionales y no correspondían.
       valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} t`,
-      label: "llegaron a esos municipios",
+      label: "Llegaron a esos municipios",
     },
   ];
 
@@ -65,23 +76,25 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
       className="flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:min-h-dvh lg:grid-rows-[auto_1fr_1fr_auto]"
     >
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-10">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between md:gap-10">
           <h2 className="vc-titular text-[clamp(1.75rem,5vw,4rem)] text-white">
             Ruta {op.municipiosTotales} municipios
             <br />
             del <span className="vc-resaltado">Valle del Cauca</span>
           </h2>
+        <a href={enlaceCali}>
+          <img
+            src={ICONO_CLICK}
+            alt="Cali: conozca la ruta"
+            width={512}
+            height={512}
+            decoding="async"
+            className="h-7 w-auto md:h-22 select-none transition hover:scale-105"
+          />
+        </a>
 
-          <a
-            href={enlaceCali}
-            className="inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg md:mt-3 md:text-lg motion-reduce:hover:translate-y-0"
-          >
-            <span aria-hidden>*</span>
-            Cali: conozca la ruta
-          </a>
         </div>
       </div>
-
       {/* Bloque uno: los indicadores. */}
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8">
         <div className="flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8">
@@ -99,7 +112,6 @@ export function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }: Props) {
           </div>
         </div>
       </div>
-
       {/* Bloque dos: la cobertura. */}
       <div className="mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10">
         {/* Sin `overflow-hidden`: recortar era el problema, no la

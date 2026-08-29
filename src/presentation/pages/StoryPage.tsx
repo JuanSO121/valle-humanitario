@@ -17,6 +17,18 @@
  * revés, con una caja de color centrada, la pieza deja de leerse como
  * sistema y parece una tarjeta suelta en medio de la página.
  *
+ * SOBRE EL RELLENO DE LAS BANDAS
+ *
+ * Las tres constantes de abajo, BANDA_TITULAR, BANDA y BANDA_CIERRE,
+ * fijan el aire vertical. Están declaradas una sola vez porque el relleno
+ * repetido a mano en cada franja es justamente lo que hizo crecer la
+ * sección sin que nadie lo notara: son cuatro bandas y cada una sumaba
+ * lo suyo.
+ *
+ * Hoy solo las usa la sección "cuando". La de "municipios" sigue con sus
+ * valores escritos a mano; para igualarla, reemplazar sus clases por
+ * estas constantes.
+ *
  * SOBRE LA TIPOGRAFÍA DE LAS BANDAS
  *
  * Titular y rótulo van los dos en Agenda ExtraCondensed, la tipografía
@@ -73,11 +85,30 @@ import { MarcaFooter } from "../components/MarcaHeader";
 import { PiezaGrafica } from "../components/PiezaGrafica";
 import { IndiceSection } from "../components/IndiceSection";
 const SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
+
+/**
+ * Relleno de la banda del titular. Lleva más aire que las demás porque
+ * es la única que tiene que sostener sola una tipografía de hasta 72 px:
+ * con el mismo relleno que el resto, la letra queda apretada contra el
+ * borde del color.
+ */
+const BANDA_TITULAR = "px-4 py-10 sm:px-6 sm:py-12 md:px-10";
+
+/** Relleno de una banda de contenido. */
+const BANDA = "px-4 py-8 sm:px-6 sm:py-10 md:px-10";
+
+/**
+ * Igual que BANDA, con más aire abajo. Es la última franja de la
+ * sección, y sin ese remate el contenido queda pegado al titular de la
+ * sección siguiente.
+ */
+const BANDA_CIERRE = "px-4 py-8 pb-12 sm:px-6 sm:py-10 sm:pb-14 md:px-10";
+
 const NAV: NavItem[] = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "balance", label: "Balance a la fecha", icon: FileText },
   { id: "indice", label: "Índice", icon: List },
-  { id: "cuando", label: "Analisis de entrega", icon: CalendarDays },
+  { id: "cuando", label: "Momentos clave", icon: CalendarDays },
   { id: "municipios", label: "Municipios", icon: MapPin },
   { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
   { id: "de-donde-salio", label: "¿De dónde salió?", icon: Truck },
@@ -139,34 +170,33 @@ function Contenido() {
         </section>
         <IndiceSection />
         {/* ── ¿Cuándo llegaron las ayudas? ──────────────────────────────
-            Cinco bandas: titular sobre cyan, hallazgo del día sobre azul,
-            cifras de movimiento sobre crema, el gráfico diario dentro de
-            una banda azul, y el cierre de nuevo en crema.
+            Cuatro bandas: titular sobre cyan, cifras de movimiento sobre
+            crema, el gráfico diario dentro de una banda azul, y el cierre
+            de nuevo en crema.
             El gráfico va sobre azul y no sobre el crema de la sección por
             contraste: es una tarjeta blanca, y blanco sobre #FBF8C6
             contrasta 1.1 a 1, así que su canto desaparecía. Sobre el azul
             se recorta solo, y la sección gana un respiro oscuro en el
             medio en vez de tres bloques crema seguidos. */}
         <section id="cuando" className="vc-seccion bg-[#FBF8C6]">
-          <div className="bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-14 md:px-10">
+          <div className={`bg-[#22ABE2] ${BANDA_TITULAR}`}>
             <div className="mx-auto max-w-6xl">
               {/* Compuesto como el banner de la campaña: la primera
                   palabra dentro de una caja crema en azul, la segunda
                   suelta en blanco sobre el cyan.
-
                   El relleno va en `em` y no en píxeles para que la caja
                   crezca con el `clamp` del titular. En píxeles, a 2rem
                   ahogaría la palabra y a 4.5rem quedaría como un filete
                   suelto alrededor.
-
                   `box-decoration-clone` es lo que sostiene la pieza si el
                   titular parte en dos líneas: sin él, el relleno lateral
                   se aplica solo al comienzo del primer fragmento y al
                   final del último, y la caja aparece abierta por un lado.
-
                   El `leading` sube a 1.25 porque la caja crece hacia
                   arriba y hacia abajo desde la línea base: con la
-                  interlínea cerrada del titular se saldría de la banda. */}
+                  interlínea cerrada del titular se saldría de la banda.
+                  Es el número más chico que la sostiene, así que bajarlo
+                  para ganar alto recorta la caja. */}
               <h2 className="vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] leading-[1.25] text-white">
                 <span className="box-decoration-clone bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-[#0079C1]">
                   Momentos
@@ -175,21 +205,36 @@ function Contenido() {
               </h2>
             </div>
           </div>
-          <div className="px-4 py-12 sm:px-6 sm:py-14 md:px-10">
+          <div className={BANDA}>
             <div className="mx-auto max-w-6xl">
               <MovimientoStatCards />
             </div>
           </div>
-          <div className="bg-[#0079C1] px-4 py-12 sm:px-6 sm:py-14 md:px-10">
+          {/* Sin el `mt-8` que había acá adentro: era el hueco que dejó
+              el rótulo "Ritmo de la operación" al sacarlo, y quedó
+              sumando 32 px encima del relleno de la banda. */}
+          <div className={`bg-[#0079C1] ${BANDA}`}>
             <div className="mx-auto max-w-6xl">
-              <div className="mt-8">
+              {/* Crema #FBF8C6, el mismo de la banda de arriba: el rótulo hereda
+                  el color del capítulo del que viene, no uno nuevo.
+                  `uppercase` porque .vc-rotulo va en caja mixta por defecto. La
+                  tilde se escribe igual en el origen: en versales el navegador
+                  la conserva, y sin ella un lector de pantalla lee "dia". */}
+              <h3 className="vc-rotulo text-[clamp(1.5rem,3.6vw,4.5rem)] uppercase text-[#FBF8C6]">
+                Entregas por día
+              </h3>
+              <div className="mt-6">
                 <JornadaBars />
               </div>
             </div>
           </div>
-          <div className="px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10">
+          <div className={BANDA_CIERRE}>
             <div className="mx-auto max-w-6xl">
-              <div className="mt-8 space-y-14">
+              {/* Mismo caso que la banda anterior: acá también había un
+                  `mt-8` huérfano. El `space-y` baja de 14 a 10 porque
+                  separa dos bloques de la misma lectura, no dos
+                  capítulos. */}
+              <div className="space-y-10">
                 <MunicipiosNuevosCallouts />
                 <EvolucionHeatmap onSelect={irAlMapa} />
               </div>

@@ -22,7 +22,7 @@
 import { useMemo } from "react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import type { MunicipioOperacion } from "@/application/derivations/operacion";
-import { SectionLabel } from "./storyPrimitives";
+import { ListaDeNombres } from "./ListaDeNombres";
 
 /** De menos a más entregas. Tomada de la pieza. */
 const ESCALA = ["#FDFBE0", "#FBF8C6", "#FCE07A", "#F7B733", "#F0801E"];
@@ -73,9 +73,15 @@ export function EvolucionHeatmap({
 
   return (
     <section>
-      <SectionLabel>Cada casilla es un día. Cuanto más cálido el color, más entregas ese día.</SectionLabel>
-      <p className="mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]">
-        
+      <h3 className="vc-titular text-[clamp(1.5rem,4.6vw,5.5rem)] text-[#0079C1]">
+        ¿Cuánta ayuda se entregó cada día?
+      </h3>
+      {/* `max-w-3xl` y no `max-w`: esa última no es una clase de Tailwind
+          (le falta el valor) y el navegador la ignoraba, así que en un
+          monitor ancho la frase se estiraba a todo el ancho de la banda. */}
+      <p className="mt-3 max-w-3xl text-lg leading-8 text-[#35708F]">
+        Cada casilla representa un día. Los colores más intensos indican los días en que se
+        hicieron más entregas.
       </p>
 
       <div className="mt-6 space-y-5">
@@ -84,15 +90,20 @@ export function EvolucionHeatmap({
             <div className="flex flex-col gap-5 lg:flex-row lg:gap-8">
               {/* La zona y su lista de municipios, como en la pieza. */}
               <div className="lg:w-52 lg:shrink-0">
-                <h3 className="vc-titular text-3xl text-white sm:text-4xl">{zona}</h3>
-                <p className="mt-3 text-base leading-6 text-[#ffffff]">
-                  {filas.map((m) => m.nombre).join(", ")}.
-                </p>
+                <h4 className="vc-titular text-3xl text-white sm:text-4xl">{zona}</h4>
+                {/* Con ListaDeNombres en vez de join(", "): en una
+                    columna de 208 px, "La Victoria" y "Calima - El
+                    Darién" se partían a la mitad y quedaba un "La"
+                    huérfano al final del renglón. */}
+                <ListaDeNombres
+                  nombres={filas.map((m) => m.nombre)}
+                  className="mt-3 block text-base leading-6 text-white"
+                />
               </div>
 
               {/* La rejilla, con su marco cyan. */}
               <div className="min-w-0 flex-1 overflow-x-auto">
-                <div className="min-w-[640px]">
+                <div className="min-w-160">
                   <Fila
                     dias={dias}
                     etiqueta=""

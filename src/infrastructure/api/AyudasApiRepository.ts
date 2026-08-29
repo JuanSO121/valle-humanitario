@@ -19,8 +19,19 @@
  * con forma vieja pasaría como 200 OK válido y rompería río abajo con un
  * `undefined.forEach` sin contexto. Mejor fallar acá, con un mensaje que
  * apunta directo a la causa.
+ *
+ * CAMBIO: todas las peticiones pasan por una cola.
+ *
+ * Un Web App de Apps Script serializa las ejecuciones por usuario. El
+ * tablero monta ocho consultas en el mismo instante y las que se pisan
+ * reciben un 404 de la infraestructura de Google, sin llegar a ejecutar
+ * el script. Con la cola viajan de a dos y ninguna se cae.
+ *
+ * Va acá y no en cada hook porque este es el único `fetch` del archivo:
+ * un solo punto cubre las diez rutas.
  * -----------------------------------------------------------------------
  */
+import { enCola } from "@/infrastructure/api/colaDePeticiones";
 import type {
   Meta,
   Origen,
@@ -63,7 +74,10 @@ export class AyudasApiRepository {
     // navegador. El síntoma es corregir el Excel, invalidar la caché del
     // backend, recargar y seguir viendo lo viejo. Quién decide cuánto
     // dura el dato es React Query con su staleTime, no el HTTP cache.
-    const response = await fetch(url.toString(), { cache: "no-store" });
+    //
+    // La cola limita cuántas de estas viajan a la vez. Sin ella, las ocho
+    // consultas del arranque se pisan entre sí en el Web App.
+    const response = await enCola(() => fetch(url.toString(), { cache: "no-store" }));
 
     if (!response.ok) {
       /**
@@ -72,19 +86,35 @@ export class AyudasApiRepository {
        * script.googleusercontent.com, y ese error aparece sin el
        * `?route=`, así que "404 en googleusercontent" no dice cuál falló.
        *
-       * Un 404 en esa URL casi nunca significa que la ruta no exista.
-       * Las causas frecuentes, en orden:
-       *   1. Falta el `case` de esa ruta en Code.gs.
-       *   2. El código está en el editor pero no se republicó con Nueva
-       *      versión: /exec sirve la versión desplegada.
+       * UN 404 ACÁ NO PUEDE VENIR DE Code.gs. `jsonResponse_` usa
+       * ContentService, que siempre responde HTTP 200: hasta
+       * `errorResponse_(..., 404)` devuelve un 200 con el 404 adentro del
+       * JSON, y lo atrapa el chequeo de `payload.error` de más abajo. Un
+       * 404 de HTTP significa que la petición no llegó a ejecutarse, o
+       * que Apps Script sirvió su propia página de error.
+       *
+       * Las causas, en el orden en que conviene descartarlas:
+       *
+       *   1. CONCURRENCIA. Si las demás rutas responden bien y esta falla
+       *      de forma intermitente, es esto. Debería estar cubierto por
+       *      la cola; si vuelve a pasar, bajar MAX_EN_VUELO a 1.
+       *   2. No se republicó con Nueva versión. /exec sirve la versión
+       *      desplegada, no el código del editor. Si la ruta es nueva,
+       *      esta es la causa y falla SIEMPRE, no a veces.
        *   3. El constructor lanzó una excepción y Apps Script devolvió su
-       *      página de error en vez del JSON. Se ve con probarRutas().
+       *      página de error en vez del JSON. Se ve con probarRutas()
+       *      desde el editor, que corre cada ruta en su propio try.
+       *
+       * La prueba que separa 1 de 2 y 3: abrir la URL a mano en el
+       * navegador. Si ahí devuelve JSON, es concurrencia.
        */
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.error(
           `[API] route=${route} respondió HTTP ${response.status}. ` +
-            "Revisar el case en Code.gs y republicar con Nueva versión.",
+            "Si las otras rutas cargaron bien, es concurrencia del Web App: " +
+            "bajar MAX_EN_VUELO en colaDePeticiones.ts. Si falla siempre, " +
+            "republicar con Nueva versión y correr probarRutas() desde el editor.",
         );
       }
       throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
@@ -187,11 +217,10 @@ export class AyudasApiRepository {
   /**
    * Serie diaria de toneladas, de la hoja TONELADAS.
    *
-   * Puede no existir todavía: si la implementación del Web App no tiene
-   * la ruta, Code.gs responde `{ error: true, status: 404 }` con HTTP
-   * 200 y `request` lo convierte en ApiError. El tablero trata ese fallo
-   * como "sin serie medida" y cae al estimado por entregas, así que no
-   * hace falta protegerlo acá. Ver useToneladas y OperacionContext.
+   * Ya está publicada y verificada: devuelve 561 toneladas repartidas en
+   * 16 días. Si falla, el tablero cae al estimado por entregas, pero hoy
+   * ese respaldo debería ser una red de seguridad y no el caso normal.
+   * Ver useToneladas y OperacionContext.
    */
   getToneladas(): Promise<ToneladasResponse> {
     return this.request<ToneladasResponse>("toneladas", {}, (p) => {
@@ -206,8 +235,11 @@ export class AyudasApiRepository {
   /**
    * Composición de lo entregado, grupos atendidos y canales.
    *
-   * Igual que getToneladas, puede no existir todavía. El tablero cae a
-   * las cifras del catálogo si falla.
+   * Ya está publicada y verificada. Si falla, el tablero cae a las cifras
+   * del catálogo estático, que están viejas: ayudaData.ts declara 256.650
+   * unidades y el Excel tiene 96.360. Por eso conviene que ese respaldo
+   * no se use nunca, y que un fallo acá se reintente en vez de darse por
+   * definitivo.
    */
   getAyuda(): Promise<AyudaResponse> {
     return this.request<AyudaResponse>("ayuda", {}, (p) => {

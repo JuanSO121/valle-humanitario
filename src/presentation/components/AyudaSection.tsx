@@ -219,15 +219,13 @@ export function AyudaSection() {
           titular, las líneas de la caja se montarían entre sí. */}
       <div className="bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-12 md:px-10">
         <div className="mx-auto max-w-6xl">
-          <h2 className="vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] leading-[1.4] text-white">
-            <span>
-              La mayor parte de la ayuda
-            </span>
-            <br />
-            <span className="box-decoration-clone bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-[#0079C1]">
-              es aseo, comida y agua
+          <h2 className="vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] text-white">
+            <span className="block">La mayor parte de la ayuda es</span>
+            <span className="mt-2 block w-fit bg-[#FBF8C6] px-[0.3em] py-[0.06em] text-[#0079C1]">
+              aseo, comida y agua
             </span>
           </h2>
+
         </div>
       </div>
 
@@ -237,7 +235,7 @@ export function AyudaSection() {
           de color lleguen a los bordes. */}
       <div className="px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10">
         <div className="mx-auto max-w-6xl">
-          <p className="max-w-3xl text-lg leading-8 text-[#35708F]">
+          <p className="max-w- text-lg leading-8 text-[#35708F]">
             Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las
             comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención
             de la emergencia.
@@ -254,11 +252,11 @@ export function AyudaSection() {
             <div className="text-center">
               {categoria ? (
                 <>
-                  <b className="block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]">
+                  <b className="vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]">
                     {categoria.unidades.toLocaleString("es-CO")}
                   </b>
                   <span className="mt-3 block text-lg text-[#35708F]">
-                    unidades de {categoria.nombre.toLowerCase()}
+                    Unidades de {categoria.nombre.toLowerCase()}
                   </span>
                   <span className="mt-2 block text-base leading-6 text-[#6B93AA]">
                     {pctTexto(categoria.unidades)} de toda la ayuda
@@ -270,15 +268,10 @@ export function AyudaSection() {
                       </>
                     )}
                   </span>
-                  <span className="mt-4 block border-t border-[#0079C1]/12 pt-3 text-[15px] leading-6 text-[#6B93AA]">
-                    El peso se registra por día y para todo el departamento
-                    {toneladasMedidas ? ` (${totalToneladas.toLocaleString("es-CO")} t)` : ""}, no
-                    por categoría.
-                  </span>
                 </>
               ) : (
                 <>
-                  <b className="block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]">
+                  <b className="vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]">
                     {totalToneladas.toLocaleString("es-CO")}
                   </b>
                   <span className="mt-3 block text-lg text-[#35708F]">toneladas de ayuda</span>
@@ -292,7 +285,7 @@ export function AyudaSection() {
             </div>
 
             <div>
-              <h3 className="text-xl font-semibold text-[#123E5C]">De qué está hecha esa ayuda</h3>
+              <h3 className="text-xl font-semibold text-[#123E5C]">¿De qué está hecha esa ayuda?</h3>
 
               <div className="mt-4 flex h-8 overflow-hidden rounded-md sm:h-9">
                 {categorias.map((c) => (
@@ -523,7 +516,7 @@ export function AyudaSection() {
                       onClick={() => enfocarCategoria(categoria.nombre)}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]"
                     >
-                      Ver en el mapa dónde llegó
+                      Conozca dónde llegó  la ayuda
                     </button>
                   </div>
                 )}
@@ -536,11 +529,10 @@ export function AyudaSection() {
               la campaña, para que no compita con la lectura de arriba. */}
           <div className="mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10">
             <h3 className="vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]">
-              A quién se dirigió la ayuda
+              ¿A quién llegó la ayuda?
             </h3>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg">
-              Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar
-              varios, así que la suma es mayor que el total de entregas.
+            <p className="mt-3 max-w text-base leading-7 text-white sm:text-lg">
+              Conozca los grupos a los que fue dirigida. Una misma entrega puede incluir varios grupos, por eso la suma puede ser mayor que el total de entregas.
             </p>
 
             <ul className="mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -564,16 +556,6 @@ export function AyudaSection() {
                 );
               })}
             </ul>
-          </div>
-
-          <div className="mt-6">
-            <Aviso>
-              <b>Cómo leer estas cifras.</b> Los porcentajes comparan cuánta ayuda de cada tipo se
-              entregó.{" "}
-              {toneladasMedidas
-                ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría."
-                : "Las toneladas son una estimación a partir del número de entregas."}
-            </Aviso>
           </div>
         </div>
       </div>

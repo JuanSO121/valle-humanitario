@@ -2,9 +2,94 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CQngczAw.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BDXGHYrF.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
+/**
+* colaDePeticiones.ts
+* -----------------------------------------------------------------------
+* Limita cuántas peticiones al Web App viajan al mismo tiempo.
+*
+* EL PROBLEMA
+*
+* Un Web App de Apps Script serializa las ejecuciones por usuario. El
+* tablero monta ocho consultas a la vez —meta, origenes, municipios,
+* categorias, flujos, destinos, toneladas, ayuda— y las que se pisan
+* reciben un 404 de la infraestructura de Google, no del script.
+*
+* Ese 404 despista, porque parece que la ruta no existiera. No puede
+* serlo: `jsonResponse_` usa ContentService, que siempre responde 200.
+* Hasta `errorResponse_(..., 404)` devuelve un 200 con el 404 adentro del
+* JSON. Un 404 de HTTP significa que la petición no llegó a ejecutarse.
+*
+* LA SOLUCIÓN
+*
+* Una cola: como mucho dos peticiones en vuelo, el resto espera turno.
+* La página tarda una fracción de segundo más en terminar de cargar y a
+* cambio no se cae ninguna sección.
+*
+* Dos y no una: con una sola en vuelo, ocho rutas en serie se sienten
+* lentas. Con dos, Apps Script las atiende sin pisarse y la carga se
+* mantiene corta. Si aun así aparecen 404 sueltos, bajarlo a 1.
+* -----------------------------------------------------------------------
+*/
+/** Peticiones simultáneas como máximo. Bajar a 1 si siguen los 404. */
+var MAX_EN_VUELO = 2;
+var enVuelo = 0;
+var esperando = [];
+/**
+* Ejecuta `tarea` cuando haya cupo.
+*
+* El `finally` es lo que sostiene la cola: si una petición falla y no se
+* libera el cupo, las que esperan quedan colgadas para siempre y la
+* página se congela a medio cargar. Por eso el contador baja pase lo que
+* pase, y el error se vuelve a lanzar para que React Query lo vea y
+* reintente.
+*/
+async function enCola(tarea) {
+	if (enVuelo >= MAX_EN_VUELO) await new Promise((liberar) => esperando.push(liberar));
+	enVuelo += 1;
+	try {
+		return await tarea();
+	} finally {
+		enVuelo -= 1;
+		const siguiente = esperando.shift();
+		if (siguiente) siguiente();
+	}
+}
+/**
+* AyudasApiRepository.ts
+* -----------------------------------------------------------------------
+* Única clase que conoce la URL del Web App de Apps Script y el contrato
+* `?route=...`. Nada fuera de este archivo debería construir esa URL a
+* mano, así, si el día de mañana el backend deja de ser Apps Script,
+* solo se reemplaza este archivo.
+*
+* Cada método corresponde 1:1 a una ruta ya cerrada y probada. No hay
+* traducción de forma de datos acá, eso ya lo hace Transforms.gs; este
+* archivo tipa la respuesta contra domain/entities.ts, valida errores de
+* red/HTTP, y valida el SHAPE mínimo esperado de cada respuesta.
+*
+* La validación de shape existe porque Apps Script cachea respuestas ya
+* armadas (CacheLayer.gs, TTL 6h) y las implementaciones Web App no se
+* actualizan solas al editar el código fuente. Si el contrato cambia
+* (ej. route=flujos pasa de array plano a {flujos, excluidos}) y el
+* deploy o la caché quedan desincronizados con Transforms.gs, un objeto
+* con forma vieja pasaría como 200 OK válido y rompería río abajo con un
+* `undefined.forEach` sin contexto. Mejor fallar acá, con un mensaje que
+* apunta directo a la causa.
+*
+* CAMBIO: todas las peticiones pasan por una cola.
+*
+* Un Web App de Apps Script serializa las ejecuciones por usuario. El
+* tablero monta ocho consultas en el mismo instante y las que se pisan
+* reciben un 404 de la infraestructura de Google, sin llegar a ejecutar
+* el script. Con la cola viajan de a dos y ninguna se cae.
+*
+* Va acá y no en cada hook porque este es el único `fetch` del archivo:
+* un solo punto cubre las diez rutas.
+* -----------------------------------------------------------------------
+*/
 var ApiError = class extends Error {
 	status;
 	constructor(message, status) {
@@ -22,7 +107,7 @@ var AyudasApiRepository = class {
 		const url = new URL(this.baseUrl);
 		url.searchParams.set("route", route);
 		for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
-		const response = await fetch(url.toString(), { cache: "no-store" });
+		const response = await enCola(() => fetch(url.toString(), { cache: "no-store" }));
 		if (!response.ok) throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
 		const payload = await response.json();
 		if (payload && typeof payload === "object" && "error" in payload && payload.error) {
@@ -61,11 +146,10 @@ var AyudasApiRepository = class {
 	/**
 	* Serie diaria de toneladas, de la hoja TONELADAS.
 	*
-	* Puede no existir todavía: si la implementación del Web App no tiene
-	* la ruta, Code.gs responde `{ error: true, status: 404 }` con HTTP
-	* 200 y `request` lo convierte en ApiError. El tablero trata ese fallo
-	* como "sin serie medida" y cae al estimado por entregas, así que no
-	* hace falta protegerlo acá. Ver useToneladas y OperacionContext.
+	* Ya está publicada y verificada: devuelve 561 toneladas repartidas en
+	* 16 días. Si falla, el tablero cae al estimado por entregas, pero hoy
+	* ese respaldo debería ser una red de seguridad y no el caso normal.
+	* Ver useToneladas y OperacionContext.
 	*/
 	getToneladas() {
 		return this.request("toneladas", {}, (p) => {
@@ -79,8 +163,11 @@ var AyudasApiRepository = class {
 	/**
 	* Composición de lo entregado, grupos atendidos y canales.
 	*
-	* Igual que getToneladas, puede no existir todavía. El tablero cae a
-	* las cifras del catálogo si falla.
+	* Ya está publicada y verificada. Si falla, el tablero cae a las cifras
+	* del catálogo estático, que están viejas: ayudaData.ts declara 256.650
+	* unidades y el Excel tiene 96.360. Por eso conviene que ese respaldo
+	* no se use nunca, y que un fallo acá se reintente en vez de darse por
+	* definitivo.
 	*/
 	getAyuda() {
 		return this.request("ayuda", {}, (p) => {
@@ -2522,19 +2609,45 @@ function useFoco() {
 * -----------------------------------------------------------------------
 * Composición de lo entregado, desde route=ayuda.
 *
-* Mismo patrón y mismo staleTime que useCatalogQueries, y `retry: false`
-* como useToneladas: mientras la ruta no esté publicada, el backend
-* responde 404 y no tiene sentido reintentar. La sección cae a las
-* cifras del catálogo y sigue funcionando.
+* CAMBIO: se quita `retry: false`.
+*
+* Estaba puesto con buen criterio: mientras la ruta no existía en el
+* backend, el 404 era permanente y reintentar no servía de nada. Pero la
+* ruta ya está publicada, y ahora ese flag hace daño.
+*
+* Un Web App de Apps Script serializa las ejecuciones por usuario. El
+* tablero monta ocho consultas a la vez y las que se pisan reciben un 404
+* de la infraestructura de Google, no del script. Con `retry: false`, ese
+* fallo de un segundo se vuelve definitivo para toda la sesión: la
+* sección cae al catálogo estático y ahí se queda, aunque el backend esté
+* perfecto.
+*
+* Con tres reintentos y espera creciente, la consulta se recupera sola.
+* El costo si la ruta de verdad no existiera son unos siete segundos
+* antes de caer al respaldo, que es una espera aceptable a cambio de no
+* mostrar datos viejos cuando los buenos estaban disponibles.
+*
+* La cola de `colaDePeticiones` es la que ataca la causa; esto es la red
+* de seguridad. Conviene tener las dos: la cola no puede evitar un fallo
+* de red del lado del usuario.
 */
 /** Igual que en useCatalogQueries. Si cambia allá, cambia acá. */
 var CATALOG_STALE_TIME_MS = 3e5;
+/**
+* Espera creciente entre intentos: 1s, 2s, 4s, con tope de 8.
+*
+* Sin la espera creciente, los tres reintentos salen casi juntos y se
+* vuelven a pisar con las otras consultas, que es exactamente lo que se
+* está tratando de evitar.
+*/
+var REINTENTO_ESCALONADO = (intento) => Math.min(1e3 * 2 ** intento, 8e3);
 function useAyuda() {
 	return useQuery({
 		queryKey: ["ayuda"],
 		queryFn: () => ayudasApiRepository.getAyuda(),
 		staleTime: CATALOG_STALE_TIME_MS,
-		retry: false
+		retry: 3,
+		retryDelay: REINTENTO_ESCALONADO
 	});
 }
 function useIsMobile(breakpointPx = 768) {
@@ -2978,12 +3091,29 @@ function topeRedondo(max, divisiones) {
 /**
 * MovimientoExtras.tsx
 * -----------------------------------------------------------------------
-* Tarjetas de jornada y municipios nuevos. Todo se calcula desde la API,
-* incluida la glosa de cada tarjeta. Antes la cifra venía de un archivo
-* y el texto estaba escrito en el JSX, así que al cambiar los datos las
-* tarjetas seguían nombrando el día equivocado.
+* Tarjetas de jornada y municipios nuevos. Las tarjetas se calculan desde
+* la API, incluida la glosa de cada una. Antes la cifra venía de un
+* archivo y el texto estaba escrito en el JSX, así que al cambiar los
+* datos las tarjetas seguían nombrando el día equivocado.
 */
 var ORIGEN_CARTAGO$2 = "ORI-CARTAGO";
+/**
+* Las dos versiones de la pieza "Así avanzó la ruta".
+*
+* REVISAR QUE LOS NOMBRES COINCIDAN CON LOS ARCHIVOS REALES de
+* `public/marca/`. El de escritorio es una suposición: en la conversación
+* solo quedó nombrado el de celular.
+*
+* Se recomienda renombrar los dos sin tildes ni mayúsculas. Una eñe o una
+* tilde en una URL obliga al navegador a codificarla, y hay servidores
+* estáticos que sirven mal esas rutas al pasar de Windows a Linux en el
+* despliegue: es un fallo que aparece solo en producción.
+*/
+var PIEZA_ESCRITORIO = "/marca/Así_avanzó_la_ruta.jpg";
+var PIEZA_MOVIL = "/marca/Así_avanzó_la_ruta_celular.jpg";
+/** Medidas reales del archivo de celular, ya verificadas. */
+var MOVIL_ANCHO = 812;
+var MOVIL_ALTO = 1738;
 function MovimientoStatCards() {
 	const op = useOperacion();
 	const primeras48 = op.jornadas.slice(0, 2).reduce((sum, j) => sum + j.entregas, 0);
@@ -3040,41 +3170,63 @@ function MovimientoStatCards() {
 	});
 }
 /**
-* "Así avanzó la ruta". Reproduce la pieza de diseño con datos vivos:
-* bloques alternados en azul y crema, uno por jornada que sumó
-* municipios. Se hace por código y no como imagen porque los nombres
-* cambian cada vez que la ruta llega a un municipio nuevo.
+* "Así avanzó la ruta".
 *
-* El camión va como imagen de fondo, decorativo, y desaparece en
-* pantallas angostas para no robarle ancho a los nombres.
+* ESCRITORIO: la pieza completa, con titular, camión y los bloques por
+* jornada ya compuestos adentro. La lista en código desaparece de la
+* vista, porque estaba diciendo dos veces lo mismo: la captura del
+* problema mostraba los municipios dentro de la imagen y otra vez al
+* lado.
+*
+* CELULAR: la pieza de celular, que trae el titular y el camión pero no
+* los bloques, más la lista en código debajo.
+*
+* LO QUE CUESTA ESTA DECISIÓN
+*
+* En escritorio los nombres de municipio dejan de venir de route=flujos y
+* pasan a estar quemados en un JPG. Hoy van 39 de 41 municipios: si la
+* ruta llega a los dos que faltan y alguien los carga al Excel, el
+* celular va a mostrar el municipio nuevo y el escritorio no. Cada vez
+* que cambien las jornadas hay que reexportar la pieza.
+*
+* Por eso la lista NO se borra en escritorio: se vuelve `sr-only`. Sigue
+* en el documento con los datos vivos, así que un lector de pantalla y un
+* buscador leen lo correcto aunque el ojo vea la imagen. Y si algún día
+* se vuelve al bloque en código, es quitar una clase.
+*
+* Las dos imágenes van con `alt` vacío por lo mismo: el contenido real ya
+* está en el <h3> y en la lista, y repetirlo haría que se anuncie dos
+* veces.
 */
 function MunicipiosNuevosCallouts() {
 	const { jornadas } = useOperacion();
 	const conNuevos = jornadas.filter((j) => j.nuevos > 0);
 	if (conNuevos.length === 0) return null;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:items-start",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "relative",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-				className: "vc-titular text-[clamp(2.25rem,7vw,4.5rem)] text-[#0079C1]",
-				children: [
-					"Así ",
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "vc-resaltado-crema",
-						children: "avanzó"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-					"la ruta"
-				]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-				src: "/marca/camion-ruta-solidaridad.png",
-				alt: "",
-				"aria-hidden": true,
-				className: "mt-8 hidden w-full max-w-md lg:block"
-			})]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
-			className: "flex flex-col gap-3",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+			className: "sr-only",
+			children: "Así avanzó la ruta"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+			src: PIEZA_ESCRITORIO,
+			alt: "",
+			"aria-hidden": true,
+			loading: "lazy",
+			decoding: "async",
+			className: "hidden h-auto w-full lg:block"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+			src: PIEZA_MOVIL,
+			alt: "",
+			"aria-hidden": true,
+			width: MOVIL_ANCHO,
+			height: MOVIL_ALTO,
+			loading: "lazy",
+			decoding: "async",
+			className: "h-auto w-full lg:hidden"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ol", {
+			className: "mt-6 flex flex-col gap-3 lg:sr-only",
 			children: conNuevos.map((j, i) => {
 				const enCrema = i % 2 === 1;
 				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
@@ -3094,8 +3246,8 @@ function MunicipiosNuevosCallouts() {
 					})]
 				}, j.fecha);
 			})
-		})]
-	});
+		})
+	] });
 }
 function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/gobernacion-color.png" }) {
 	const [abierto, setAbierto] = (0, import_react.useState)(false);
@@ -3305,13 +3457,6 @@ function SectionTitle({ children, tono = "hueso" }) {
 function Card({ children, className = "" }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: `rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#123E5C]/10 ${className}`,
-		children
-	});
-}
-/** Aviso metodológico. Amarillo, porque siempre dice qué NO se puede afirmar. */
-function Aviso({ children }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "rounded-lg border border-[#FFD400]/40 border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]",
 		children
 	});
 }
@@ -3640,6 +3785,57 @@ function MunicipiosGrid({ onSelect, conRotulo = true }) {
 	] });
 }
 /**
+* ListaDeNombres.tsx
+* -----------------------------------------------------------------------
+* Una lista de nombres separados por coma, donde ningún nombre se parte
+* entre dos líneas.
+*
+* EL PROBLEMA
+*
+* `nombres.join(", ")` produce una sola cadena, y el navegador no tiene
+* cómo distinguir el espacio de "La Victoria" del que separa dos
+* municipios: parte donde le convenga. En el listado de zonas se leía
+*
+*     ... Toro, Ulloa, La
+*     Victoria, Versalles ...
+*
+* y "La" quedaba huérfana al final del renglón. Pasa con La Victoria, La
+* Unión, La Cumbre, El Cerrito, El Águila, El Cairo, El Dovio, San
+* Pedro, Guadalajara de Buga, Santiago de Cali y Calima - El Darién:
+* once de los cuarenta y dos.
+*
+* POR QUÉ EL SEPARADOR VA AFUERA DEL SPAN
+*
+* Es lo que más se equivoca al resolver esto. Si el `, ` va adentro del
+* `whitespace-nowrap`, ese espacio también queda sin poder partirse, y
+* como es el único espacio entre un nombre y el siguiente, la lista
+* entera se vuelve una línea indivisible que desborda a lo ancho.
+*
+* Con el separador afuera, el navegador tiene exactamente una
+* oportunidad de corte entre nombre y nombre, que es lo que se quiere. Y
+* la coma queda pegada al nombre que la precede, porque entre el cierre
+* del span y la coma no hay ningún espacio.
+*
+* POR QUÉ NO SE USAN ESPACIOS DURos
+*
+* La alternativa corta era `nombre.replace(/ /g, "\u00A0")`. Funciona,
+* pero cambia el TEXTO y no solo cómo se pinta: buscar "La Victoria" con
+* Ctrl+F deja de encontrarlo, y al copiar la lista se pegan caracteres
+* invisibles raros. Acá el texto queda intacto y el que no parte es el
+* CSS.
+* -----------------------------------------------------------------------
+*/
+function ListaDeNombres({ nombres, cierre = ".", className }) {
+	if (nombres.length === 0) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className,
+		children: nombres.map((nombre, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_react.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "whitespace-nowrap",
+			children: nombre
+		}), i < nombres.length - 1 ? ", " : cierre] }, `${i}-${nombre}`))
+	});
+}
+/**
 * EvolucionHeatmap.tsx
 * -----------------------------------------------------------------------
 * Una casilla por municipio y día, agrupadas por zona.
@@ -3685,8 +3881,14 @@ function EvolucionHeatmap({ onSelect }) {
 		return ESCALA[Math.min(ESCALA.length - 1, Math.round((valor - 1) / Math.max(1, maxDia - 1) * (ESCALA.length - 1)))] ?? ESCALA[0];
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Cada casilla es un día. Cuanto más cálido el color, más entregas ese día." }),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "mt-3 max-w-2xl text-lg leading-8 text-[#0079C1]" }),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+			className: "vc-titular text-[clamp(1.5rem,4.6vw,5.5rem)] text-[#0079C1]",
+			children: "¿Cuánta ayuda se entregó cada día?"
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-3 max-w-3xl text-lg leading-8 text-[#35708F]",
+			children: "Cada casilla representa un día. Los colores más intensos indican los días en que se hicieron más entregas."
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mt-6 space-y-5",
 			children: grupos.map(({ zona, filas }) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -3695,17 +3897,17 @@ function EvolucionHeatmap({ onSelect }) {
 					className: "flex flex-col gap-5 lg:flex-row lg:gap-8",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "lg:w-52 lg:shrink-0",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
 							className: "vc-titular text-3xl text-white sm:text-4xl",
 							children: zona
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-3 text-base leading-6 text-[#ffffff]",
-							children: [filas.map((m) => m.nombre).join(", "), "."]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ListaDeNombres, {
+							nombres: filas.map((m) => m.nombre),
+							className: "mt-3 block text-base leading-6 text-white"
 						})]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "min-w-0 flex-1 overflow-x-auto",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "min-w-[640px]",
+							className: "min-w-160",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
 								dias,
 								etiqueta: "",
@@ -3831,7 +4033,7 @@ var categoriasAyuda = [
 			["Pony malta", 1696],
 			["Jugos", 1408],
 			["Agua (unidades)", 1058],
-			["Agua en pacas (mlitros)", 1047],
+			["Agua en pacas (mililitros)", 1047],
 			["Agua persona", 550],
 			["Electrolit", 453],
 			["Agua 1 litro", 450]
@@ -3921,7 +4123,7 @@ var categoriasAyuda = [
 			["Platanitos", 293],
 			["Fideos", 286],
 			["Rollos papel", 277],
-			["Papas y platanillas (paquetes)", 135],
+			["Papas y platanitos (paquetes)", 135],
 			["Powerade", 98],
 			["Ensure", 78],
 			["Bolsas plásticas", 73]
@@ -4245,15 +4447,14 @@ function AyudaSection() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 			className: "mx-auto max-w-6xl",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
-				className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] leading-[1.4] text-white",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "La mayor parte de la ayuda" }),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "box-decoration-clone bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-[#0079C1]",
-						children: "es aseo, comida y agua"
-					})
-				]
+				className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] text-white",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block",
+					children: "La mayor parte de la ayuda es"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-2 block w-fit bg-[#FBF8C6] px-[0.3em] py-[0.06em] text-[#0079C1]",
+					children: "aseo, comida y agua"
+				})]
 			})
 		})
 	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -4262,7 +4463,7 @@ function AyudaSection() {
 			className: "mx-auto max-w-6xl",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "max-w-3xl text-lg leading-8 text-[#35708F]",
+					className: "max-w- text-lg leading-8 text-[#35708F]",
 					children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -4275,12 +4476,12 @@ function AyudaSection() {
 						className: "text-center",
 						children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
+								className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
 								children: categoria.unidades.toLocaleString("es-CO")
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 								className: "mt-3 block text-lg text-[#35708F]",
-								children: ["unidades de ", categoria.nombre.toLowerCase()]
+								children: ["Unidades de ", categoria.nombre.toLowerCase()]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 								className: "mt-2 block text-base leading-6 text-[#6B93AA]",
@@ -4294,18 +4495,10 @@ function AyudaSection() {
 										categoria.municipios === 1 ? "municipio" : "municipios"
 									] })
 								]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "mt-4 block border-t border-[#0079C1]/12 pt-3 text-[15px] leading-6 text-[#6B93AA]",
-								children: [
-									"El peso se registra por día y para todo el departamento",
-									toneladasMedidas ? ` (${totalToneladas.toLocaleString("es-CO")} t)` : "",
-									", no por categoría."
-								]
 							})
 						] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
+								className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
 								children: totalToneladas.toLocaleString("es-CO")
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -4320,7 +4513,7 @@ function AyudaSection() {
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 							className: "text-xl font-semibold text-[#123E5C]",
-							children: "De qué está hecha esa ayuda"
+							children: "¿De qué está hecha esa ayuda?"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
@@ -4495,7 +4688,7 @@ function AyudaSection() {
 										type: "button",
 										onClick: () => enfocarCategoria(categoria.nombre),
 										className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
-										children: "Ver en el mapa dónde llegó"
+										children: "Conozca dónde llegó  la ayuda"
 									})
 								})
 							]
@@ -4507,11 +4700,11 @@ function AyudaSection() {
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
 							className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
-							children: "A quién se dirigió la ayuda"
+							children: "¿A quién llegó la ayuda?"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
-							children: "Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar varios, así que la suma es mayor que el total de entregas."
+							className: "mt-3 max-w text-base leading-7 text-white sm:text-lg",
+							children: "Conozca los grupos a los que fue dirigida. Una misma entrega puede incluir varios grupos, por eso la suma puede ser mayor que el total de entregas."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 							className: "mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3",
@@ -4536,15 +4729,6 @@ function AyudaSection() {
 							})
 						})
 					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-6",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
-						" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
-						" ",
-						toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría." : "Las toneladas son una estimación a partir del número de entregas."
-					] })
 				})
 			]
 		})
@@ -4993,7 +5177,7 @@ function BalanceFinal() {
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 									className: "flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4 md:pr-6",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-widest md:min-w-24",
+										className: "shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-tight md:min-w-24",
 										style: { color: r.tinta },
 										children: ["Ruta ", i + 1]
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -5236,20 +5420,30 @@ function rangoEnDias(desde, hasta) {
 	if (Number.isNaN(ms)) return 0;
 	return Math.round(ms / 864e5) + 1;
 }
+/**
+* El ícono de mano haciendo clic del botón de Cali.
+*
+* El archivo es de 512 por 512 con fondo transparente, pero el dibujo
+* ocupa 474 por 372 centrado, así que sobra cerca de un 14 por ciento de
+* aire arriba y abajo. Por eso la caja va más grande de lo que parecería
+* necesario: a 28 px de caja la mano mide unos 20 px de alto, que es lo
+* que corresponde al lado de un texto de 16 a 18 px.
+*/
+var ICONO_CLICK = "/marca/boton_cali_conozca.png";
 function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	const op = useOperacion();
 	const indicadores = [
 		{
 			valor: `${op.municipiosAtendidos} de ${op.municipiosTotales}`,
-			label: "municipios recibieron ayudas"
+			label: "Municipios recibieron ayudas"
 		},
 		{
 			valor: op.totalEntregas.toLocaleString("es-CO"),
-			label: "entregas llegaron a los municipios"
+			label: "Entregas llegaron a los municipios"
 		},
 		{
 			valor: `${op.toneladasMunicipales.toLocaleString("es-CO")} t`,
-			label: "llegaron a esos municipios"
+			label: "Llegaron a esos municipios"
 		}
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
@@ -5259,7 +5453,7 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-10",
+					className: "flex flex-col gap-5 md:flex-row md:items-center md:justify-between md:gap-10",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
 						className: "vc-titular text-[clamp(1.75rem,5vw,4rem)] text-white",
 						children: [
@@ -5273,13 +5467,16 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 								children: "Valle del Cauca"
 							})
 						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("a", {
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
 						href: enlaceCali,
-						className: "inline-flex shrink-0 items-center gap-2 self-start rounded-full bg-[#FBF8C6] px-5 py-2.5 text-base font-bold text-[#0079C1] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg md:mt-3 md:text-lg motion-reduce:hover:translate-y-0",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"aria-hidden": true,
-							children: "*"
-						}), "Cali: conozca la ruta"]
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+							src: ICONO_CLICK,
+							alt: "Cali: conozca la ruta",
+							width: 512,
+							height: 512,
+							decoding: "async",
+							className: "h-7 w-auto md:h-22 select-none transition hover:scale-105"
+						})
 					})]
 				})
 			}),
@@ -5335,6 +5532,18 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 * revés, con una caja de color centrada, la pieza deja de leerse como
 * sistema y parece una tarjeta suelta en medio de la página.
 *
+* SOBRE EL RELLENO DE LAS BANDAS
+*
+* Las tres constantes de abajo, BANDA_TITULAR, BANDA y BANDA_CIERRE,
+* fijan el aire vertical. Están declaradas una sola vez porque el relleno
+* repetido a mano en cada franja es justamente lo que hizo crecer la
+* sección sin que nadie lo notara: son cuatro bandas y cada una sumaba
+* lo suyo.
+*
+* Hoy solo las usa la sección "cuando". La de "municipios" sigue con sus
+* valores escritos a mano; para igualarla, reemplazar sus clases por
+* estas constantes.
+*
 * SOBRE LA TIPOGRAFÍA DE LAS BANDAS
 *
 * Titular y rótulo van los dos en Agenda ExtraCondensed, la tipografía
@@ -5363,6 +5572,21 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 * -----------------------------------------------------------------------
 */
 var SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
+/**
+* Relleno de la banda del titular. Lleva más aire que las demás porque
+* es la única que tiene que sostener sola una tipografía de hasta 72 px:
+* con el mismo relleno que el resto, la letra queda apretada contra el
+* borde del color.
+*/
+var BANDA_TITULAR = "px-4 py-10 sm:px-6 sm:py-12 md:px-10";
+/** Relleno de una banda de contenido. */
+var BANDA = "px-4 py-8 sm:px-6 sm:py-10 md:px-10";
+/**
+* Igual que BANDA, con más aire abajo. Es la última franja de la
+* sección, y sin ese remate el contenido queda pegado al titular de la
+* sección siguiente.
+*/
+var BANDA_CIERRE = "px-4 py-8 pb-12 sm:px-6 sm:py-10 sm:pb-14 md:px-10";
 var NAV = [
 	{
 		id: "inicio",
@@ -5381,7 +5605,7 @@ var NAV = [
 	},
 	{
 		id: "cuando",
-		label: "Analisis de entrega",
+		label: "Momentos clave",
 		icon: CalendarDays
 	},
 	{
@@ -5445,7 +5669,7 @@ function Contenido() {
 				className: "vc-seccion bg-[#FBF8C6]",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
+						className: `bg-[#22ABE2] ${BANDA_TITULAR}`,
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
@@ -5462,28 +5686,31 @@ function Contenido() {
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "px-4 py-12 sm:px-6 sm:py-14 md:px-10",
+						className: BANDA,
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MovimientoStatCards, {})
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "bg-[#0079C1] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: `bg-[#0079C1] ${BANDA}`,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							className: "mx-auto max-w-6xl",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-8",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,4.5rem)] uppercase text-[#FBF8C6]",
+								children: "Entregas por día"
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-6",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(JornadaBars, {})
-							})
+							})]
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
+						className: BANDA_CIERRE,
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
 							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "mt-8 space-y-14",
+								className: "space-y-10",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })]
 							})
 						})
