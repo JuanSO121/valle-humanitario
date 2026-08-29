@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------
  * Refleja el contrato de API ya cerrado y probado contra el Excel real
  * (route=meta/origenes/municipios/categorias/flujos/destinos/destino/
- * destino-logistica/toneladas). No son las hojas del Excel, son la forma
- * que ya devuelve Transforms.gs. Si el backend cambia una forma de
+ * destino-logistica/toneladas/ayuda/necesidades). No son las hojas del
+ * Excel, son la forma que ya devuelve el backend. Si cambia una forma de
  * respuesta, este archivo es el único lugar que debería tocarse en el
  * dominio.
  * -----------------------------------------------------------------------
@@ -102,6 +102,13 @@ export interface ToneladasResponse {
  * entidades. `municipios` cuenta solo municipios. Son distintos y por eso
  * van separados: decir que una categoría llegó a 44 municipios en un
  * departamento de 41 es lo que pasaba al usar el primero.
+ *
+ * OJO CON `unidades`. Hoy sale de ENVIOS_CATEGORIA, y esa columna está
+ * rota: en 242 de 553 pares destino-categoría no coincide con la suma de
+ * DETALLE_PRODUCTO, y la diferencia no es sutil (Sevilla / Aseo personal
+ * dice 10 donde el detalle suma 9.764). El total publicado, 96.360, es
+ * 2,7 veces menor que el real, 256.263. Cuando la fuente pase a
+ * DETALLE_PRODUCTO, todos los porcentajes de esta respuesta cambian.
  */
 export interface CategoriaAyudaApi {
   id: string;
@@ -231,4 +238,75 @@ export interface Meta {
     municipios: number;
   };
   validacion: { advertencias: number; detalle: unknown[] };
+}
+
+/**
+ * route=necesidades, hoja NECESIDADES_ACOPIO.
+ *
+ * Es lo único del tablero que caduca en horas. Todo lo demás cuenta lo
+ * que ya pasó; esto dice qué falta AHORA, y una lista vieja no es un dato
+ * impreciso: es una lista que manda a la gente a donar lo que ya sobra.
+ *
+ * Por eso `fechaInventario` no es opcional en la práctica aunque el tipo
+ * admita null: sin ella la página no puede decir de cuándo es lo que está
+ * mostrando, y esa es justamente la información que decide si la lista
+ * sirve o no.
+ */
+export interface ElementoNecesario {
+  nombre: string;
+  /** Lo que decía el papel, tal cual: NADA, POCO, POCAS, BASTANTE. */
+  existencia: string | null;
+  /**
+   * Cuánto hay en bodega: 0 nada, 1 poco, 3 bastante.
+   *
+   * `null` cuando no se anotó. NO es cero: "no se revisó" y "no hay" son
+   * cosas distintas, y confundirlas pondría como urgente algo que nadie
+   * llegó a mirar. Por eso el orden de la lista trata el null como el
+   * final de la escala y no como el principio.
+   */
+  nivel: number | null;
+  /**
+   * URGENTE · ALTA · CUBIERTO · SIN DATO.
+   *
+   * Es la misma escala que `nivel`, vista al revés: `nivel` dice cuánto
+   * hay y `prioridad` dice qué tan urgente es reponerlo. Viajan las dos
+   * porque una sirve para ordenar y la otra para etiquetar, y derivar una
+   * de la otra en el frontend sería repetir una regla que ya vive en el
+   * Excel.
+   *
+   * Va como `string` y no como unión cerrada a propósito: la escribe una
+   * persona en una hoja de cálculo, así que un valor nuevo no debe
+   * romper el tipado. El frontend cae a "SIN DATO" si no lo reconoce.
+   */
+  prioridad: string;
+  /** La categoría de CAT_CATEGORIAS con la que se corresponde, si aplica. */
+  categoriaBase: string | null;
+  observacion: string | null;
+}
+
+export interface SeccionNecesidades {
+  /**
+   * El nombre tal como está en la hoja: "Alimentos y no perecederos",
+   * "Aseo personal", "Dormir y abrigo", "Otros elementos".
+   *
+   * El frontend empareja su ilustración con este nombre normalizado,
+   * porque el Excel no trae ningún id de sección. Si alguien renombra
+   * una, la sección aparece igual pero sin ilustración: es preferible a
+   * que desaparezca.
+   */
+  nombre: string;
+  elementos: ElementoNecesario[];
+  total: number;
+  /** Elementos con nivel 0, para que la tarjeta avise sin abrirse. */
+  urgentes: number;
+}
+
+export interface NecesidadesResponse {
+  /** ISO yyyy-MM-dd del inventario más reciente entre las filas vigentes. */
+  fechaInventario: string | null;
+  secciones: SeccionNecesidades[];
+  totalElementos: number;
+  totalUrgentes: number;
+  fuente: "NECESIDADES_ACOPIO";
+  disclaimer: string;
 }

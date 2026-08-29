@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BDXGHYrF.js
+import { _ as Building2, a as PackageCheck, c as MapPin, d as HeartHandshake, f as HandHeart, g as CalendarDays, h as ChevronDown, i as Package, l as List, m as ChevronLeft, n as Warehouse, o as Menu, p as FileText, r as Truck, s as Map$1, t as X, u as House, v as Boxes, y as ArrowLeft } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DHFgqzKB.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -87,7 +87,7 @@ async function enCola(tarea) {
 * el script. Con la cola viajan de a dos y ninguna se cae.
 *
 * Va acá y no en cada hook porque este es el único `fetch` del archivo:
-* un solo punto cubre las diez rutas.
+* un solo punto cubre las once rutas.
 * -----------------------------------------------------------------------
 */
 var ApiError = class extends Error {
@@ -163,11 +163,20 @@ var AyudasApiRepository = class {
 	/**
 	* Composición de lo entregado, grupos atendidos y canales.
 	*
-	* Ya está publicada y verificada. Si falla, el tablero cae a las cifras
-	* del catálogo estático, que están viejas: ayudaData.ts declara 256.650
-	* unidades y el Excel tiene 96.360. Por eso conviene que ese respaldo
-	* no se use nunca, y que un fallo acá se reintente en vez de darse por
-	* definitivo.
+	* OJO CON EL TOTAL. Esta ruta suma ENVIOS_CATEGORIA.unidades, y esa
+	* columna está rota: en 242 de 553 pares destino-categoría no coincide
+	* con la suma de DETALLE_PRODUCTO, y la diferencia es de órdenes de
+	* magnitud (Sevilla / Aseo personal dice 10 donde el detalle suma
+	* 9.764; parece haberse cargado el conteo de renglones en vez de las
+	* unidades). El total que devuelve, 96.360, es 2,7 veces menor que el
+	* real, 256.263, y de ahí salen todos los porcentajes por categoría.
+	*
+	* Mientras la fuente no pase a DETALLE_PRODUCTO, las cifras de esta
+	* ruta se publican sabiendo que están mal.
+	*
+	* El respaldo estático de ayudaData.ts, en cambio, SÍ era correcto:
+	* sus 256.650 unidades y sus diez productos más entregados coinciden
+	* con DETALLE_PRODUCTO. Se creyó desactualizado y no lo estaba.
 	*/
 	getAyuda() {
 		return this.request("ayuda", {}, (p) => {
@@ -176,6 +185,30 @@ var AyudasApiRepository = class {
 			if (!Array.isArray(obj["categorias"])) return "falta el campo \"categorias\" (array)";
 			if (!Array.isArray(obj["poblaciones"])) return "falta el campo \"poblaciones\" (array)";
 			if (!Array.isArray(obj["canales"])) return "falta el campo \"canales\" (array)";
+			return null;
+		});
+	}
+	/**
+	* Lo que falta hoy en el centro de acopio, de la hoja
+	* NECESIDADES_ACOPIO.
+	*
+	* Es la única ruta del tablero que caduca en horas: las demás cuentan
+	* lo que ya pasó. Si falla, la sección muestra las ilustraciones sin
+	* abrir ninguna lista, y eso es deliberado: no hay respaldo estático
+	* posible, porque una lista de necesidades sin fecha manda a la gente
+	* a donar lo que ya sobra.
+	*
+	* La validación de forma solo exige `secciones`. `fechaInventario`
+	* puede venir en null si ninguna fila vigente trae fecha legible, y en
+	* ese caso la sección se dibuja igual pero sin fechar: es peor no
+	* mostrar nada que mostrarlo sin fecha, porque la lista sigue siendo
+	* útil aunque no se sepa exactamente de cuándo es.
+	*/
+	getNecesidades() {
+		return this.request("necesidades", {}, (p) => {
+			if (!p || typeof p !== "object") return "se esperaba un objeto";
+			const obj = p;
+			if (!Array.isArray(obj["secciones"])) return "falta el campo \"secciones\" (array)";
 			return null;
 		});
 	}
@@ -1417,7 +1450,7 @@ var OPERACION_VACIA = {
 	toneladasMedidas: false
 };
 /** Comparación de nombres sin tildes ni mayúsculas. */
-function normalizar(nombre) {
+function normalizar$1(nombre) {
 	return nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 /** "2026-08-25" a "25 de agosto de 2026". */
@@ -1449,13 +1482,13 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		nombre: m.name,
 		zona: m.zone
 	}));
-	const zonaPorNombre = new Map(catalogoFinal.map((m) => [normalizar(m.nombre), m.zona]));
-	const codigoPorNombre = new Map(catalogoFinal.map((m) => [normalizar(m.nombre), m.codigoDane]));
+	const zonaPorNombre = new Map(catalogoFinal.map((m) => [normalizar$1(m.nombre), m.zona]));
+	const codigoPorNombre = new Map(catalogoFinal.map((m) => [normalizar$1(m.nombre), m.codigoDane]));
 	if (!flujos || flujos.length === 0) return OPERACION_VACIA;
 	const municipales = flujos.filter(esMunicipal);
 	const porDestino = /* @__PURE__ */ new Map();
 	for (const f of municipales) {
-		const clave = normalizar(f.destino.nombre);
+		const clave = normalizar$1(f.destino.nombre);
 		const actual = porDestino.get(f.destino.id) ?? {
 			destinoId: f.destino.id,
 			nombre: f.destino.nombre,
@@ -2536,65 +2569,135 @@ function TopBar({ viewState, seleccionNombre, onGoToAll }) {
 /**
 * FocoContext.tsx
 * -----------------------------------------------------------------------
-* Qué está mirando la persona, compartido entre las secciones y el mapa.
+* El puente entre el relato y el mapa.
 *
-* Las secciones de arriba llevan al mapa, pero hasta ahora solo hacían
-* scroll: se llegaba al mapa sin nada seleccionado y había que buscar a
-* mano el municipio en el que se venía de hacer clic.
+* Varias secciones mandan al mapa: la galería de municipios, el podio, el
+* calendario de evolución, las categorías de ayuda. Todas hacen lo mismo
+* —bajar al mapa y seleccionar algo— pero el viaje era de ida sola: una
+* vez abajo, para volver había que acordarse de en qué sección se estaba
+* y buscarla a mano en una página de ocho secciones.
 *
-* Este contexto guarda esa intención. Al tocar un municipio se enfoca ese
-* municipio; al tocar una categoría se enfocan todos los que la
-* recibieron. El mapa lee el foco y responde.
+* CÓMO SE RESUELVE EL REGRESO
 *
-* Vive aparte de OperacionContext a propósito: uno son los datos, que
-* cambian cuando cambia el Excel, y el otro es la navegación, que cambia
-* con cada clic. Mezclarlos haría que todo el árbol se vuelva a dibujar
-* cada vez que alguien toca una ficha.
+* Guardando la POSICIÓN DEL SCROLL justo antes de bajar al mapa.
+*
+* La alternativa era que cada llamada declarara de qué sección venía. Se
+* probó y tiene un defecto de fondo: hay que tocar todos los puntos de
+* entrada, y el que se olvide queda sin regreso sin que nadie lo note.
+* Ya pasó: el botón estaba escrito y no aparecía nunca, porque ninguna
+* sección declaraba su origen.
+*
+* Con la posición del scroll el regreso funciona para TODOS los enlaces
+* sin tocar ninguno, incluidos los que se agreguen mañana. Y devuelve al
+* punto exacto donde estaba la persona, no al comienzo de la sección: si
+* venía del municipio número 30 de la galería, vuelve ahí.
+*
+* La etiqueta sigue siendo opcional. Sin ella el botón dice "Volver"; con
+* ella, "Volver a los municipios". Es lo único que gana algo por
+* declararse en el origen, y no declararlo no rompe nada.
 * -----------------------------------------------------------------------
 */
-var FocoContext = (0, import_react.createContext)({
-	municipio: null,
-	categoria: null,
-	enfocarMunicipio: () => {},
-	enfocarCategoria: () => {},
-	limpiar: () => {}
-});
-/** Lleva la vista al mapa. Se usa siempre junto con enfocar. */
-function irAlMapa() {
-	document.getElementById("mapa-de-ayudas")?.scrollIntoView({
-		behavior: "smooth",
-		block: "start"
-	});
+/** Id de la sección del mapa en StoryPage. */
+var MAPA_ID = "mapa-de-ayudas";
+/**
+* El contenedor que hace scroll. Es el <main> de StoryPage, no la
+* ventana: la página entera vive dentro de un `h-dvh overflow-y-auto`,
+* así que `window.scrollY` siempre vale 0 y no sirve para esto.
+*/
+var SCROLL_ROOT_ID$1 = "ruta-solidaridad-scroll";
+var FocoContext = (0, import_react.createContext)(null);
+function raizDeScroll() {
+	if (typeof document === "undefined") return null;
+	return document.getElementById(SCROLL_ROOT_ID$1);
+}
+function prefiereQuieto() {
+	if (typeof window === "undefined") return true;
+	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 function FocoProvider({ children }) {
 	const [municipio, setMunicipio] = (0, import_react.useState)(null);
 	const [categoria, setCategoria] = (0, import_react.useState)(null);
-	const enfocarMunicipio = (0, import_react.useCallback)((nombre) => {
-		setCategoria(null);
+	const [etiquetaRegreso, setEtiquetaRegreso] = (0, import_react.useState)(null);
+	/**
+	* `useState` y no `useRef` para el booleano: el botón del mapa tiene
+	* que volver a dibujarse cuando aparece o desaparece el regreso, y una
+	* ref no dispara render.
+	*
+	* La posición sí va en ref: cambia junto con el booleano y nadie la
+	* lee para pintar, así que guardarla en estado provocaría un render de
+	* más en cada viaje.
+	*/
+	const [puedeVolver, setPuedeVolver] = (0, import_react.useState)(false);
+	const posicionPrevia = (0, import_react.useRef)(0);
+	/**
+	* Anota dónde estaba la persona y baja al mapa.
+	*
+	* El orden importa: primero se lee `scrollTop`, después se desplaza. Al
+	* revés se guardaría la posición del mapa y el botón devolvería al
+	* mismo lugar donde ya está.
+	*/
+	const irAlMapa = (0, import_react.useCallback)((etiqueta) => {
+		const raiz = raizDeScroll();
+		if (raiz) {
+			posicionPrevia.current = raiz.scrollTop;
+			setPuedeVolver(true);
+		}
+		setEtiquetaRegreso(etiqueta ?? null);
+		const destino = document.getElementById(MAPA_ID);
+		if (!destino) return;
+		destino.scrollIntoView({
+			behavior: prefiereQuieto() ? "auto" : "smooth",
+			block: "start"
+		});
+	}, []);
+	const enfocarMunicipio = (0, import_react.useCallback)((nombre, etiqueta) => {
 		setMunicipio(nombre);
-		irAlMapa();
-	}, []);
-	const enfocarCategoria = (0, import_react.useCallback)((nombre) => {
-		setMunicipio(null);
+		setCategoria(null);
+		irAlMapa(etiqueta);
+	}, [irAlMapa]);
+	const enfocarCategoria = (0, import_react.useCallback)((nombre, etiqueta) => {
 		setCategoria(nombre);
-		if (nombre) irAlMapa();
-	}, []);
+		setMunicipio(null);
+		irAlMapa(etiqueta);
+	}, [irAlMapa]);
+	/**
+	* Solo quita el resaltado. El regreso sobrevive a propósito: la persona
+	* sigue en el mapa habiendo llegado desde algún lado, y el botón tiene
+	* que seguir ahí. Es lo que hace el "Ver todos" de la píldora amarilla.
+	*/
 	const limpiar = (0, import_react.useCallback)(() => {
 		setMunicipio(null);
 		setCategoria(null);
 	}, []);
+	const volver = (0, import_react.useCallback)(() => {
+		const raiz = raizDeScroll();
+		if (raiz) raiz.scrollTo({
+			top: posicionPrevia.current,
+			behavior: prefiereQuieto() ? "auto" : "smooth"
+		});
+		setMunicipio(null);
+		setCategoria(null);
+		setEtiquetaRegreso(null);
+		setPuedeVolver(false);
+	}, []);
 	const value = (0, import_react.useMemo)(() => ({
 		municipio,
 		categoria,
+		puedeVolver,
+		etiquetaRegreso,
 		enfocarMunicipio,
 		enfocarCategoria,
-		limpiar
+		limpiar,
+		volver
 	}), [
 		municipio,
 		categoria,
+		puedeVolver,
+		etiquetaRegreso,
 		enfocarMunicipio,
 		enfocarCategoria,
-		limpiar
+		limpiar,
+		volver
 	]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FocoContext.Provider, {
 		value,
@@ -2602,7 +2705,9 @@ function FocoProvider({ children }) {
 	});
 }
 function useFoco() {
-	return (0, import_react.useContext)(FocoContext);
+	const valor = (0, import_react.useContext)(FocoContext);
+	if (valor === null) throw new Error("useFoco se usó fuera de <FocoProvider>. Envolvé la página con el proveedor.");
+	return valor;
 }
 /**
 * useAyuda.ts
@@ -2778,6 +2883,31 @@ function DashboardPage({ embedded = false }) {
 		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
 	}, [viewState.timelineInstant, viewState.timelineDate]);
 	const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
+	/**
+	* Volver a donde estaba la persona antes de bajar al mapa.
+	*
+	* El FocoContext guarda el `scrollTop` del relato justo antes de
+	* desplazarse hasta acá, así que `foco.volver()` devuelve al punto
+	* exacto, no al comienzo de la sección.
+	*
+	* También se resetea el viewState. Sin eso, la persona se iba con la
+	* ficha del municipio abierta y al bajar de nuevo al mapa se la
+	* encontraba abierta sin haberla pedido en ese momento.
+	*/
+	const volverAlRelato = () => {
+		setViewState((prev) => viewTransitions.toAll(prev));
+		foco.volver();
+	};
+	/**
+	* Solo hay a dónde volver si se llegó por un enlace del relato. Quien
+	* bajó con el scroll no ve el botón, porque no habría nada distinto a
+	* donde ya está.
+	*
+	* En móvil se oculta mientras hay un panel abierto, igual que los
+	* demás controles: el panel ya ocupa la pantalla y tiene su propio
+	* cierre.
+	*/
+	const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: embedded ? "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background" : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
 		children: [
@@ -2791,10 +2921,25 @@ function DashboardPage({ embedded = false }) {
 				lens,
 				instant: viewState.timelineInstant
 			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex flex-col items-start gap-2 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]",
+				children: [puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: volverAlRelato,
+					className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
+						className: "size-4 shrink-0",
+						"aria-hidden": true
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "min-w-0 truncate",
+						children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
+					})]
+				}), !viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile })]
+			}),
 			foco.categoria && resaltados && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-auto absolute inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex justify-center md:inset-x-0",
+				className: `pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${puedeVolver ? "top-[calc(3.75rem+env(safe-area-inset-top))]" : "top-[calc(0.75rem+env(safe-area-inset-top))]"}`,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg",
+					className: "pointer-events-auto flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 						className: "text-base font-bold text-[#123E5C]",
 						children: [
@@ -2818,10 +2963,6 @@ function DashboardPage({ embedded = false }) {
 					setLinesDismissed(false);
 					setViewState((prev) => viewTransitions.toAll(prev));
 				}
-			}),
-			!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-10 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile })
 			}),
 			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
 				municipios: municipiosMapa,
@@ -5514,6 +5655,493 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	});
 }
 /**
+* useNecesidades.ts
+* -----------------------------------------------------------------------
+* Lo que falta hoy en el centro de acopio, desde route=necesidades.
+*
+* `staleTime` mucho más corto que el resto del tablero: cinco minutos
+* contra los treinta de los catálogos. Todo lo demás cuenta lo que ya
+* pasó y no cambia; esto cambia con cada inventario, y una lista vieja no
+* es un dato impreciso, es una lista que manda a la gente a donar lo que
+* ya sobra.
+*
+* Reintentos como en useAyuda: el Web App de Apps Script serializa las
+* ejecuciones por usuario, así que un 404 de concurrencia no debe darse
+* por definitivo.
+*/
+var NECESIDADES_STALE_TIME_MS = 3e5;
+function useNecesidades() {
+	return useQuery({
+		queryKey: ["necesidades"],
+		queryFn: () => ayudasApiRepository.getNecesidades(),
+		staleTime: NECESIDADES_STALE_TIME_MS,
+		retry: 3,
+		retryDelay: REINTENTO_ESCALONADO
+	});
+}
+/**
+* QueHaceFaltaSection.tsx
+* -----------------------------------------------------------------------
+* "¿Qué hace falta hoy?": las cuatro categorías del centro de acopio.
+* Al tocar una, se abre un cajón con lo que se necesita, producto por
+* producto y en orden de urgencia.
+*
+* CADA PRODUCTO LLEVA SU ESTADO
+*
+* Agotado, Escaso o Buena cantidad. Son las palabras del papel del
+* acopio —NADA, POCO, BASTANTE— dichas en lenguaje corriente, y su
+* significado se explica en la leyenda del final de la sección.
+*
+* Que aparezca el estado es lo que permite mostrar también lo que está
+* en buena cantidad. Sin etiqueta, una lista solo puede leerse como
+* "esto hace falta" y pedir algo que sobra desperdicia una donación; con
+* ella, ese mismo renglón sirve al revés y dice qué NO hay que llevar.
+*
+* LO QUE NO SE REVISÓ NO SE MUESTRA
+*
+* La hoja trae dos renglones con la existencia sin anotar. No aparecen:
+* sin estado no se pueden ordenar ni etiquetar, y ponerlos con una
+* etiqueta inventada sería peor que omitirlos.
+*
+* Hoy son "Enlatados" y "Granos de todo tipo", los dos en Alimentos, y
+* los dos son necesidades reales que quedan fuera de la página. Se
+* arreglan anotando su existencia en NECESIDADES_ACOPIO: aparecen solas,
+* sin tocar código.
+*
+* ESTA SECCIÓN LE HABLA A UN CIUDADANO, NO A UN OPERADOR
+*
+* Quien lee esto está decidiendo si sale a comprar algo. No aparecen
+* «URGENTE», «nivel 0», «existencias en bodega» ni «inventario».
+*
+* POR QUÉ EL CAJÓN OCUPA LA FILA ENTERA
+*
+* Abrir la lista dentro de la media columna del botón se veía mal: la
+* tarjeta de al lado quedaba flotando con un hueco debajo, la fila
+* siguiente se iba hacia abajo sin explicación, y la lista se partía en
+* cinco o seis renglones.
+*
+* Ahora el cajón abarca las dos columnas y se inserta debajo de la FILA
+* del botón. Lo hacen legible una PUNTA alineada con la tarjeta abierta,
+* la altura ANIMADA con `grid-template-rows` de 0fr a 1fr, y el cajón
+* montado durante el cierre para que también se anime.
+*
+* POR QUÉ LAS ILUSTRACIONES SE EMPAREJAN POR PALABRA CLAVE
+*
+* Antes era un diccionario con el nombre exacto de la sección como
+* llave, y cualquier diferencia dejaba la tarjeta sin dibujo sin ningún
+* aviso: un `undefined` en un diccionario no se queja. Ya pasó tres veces
+* en este proyecto con cruces por texto. Ahora basta con que una palabra
+* clave aparezca en el nombre, y si ninguna calza queda un aviso en
+* consola con el texto exacto que llegó.
+* -----------------------------------------------------------------------
+*/
+/** Colores muestreados del JPG original, para reconstruir el fondo. */
+var CYAN_CENTRO = "#40BBE5";
+var CYAN_BORDE = "#0E8BB7";
+/**
+* Sombras que respetan la silueta del PNG.
+*
+* `drop-shadow` se calcula sobre el canal alfa, a diferencia de
+* `box-shadow`, que dibuja la caja rectangular del elemento. Con
+* ilustraciones recortadas es la diferencia entre una sombra que sigue el
+* contorno y un rectángulo flotando detrás.
+*/
+var SOMBRA_REPOSO = "drop-shadow(0 6px 10px rgba(0,0,0,0.18))";
+var SOMBRA_ACTIVA = "drop-shadow(0 14px 20px rgba(0,0,0,0.32))";
+/**
+* Los tres estados, en el orden en que se leen: de lo que falta a lo que
+* sobra.
+*
+* Semáforo de tres pasos, pero con la PALABRA siempre visible además del
+* color. El color solo no alcanza: una de cada doce personas no
+* distingue el rojo del verde, y este es justamente el dato que decide
+* si alguien compra algo o no.
+*/
+var ESTADOS = [
+	{
+		etiqueta: "Agotado",
+		glosa: "En este momento no hay existencias.",
+		barra: "#F26049",
+		fondo: "#F26049",
+		texto: "#FFFFFF"
+	},
+	{
+		etiqueta: "Escaso",
+		glosa: "Se necesita más.",
+		barra: "#F7B733",
+		fondo: "#FFD400",
+		texto: "#123E5C"
+	},
+	{
+		etiqueta: "Buena cantidad",
+		glosa: "Hay existencias suficientes por ahora.",
+		barra: "#5CC46B",
+		fondo: "#5CC46B",
+		texto: "#123E5C"
+	}
+];
+/**
+* El estado de un producto según el `nivel` de la hoja.
+*
+* Devuelve `null` cuando no se anotó, y ese elemento no se dibuja. Un
+* `nivel` fuera de la escala conocida cae en "Buena cantidad" y no en
+* "Agotado": si el dato es dudoso, más vale no mandar a nadie a comprar
+* de más.
+*/
+function estadoDe(nivel) {
+	if (nivel === null) return null;
+	if (nivel === 0) return ESTADOS[0];
+	if (nivel === 1) return ESTADOS[1];
+	return ESTADOS[2];
+}
+/**
+* OJO CON LOS NOMBRES DE ARCHIVO. Los originales vienen como
+* `Otros_pelementos.png` y `alimentos_no_pere.png`. Acá se asumen
+* renombrados a minúsculas y sin tildes en `public/marca/`. En Windows el
+* servidor de desarrollo no distingue mayúsculas y en el Linux del
+* despliegue sí: un nombre mal copiado funciona en tu máquina y da 404 en
+* producción.
+*/
+var ILUSTRACIONES = [
+	{
+		claves: [
+			"ALIMENTO",
+			"PERECEDERO",
+			"COMIDA",
+			"MERCADO"
+		],
+		src: "/marca/que-hace-falta-alimentos.png",
+		alt: "Alimentos no perecederos: arroz, pasta, lentejas, frijoles, harina, azúcar, sal, atún, sardinas, enlatados, aceite."
+	},
+	{
+		claves: ["ASEO", "HIGIENE"],
+		src: "/marca/que-hace-falta-aseo.png",
+		alt: "Aseo personal: papel higiénico, kit de higiene, cepillos y pasta dental, jabón."
+	},
+	{
+		claves: [
+			"DORMIR",
+			"ABRIGO",
+			"COLCHON",
+			"DESCANSO"
+		],
+		src: "/marca/que-hace-falta-dormir.png",
+		alt: "Elementos para dormir y abrigo: colchonetas, almohadas, cobijas, sábanas y ropa de abrigo."
+	},
+	{
+		claves: ["OTRO"],
+		src: "/marca/que-hace-falta-otros.png",
+		alt: "Otros elementos necesarios: agua potable, pañales, detergente, cloro, limpiador multiusos, botiquín, bolsas de basura, linterna, pilas y guantes."
+	}
+];
+function normalizar(texto) {
+	return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
+}
+/**
+* La ilustración de una sección, o `undefined` si ninguna calza.
+*
+* El aviso en consola es la parte importante: sin él, una sección
+* renombrada pierde su dibujo en silencio y hay que ir a leer el código
+* para entender por qué apareció una caja de texto.
+*/
+function ilustracionDe(nombreSeccion) {
+	const nombre = normalizar(nombreSeccion);
+	return ILUSTRACIONES.find((i) => i.claves.some((c) => nombre.includes(c)));
+}
+/**
+* Cuántas tarjetas caben por fila, según el mismo corte que usa la
+* grilla (`sm`, 640 px).
+*
+* Hace falta en JavaScript y no solo en CSS porque el cajón se inserta
+* DESPUÉS de la última tarjeta de su fila, y cuál es esa depende de si
+* hay una o dos columnas.
+*/
+function useColumnas() {
+	const [columnas, setColumnas] = (0, import_react.useState)(1);
+	(0, import_react.useEffect)(() => {
+		const mql = window.matchMedia("(min-width: 640px)");
+		const actualizar = () => setColumnas(mql.matches ? 2 : 1);
+		actualizar();
+		mql.addEventListener("change", actualizar);
+		return () => mql.removeEventListener("change", actualizar);
+	}, []);
+	return columnas;
+}
+function QueHaceFaltaSection() {
+	const { data } = useNecesidades();
+	const [abierta, setAbierta] = (0, import_react.useState)(null);
+	const columnas = useColumnas();
+	const secciones = (0, import_react.useMemo)(() => data?.secciones ?? [], [data]);
+	const indiceAbierta = secciones.findIndex((s) => s.nombre === abierta);
+	/**
+	* Se recorre por FILAS y no por tarjetas para poder meter el cajón
+	* justo después de la última de cada fila.
+	*/
+	const filas = [];
+	for (let i = 0; i < secciones.length; i += columnas) filas.push(secciones.slice(i, i + columnas));
+	/**
+	* Al cerrar, devolver la vista a las cuatro tarjetas.
+	*
+	* El cajón puede medir varios cientos de píxeles. Al colapsarlo, todo
+	* lo que estaba debajo sube de golpe y la persona se queda mirando la
+	* sección siguiente sin haber pedido moverse: cerró algo y el mundo se
+	* desplazó solo. Recentrar las tarjetas devuelve el punto de partida y
+	* deja claro que puede abrir otra.
+	*
+	* `anterior` distingue un cierre real de la carga inicial, donde
+	* `abierta` ya vale null y no hay nada que recentrar. Y cambiar de una
+	* categoría a otra tampoco entra acá, porque ahí `abierta` pasa de un
+	* nombre a otro, nunca por null.
+	*
+	* El `setTimeout` dura lo que la transición: antes de eso el cajón
+	* todavía ocupa alto y el navegador calcularía el destino con la
+	* página que está por dejar de existir.
+	*/
+	const tarjetasRef = (0, import_react.useRef)(null);
+	const anterior = (0, import_react.useRef)(null);
+	(0, import_react.useEffect)(() => {
+		const seCerro = anterior.current !== null && abierta === null;
+		anterior.current = abierta;
+		if (!seCerro) return;
+		const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const id = window.setTimeout(() => {
+			tarjetasRef.current?.scrollIntoView({
+				behavior: prefiereQuieto ? "auto" : "smooth",
+				block: "center"
+			});
+		}, prefiereQuieto ? 0 : 320);
+		return () => window.clearTimeout(id);
+	}, [abierta]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+		id: "que-hace-falta",
+		className: "vc-seccion px-4 py-12 sm:px-6 sm:py-16 md:px-10",
+		style: { background: `radial-gradient(ellipse at center, ${CYAN_CENTRO} 0%, ${CYAN_BORDE} 80%)` },
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mx-auto max-w-6xl",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+					className: "vc-titular mx-auto w-fit bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-center text-[clamp(1.75rem,6vw,3.5rem)] leading-tight text-[#0079C1]",
+					children: "¿Qué hace falta hoy?"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "vc-titular mx-auto w-fit px-[1em] py-[0.7em] text-center text-[clamp(1.75rem,2vw,3.5rem)] leading-tight text-[#FBF8C6]",
+					children: "Toque una categoría para conocer qué se necesita en el centro de acopio y qué elementos están agotados, escasos o disponibles en buena cantidad."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Leyenda, {}),
+				secciones.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					ref: tarjetasRef,
+					className: "mt-8 space-y-6",
+					children: filas.map((fila, indiceFila) => {
+						const enEstaFila = indiceAbierta >= 0 && Math.floor(indiceAbierta / columnas) === indiceFila ? secciones[indiceAbierta] : null;
+						const columnaAbierta = enEstaFila ? indiceAbierta % columnas : 0;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "grid items-start gap-6 sm:grid-cols-2",
+							children: fila.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaCategoria, {
+								seccion: s,
+								abierta: abierta === s.nombre,
+								onToggle: () => setAbierta(abierta === s.nombre ? null : s.nombre)
+							}, s.nombre))
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(CajonDeFila, {
+							seccion: enEstaFila,
+							columnaAbierta,
+							columnas,
+							fechaInventario: data?.fechaInventario ?? null,
+							onCerrar: () => setAbierta(null)
+						})] }, indiceFila);
+					})
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "mt-10 grid items-start gap-6 sm:grid-cols-2",
+					children: ILUSTRACIONES.map((arte) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+						src: arte.src,
+						alt: arte.alt,
+						loading: "lazy",
+						decoding: "async",
+						className: "h-auto w-full"
+					}) }, arte.src))
+				})
+			]
+		})
+	});
+}
+/**
+* La instrucción y el significado de los tres estados.
+*
+* Va sobre una tarjeta blanca y no directamente sobre el cyan: texto
+* blanco sobre el fondo de esta sección contrasta cerca de 3,6 a 1, por
+* debajo del 4,5 que pide la norma para cuerpo de texto. Sobre blanco,
+* el mismo texto en azul profundo pasa de sobra.
+*
+* Los tres estados van EN LÍNEA y no apilados, con el mismo patrón que
+* la leyenda de familias de AyudaSection. Apilados ocupaban siete
+* renglones y empujaban las tarjetas fuera de la primera pantalla, que
+* es donde tienen que estar: la leyenda explica algo que todavía no se
+* ha visto, así que cuanto menos espacio ocupe, mejor cumple su papel.
+*/
+function Leyenda() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "mt-6 rounded-xl bg-white px-5 py-4 sm:px-6 sm:py-5",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+			className: "mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-3",
+			children: ESTADOS.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+				className: "flex flex-col items-center text-center",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "rounded-full px-2.5 py-0.5 text-[13px] font-extrabold",
+					style: {
+						background: e.fondo,
+						color: e.texto
+					},
+					children: e.etiqueta
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-2 text-[15px] leading-6 text-[#35708F]",
+					children: e.glosa
+				})]
+			}, e.etiqueta))
+		})
+	});
+}
+function TarjetaCategoria({ seccion, abierta, onToggle }) {
+	const arte = (0, import_react.useMemo)(() => ilustracionDe(seccion.nombre), [seccion.nombre]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+		type: "button",
+		"aria-expanded": abierta,
+		onClick: onToggle,
+		style: { filter: abierta ? SOMBRA_ACTIVA : SOMBRA_REPOSO },
+		className: `mx-auto block w-full max-w-[26rem] transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FBF8C6] motion-reduce:transform-none ${abierta ? "-translate-y-1.5" : "hover:-translate-y-1.5"}`,
+		children: [arte ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+			src: arte.src,
+			alt: arte.alt,
+			loading: "lazy",
+			decoding: "async",
+			className: "h-auto w-full"
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "block rounded-xl bg-[#FBF8C6] px-6 py-8 text-xl font-bold text-[#0079C1]",
+			children: seccion.nombre
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
+			"aria-hidden": true,
+			className: `mx-auto mt-1 size-7 text-white transition-transform duration-200 motion-reduce:transform-none ${abierta ? "rotate-180" : ""}`
+		})]
+	}) });
+}
+/**
+* El cajón que se abre debajo de una fila de tarjetas.
+*
+* Recibe `null` cuando ninguna de su fila está abierta, pero NO se
+* desmonta: conserva el contenido de la última que estuvo abierta
+* mientras la altura vuelve a cero. Sin eso, cerrar sería un corte seco.
+*/
+function CajonDeFila({ seccion, columnaAbierta, columnas, fechaInventario, onCerrar }) {
+	const panelId = (0, import_react.useId)();
+	const panelRef = (0, import_react.useRef)(null);
+	const ultima = (0, import_react.useRef)(null);
+	if (seccion) ultima.current = seccion;
+	const contenido = seccion ?? ultima.current;
+	const abierto = seccion !== null;
+	/**
+	* Al abrir, asegurarse de que el cajón quepa en pantalla.
+	*
+	* El `setTimeout` dura lo mismo que la transición: si se llama antes,
+	* el navegador mide el cajón todavía colapsado y desplaza de menos.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!abierto) return;
+		const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const id = window.setTimeout(() => {
+			panelRef.current?.scrollIntoView({
+				behavior: prefiereQuieto ? "auto" : "smooth",
+				block: "nearest"
+			});
+		}, prefiereQuieto ? 0 : 320);
+		return () => window.clearTimeout(id);
+	}, [abierto]);
+	if (!contenido) return null;
+	const puntaIzquierda = columnas === 1 ? "50%" : `${(columnaAbierta + .5) * (100 / columnas)}%`;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+		"div",
+		/**
+		* El truco de `grid-template-rows` de 0fr a 1fr es lo que permite
+		* animar una altura que no se conoce de antemano. `max-height` obliga
+		* a inventar un número: si queda corto recorta la lista, y si queda
+		* largo la animación arranca con un tramo muerto.
+		*/
+		{
+			id: panelId,
+			ref: panelRef,
+			"aria-hidden": !abierto,
+			className: `grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none ${abierto ? "mt-3 grid-rows-[1fr] opacity-100" : "mt-0 grid-rows-[0fr] opacity-0"}`,
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "min-h-0 overflow-hidden",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "relative rounded-2xl bg-white p-5 pt-6 sm:p-8 sm:pt-9",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							"aria-hidden": true,
+							className: "absolute -top-2 size-4 -translate-x-1/2 rotate-45 rounded-[3px] bg-white",
+							style: { left: puntaIzquierda }
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+							type: "button",
+							onClick: onCerrar,
+							tabIndex: abierto ? 0 : -1,
+							"aria-label": `Cerrar ${contenido.nombre}`,
+							className: "absolute right-3 top-3 grid size-10 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] sm:right-5 sm:top-5",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+								className: "size-6",
+								"aria-hidden": true
+							})
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ListaDeNecesidades, {
+							seccion: contenido,
+							fechaInventario
+						})
+					]
+				})
+			})
+		}
+	);
+}
+function ListaDeNecesidades({ seccion, fechaInventario }) {
+	/**
+	* Solo los que tienen estado. Los que la hoja dejó sin anotar no se
+	* pueden ordenar ni etiquetar, y ponerlos con una etiqueta inventada
+	* sería peor que omitirlos.
+	*/
+	const elementos = (0, import_react.useMemo)(() => (seccion.elementos ?? []).map((e) => ({
+		elemento: e,
+		estado: estadoDe(e.nivel)
+	})).filter((x) => x.estado !== null), [seccion.elementos]);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+			className: "vc-titular pr-12 text-[clamp(1.375rem,3.4vw,2.25rem)] text-[#0079C1]",
+			children: seccion.nombre
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-1 text-base text-[#6B93AA]",
+			children: "De lo que más falta a lo que ya hay."
+		}),
+		elementos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-5 text-lg leading-8 text-[#35708F]",
+			children: "Por ahora no hay nada anotado en esta categoría."
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+			className: "mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+			children: elementos.map(({ elemento, estado }) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+				className: "rounded-xl border-l-[6px] bg-[#F2FAFD] px-4 py-3.5",
+				style: { borderLeftColor: estado.barra },
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "block text-[clamp(1rem,1.6vw,1.1875rem)] font-bold leading-snug text-[#123E5C]",
+					children: elemento.nombre
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "mt-2 inline-block rounded-full px-3 py-1 text-sm font-extrabold",
+					style: {
+						background: estado.fondo,
+						color: estado.texto
+					},
+					children: estado.etiqueta
+				})]
+			}, elemento.nombre))
+		})
+	] });
+}
+/**
 * StoryPage.tsx
 * -----------------------------------------------------------------------
 * El relato completo de la Ruta de la Solidaridad, de la portada al mapa.
@@ -5531,6 +6159,15 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 * van a sangre y el ancho máximo se controla adentro con `max-w-6xl`: al
 * revés, con una caja de color centrada, la pieza deja de leerse como
 * sistema y parece una tarjeta suelta en medio de la página.
+*
+* SOBRE EL ORDEN DE LAS SECCIONES
+*
+* "¿Qué hace falta hoy?" va tercera, apenas después del índice, y no al
+* final. Es la única de la página que pide algo en vez de informar, y la
+* única cuyo contenido caduca en horas: enterrarla debajo de ocho
+* secciones de balance la volvería decorativa. Quien entra a ver cómo va
+* la operación se encuentra primero con lo que puede hacer, y después con
+* el recuento.
 *
 * SOBRE EL RELLENO DE LAS BANDAS
 *
@@ -5604,6 +6241,11 @@ var NAV = [
 		icon: List
 	},
 	{
+		id: "que-hace-falta",
+		label: "¿Qué hace falta hoy?",
+		icon: HandHeart
+	},
+	{
 		id: "cuando",
 		label: "Momentos clave",
 		icon: CalendarDays
@@ -5664,6 +6306,7 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BalanceFinal, {})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(IndiceSection, {}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(QueHaceFaltaSection, {}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 				id: "cuando",
 				className: "vc-seccion bg-[#FBF8C6]",

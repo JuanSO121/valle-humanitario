@@ -28,7 +28,7 @@
  * el script. Con la cola viajan de a dos y ninguna se cae.
  *
  * Va acá y no en cada hook porque este es el único `fetch` del archivo:
- * un solo punto cubre las diez rutas.
+ * un solo punto cubre las once rutas.
  * -----------------------------------------------------------------------
  */
 import { enCola } from "@/infrastructure/api/colaDePeticiones";
@@ -40,6 +40,7 @@ import type {
   FlujosResponse,
   ToneladasResponse,
   AyudaResponse,
+  NecesidadesResponse,
   DestinoResumenLista,
   DestinoResumen,
   DestinoLogistica,
@@ -235,11 +236,20 @@ export class AyudasApiRepository {
   /**
    * Composición de lo entregado, grupos atendidos y canales.
    *
-   * Ya está publicada y verificada. Si falla, el tablero cae a las cifras
-   * del catálogo estático, que están viejas: ayudaData.ts declara 256.650
-   * unidades y el Excel tiene 96.360. Por eso conviene que ese respaldo
-   * no se use nunca, y que un fallo acá se reintente en vez de darse por
-   * definitivo.
+   * OJO CON EL TOTAL. Esta ruta suma ENVIOS_CATEGORIA.unidades, y esa
+   * columna está rota: en 242 de 553 pares destino-categoría no coincide
+   * con la suma de DETALLE_PRODUCTO, y la diferencia es de órdenes de
+   * magnitud (Sevilla / Aseo personal dice 10 donde el detalle suma
+   * 9.764; parece haberse cargado el conteo de renglones en vez de las
+   * unidades). El total que devuelve, 96.360, es 2,7 veces menor que el
+   * real, 256.263, y de ahí salen todos los porcentajes por categoría.
+   *
+   * Mientras la fuente no pase a DETALLE_PRODUCTO, las cifras de esta
+   * ruta se publican sabiendo que están mal.
+   *
+   * El respaldo estático de ayudaData.ts, en cambio, SÍ era correcto:
+   * sus 256.650 unidades y sus diez productos más entregados coinciden
+   * con DETALLE_PRODUCTO. Se creyó desactualizado y no lo estaba.
    */
   getAyuda(): Promise<AyudaResponse> {
     return this.request<AyudaResponse>("ayuda", {}, (p) => {
@@ -248,6 +258,31 @@ export class AyudasApiRepository {
       if (!Array.isArray(obj["categorias"])) return 'falta el campo "categorias" (array)';
       if (!Array.isArray(obj["poblaciones"])) return 'falta el campo "poblaciones" (array)';
       if (!Array.isArray(obj["canales"])) return 'falta el campo "canales" (array)';
+      return null;
+    });
+  }
+
+  /**
+   * Lo que falta hoy en el centro de acopio, de la hoja
+   * NECESIDADES_ACOPIO.
+   *
+   * Es la única ruta del tablero que caduca en horas: las demás cuentan
+   * lo que ya pasó. Si falla, la sección muestra las ilustraciones sin
+   * abrir ninguna lista, y eso es deliberado: no hay respaldo estático
+   * posible, porque una lista de necesidades sin fecha manda a la gente
+   * a donar lo que ya sobra.
+   *
+   * La validación de forma solo exige `secciones`. `fechaInventario`
+   * puede venir en null si ninguna fila vigente trae fecha legible, y en
+   * ese caso la sección se dibuja igual pero sin fechar: es peor no
+   * mostrar nada que mostrarlo sin fecha, porque la lista sigue siendo
+   * útil aunque no se sepa exactamente de cuándo es.
+   */
+  getNecesidades(): Promise<NecesidadesResponse> {
+    return this.request<NecesidadesResponse>("necesidades", {}, (p) => {
+      if (!p || typeof p !== "object") return "se esperaba un objeto";
+      const obj = p as Record<string, unknown>;
+      if (!Array.isArray(obj["secciones"])) return 'falta el campo "secciones" (array)';
       return null;
     });
   }

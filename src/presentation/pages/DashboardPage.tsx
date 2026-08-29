@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ClientOnly } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useOrigenes, useDestinos, useFlujos } from "@/application/hooks/useCatalogQueries";
 import { useFlujosPorLente } from "@/application/hooks/useFlujosPorLente";
 import {
@@ -234,6 +235,33 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
   const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
 
+  /**
+   * Volver a donde estaba la persona antes de bajar al mapa.
+   *
+   * El FocoContext guarda el `scrollTop` del relato justo antes de
+   * desplazarse hasta acá, así que `foco.volver()` devuelve al punto
+   * exacto, no al comienzo de la sección.
+   *
+   * También se resetea el viewState. Sin eso, la persona se iba con la
+   * ficha del municipio abierta y al bajar de nuevo al mapa se la
+   * encontraba abierta sin haberla pedido en ese momento.
+   */
+  const volverAlRelato = () => {
+    setViewState((prev) => viewTransitions.toAll(prev));
+    foco.volver();
+  };
+
+  /**
+   * Solo hay a dónde volver si se llegó por un enlace del relato. Quien
+   * bajó con el scroll no ve el botón, porque no habría nada distinto a
+   * donde ya está.
+   *
+   * En móvil se oculta mientras hay un panel abierto, igual que los
+   * demás controles: el panel ya ocupa la pantalla y tiene su propio
+   * cierre.
+   */
+  const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
+
   return (
     <div
       className={
@@ -286,9 +314,52 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         instant={viewState.timelineInstant}
       />
 
+      {/* Esquina superior izquierda, en una columna: primero cómo salir,
+          después cómo leer. La leyenda de orígenes ya vivía acá; el botón
+          de regreso se le pone encima en vez de buscarle otro rincón,
+          porque un "volver" en cualquier otro lado no se encuentra.
+
+          El contenedor va sin `pointer-events`, y cada hijo activa los
+          suyos: si no, esta caja invisible se comería los clics del mapa
+          en toda la esquina, incluso cuando no hay botón. */}
+      <div className="pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex flex-col items-start gap-2 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]">
+        {puedeVolver && (
+          <button
+            type="button"
+            onClick={volverAlRelato}
+            className="pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]"
+          >
+            <ArrowLeft className="size-4 shrink-0" aria-hidden />
+            {/* La etiqueta es opcional: quien no la declara al enfocar
+                obtiene un "Volver" a secas, que funciona igual. */}
+            <span className="min-w-0 truncate">
+              {foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"}
+            </span>
+          </button>
+        )}
+
+        {!viewState.destinoId && !viewState.origenId && (
+          <FlujosLegend compact={isMobile} />
+        )}
+      </div>
+
+      {/* El contenedor va SIN pointer-events. Antes era
+          `pointer-events-auto` y, como abarca todo el ancho, funcionaba
+          como una barra invisible que se comía los clics del borde
+          superior del mapa. Quien tiene que recibirlos es la píldora.
+
+          En móvil baja cuando hay botón de regreso, que ocupa la esquina
+          izquierda a esa misma altura. En escritorio no hace falta: uno
+          está a la izquierda y la otra al centro. */}
       {foco.categoria && resaltados && (
-        <div className="pointer-events-auto absolute inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex justify-center md:inset-x-0">
-          <div className="flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg">
+        <div
+          className={`pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${
+            puedeVolver
+              ? "top-[calc(3.75rem+env(safe-area-inset-top))]"
+              : "top-[calc(0.75rem+env(safe-area-inset-top))]"
+          }`}
+        >
+          <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg">
             <span className="text-base font-bold text-[#123E5C]">
               {resaltados.size} municipios recibieron {foco.categoria.toLowerCase()}
             </span>
@@ -313,15 +384,6 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           setViewState((prev) => viewTransitions.toAll(prev));
         }}
       />
-
-      {/* Leyenda de orígenes arriba a la izquierda, donde antes estaba
-          el panel de territorio. Es lo primero que hay que entender: de
-          dónde sale cada línea. */}
-      {!viewState.destinoId && !viewState.origenId && (
-        <div className="pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-10 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]">
-          <FlujosLegend compact={isMobile} />
-        </div>
-      )}
 
       {!hayPanelAbiertoEnMobile && (
         <TerritoryControls

@@ -17,6 +17,15 @@
  * revés, con una caja de color centrada, la pieza deja de leerse como
  * sistema y parece una tarjeta suelta en medio de la página.
  *
+ * SOBRE EL ORDEN DE LAS SECCIONES
+ *
+ * "¿Qué hace falta hoy?" va tercera, apenas después del índice, y no al
+ * final. Es la única de la página que pide algo en vez de informar, y la
+ * única cuyo contenido caduca en horas: enterrarla debajo de ocho
+ * secciones de balance la volvería decorativa. Quien entra a ver cómo va
+ * la operación se encuentra primero con lo que puede hacer, y después con
+ * el recuento.
+ *
  * SOBRE EL RELLENO DE LAS BANDAS
  *
  * Las tres constantes de abajo, BANDA_TITULAR, BANDA y BANDA_CIERRE,
@@ -61,6 +70,7 @@ import {
   List,
   CalendarDays,
   FileText,
+  HandHeart,
   Home,
   Lightbulb,
   Map,
@@ -84,6 +94,7 @@ import { SectionLabel } from "../components/storyPrimitives";
 import { MarcaFooter } from "../components/MarcaHeader";
 import { PiezaGrafica } from "../components/PiezaGrafica";
 import { IndiceSection } from "../components/IndiceSection";
+import { QueHaceFaltaSection } from "../components/QueHaceFaltaSection";
 const SCROLL_ROOT_ID = "ruta-solidaridad-scroll";
 
 /**
@@ -108,6 +119,7 @@ const NAV: NavItem[] = [
   { id: "inicio", label: "Inicio", icon: Home },
   { id: "balance", label: "Balance a la fecha", icon: FileText },
   { id: "indice", label: "Índice", icon: List },
+  { id: "que-hace-falta", label: "¿Qué hace falta hoy?", icon: HandHeart },
   { id: "cuando", label: "Momentos clave", icon: CalendarDays },
   { id: "municipios", label: "Municipios", icon: MapPin },
   { id: "que-se-entrego", label: "¿Qué se entregó?", icon: Package },
@@ -169,6 +181,10 @@ function Contenido() {
           <BalanceFinal />
         </section>
         <IndiceSection />
+        {/* Sin <section> envolviendo ni clases de relleno: el componente
+            emite la suya, con su `id` y su propio fondo, igual que
+            IndiceSection. */}
+        <QueHaceFaltaSection />
         {/* ── ¿Cuándo llegaron las ayudas? ──────────────────────────────
             Cuatro bandas: titular sobre cyan, cifras de movimiento sobre
             crema, el gráfico diario dentro de una banda azul, y el cierre
