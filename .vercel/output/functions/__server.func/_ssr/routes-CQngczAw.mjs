@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as PackageCheck, c as MapPin, d as HeartHandshake, f as FileText, g as Boxes, h as Building2, i as Package, l as List, m as CalendarDays, n as Warehouse, o as Menu, p as ChevronLeft, r as Truck, s as Map$1, t as X, u as House } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DX1LYdUI.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CQngczAw.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var ApiError = class extends Error {
@@ -2887,79 +2887,72 @@ function JornadaBars() {
 	const marcas = Array.from({ length: 5 }, (_, i) => tope / DIVISIONES * (DIVISIONES - i));
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("figure", {
 		className: "rounded-lg bg-white p-5 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-7",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("figcaption", {
-				className: "mb-1 text-sm font-bold uppercase tracking-widest text-[#00639F]",
-				children: "Entregas por día"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mb-5 text-base text-[#35708F]",
-				children: "Cada barra corresponde a una fecha; la barra amarilla representa el día con mayor número de entregas."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "-mx-1 overflow-x-auto px-1 pb-1",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "min-w-[34rem]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "grid grid-cols-[2.75rem_1fr]",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-								className: "flex h-56 flex-col justify-between pr-3 text-right text-xs tabular-nums text-[#6B93AA]",
-								children: marcas.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
-									className: "-translate-y-1/2 leading-none first:translate-y-0 last:translate-y-0",
-									children: Math.round(m).toLocaleString("es-CO")
-								}, `marca-${m}`))
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "relative h-56 border-b-2 border-l-2 border-[#123E5C]/20",
-								children: [marcas.slice(0, -1).map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"aria-hidden": true,
-									className: "absolute inset-x-0 h-px bg-[#123E5C]/8",
-									style: { bottom: `${m / tope * 100}%` }
-								}, `linea-${m}`)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "absolute inset-0 flex items-end gap-1.5 px-2 sm:gap-2",
-									children: jornadas.map((j) => {
-										const esPico = j.entregas === max;
-										return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "relative flex h-full min-w-0 flex-1 items-end",
-											title: `${Number(j.dia)} de agosto: ${j.entregas} entregas hacia ${j.municipios} municipios`,
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												className: "w-full rounded-t-sm transition-[height] duration-500 motion-reduce:transition-none",
-												style: {
-													height: `${Math.max(2, j.entregas / tope * 100)}%`,
-													background: esPico ? "#FFD400" : "#0079C1"
-												}
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "pointer-events-none absolute inset-x-0 text-center text-[11px] font-bold tabular-nums text-[#123E5C]",
-												style: { bottom: `calc(${Math.max(2, j.entregas / tope * 100)}% + 4px)` },
-												children: j.entregas
-											})]
-										}, j.fecha);
-									})
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mb-5 text-base text-[#35708F]",
+			children: "Cada barra corresponde a una fecha; la barra amarilla representa el día con mayor número de entregas."
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "-mx-1 overflow-x-auto px-1 pb-1",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-w-[34rem]",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "grid grid-cols-[2.75rem_1fr]",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "flex h-56 flex-col justify-between pr-3 text-right text-xs tabular-nums text-[#6B93AA]",
+							children: marcas.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
+								className: "-translate-y-1/2 leading-none first:translate-y-0 last:translate-y-0",
+								children: Math.round(m).toLocaleString("es-CO")
+							}, `marca-${m}`))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							className: "relative h-56 border-b-2 border-l-2 border-[#123E5C]/20",
+							children: [marcas.slice(0, -1).map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"aria-hidden": true,
+								className: "absolute inset-x-0 h-px bg-[#123E5C]/8",
+								style: { bottom: `${m / tope * 100}%` }
+							}, `linea-${m}`)), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "absolute inset-0 flex items-end gap-1.5 px-2 sm:gap-2",
+								children: jornadas.map((j) => {
+									const esPico = j.entregas === max;
+									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "relative flex h-full min-w-0 flex-1 items-end",
+										title: `${Number(j.dia)} de agosto: ${j.entregas} entregas hacia ${j.municipios} municipios`,
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "w-full rounded-t-sm transition-[height] duration-500 motion-reduce:transition-none",
+											style: {
+												height: `${Math.max(2, j.entregas / tope * 100)}%`,
+												background: esPico ? "#FFD400" : "#0079C1"
+											}
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "pointer-events-none absolute inset-x-0 text-center text-[11px] font-bold tabular-nums text-[#123E5C]",
+											style: { bottom: `calc(${Math.max(2, j.entregas / tope * 100)}% + 4px)` },
+											children: j.entregas
+										})]
+									}, j.fecha);
+								})
+							})]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "flex gap-1.5 px-2 pt-2 sm:gap-2",
+							children: jornadas.map((j) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "min-w-0 flex-1 text-center",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "block text-xs font-semibold tabular-nums text-[#35708F]",
+									children: Number(j.dia)
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "mt-1 block h-5 text-[11px] font-bold text-[#8A6A00]",
+									children: j.nuevos > 0 ? `+${j.nuevos}` : ""
 								})]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "flex gap-1.5 px-2 pt-2 sm:gap-2",
-								children: jornadas.map((j) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "min-w-0 flex-1 text-center",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "block text-xs font-semibold tabular-nums text-[#35708F]",
-										children: Number(j.dia)
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "mt-1 block h-5 text-[11px] font-bold text-[#8A6A00]",
-										children: j.nuevos > 0 ? `+${j.nuevos}` : ""
-									})]
-								}, `dia-${j.fecha}`))
-							})
-						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-1 text-xs text-[#6B93AA]",
-						children: "Los números en amarillo identifica el número de municipios que reciben ayuda por primera vez."
-					})]
-				})
+							}, `dia-${j.fecha}`))
+						})
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 text-xs text-[#6B93AA]",
+					children: "Los números en amarillo identifica el número de municipios que reciben ayuda por primera vez."
+				})]
 			})
-		]
+		})]
 	});
 }
 /**
@@ -4121,7 +4114,24 @@ var familiasDeAyuda = [
 * porcentajes falsos en vez de no mostrar ninguno. Conviene actualizarlo
 * o, mejor, quitar el respaldo y no dibujar los porcentajes sin datos.
 *
-* TRES CAMBIOS DE ESTA VERSIÓN
+* SOBRE LAS BANDAS
+*
+* La sección ahora emite sus propias franjas a sangre, como las de
+* "¿Cuándo llegaron las ayudas?" y "¿Cuánta ayuda recibió cada
+* municipio?": titular sobre cyan, contenido sobre el fondo de la
+* sección.
+*
+* Antes no las emitía, aunque el comentario de StoryPage decía que sí.
+* Como la <section> de allá no lleva `px-*` —justamente porque se
+* esperaba que el relleno lo pusiera cada banda de acá— el contenido
+* quedaba pegado al borde de la pantalla en todo lo que fuera menor a
+* 1152 px, que es donde `max-w-6xl` deja de tocar los lados.
+*
+* El titular va compuesto como el banner de la campaña: la primera
+* mitad dentro de una caja crema en azul, la segunda suelta en blanco
+* sobre el cyan.
+*
+* TRES CAMBIOS ANTERIORES QUE SIGUEN VIGENTES
 *
 * 1. El panel grande responde a la selección, con datos reales.
 *
@@ -4132,8 +4142,6 @@ var familiasDeAyuda = [
 *
 *    En vez de eso, al elegir una categoría la cifra grande pasa a ser
 *    las unidades de esa categoría, con su porcentaje y sus municipios.
-*    El peso queda abajo, con la aclaración de que es del departamento
-*    entero. Se gana la sensación de respuesta sin inventar un número.
 *
 * 2. Al elegir una categoría, la vista baja hasta la lista de artículos.
 *
@@ -4143,10 +4151,6 @@ var familiasDeAyuda = [
 *    mueve nada.
 *
 * 3. Cerrar es una X en la esquina, no un botón de texto abajo.
-*
-*    "Ver las ayudas mas entregadas" describía el destino en vez de la
-*    acción, y estaba al final de una lista larga: para volver había que
-*    recorrer toda la tarjeta. La X está donde se la busca.
 * -----------------------------------------------------------------------
 */
 function AyudaSection() {
@@ -4236,316 +4240,315 @@ function AyudaSection() {
 		label,
 		value
 	}));
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "mx-auto max-w-6xl",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: tituloComposicion(categorias, totalUnidades) }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-4 max-w-3xl text-lg leading-8 text-[#35708F]",
-				children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-3 max-w-2xl text-lg leading-8 text-[#35708F]",
-				children: "Seleccione una categoría para ver qué artículos incluyó."
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "text-center",
-					children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
-							children: categoria.unidades.toLocaleString("es-CO")
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-							className: "mt-3 block text-lg text-[#35708F]",
-							children: ["unidades de ", categoria.nombre.toLowerCase()]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-							className: "mt-2 block text-base leading-6 text-[#6B93AA]",
-							children: [
-								pctTexto(categoria.unidades),
-								" de toda la ayuda",
-								categoria.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-									" · ",
-									categoria.municipios,
-									" ",
-									categoria.municipios === 1 ? "municipio" : "municipios"
-								] })
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-							className: "mt-4 block border-t border-[#0079C1]/12 pt-3 text-[15px] leading-6 text-[#6B93AA]",
-							children: [
-								"El peso se registra por día y para todo el departamento",
-								toneladasMedidas ? ` (${totalToneladas.toLocaleString("es-CO")} t)` : "",
-								", no por categoría."
-							]
-						})
-					] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
-							children: totalToneladas.toLocaleString("es-CO")
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "mt-3 block text-lg text-[#35708F]",
-							children: "toneladas de ayuda"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "mt-2 block text-base leading-6 text-[#6B93AA]",
-							children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
-						})
-					] })
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						className: "text-xl font-semibold text-[#123E5C]",
-						children: "De qué está hecha esa ayuda"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
-						children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-							title: `${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(c.unidades)} de la ayuda`,
-							className: "block transition-opacity",
-							style: {
-								flex: c.unidades,
-								background: c.color,
-								opacity: activa && activa !== c.nombre ? .28 : 1
-							}
-						}, c.nombre))
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-4 flex flex-wrap gap-[3px] sm:gap-1",
-						children: waffle.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-							title: c.nombre,
-							className: "block size-[11px] rounded-[2px] sm:size-[15px] sm:rounded-[2.5px]",
-							style: {
-								background: c.color,
-								opacity: activa && activa !== c.nombre ? .28 : 1
-							}
-						}, `${c.nombre}-${i}`))
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-3 text-base text-[#6B93AA]",
-						children: "Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde cada categoría."
-					})
-				] })]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-				className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#35708F]",
-				children: familiasDeAyuda.map((f) => {
-					const colores = f.categorias.map((n) => categorias.find((c) => c.nombre === n)?.color).filter((c) => typeof c === "string");
-					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						className: "flex items-center gap-2",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-								className: "block h-2 w-6 rounded-sm",
-								style: { background: colores.length > 1 ? `linear-gradient(90deg, ${colores.join(",")})` : colores[0] ?? "#6B93AA" }
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "font-semibold text-[#123E5C]",
-								children: f.nombre
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "text-[#6B93AA]",
-								children: ["· ", f.categorias.join(", ")]
-							})
-						]
-					}, f.nombre);
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-					children: "Categorías"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-4 grid gap-2.5 sm:grid-cols-2",
-					children: categorias.map((c, i) => {
-						const seleccionada = activa === c.nombre;
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							type: "button",
-							"aria-pressed": seleccionada,
-							onClick: () => setActiva(seleccionada ? null : c.nombre),
-							style: { "--i": i },
-							className: `vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${seleccionada ? "-translate-y-0.5 text-white shadow-lg" : "bg-white hover:-translate-y-0.5 hover:shadow-md"} motion-reduce:hover:translate-y-0`,
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"aria-hidden": true,
-									className: "absolute inset-0 -z-10 transition-opacity duration-200",
-									style: {
-										background: c.color,
-										opacity: seleccionada ? 1 : 0
-									}
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"aria-hidden": true,
-									className: "absolute inset-y-0 left-0 w-1",
-									style: { background: seleccionada ? "transparent" : c.color }
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "flex items-baseline justify-between gap-3",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: `min-w-0 truncate text-base font-semibold ${seleccionada ? "text-white" : "text-[#123E5C]"}`,
-										children: c.nombre
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: `shrink-0 text-2xl font-extrabold ${seleccionada ? "text-white" : "text-[#0079C1]"}`,
-										children: pctTexto(c.unidades)
-									})]
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-										className: "vc-crece block h-full rounded-full",
-										style: {
-											width: `${c.unidades / maxUnidades * 100}%`,
-											background: seleccionada ? "#FFFFFF" : c.color,
-											"--i": i
-										}
-									})
-								}),
-								c.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: `mt-2.5 block text-[15px] ${seleccionada ? "text-white/85" : "text-[#6B93AA]"}`,
-									children: [
-										"Llegó a ",
-										c.municipios,
-										" ",
-										c.municipios === 1 ? "municipio" : "municipios"
-									]
-								})
-							]
-						}, c.nombre);
-					})
-				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					ref: panelRef,
-					className: "scroll-mt-6 lg:sticky lg:top-6",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-						className: "relative",
-						children: [
-							categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-								type: "button",
-								onClick: () => setActiva(null),
-								"aria-label": `Cerrar ${categoria.nombre} y volver a lo más entregado`,
-								className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
-									className: "size-5",
-									"aria-hidden": true
-								})
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "pr-10 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-								children: categoria ? categoria.nombre : "Lo más entregado"
-							}),
-							productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-								className: "mt-4 flex flex-col gap-3",
-								children: productos.map((prod, i) => {
-									const maximo = Math.max(1, ...productos.map((x) => x.value));
-									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-										style: { "--i": i },
-										className: "vc-aparece",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "flex items-baseline justify-between gap-3",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "min-w-0 truncate text-base text-[#35708F]",
-												children: prod.label
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-												className: "shrink-0 tabular-nums text-[#123E5C]",
-												children: prod.value.toLocaleString("es-CO")
-											})]
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-											className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
-											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-												className: "vc-crece block h-full rounded-full",
-												style: {
-													width: `${prod.value / maximo * 100}%`,
-													background: prod.color ?? "#0079C1",
-													"--i": i
-												}
-											})
-										})]
-									}, prod.label);
-								})
-							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-4 text-base text-[#6B93AA]",
-								children: "No hay detalle de artículos para esta categoría."
-							}),
-							categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-6 border-t border-[#0079C1]/12 pt-5",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-									type: "button",
-									onClick: () => enfocarCategoria(categoria.nombre),
-									className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
-									children: "Ver en el mapa dónde llegó"
-								})
-							})
-						]
-					}, categoria?.nombre ?? "general")
-				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-12 md:px-10",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "mx-auto max-w-6xl",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+				className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] leading-[1.4] text-white",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-						className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
-						children: "A quién se dirigió la ayuda"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
-						children: "Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar varios, así que la suma es mayor que el total de entregas."
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3",
-						children: poblaciones.map(([nombre, entregas]) => {
-							const maximo = Math.max(1, ...poblaciones.map(([, v]) => v));
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-baseline justify-between gap-3",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "min-w-0 truncate text-base text-white sm:text-lg",
-									children: nombre
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-									className: "shrink-0 text-xl font-extrabold text-[#FBF8C6]",
-									children: entregas
-								})]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "mt-2 h-[6px] overflow-hidden rounded-full bg-white/25",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-									className: "block h-full rounded-full bg-[#FFD400]",
-									style: { width: `${entregas / maximo * 100}%` }
-								})
-							})] }, nombre);
-						})
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "La mayor parte de la ayuda" }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "box-decoration-clone bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-[#0079C1]",
+						children: "es aseo, comida y agua"
 					})
 				]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mt-6",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
-					" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
-					" ",
-					toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría." : "Las toneladas son una estimación a partir del número de entregas."
-				] })
 			})
-		]
-	});
-}
-/**
-* El titular nombra las categorías reales, así que cambia con los datos.
-*
-* El anterior estaba escrito a mano y decía "aseo, comida y agua", pero
-* aseo personal es la sexta categoría con el 8 por ciento. Las tres
-* primeras hoy son alimentos, descanso y abrigo, y protección y
-* seguridad. Un titular a mano en una página que se actualiza sola
-* envejece sin que nadie se entere.
-*/
-function tituloComposicion(categorias, totalUnidades) {
-	const conDatos = categorias.filter((c) => c.unidades > 0);
-	if (conDatos.length < 3 || totalUnidades <= 0) return "De qué está hecha la ayuda entregada";
-	const top = [...conDatos].sort((a, b) => b.unidades - a.unidades).slice(0, 3);
-	const suma = top.reduce((acc, c) => acc + c.unidades, 0);
-	const porcentaje = Math.round(suma / totalUnidades * 100);
-	const nombres = top.map((c) => c.nombre.toLowerCase());
-	const lista = `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
-	return `${lista.charAt(0).toUpperCase()}${lista.slice(1)} son el ${porcentaje}% de la ayuda`;
+		})
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mx-auto max-w-6xl",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "max-w-3xl text-lg leading-8 text-[#35708F]",
+					children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 max-w-2xl text-lg leading-8 text-[#35708F]",
+					children: "Seleccione una categoría para ver qué artículos incluyó."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "text-center",
+						children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
+								children: categoria.unidades.toLocaleString("es-CO")
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "mt-3 block text-lg text-[#35708F]",
+								children: ["unidades de ", categoria.nombre.toLowerCase()]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "mt-2 block text-base leading-6 text-[#6B93AA]",
+								children: [
+									pctTexto(categoria.unidades),
+									" de toda la ayuda",
+									categoria.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+										" · ",
+										categoria.municipios,
+										" ",
+										categoria.municipios === 1 ? "municipio" : "municipios"
+									] })
+								]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+								className: "mt-4 block border-t border-[#0079C1]/12 pt-3 text-[15px] leading-6 text-[#6B93AA]",
+								children: [
+									"El peso se registra por día y para todo el departamento",
+									toneladasMedidas ? ` (${totalToneladas.toLocaleString("es-CO")} t)` : "",
+									", no por categoría."
+								]
+							})
+						] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+								className: "block font-serif text-[64px] leading-none tracking-[-0.02em] text-[#0079C1]",
+								children: totalToneladas.toLocaleString("es-CO")
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-3 block text-lg text-[#35708F]",
+								children: "toneladas de ayuda"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-2 block text-base leading-6 text-[#6B93AA]",
+								children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
+							})
+						] })
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "text-xl font-semibold text-[#123E5C]",
+							children: "De qué está hecha esa ayuda"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
+							children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								title: `${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(c.unidades)} de la ayuda`,
+								className: "block transition-opacity",
+								style: {
+									flex: c.unidades,
+									background: c.color,
+									opacity: activa && activa !== c.nombre ? .28 : 1
+								}
+							}, c.nombre))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-4 flex flex-wrap gap-[3px] sm:gap-1",
+							children: waffle.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								title: c.nombre,
+								className: "block size-[11px] rounded-[2px] sm:size-[15px] sm:rounded-[2.5px]",
+								style: {
+									background: c.color,
+									opacity: activa && activa !== c.nombre ? .28 : 1
+								}
+							}, `${c.nombre}-${i}`))
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-3 text-base text-[#6B93AA]",
+							children: "Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde cada categoría."
+						})
+					] })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#35708F]",
+					children: familiasDeAyuda.map((f) => {
+						const colores = f.categorias.map((n) => categorias.find((c) => c.nombre === n)?.color).filter((c) => typeof c === "string");
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+									className: "block h-2 w-6 rounded-sm",
+									style: { background: colores.length > 1 ? `linear-gradient(90deg, ${colores.join(",")})` : colores[0] ?? "#6B93AA" }
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+									className: "font-semibold text-[#123E5C]",
+									children: f.nombre
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "text-[#6B93AA]",
+									children: ["· ", f.categorias.join(", ")]
+								})
+							]
+						}, f.nombre);
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+						children: "Categorías"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-4 grid gap-2.5 sm:grid-cols-2",
+						children: categorias.map((c, i) => {
+							const seleccionada = activa === c.nombre;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								"aria-pressed": seleccionada,
+								onClick: () => setActiva(seleccionada ? null : c.nombre),
+								style: { "--i": i },
+								className: `vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${seleccionada ? "-translate-y-0.5 text-white shadow-lg" : "bg-white hover:-translate-y-0.5 hover:shadow-md"} motion-reduce:hover:translate-y-0`,
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": true,
+										className: "absolute inset-0 -z-10 transition-opacity duration-200",
+										style: {
+											background: c.color,
+											opacity: seleccionada ? 1 : 0
+										}
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": true,
+										className: "absolute inset-y-0 left-0 w-1",
+										style: { background: seleccionada ? "transparent" : c.color }
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: "flex items-baseline justify-between gap-3",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: `min-w-0 truncate text-base font-semibold ${seleccionada ? "text-white" : "text-[#123E5C]"}`,
+											children: c.nombre
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: `shrink-0 text-2xl font-extrabold ${seleccionada ? "text-white" : "text-[#0079C1]"}`,
+											children: pctTexto(c.unidades)
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+											className: "vc-crece block h-full rounded-full",
+											style: {
+												width: `${c.unidades / maxUnidades * 100}%`,
+												background: seleccionada ? "#FFFFFF" : c.color,
+												"--i": i
+											}
+										})
+									}),
+									c.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+										className: `mt-2.5 block text-[15px] ${seleccionada ? "text-white/85" : "text-[#6B93AA]"}`,
+										children: [
+											"Llegó a ",
+											c.municipios,
+											" ",
+											c.municipios === 1 ? "municipio" : "municipios"
+										]
+									})
+								]
+							}, c.nombre);
+						})
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						ref: panelRef,
+						className: "scroll-mt-6 lg:sticky lg:top-6",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+							className: "relative",
+							children: [
+								categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+									type: "button",
+									onClick: () => setActiva(null),
+									"aria-label": `Cerrar ${categoria.nombre} y volver a lo más entregado`,
+									className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+										className: "size-5",
+										"aria-hidden": true
+									})
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "pr-10 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+									children: categoria ? categoria.nombre : "Lo más entregado"
+								}),
+								productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+									className: "mt-4 flex flex-col gap-3",
+									children: productos.map((prod, i) => {
+										const maximo = Math.max(1, ...productos.map((x) => x.value));
+										return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+											style: { "--i": i },
+											className: "vc-aparece",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+												className: "flex items-baseline justify-between gap-3",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+													className: "min-w-0 truncate text-base text-[#35708F]",
+													children: prod.label
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+													className: "shrink-0 tabular-nums text-[#123E5C]",
+													children: prod.value.toLocaleString("es-CO")
+												})]
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+												className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
+												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+													className: "vc-crece block h-full rounded-full",
+													style: {
+														width: `${prod.value / maximo * 100}%`,
+														background: prod.color ?? "#0079C1",
+														"--i": i
+													}
+												})
+											})]
+										}, prod.label);
+									})
+								}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+									className: "mt-4 text-base text-[#6B93AA]",
+									children: "No hay detalle de artículos para esta categoría."
+								}),
+								categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-6 border-t border-[#0079C1]/12 pt-5",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										type: "button",
+										onClick: () => enfocarCategoria(categoria.nombre),
+										className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
+										children: "Ver en el mapa dónde llegó"
+									})
+								})
+							]
+						}, categoria?.nombre ?? "general")
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+							className: "vc-titular text-[clamp(1.5rem,4vw,2.5rem)] text-[#FBF8C6]",
+							children: "A quién se dirigió la ayuda"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-3 max-w-2xl text-base leading-7 text-white sm:text-lg",
+							children: "Entregas que declararon ayuda dirigida a un grupo. Una misma entrega puede nombrar varios, así que la suma es mayor que el total de entregas."
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "mt-8 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3",
+							children: poblaciones.map(([nombre, entregas]) => {
+								const maximo = Math.max(1, ...poblaciones.map(([, v]) => v));
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+									className: "flex items-baseline justify-between gap-3",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "min-w-0 truncate text-base text-white sm:text-lg",
+										children: nombre
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "shrink-0 text-xl font-extrabold text-[#FBF8C6]",
+										children: entregas
+									})]
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-2 h-[6px] overflow-hidden rounded-full bg-white/25",
+									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+										className: "block h-full rounded-full bg-[#FFD400]",
+										style: { width: `${entregas / maximo * 100}%` }
+									})
+								})] }, nombre);
+							})
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-6",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
+						" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
+						" ",
+						toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría." : "Las toneladas son una estimación a partir del número de entregas."
+					] })
+				})
+			]
+		})
+	})] });
 }
 var canalesPresentacion = [
 	{
@@ -4619,8 +4622,8 @@ function CanalesSection() {
 	* entra: sus entregas llegaron a municipios que ya están contados.
 	*/
 	const rutasFueraDelConteo = rutas.filter((r) => r.id !== "cartago");
-	const entregasFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
-	const unidadesFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.unidades, 0);
+	rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
+	rutasFueraDelConteo.reduce((sum, r) => sum + r.unidades, 0);
 	/**
 	* Toneladas por ruta, estimadas. El peso se reparte entre TODAS las
 	* entregas conocidas: las que el mapa dibuja más las que no tienen
@@ -4658,23 +4661,9 @@ function CanalesSection() {
 					]
 				}, c.id))
 			})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
-					children: [
-						"El conteo por municipio deja fuera ",
-						unidadesFuera.toLocaleString("es-CO"),
-						" unidades",
-						entregasFuera > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-							" ",
-							"repartidas en ",
-							entregasFuera.toLocaleString("es-CO"),
-							" entregas, unas",
-							" ",
-							toneladasDe(entregasFuera).toLocaleString("es-CO"),
-							" toneladas"
-						] }) : null,
-						". Cartago aparece acá como ruta, pero lo suyo ya está contado en los municipios que recibieron."
-					]
+					children: "El conteo por municipio deja fuera estas rutas. Suman 121 entregas y unas 166 toneladas que también se movieron."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mt-9 grid gap-4 lg:grid-cols-2",
@@ -5459,13 +5448,19 @@ function Contenido() {
 						className: "bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-								className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] text-[#FBF8C6]",
-								children: "Momentos Clave"
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
+								className: "vc-titular max-w-4xl text-[clamp(2rem,6.5vw,4.5rem)] leading-[1.25] text-white",
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: "box-decoration-clone bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-[#0079C1]",
+										children: "Momentos"
+									}),
+									" ",
+									"Clave"
+								]
 							})
 						})
 					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(BandaRotulo, { children: momentoClave(op.picoEntregas?.dia, op.picoCobertura?.dia) }),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "px-4 py-12 sm:px-6 sm:py-14 md:px-10",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -5475,34 +5470,22 @@ function Contenido() {
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "bg-[#0079C1] px-4 py-12 sm:px-6 sm:py-14 md:px-10",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-white",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "vc-resaltado",
-									children: "Ritmo"
-								}), " de la operación"]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "mt-8",
 								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(JornadaBars, {})
-							})]
+							})
 						})
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 						className: "px-4 py-12 pb-16 sm:px-6 sm:py-14 md:px-10",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 							className: "mx-auto max-w-6xl",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", {
-								className: "vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] text-[#0079C1]",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "vc-resaltado",
-									children: "Municipios"
-								}), " que se van sumando"]
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "mt-8 space-y-14",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipiosNuevosCallouts, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EvolucionHeatmap, { onSelect: irAlMapa })]
-							})]
+							})
 						})
 					})
 				]
@@ -5603,7 +5586,7 @@ function Contenido() {
 				className: "bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-33",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "block font-serif text-xl text-[#FBF8C6]",
+						className: "block font-serif text-xl text-[#fbf8c6]",
 						children: "Ruta de la Solidaridad"
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
@@ -5646,45 +5629,6 @@ function BandaRotulo({ children }) {
 			children
 		})
 	});
-}
-/**
-* El hallazgo del calendario, para el rótulo de la banda azul.
-*
-* Devuelve nodos y no una cadena porque el día va dentro de un recuadro
-* amarillo: es el único dato variable del rótulo y es lo que el lector
-* tiene que retener.
-*
-* Los dos casos son distintos de verdad. Cuando el día de más entregas
-* es también el de más municipios nuevos, hubo un solo pico y decirlo en
-* una frase es más claro. Cuando son días distintos, el dato es
-* justamente que el volumen y la cobertura no se movieron juntos.
-*/
-function momentoClave(diaPico, diaCobertura) {
-	if (!diaPico || !diaCobertura) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		className: "vc-resaltado",
-		children: "Día a día"
-	}), " de la operación"] });
-	if (diaPico === diaCobertura) return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-		"El ",
-		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-			className: "vc-resaltado",
-			children: [Number(diaPico), " de agosto"]
-		}),
-		" se entregó más que ningún otro día"
-	] });
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-		"El ",
-		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-			className: "vc-resaltado",
-			children: [Number(diaCobertura), " de agosto"]
-		}),
-		" se llegó a más municipios y el ",
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "vc-resaltado",
-			children: Number(diaPico)
-		}),
-		" se entregó más"
-	] });
 }
 /**
 * routes/index.tsx
