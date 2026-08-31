@@ -9,7 +9,6 @@
  * dominio.
  * -----------------------------------------------------------------------
  */
-
 export interface Origen {
   id: string; // "ORI-CALI" | "ORI-CARTAGO" | "ORI-EXTERNO"
   nombre: string;
@@ -17,7 +16,6 @@ export interface Origen {
   longitud: number | null;
   animable: boolean;
 }
-
 export interface Municipio {
   id: string;
   codigoDane: string;
@@ -26,12 +24,10 @@ export interface Municipio {
   latitud: number;
   longitud: number;
 }
-
 export interface Categoria {
   id: string;
   nombre: string;
 }
-
 export interface DestinoRef {
   id: string;
   nombre: string;
@@ -39,13 +35,11 @@ export interface DestinoRef {
   latitud: number | null;
   longitud: number | null;
 }
-
 /** Un punto por fecha dentro de un flujo, habilita el timeline. */
 export interface FlujoFecha {
   fecha: string; // ISO yyyy-MM-dd
   despachosCount: number;
 }
-
 /**
  * Una fila de route=flujos: un par (origen, destino) con al menos un
  * despacho real. `despachosCount` es la única métrica que debe alimentar
@@ -59,19 +53,16 @@ export interface Flujo {
   ultimaFecha: string | null;
   porFecha: FlujoFecha[];
 }
-
 export interface FlujoExcluido {
   despachoId: string;
   origenId: string;
   destinoId: string;
   motivo: "ORIGEN_SIN_COORDENADA" | "DESTINO_SIN_COORDENADA";
 }
-
 export interface FlujosResponse {
   flujos: Flujo[];
   excluidos: FlujoExcluido[];
 }
-
 /**
  * route=toneladas, hoja TONELADAS.
  *
@@ -87,12 +78,17 @@ export interface ToneladasPunto {
   toneladas: number;
   acumulado: number;
 }
-
 export interface ToneladasResponse {
   serie: ToneladasPunto[];
   total: number;
   fuente: "TONELADAS";
   disclaimer: string;
+}
+
+/** Un artículo entregado, con su cantidad ya sumada. */
+export interface ProductoEntregado {
+  nombre: string;
+  unidades: number;
 }
 
 /**
@@ -103,12 +99,20 @@ export interface ToneladasResponse {
  * van separados: decir que una categoría llegó a 44 municipios en un
  * departamento de 41 es lo que pasaba al usar el primero.
  *
- * OJO CON `unidades`. Hoy sale de ENVIOS_CATEGORIA, y esa columna está
- * rota: en 242 de 553 pares destino-categoría no coincide con la suma de
- * DETALLE_PRODUCTO, y la diferencia no es sutil (Sevilla / Aseo personal
- * dice 10 donde el detalle suma 9.764). El total publicado, 96.360, es
- * 2,7 veces menor que el real, 256.263. Cuando la fuente pase a
- * DETALLE_PRODUCTO, todos los porcentajes de esta respuesta cambian.
+ * DE DÓNDE SALEN LAS UNIDADES
+ *
+ * De DETALLE_PRODUCTO, una fila por artículo entregado. Antes salían de
+ * ENVIOS_CATEGORIA.unidades, que está rota: en 242 de 553 pares
+ * destino-categoría no coincidía con la suma real, y no por poco
+ * —Sevilla / Aseo personal decía 10 donde el detalle suma 9.764—, así
+ * que el tablero publicaba 96.360 unidades contra las 256.263 reales.
+ *
+ * ENVIOS_CATEGORIA sigue mandando en qué pares destino-categoría
+ * existen y en `renglones`, pero la cantidad ya no.
+ *
+ * Once pares no tienen ninguna fila de detalle y conservan el valor de
+ * la hoja: son 558 unidades, casi todas de Mascotas, y quedan
+ * reportadas como UNIDADES_SIN_DETALLE en el diagnóstico.
  */
 export interface CategoriaAyudaApi {
   id: string;
@@ -127,14 +131,35 @@ export interface CategoriaAyudaApi {
    * traerlo, y eso no debe romper el tipado ni la sección.
    */
   municipiosNombres?: string[];
+  /**
+   * Los más entregados de esta categoría, de mayor a menor, recortados a
+   * los doce primeros por el backend.
+   *
+   * Son la razón de existir de DETALLE_PRODUCTO. Antes esta lista vivía
+   * escrita a mano en ayudaData.ts y contradecía al propio tablero en la
+   * misma pantalla: "Tapabocas 17.100" al lado de "Protección y
+   * seguridad: 11.167 unidades". Ahora los productos y las unidades
+   * nacen del mismo sitio y no pueden volver a divergir.
+   *
+   * Opcional por la misma razón que `municipiosNombres`: un Web App
+   * desplegado de antes no los trae.
+   */
+  productos?: ProductoEntregado[];
+  /**
+   * Cuántos artículos distintos tiene la categoría en total, ANTES del
+   * recorte a doce.
+   *
+   * Sin este número, "12 de 12" y "12 de 102" se ven igual en la página,
+   * y una lista parece completa cuando es la punta de otra mucho más
+   * larga. Aseo personal tiene 102 productos distintos; Salud, tres.
+   */
+  productosDistintos?: number;
 }
-
 export interface PoblacionAtendida {
   nombre: string;
   /** Despachos que declaran esta población. Un despacho puede declarar varias. */
   despachos: number;
 }
-
 export interface CanalApi {
   /**
    * Id del GRUPO, no de un destino: "cali", "multiples" o
@@ -151,16 +176,29 @@ export interface CanalApi {
   destinos: number;
   categorias: Array<{ nombre: string; unidades: number }>;
 }
-
 export interface AyudaResponse {
   totalUnidades: number;
   categorias: CategoriaAyudaApi[];
+  /**
+   * Los más entregados de toda la operación, para "Lo más entregado"
+   * cuando no hay categoría elegida.
+   *
+   * Lo calcula el backend y NO se puede armar sumando las listas por
+   * categoría: cada una viene recortada a sus doce primeros, así que el
+   * resultado sería un ranking de los recortes.
+   */
+  productosDestacados?: ProductoEntregado[];
   poblaciones: PoblacionAtendida[];
   canales: CanalApi[];
-  fuente: "ENVIOS_CATEGORIA";
+  /**
+   * La unión admite las dos porque el valor cambia con el despliegue:
+   * "ENVIOS_CATEGORIA" es lo que devuelve un Web App anterior al cambio
+   * de fuente, y sirve de señal de que las cifras que se están viendo
+   * son las viejas.
+   */
+  fuente: "DETALLE_PRODUCTO" | "ENVIOS_CATEGORIA";
   disclaimer: string;
 }
-
 /** route=destinos, listado liviano para poblar el mapa. */
 export interface DestinoResumenLista {
   id: string;
@@ -168,18 +206,24 @@ export interface DestinoResumenLista {
   tipo: string;
   latitud: number | null;
   longitud: number | null;
+  /** Mismo origen que en route=ayuda: la suma de DETALLE_PRODUCTO. */
   totalUnidades: number;
   categoriasConEnvio: number;
 }
-
-/** route=destino&id=, vista PRINCIPAL, solo ENVIOS_CATEGORIA. */
+/**
+ * route=destino&id=, vista PRINCIPAL.
+ *
+ * Qué categorías tiene el destino lo dice ENVIOS_CATEGORIA; cuántas
+ * unidades, DETALLE_PRODUCTO. Por eso `fuente` sigue diciendo
+ * ENVIOS_CATEGORIA aunque las cantidades ya no salgan de ahí: nombra la
+ * tabla que define las filas, no la que aporta los números.
+ */
 export interface CategoriaEntregada {
   id: string;
   nombre: string;
   unidades: number;
   porcentaje: number;
 }
-
 export interface DestinoResumen {
   destino: DestinoRef;
   resumen: {
@@ -191,7 +235,6 @@ export interface DestinoResumen {
   fuente: "ENVIOS_CATEGORIA";
   disclaimer: string;
 }
-
 /** route=destino-logistica&id=, vista SECUNDARIA, solo DESPACHOS. Nunca sumar contra DestinoResumen. */
 export interface DespachoLogistico {
   id: string;
@@ -208,14 +251,12 @@ export interface DespachoLogistico {
   documento: { id: string; nombre: string; driveUrl: string } | null;
   observaciones: string | null;
 }
-
 export interface DestinoLogistica {
   destinoId: string;
   despachos: DespachoLogistico[];
   fuente: "DESPACHOS";
   disclaimer: string;
 }
-
 export interface Meta {
   evento: string;
   entidad: string;
@@ -232,6 +273,7 @@ export interface Meta {
     municipiosAtendidos?: number;
     municipiosTotales?: number;
     ultimoDespacho?: string | null;
+    /** Con el cambio de fuente pasa de 96.360 a 256.263. */
     unidadesEntregadas: number;
     destinosConEnvio: number;
     categorias: number;
@@ -239,7 +281,6 @@ export interface Meta {
   };
   validacion: { advertencias: number; detalle: unknown[] };
 }
-
 /**
  * route=necesidades, hoja NECESIDADES_ACOPIO.
  *
@@ -283,7 +324,6 @@ export interface ElementoNecesario {
   categoriaBase: string | null;
   observacion: string | null;
 }
-
 export interface SeccionNecesidades {
   /**
    * El nombre tal como está en la hoja: "Alimentos y no perecederos",
@@ -300,7 +340,6 @@ export interface SeccionNecesidades {
   /** Elementos con nivel 0, para que la tarjeta avise sin abrirse. */
   urgentes: number;
 }
-
 export interface NecesidadesResponse {
   /** ISO yyyy-MM-dd del inventario más reciente entre las filas vigentes. */
   fechaInventario: string | null;

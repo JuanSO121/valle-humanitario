@@ -9,7 +9,7 @@
  *
  * Agotado, Escaso o Buena cantidad. Son las palabras del papel del
  * acopio —NADA, POCO, BASTANTE— dichas en lenguaje corriente, y su
- * significado se explica en la leyenda del final de la sección.
+ * significado se explica en la leyenda.
  *
  * Que aparezca el estado es lo que permite mostrar también lo que está
  * en buena cantidad. Sin etiqueta, una lista solo puede leerse como
@@ -31,6 +31,19 @@
  *
  * Quien lee esto está decidiendo si sale a comprar algo. No aparecen
  * «URGENTE», «nivel 0», «existencias en bodega» ni «inventario».
+ *
+ * POR QUÉ LAS CUATRO ILUSTRACIONES VAN EN UNA TARJETA
+ *
+ * Porque no comparten ninguna geometría. Cada PNG tiene su píldora en una
+ * esquina distinta, su dibujo desbordando hacia otro lado y proporciones
+ * que van de 1,97 a 2,84. Sueltas en la rejilla, con ancho fijo, la más
+ * apaisada medía 146 px de alto y la más cuadrada 213: las filas quedaban
+ * desparejas por 67 px, ninguna píldora coincidía con la de al lado y el
+ * ojo buscaba una cuadrícula que no existía. Eso era la desconexión.
+ *
+ * La tarjeta lo resuelve con dos cosas: un contenedor idéntico para las
+ * cuatro y una caja de imagen de ALTO FIJO con `object-contain`. Lo que
+ * cambia entre una y otra pasa a ser el dibujo, no el encuadre.
  *
  * POR QUÉ EL CAJÓN OCUPA LA FILA ENTERA
  *
@@ -76,7 +89,7 @@ const SOMBRA_ACTIVA = "drop-shadow(0 14px 20px rgba(0,0,0,0.32))";
 
 interface Estado {
   etiqueta: string;
-  /** Qué significa. Se muestra en la leyenda del final de la sección. */
+  /** Qué significa. Se muestra en la leyenda. */
   glosa: string;
   barra: string;
   fondo: string;
@@ -143,6 +156,25 @@ interface Ilustracion {
   claves: string[];
   src: string;
   alt: string;
+  /**
+   * Ancho de esta ilustración dentro de su caja, de 0 a 1. Por omisión 1.
+   *
+   * Existe para una sola cosa: emparejar el tamaño de las PÍLDORAS, que
+   * es lo único que el ojo compara entre las cuatro tarjetas.
+   *
+   * Normalizar por ancho ya deja tres de las cuatro casi iguales, porque
+   * las píldoras ocupan entre el 90% y el 97% del ancho de su lienzo. La
+   * de aseo desentona porque está dibujada más alta —240 px contra los
+   * ~177 de las demás— y por eso baja al 75%: con ese valor su píldora
+   * mide 95,6 px contra 94,9, 101,9 y 95,8 de las otras tres.
+   *
+   * OJO: el valor pertenece al ARCHIVO, no a la categoría. Si se
+   * reemplaza un PNG por otro con distinta composición, hay que volver a
+   * mirarlo o la tarjeta vuelve a desentonar. La solución de fondo es
+   * pedir los cuatro con la píldora del mismo tamaño; entonces esto se
+   * puede borrar.
+   */
+  escala?: number;
 }
 
 /**
@@ -158,23 +190,39 @@ const ILUSTRACIONES: Ilustracion[] = [
     claves: ["ALIMENTO", "PERECEDERO", "COMIDA", "MERCADO"],
     src: "/marca/que-hace-falta-alimentos.png",
     alt: "Alimentos no perecederos: arroz, pasta, lentejas, frijoles, harina, azúcar, sal, atún, sardinas, enlatados, aceite.",
+    escala: 0.75,
   },
   {
     claves: ["ASEO", "HIGIENE"],
     src: "/marca/que-hace-falta-aseo.png",
     alt: "Aseo personal: papel higiénico, kit de higiene, cepillos y pasta dental, jabón.",
+    // Su píldora está dibujada un 35% más alta que la de las otras tres.
+    escala: 0.75,
   },
   {
     claves: ["DORMIR", "ABRIGO", "COLCHON", "DESCANSO"],
     src: "/marca/que-hace-falta-dormir.png",
     alt: "Elementos para dormir y abrigo: colchonetas, almohadas, cobijas, sábanas y ropa de abrigo.",
+    escala: 0.75,
   },
   {
     claves: ["OTRO"],
     src: "/marca/que-hace-falta-otros.png",
     alt: "Otros elementos necesarios: agua potable, pañales, detergente, cloro, limpiador multiusos, botiquín, bolsas de basura, linterna, pilas y guantes.",
+    escala: 0.75,
   },
+  
 ];
+
+/**
+ * La caja de la ilustración.
+ *
+ * `flex-1` y no un alto fijo: la caja crece hasta llenar lo que le deja
+ * la tarjeta, y la tarjeta se estira a la altura de su vecina por el
+ * `stretch` de la rejilla. Así las dos de una fila terminan del mismo
+ * alto sin que haya que declarar ningún número.
+ */
+const CAJA_ILUSTRACION = "flex w-full flex-1 items-center justify-center";
 
 function normalizar(texto: string): string {
   return texto
@@ -206,20 +254,6 @@ function ilustracionDe(nombreSeccion: string): Ilustracion | undefined {
   }
 
   return encontrada;
-}
-
-const MESES = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-];
-
-/** "2026-08-29" a "29 de agosto". El año sobra: es la emergencia de ahora. */
-function fechaCorta(iso: string | null): string {
-  if (!iso) return "";
-  const [, mes, dia] = iso.split("-");
-  const nombreMes = MESES[Number(mes) - 1];
-  if (!dia || !nombreMes) return iso;
-  return `${Number(dia)} de ${nombreMes}`;
 }
 
 /**
@@ -266,18 +300,12 @@ export function QueHaceFaltaSection() {
    *
    * El cajón puede medir varios cientos de píxeles. Al colapsarlo, todo
    * lo que estaba debajo sube de golpe y la persona se queda mirando la
-   * sección siguiente sin haber pedido moverse: cerró algo y el mundo se
-   * desplazó solo. Recentrar las tarjetas devuelve el punto de partida y
-   * deja claro que puede abrir otra.
+   * sección siguiente sin haber pedido moverse. Recentrar las tarjetas
+   * devuelve el punto de partida y deja claro que puede abrir otra.
    *
    * `anterior` distingue un cierre real de la carga inicial, donde
-   * `abierta` ya vale null y no hay nada que recentrar. Y cambiar de una
-   * categoría a otra tampoco entra acá, porque ahí `abierta` pasa de un
-   * nombre a otro, nunca por null.
-   *
-   * El `setTimeout` dura lo que la transición: antes de eso el cajón
-   * todavía ocupa alto y el navegador calcularía el destino con la
-   * página que está por dejar de existir.
+   * `abierta` ya vale null. Cambiar de una categoría a otra tampoco entra
+   * acá, porque ahí `abierta` pasa de un nombre a otro, nunca por null.
    */
   const tarjetasRef = useRef<HTMLDivElement>(null);
   const anterior = useRef<string | null>(null);
@@ -314,21 +342,18 @@ export function QueHaceFaltaSection() {
         <h2 className="vc-titular mx-auto w-fit bg-[#FBF8C6] px-[0.3em] py-[0.1em] text-center text-[clamp(1.75rem,6vw,3.5rem)] leading-tight text-[#0079C1]">
           ¿Qué hace falta hoy?
         </h2>
-
         <h3 className="vc-titular mx-auto w-fit px-[1em] py-[0.7em] text-center text-[clamp(1.75rem,2vw,3.5rem)] leading-tight text-[#FBF8C6]">
-          Toque una categoría para conocer qué se necesita en el centro de acopio y qué elementos están agotados,
-          
-          escasos o disponibles en buena cantidad.
+          Toque una categoría para conocer qué se necesita en el centro de acopio y qué elementos
+          están agotados, escasos o disponibles en buena cantidad.
         </h3>
 
-        {/* La explicación va ANTES de las tarjetas: es la instrucción de
-            uso y el significado de los colores. Al final quedaba después
-            de lo que pretendía explicar, así que la primera vez que
-            alguien veía una ficha roja no sabía qué decía. */}
+        {/* La leyenda va ANTES de las tarjetas: explica el significado de
+            los colores, y al final quedaba después de lo que pretendía
+            explicar. */}
         <Leyenda />
 
         {secciones.length > 0 ? (
-          <div ref={tarjetasRef} className="mt-8 space-y-6">
+          <div ref={tarjetasRef} className="mt-8 space-y-5">
             {filas.map((fila, indiceFila) => {
               const enEstaFila =
                 indiceAbierta >= 0 && Math.floor(indiceAbierta / columnas) === indiceFila
@@ -341,11 +366,12 @@ export function QueHaceFaltaSection() {
 
               return (
                 <div key={indiceFila}>
-                  {/* `items-start`: sin él, las dos celdas de la fila se
-                      estiran a la altura de la más alta y las
-                      ilustraciones, que no miden lo mismo, quedan
-                      descolgadas. */}
-                  <ul className="grid items-start gap-6 sm:grid-cols-2">
+                  {/* Sin `items-start`: ahora que cada tarjeta tiene su
+                      propia superficie, se las quiere de la misma altura.
+                      Estirándose, las dos de una fila comparten borde
+                      superior e inferior y por fin hay una cuadrícula que
+                      el ojo puede seguir. */}
+                  <ul className="grid gap-5 sm:grid-cols-2">
                     {fila.map((s) => (
                       <TarjetaCategoria
                         key={s.nombre}
@@ -360,7 +386,6 @@ export function QueHaceFaltaSection() {
                     seccion={enEstaFila}
                     columnaAbierta={columnaAbierta}
                     columnas={columnas}
-                    fechaInventario={data?.fechaInventario ?? null}
                     onCerrar={() => setAbierta(null)}
                   />
                 </div>
@@ -369,19 +394,23 @@ export function QueHaceFaltaSection() {
           </div>
         ) : (
           // Sin la ruta publicada, las ilustraciones quedan como índice
-          // visual pero no abren nada. No hay lista de respaldo a
-          // propósito: una lista de necesidades sin fecha manda a la
-          // gente a llevar lo que ya sobra.
-          <ul className="mt-10 grid items-start gap-6 sm:grid-cols-2">
+          // visual pero no abren nada. Mismo encuadre que las de verdad,
+          // para que el paso de un estado al otro no cambie la maqueta.
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2">
             {ILUSTRACIONES.map((arte) => (
               <li key={arte.src}>
-                <img
-                  src={arte.src}
-                  alt={arte.alt}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-auto w-full"
-                />
+                <div className="flex h-full flex-col rounded-2xl bg-white/10 p-4">
+                  <span className={CAJA_ILUSTRACION}>
+                    <img
+                      src={arte.src}
+                      alt={arte.alt}
+                      loading="lazy"
+                      decoding="async"
+                      style={{ filter: SOMBRA_REPOSO, width: `${(arte.escala ?? 1) * 100}%` }}
+                      className="h-auto object-contain"
+                    />
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
@@ -392,41 +421,32 @@ export function QueHaceFaltaSection() {
 }
 
 /**
- * La instrucción y el significado de los tres estados.
+ * El significado de los tres estados.
  *
- * Va sobre una tarjeta blanca y no directamente sobre el cyan: texto
- * blanco sobre el fondo de esta sección contrasta cerca de 3,6 a 1, por
- * debajo del 4,5 que pide la norma para cuerpo de texto. Sobre blanco,
- * el mismo texto en azul profundo pasa de sobra.
- *
- * Los tres estados van EN LÍNEA y no apilados, con el mismo patrón que
- * la leyenda de familias de AyudaSection. Apilados ocupaban siete
- * renglones y empujaban las tarjetas fuera de la primera pantalla, que
- * es donde tienen que estar: la leyenda explica algo que todavía no se
- * ha visto, así que cuanto menos espacio ocupe, mejor cumple su papel.
+ * Va sobre una tarjeta blanca y no directamente sobre el cyan: el
+ * degradado va de #40BBE5 en el centro a #0E8BB7 en los bordes, y no hay
+ * un solo color de texto que pase el 4,5 de contraste en los dos
+ * extremos. Sobre blanco, el azul profundo lo pasa de sobra.
  */
 function Leyenda() {
   return (
-    <div className="mt-6 rounded-xl bg-white px-5 py-4 sm:px-6 sm:py-5">
-      {/* Tres columnas en pantallas anchas, apiladas en celular. La
-          ficha usa el mismo color y la misma forma que en la lista, para
-          que la leyenda se reconozca sin tener que comparar. */}
-        <ul className="mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-3">
+    <div className="rounded-xl bg-white px-5 py-4 sm:px-6 sm:py-5">
+      {/* Tres columnas en pantallas anchas, apiladas en celular. La ficha
+          usa el mismo color y la misma forma que en la lista, para que la
+          leyenda se reconozca sin tener que comparar. */}
+      <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-3">
         {ESTADOS.map((e) => (
-            <li key={e.etiqueta} className="flex flex-col items-center text-center">
+          <li key={e.etiqueta} className="flex flex-col items-center text-center">
             <span
-                className="rounded-full px-2.5 py-0.5 text-[13px] font-extrabold"
-                style={{ background: e.fondo, color: e.texto }}
+              className="rounded-full px-2.5 py-0.5 text-[13px] font-extrabold"
+              style={{ background: e.fondo, color: e.texto }}
             >
-                {e.etiqueta}
+              {e.etiqueta}
             </span>
-            <span className="mt-2 text-[15px] leading-6 text-[#35708F]">
-                {e.glosa}
-            </span>
-            </li>
+            <span className="mt-2 text-[15px] leading-6 text-[#35708F]">{e.glosa}</span>
+          </li>
         ))}
-        </ul>
-
+      </ul>
     </div>
   );
 }
@@ -444,52 +464,74 @@ function TarjetaCategoria({
 
   return (
     <li>
-      {/* `aria-expanded` y no `aria-pressed`: esto no es un interruptor,
-          es algo que muestra y esconde contenido.
+      {/* LA TARJETA, no la ilustración suelta.
+          El fondo es blanco translúcido y no blanco pleno: las píldoras
+          de los PNG son crema, azul, amarilla y naranja, y una superficie
+          opaca competiría con ellas. Al 10% se ve el cyan por debajo y la
+          caja apenas se insinúa, que es todo lo que hace falta para que
+          las cuatro se lean como un conjunto.
 
-          Sin borde ni anillo: son PNG recortados y cualquier rectángulo
-          delata la caja. El único recuadro es el de `focus-visible`, que
-          solo aparece con teclado. */}
+          `aria-expanded` y no `aria-pressed`: esto no es un interruptor,
+          es algo que muestra y esconde contenido. El único recuadro es el
+          de `focus-visible`, que solo aparece con teclado. */}
       <button
         type="button"
         aria-expanded={abierta}
         onClick={onToggle}
-        style={{ filter: abierta ? SOMBRA_ACTIVA : SOMBRA_REPOSO }}
-        /* `max-w-[26rem]` y centrado: a ancho completo de media columna
-           cada ilustración medía unos 560 px y la sección se estiraba
-           tanto que las cuatro no cabían juntas en pantalla. A 416 px la
-           más apaisada mide 146 px de alto y la más cuadrada 213, así
-           que las dos filas entran de una sola mirada, que es lo que
-           hace que se puedan comparar. */
-        className={`mx-auto block w-full max-w-[26rem] transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FBF8C6] motion-reduce:transform-none ${
-          abierta ? "-translate-y-1.5" : "hover:-translate-y-1.5"
+        className={`flex h-full w-full flex-col rounded-2xl px-4 pb-2.5 pt-4 transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FBF8C6] motion-reduce:transform-none ${
+          abierta
+            ? "-translate-y-1.5 bg-white/25"
+            : "bg-white/10 hover:-translate-y-1.5 hover:bg-white/20"
         }`}
       >
-        {arte ? (
-          <img
-            src={arte.src}
-            alt={arte.alt}
-            loading="lazy"
-            decoding="async"
-            className="h-auto w-full"
-          />
-        ) : (
-          // Sección sin ilustración que le calce. Aparece igual, con su
-          // nombre, y el aviso de ilustracionDe queda en la consola.
-          <span className="block rounded-xl bg-[#FBF8C6] px-6 py-8 text-xl font-bold text-[#0079C1]">
-            {seccion.nombre}
-          </span>
-        )}
+        {/* SE IGUALA EL ANCHO, NO EL ALTO.
+            Es el cambio que más acerca las cuatro píldoras sin depender
+            de ningún ajuste por archivo.
 
-        {/* La flecha es la única señal de que la ilustración se abre. Sin
-            ella un PNG parece decoración. Va sin texto al lado porque el
-            nombre de la categoría ya está dibujado en la propia imagen. */}
-        <ChevronDown
-          aria-hidden
-          className={`mx-auto mt-1 size-7 text-white transition-transform duration-200 motion-reduce:transform-none ${
-            abierta ? "rotate-180" : ""
-          }`}
-        />
+            Los cuatro PNG reparten su lienzo distinto: la píldora ocupa
+            casi todo el ancho en las cuatro —entre el 90% y el 97%— pero
+            un alto muy variable, del 37,5% en alimentos al 72,5% en
+            aseo. Igualando el ALTO de la imagen, la píldora de aseo
+            quedaba 93% más grande que la de alimentos. Igualando el
+            ANCHO, la diferencia baja a 34%.
+
+            Lo que queda de diferencia ya no es de encuadre: es que en la
+            ilustración de aseo la píldora está dibujada más alta. Eso no
+            se corrige con CSS, se corrige reexportando. */}
+        <span className={CAJA_ILUSTRACION}>
+          {arte ? (
+            <img
+              src={arte.src}
+              alt={arte.alt}
+              loading="lazy"
+              decoding="async"
+              style={{
+                filter: abierta ? SOMBRA_ACTIVA : SOMBRA_REPOSO,
+                width: `${(arte.escala ?? 1) * 100}%`,
+              }}
+              className="h-auto object-contain"
+            />
+          ) : (
+            // Sección sin ilustración que le calce. Aparece igual, con su
+            // nombre, y el aviso de ilustracionDe queda en la consola.
+            <span className="rounded-xl bg-[#FBF8C6] px-6 py-4 text-xl font-bold text-[#0079C1]">
+              {seccion.nombre}
+            </span>
+          )}
+        </span>
+
+        {/* La flecha vive DENTRO de la tarjeta y separada por un filete.
+            Antes flotaba en el cyan, debajo de una imagen cuyo centro
+            visual no coincide con el centro de su caja, así que parecía
+            un adorno suelto entre dos tarjetas en vez del control de una. */}
+        <span className="mt-3 flex w-full justify-center border-t border-white/25 pt-2">
+          <ChevronDown
+            aria-hidden
+            className={`size-6 text-white transition-transform duration-200 motion-reduce:transform-none ${
+              abierta ? "rotate-180" : ""
+            }`}
+          />
+        </span>
       </button>
     </li>
   );
@@ -506,13 +548,11 @@ function CajonDeFila({
   seccion,
   columnaAbierta,
   columnas,
-  fechaInventario,
   onCerrar,
 }: {
   seccion: SeccionNecesidades | null;
   columnaAbierta: number;
   columnas: number;
-  fechaInventario: string | null;
   onCerrar: () => void;
 }) {
   const panelId = useId();
@@ -598,20 +638,14 @@ function CajonDeFila({
             <X className="size-6" aria-hidden />
           </button>
 
-          <ListaDeNecesidades seccion={contenido} fechaInventario={fechaInventario} />
+          <ListaDeNecesidades seccion={contenido} />
         </div>
       </div>
     </div>
   );
 }
 
-function ListaDeNecesidades({
-  seccion,
-  fechaInventario,
-}: {
-  seccion: SeccionNecesidades;
-  fechaInventario: string | null;
-}) {
+function ListaDeNecesidades({ seccion }: { seccion: SeccionNecesidades }) {
   /**
    * Solo los que tienen estado. Los que la hoja dejó sin anotar no se
    * pueden ordenar ni etiquetar, y ponerlos con una etiqueta inventada
@@ -643,8 +677,8 @@ function ListaDeNecesidades({
            falta agruparla ni numerarla.
 
            Tres columnas en pantallas anchas: con una sola, catorce
-           renglones de alimentos obligan a bajar la vista por una
-           columna larguísima y el cajón crece de más. */
+           renglones de alimentos obligan a bajar la vista por una columna
+           larguísima y el cajón crece de más. */
         <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {elementos.map(({ elemento, estado }) => (
             <li

@@ -2,7 +2,7 @@ import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { _ as Building2, a as PackageCheck, c as MapPin, d as HeartHandshake, f as HandHeart, g as CalendarDays, h as ChevronDown, i as Package, l as List, m as ChevronLeft, n as Warehouse, o as Menu, p as FileText, r as Truck, s as Map$1, t as X, u as House, v as Boxes, y as ArrowLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DHFgqzKB.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BEeKFW4M.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -3390,6 +3390,32 @@ function MunicipiosNuevosCallouts() {
 		})
 	] });
 }
+/**
+* SidebarNav
+* -----------------------------------------------------------------------
+* CÓMO SE ABRE EN ESCRITORIO
+*
+* Haciendo clic en cualquier punto de la barra retraída. Antes había un
+* botón de tres líneas dentro del riel, y el problema es que estaba
+* compuesto exactamente igual que los ítems del menú: mismo tamaño de
+* ícono, misma columna, apilado justo encima de ellos. Se leía como una
+* sección más, no como un control.
+*
+* Ahora el riel entero es la zona de clic. Es más grande que cualquier
+* botón, no compite con los íconos de sección y no hace falta apuntarle a
+* nada. Los íconos de sección siguen navegando: cortan la propagación
+* para que un clic sobre uno no haga las dos cosas a la vez.
+*
+* El clic sobre el `<nav>` es una comodidad para el mouse, no la única
+* puerta. Quien navega con teclado llega al botón del logo, que retraído
+* cambia su función y su etiqueta a "Abrir menú": un `div` con `onClick`
+* no recibe foco y dejaría la barra inalcanzable sin mouse.
+*
+* En celular no cambia nada: el botón flotante de la esquina sigue
+* siendo el que abre, y ahí sí tiene sentido, porque no está dentro de
+* ninguna lista con la que confundirse.
+* -----------------------------------------------------------------------
+*/
 function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/gobernacion-color.png" }) {
 	const [abierto, setAbierto] = (0, import_react.useState)(false);
 	const [activo, setActivo] = (0, import_react.useState)(items[0]?.id ?? "");
@@ -3480,24 +3506,33 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/go
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
 			ref: navRef,
 			"aria-label": "Secciones",
-			className: `fixed left-0 top-0 z-50 shadow-xl md:shadow-none flex h-dvh flex-col border-r border-[#0079C1]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"}`,
+			onClick: abierto ? void 0 : () => setAbierto(true),
+			className: `fixed left-0 top-0 z-50 flex h-dvh flex-col border-r border-[#0079C1]/12 bg-white py-5 shadow-xl transition-[width,transform] duration-300 ease-out md:shadow-none motion-reduce:transition-none ${abierto ? "w-72 translate-x-0 px-4" : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:cursor-pointer md:px-3 md:hover:bg-[#FAFDFF]"}`,
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: `mb-5 ${abierto ? "flex items-center gap-3 px-1" : "flex flex-col items-center gap-2"}`,
+					className: `mb-5 ${abierto ? "flex items-center gap-3 px-1" : "flex justify-center"}`,
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
-						onClick: () => irA(inicioId),
-						"aria-label": "Volver al inicio",
-						title: "Volver al inicio",
+						onClick: (evento) => {
+							evento.stopPropagation();
+							if (abierto) irA(inicioId);
+							else setAbierto(true);
+						},
+						"aria-label": abierto ? "Volver al inicio" : "Abrir menú",
+						"aria-expanded": abierto ? void 0 : false,
+						title: abierto ? "Volver al inicio" : "Abrir menú",
 						className: `flex shrink-0 items-center justify-center rounded-xl transition hover:bg-[#EAF7FC] ${abierto ? "h-12 px-2" : "h-11 w-full px-1"}`,
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
 							src: logo,
-							alt: "Gobernación del Valle del Cauca. Volver al inicio",
+							alt: abierto ? "Gobernación del Valle del Cauca. Volver al inicio" : "",
 							className: abierto ? "h-10 w-auto" : "h-8 w-full object-contain"
 						})
-					}), abierto ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					}), abierto && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 						type: "button",
-						onClick: () => setAbierto(false),
+						onClick: (evento) => {
+							evento.stopPropagation();
+							setAbierto(false);
+						},
 						"aria-label": "Cerrar menú",
 						className: "ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-[#35708F] transition hover:bg-[#F2FAFD]",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
@@ -3507,15 +3542,6 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/go
 							className: "hidden size-5 md:block",
 							"aria-hidden": true
 						})]
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: () => setAbierto(true),
-						"aria-label": "Abrir menú",
-						className: "hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#35708F] transition hover:bg-[#F2FAFD] md:flex",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Menu, {
-							className: "size-6",
-							"aria-hidden": true
-						})
 					})]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
@@ -3524,7 +3550,10 @@ function SidebarNav({ items, scrollRootId, homeId, fechaCorte, logo = "/marca/go
 						const esActivo = activo === id;
 						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 							type: "button",
-							onClick: () => irA(id),
+							onClick: (evento) => {
+								evento.stopPropagation();
+								irA(id);
+							},
 							"aria-current": esActivo ? "true" : void 0,
 							title: abierto ? void 0 : label,
 							className: `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${esActivo ? "bg-[#EAF7FC] text-[#0079C1]" : "text-[#35708F] hover:bg-[#F2FAFD] hover:text-[#0079C1]"} ${abierto ? "" : "md:justify-center md:px-0"}`,
@@ -3598,6 +3627,13 @@ function SectionTitle({ children, tono = "hueso" }) {
 function Card({ children, className = "" }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: `rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#123E5C]/10 ${className}`,
+		children
+	});
+}
+/** Aviso metodológico. Amarillo, porque siempre dice qué NO se puede afirmar. */
+function Aviso({ children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "rounded-lg border border-[#FFD400]/40 border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]",
 		children
 	});
 }
@@ -4356,46 +4392,6 @@ var categoriasAyuda = [
 		]
 	}
 ];
-/** Los 14 productos más repartidos de toda la emergencia, sin importar categoría. */
-var productosMasRepartidos = [
-	["Tapabocas", 17100],
-	["Papel higiénico", 15980],
-	["Toallas higiénicas", 9528],
-	["Botella agua personal", 7814],
-	["Mercados", 5989],
-	["Pañales de adulto", 5823],
-	["Atún", 5484],
-	["Cobijas", 5255],
-	["Jabón de baño", 5086],
-	["Cremas dentales", 4791],
-	["Pañitos húmedos", 4494],
-	["Botellas agua", 4413],
-	["Agua", 4388],
-	["Kit de aseo", 4281]
-];
-/**
-* Despachos que declaran expresamente cada población en el formato.
-*
-* Corregido contra DESPACHO_POBLACION: el tablero HTML mostraba
-* "veredas 47" y "rural 47" como dos filas, y lo mismo con
-* "indígena 8" / "etnias 8". En la fuente son UNA sola etiqueta cada
-* par, así que verlas repetidas duplicaba visualmente su peso.
-*
-* Se omite "general" (197 despachos), que no es una focalización sino
-* la ausencia de ella.
-*/
-var poblacionesFocalizadas = [
-	["Mascotas", 84],
-	["Veredas y rural", 47],
-	["Adulto mayor", 33],
-	["Discapacidad", 25],
-	["Donación China", 19],
-	["Indígena y etnias", 8],
-	["Juventudes", 6],
-	["Rescatistas", 5],
-	["Mujeres", 4],
-	["Primera infancia", 2]
-];
 /** Agrupación por necesidad. El color de cada categoría ya la codifica; esto la nombra. */
 var familiasDeAyuda = [
 	{
@@ -4438,62 +4434,41 @@ var familiasDeAyuda = [
 * Composición de la ayuda entregada. Al elegir una categoría, la lista
 * de la derecha cambia a los artículos que la componen.
 *
-* QUÉ VIENE DE LA BASE Y QUÉ NO
+* AHORA TODO VIENE DE LA BASE
 *
-* De route=ayuda: unidades, porcentaje, municipios por categoría, y las
-* poblaciones atendidas. De route=toneladas: el peso. Todo eso se
-* actualiza solo cuando cambia el Excel.
+* Los nombres de producto salían de `ayudaData.ts`, escritos a mano, y
+* contradecían al propio tablero en la misma pantalla: decía "Tapabocas
+* 17.100" al lado de "Protección y seguridad: 11.167 unidades", y la
+* suma de los catorce artículos del listado general, 100.426, superaba
+* el total de toda la operación, 96.360.
 *
-* De ayudaData.ts, a mano: el color de cada categoría, que es una
-* decisión de diseño, y los NOMBRES DE PRODUCTO de la lista de la
-* derecha. Esos últimos no se pueden conectar: ENVIOS_CATEGORIA guarda
-* cuántos productos distintos trae cada envío, no cuáles. Mientras esa
-* lista siga siendo una transcripción, hay que revisarla a mano cuando
-* cambie el inventario.
+* La hoja DETALLE_PRODUCTO resolvió las dos cosas a la vez. De ahí salen
+* ahora los productos Y las unidades, así que las dos cifras nacen del
+* mismo sitio y no pueden volver a divergir.
 *
-* OJO CON EL RESPALDO. `TOTAL_UNIDADES` de ayudaData.ts quedó viejo:
-* declara 256.650 unidades y el Excel tiene 96.360. Solo se usa si
-* route=ayuda no responde, pero en ese caso la página muestra
-* porcentajes falsos en vez de no mostrar ninguno. Conviene actualizarlo
-* o, mejor, quitar el respaldo y no dibujar los porcentajes sin datos.
+* De paso quedó claro que `ayudaData.ts` NUNCA estuvo desactualizado:
+* sus 256.650 unidades y sus diez productos más entregados coinciden con
+* el detalle real. Lo que estaba mal era ENVIOS_CATEGORIA.unidades, que
+* es de donde el tablero venía sacando sus 96.360.
 *
-* SOBRE LAS BANDAS
+* QUÉ QUEDA DEL CATÁLOGO ESTÁTICO
 *
-* La sección ahora emite sus propias franjas a sangre, como las de
-* "¿Cuándo llegaron las ayudas?" y "¿Cuánta ayuda recibió cada
-* municipio?": titular sobre cyan, contenido sobre el fondo de la
-* sección.
+* Solo dos cosas, y las dos son decisiones editoriales, no datos: el
+* COLOR de cada categoría y la agrupación en FAMILIAS. Ni una cifra.
 *
-* Antes no las emitía, aunque el comentario de StoryPage decía que sí.
-* Como la <section> de allá no lleva `px-*` —justamente porque se
-* esperaba que el relleno lo pusiera cada banda de acá— el contenido
-* quedaba pegado al borde de la pantalla en todo lo que fuera menor a
-* 1152 px, que es donde `max-w-6xl` deja de tocar los lados.
+* TRES COMPORTAMIENTOS QUE SIGUEN VIGENTES
 *
-* El titular va compuesto como el banner de la campaña: la primera
-* mitad dentro de una caja crema en azul, la segunda suelta en blanco
-* sobre el cyan.
-*
-* TRES CAMBIOS ANTERIORES QUE SIGUEN VIGENTES
-*
-* 1. El panel grande responde a la selección, con datos reales.
-*
-*    Las toneladas NO se desagregan por categoría, y estimarlas
-*    repartiendo el total proporcional a las unidades sería inventarlas:
-*    esa columna mezcla mercados, paquetes, kilos y pacas, así que
-*    asumiría que un mercado pesa lo mismo que un paquete de pañales.
-*
-*    En vez de eso, al elegir una categoría la cifra grande pasa a ser
-*    las unidades de esa categoría, con su porcentaje y sus municipios.
+* 1. El panel grande responde a la selección con datos reales. Las
+*    toneladas NO se desagregan por categoría, y repartir el total
+*    proporcional a las unidades sería inventarlas: esa columna mezcla
+*    mercados, paquetes, kilos y pacas. Así que al elegir una categoría
+*    la cifra grande pasa a ser sus unidades.
 *
 * 2. Al elegir una categoría, la vista baja hasta la lista de artículos.
+*    `block: "nearest"` no mueve nada en escritorio, donde la tarjeta es
+*    sticky y ya está a la vista.
 *
-*    En móvil la tarjeta queda debajo de la rejilla, así que al tocar la
-*    última categoría no pasaba nada visible. Se usa block "nearest": en
-*    escritorio, donde la tarjeta es sticky y ya está a la vista, no se
-*    mueve nada.
-*
-* 3. Cerrar es una X en la esquina, no un botón de texto abajo.
+* 3. Cerrar es una X en la esquina, no un botón de texto al final.
 * -----------------------------------------------------------------------
 */
 function AyudaSection() {
@@ -4503,18 +4478,11 @@ function AyudaSection() {
 	const { enfocarCategoria } = useFoco();
 	const panelRef = (0, import_react.useRef)(null);
 	/**
-	* Antes esta lista decía "llegó a 44 municipios" en un departamento de
-	* 41, porque el catálogo cuenta destinos de cualquier tipo. La ruta
-	* separa las dos cuentas y acá se usa la de municipios.
+	* El color y nada más sale del archivo local. Todo lo demás —unidades,
+	* municipios, productos— viene de la ruta.
 	*/
 	const categorias = (0, import_react.useMemo)(() => {
-		if (!ayuda) return categoriasAyuda.map((c) => ({
-			nombre: c.nombre,
-			unidades: c.unidades,
-			municipios: null,
-			color: c.color,
-			productos: c.productos
-		}));
+		if (!ayuda) return [];
 		return ayuda.categorias.map((viva) => {
 			const local = categoriasAyuda.find((c) => c.nombre === viva.nombre);
 			return {
@@ -4522,22 +4490,20 @@ function AyudaSection() {
 				unidades: viva.unidades,
 				municipios: viva.municipios,
 				color: local?.color ?? "#6B93AA",
-				productos: local?.productos ?? []
+				productos: viva.productos ?? [],
+				productosDistintos: viva.productosDistintos ?? viva.productos?.length ?? 0
 			};
 		});
 	}, [ayuda]);
-	const totalUnidades = ayuda?.totalUnidades ?? 256650;
-	const poblaciones = ayuda ? ayuda.poblaciones.map((p) => [p.nombre, p.despachos]) : poblacionesFocalizadas.map(([nombre, despachos]) => [nombre, despachos]);
+	const totalUnidades = ayuda?.totalUnidades ?? 0;
+	const poblaciones = (0, import_react.useMemo)(() => (ayuda?.poblaciones ?? []).map((p) => [p.nombre, p.despachos]), [ayuda]);
 	const pct = (unidades) => totalUnidades > 0 ? Math.round(unidades / totalUnidades * 100) : 0;
 	/**
 	* Porcentaje para mostrar.
 	*
-	* Herramientas y materiales son 851 unidades de 96.360, un 0,88 por
-	* ciento, y Salud son 87, un 0,09. Redondeados dan cero, y un cero se
-	* lee como que no se entregó nada. Sí se entregó, solo que poco.
-	*
-	* "menos de 1" dice lo mismo sin mentir. Cero se reserva para cuando
-	* de verdad no hay nada.
+	* Salud son 87 unidades de 256.263, un 0,03 por ciento. Redondeado da
+	* cero, y un cero se lee como que no se entregó nada. Sí se entregó,
+	* solo que poco. "menos de 1" dice lo mismo sin mentir.
 	*/
 	const pctTexto = (unidades) => {
 		if (unidades <= 0) return "0%";
@@ -4546,17 +4512,6 @@ function AyudaSection() {
 	};
 	const categoria = activa ? categorias.find((c) => c.nombre === activa) : void 0;
 	const maxUnidades = Math.max(1, ...categorias.map((c) => c.unidades));
-	/**
-	* Al elegir una categoría, llevar la vista a la lista de artículos.
-	*
-	* `block: "nearest"` es la pieza importante: si la tarjeta ya está
-	* visible, como en escritorio donde es sticky, el navegador no
-	* desplaza nada. El salto ocurre solo cuando hace falta, que es en
-	* pantallas angostas.
-	*
-	* No se hace al deseleccionar: ahí el foco vuelve a la rejilla y
-	* moverse sería desorientador.
-	*/
 	(0, import_react.useEffect)(() => {
 		if (!activa || !panelRef.current) return;
 		const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -4567,22 +4522,22 @@ function AyudaSection() {
 	}, [activa]);
 	const waffle = (0, import_react.useMemo)(() => categorias.flatMap((c) => Array.from({ length: Math.round(c.unidades / Math.max(1, totalUnidades) * 100) }, () => c)), [categorias, totalUnidades]);
 	/**
-	* Tipo explícito, con `color` opcional.
+	* Los artículos que se listan a la derecha.
 	*
-	* Sin él, TypeScript infiere una unión de dos formas distintas, una con
-	* color y otra sin, y solo deja leer lo que existe en las dos. El
-	* color solo aplica cuando hay categoría seleccionada: en la lista
-	* general los artículos vienen de categorías distintas y pintarlos
-	* todos igual sería mentir sobre a cuál pertenecen.
+	* Con categoría elegida, los suyos y en su color. Sin categoría, el
+	* ranking general que calcula el backend: no se puede armar sumando
+	* las listas por categoría, porque cada una viene recortada a sus doce
+	* primeros y el resultado sería un ranking de los recortes.
 	*/
-	const productos = categoria ? categoria.productos.map(([label, value]) => ({
-		label,
-		value,
+	const productos = categoria ? categoria.productos.map((p) => ({
+		label: p.nombre,
+		value: p.unidades,
 		color: categoria.color
-	})) : productosMasRepartidos.map(([label, value]) => ({
-		label,
-		value
+	})) : (ayuda?.productosDestacados ?? []).map((p) => ({
+		label: p.nombre,
+		value: p.unidades
 	}));
+	const sinDatos = categorias.length === 0;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "bg-[#22ABE2] px-4 py-12 sm:px-6 sm:py-12 md:px-10",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
@@ -4604,239 +4559,255 @@ function AyudaSection() {
 			className: "mx-auto max-w-6xl",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "max-w- text-lg leading-8 text-[#35708F]",
+					className: "max-w-3xl text-lg leading-8 text-[#35708F]",
 					children: "Las categorías de entrega muestran los diferentes tipos de ayudas entregadas a las comunidades afectadas, de acuerdo con las necesidades identificadas durante la atención de la emergencia."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-3 max-w-2xl text-lg leading-8 text-[#35708F]",
 					children: "Seleccione una categoría para ver qué artículos incluyó."
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "text-center",
-						children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
-								children: categoria.unidades.toLocaleString("es-CO")
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "mt-3 block text-lg text-[#35708F]",
-								children: ["Unidades de ", categoria.nombre.toLowerCase()]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-								className: "mt-2 block text-base leading-6 text-[#6B93AA]",
-								children: [
-									pctTexto(categoria.unidades),
-									" de toda la ayuda",
-									categoria.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-										" · ",
-										categoria.municipios,
-										" ",
-										categoria.municipios === 1 ? "municipio" : "municipios"
-									] })
-								]
-							})
-						] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
-								children: totalToneladas.toLocaleString("es-CO")
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "mt-3 block text-lg text-[#35708F]",
-								children: "toneladas de ayuda"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "mt-2 block text-base leading-6 text-[#6B93AA]",
-								children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
-							})
-						] })
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-							className: "text-xl font-semibold text-[#123E5C]",
-							children: "¿De qué está hecha esa ayuda?"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
-							children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-								title: `${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(c.unidades)} de la ayuda`,
-								className: "block transition-opacity",
-								style: {
-									flex: c.unidades,
-									background: c.color,
-									opacity: activa && activa !== c.nombre ? .28 : 1
-								}
-							}, c.nombre))
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							className: "mt-4 flex flex-wrap gap-[3px] sm:gap-1",
-							children: waffle.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-								title: c.nombre,
-								className: "block size-[11px] rounded-[2px] sm:size-[15px] sm:rounded-[2.5px]",
-								style: {
-									background: c.color,
-									opacity: activa && activa !== c.nombre ? .28 : 1
-								}
-							}, `${c.nombre}-${i}`))
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-base text-[#6B93AA]",
-							children: "Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde cada categoría."
-						})
-					] })]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-					className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#35708F]",
-					children: familiasDeAyuda.map((f) => {
-						const colores = f.categorias.map((n) => categorias.find((c) => c.nombre === n)?.color).filter((c) => typeof c === "string");
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-							className: "flex items-center gap-2",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-									className: "block h-2 w-6 rounded-sm",
-									style: { background: colores.length > 1 ? `linear-gradient(90deg, ${colores.join(",")})` : colores[0] ?? "#6B93AA" }
-								}),
+				sinDatos ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-10",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "No se pudieron cargar las cifras." }), " La composición de la ayuda se calcula desde el registro de entregas y en este momento no está disponible. Vuelva a intentarlo en unos minutos."] })
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-10 grid gap-8 rounded-xl border border-[#0079C1]/12 bg-white p-5 sm:p-7 lg:grid-cols-[minmax(210px,0.7fr)_minmax(0,1.4fr)] lg:items-center",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "text-center",
+							children: categoria ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-									className: "font-semibold text-[#123E5C]",
-									children: f.nombre
+									className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
+									children: categoria.unidades.toLocaleString("es-CO")
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "text-[#6B93AA]",
-									children: ["· ", f.categorias.join(", ")]
+									className: "mt-3 block text-lg text-[#35708F]",
+									children: ["Unidades de ", categoria.nombre.toLowerCase()]
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "mt-2 block text-base leading-6 text-[#6B93AA]",
+									children: [
+										pctTexto(categoria.unidades),
+										" de toda la ayuda",
+										categoria.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+											" · ",
+											categoria.municipios,
+											" ",
+											categoria.municipios === 1 ? "municipio" : "municipios"
+										] })
+									]
 								})
-							]
-						}, f.nombre);
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-						children: "Categorías"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-4 grid gap-2.5 sm:grid-cols-2",
-						children: categorias.map((c, i) => {
-							const seleccionada = activa === c.nombre;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-								type: "button",
-								"aria-pressed": seleccionada,
-								onClick: () => setActiva(seleccionada ? null : c.nombre),
-								style: { "--i": i },
-								className: `vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${seleccionada ? "-translate-y-0.5 text-white shadow-lg" : "bg-white hover:-translate-y-0.5 hover:shadow-md"} motion-reduce:hover:translate-y-0`,
+							] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+									className: "vc-titular block text-[64px] tracking-[-0.02em] tabular-nums text-[#0079C1]",
+									children: totalToneladas.toLocaleString("es-CO")
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "mt-3 block text-lg text-[#35708F]",
+									children: "toneladas de ayuda"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "mt-2 block text-base leading-6 text-[#6B93AA]",
+									children: toneladasMedidas ? "entregadas en todo el departamento, por todas las rutas" : "estimadas a partir del número de entregas"
+								})
+							] })
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+								className: "text-xl font-semibold text-[#123E5C]",
+								children: "¿De qué está hecha esa ayuda?"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-4 flex h-8 overflow-hidden rounded-md sm:h-9",
+								children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+									title: `${c.nombre}: ${c.unidades.toLocaleString("es-CO")} unidades, ${pctTexto(c.unidades)} de la ayuda`,
+									className: "block transition-opacity",
+									style: {
+										flex: c.unidades,
+										background: c.color,
+										opacity: activa && activa !== c.nombre ? .28 : 1
+									}
+								}, c.nombre))
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+								className: "mt-4 flex flex-wrap gap-[3px] sm:gap-1",
+								children: waffle.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+									title: c.nombre,
+									className: "block size-[11px] rounded-[2px] sm:size-[15px] sm:rounded-[2.5px]",
+									style: {
+										background: c.color,
+										opacity: activa && activa !== c.nombre ? .28 : 1
+									}
+								}, `${c.nombre}-${i}`))
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "mt-3 text-base text-[#6B93AA]",
+								children: "Cada bloque es el 1 por ciento de la ayuda. El color indica a qué necesidad responde cada categoría."
+							})
+						] })]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "mt-6 flex flex-wrap gap-x-6 gap-y-2.5 text-[15px] text-[#35708F]",
+						children: familiasDeAyuda.map((f) => {
+							const colores = f.categorias.map((n) => categorias.find((c) => c.nombre === n)?.color).filter((c) => typeof c === "string");
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+								className: "flex items-center gap-2",
 								children: [
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"aria-hidden": true,
-										className: "absolute inset-0 -z-10 transition-opacity duration-200",
-										style: {
-											background: c.color,
-											opacity: seleccionada ? 1 : 0
-										}
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+										className: "block h-2 w-6 rounded-sm",
+										style: { background: colores.length > 1 ? `linear-gradient(90deg, ${colores.join(",")})` : colores[0] ?? "#6B93AA" }
 									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"aria-hidden": true,
-										className: "absolute inset-y-0 left-0 w-1",
-										style: { background: seleccionada ? "transparent" : c.color }
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+										className: "font-semibold text-[#123E5C]",
+										children: f.nombre
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "flex items-baseline justify-between gap-3",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: `min-w-0 truncate text-base font-semibold ${seleccionada ? "text-white" : "text-[#123E5C]"}`,
-											children: c.nombre
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: `shrink-0 text-2xl font-extrabold ${seleccionada ? "text-white" : "text-[#0079C1]"}`,
-											children: pctTexto(c.unidades)
-										})]
-									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-											className: "vc-crece block h-full rounded-full",
-											style: {
-												width: `${c.unidades / maxUnidades * 100}%`,
-												background: seleccionada ? "#FFFFFF" : c.color,
-												"--i": i
-											}
-										})
-									}),
-									c.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: `mt-2.5 block text-[15px] ${seleccionada ? "text-white/85" : "text-[#6B93AA]"}`,
-										children: [
-											"Llegó a ",
-											c.municipios,
-											" ",
-											c.municipios === 1 ? "municipio" : "municipios"
-										]
+										className: "text-[#6B93AA]",
+										children: ["· ", f.categorias.join(", ")]
 									})
 								]
-							}, c.nombre);
+							}, f.nombre);
 						})
-					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						ref: panelRef,
-						className: "scroll-mt-6 lg:sticky lg:top-6",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
-							className: "relative",
-							children: [
-								categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,0.85fr)] lg:items-start",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+							children: "Categorías"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							className: "mt-4 grid gap-2.5 sm:grid-cols-2",
+							children: categorias.map((c, i) => {
+								const seleccionada = activa === c.nombre;
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 									type: "button",
-									onClick: () => setActiva(null),
-									"aria-label": `Cerrar ${categoria.nombre} y volver a lo más entregado`,
-									className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
-										className: "size-5",
-										"aria-hidden": true
-									})
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "pr-10 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
-									children: categoria ? categoria.nombre : "Lo más entregado"
-								}),
-								productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-									className: "mt-4 flex flex-col gap-3",
-									children: productos.map((prod, i) => {
-										const maximo = Math.max(1, ...productos.map((x) => x.value));
-										return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-											style: { "--i": i },
-											className: "vc-aparece",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-												className: "flex items-baseline justify-between gap-3",
-												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-													className: "min-w-0 truncate text-base text-[#35708F]",
-													children: prod.label
-												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-													className: "shrink-0 tabular-nums text-[#123E5C]",
-													children: prod.value.toLocaleString("es-CO")
-												})]
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-												className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
-												children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-													className: "vc-crece block h-full rounded-full",
-													style: {
-														width: `${prod.value / maximo * 100}%`,
-														background: prod.color ?? "#0079C1",
-														"--i": i
-													}
-												})
+									"aria-pressed": seleccionada,
+									onClick: () => setActiva(seleccionada ? null : c.nombre),
+									style: { "--i": i },
+									className: `vc-aparece group relative overflow-hidden rounded-md p-4 text-left transition duration-200 ${seleccionada ? "-translate-y-0.5 text-white shadow-lg" : "bg-white hover:-translate-y-0.5 hover:shadow-md"} motion-reduce:hover:translate-y-0`,
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"aria-hidden": true,
+											className: "absolute inset-0 -z-10 transition-opacity duration-200",
+											style: {
+												background: c.color,
+												opacity: seleccionada ? 1 : 0
+											}
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											"aria-hidden": true,
+											className: "absolute inset-y-0 left-0 w-1",
+											style: { background: seleccionada ? "transparent" : c.color }
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "flex items-baseline justify-between gap-3",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: `min-w-0 truncate text-base font-semibold ${seleccionada ? "text-white" : "text-[#123E5C]"}`,
+												children: c.nombre
+											}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+												className: `shrink-0 text-2xl font-extrabold ${seleccionada ? "text-white" : "text-[#0079C1]"}`,
+												children: pctTexto(c.unidades)
 											})]
-										}, prod.label);
-									})
-								}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "mt-4 text-base text-[#6B93AA]",
-									children: "No hay detalle de artículos para esta categoría."
-								}),
-								categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-									className: "mt-6 border-t border-[#0079C1]/12 pt-5",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+											className: "mt-3 block h-[5px] overflow-hidden rounded-full bg-black/10",
+											children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+												className: "vc-crece block h-full rounded-full",
+												style: {
+													width: `${c.unidades / maxUnidades * 100}%`,
+													background: seleccionada ? "#FFFFFF" : c.color,
+													"--i": i
+												}
+											})
+										}),
+										c.municipios !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: `mt-2.5 block text-[15px] ${seleccionada ? "text-white/85" : "text-[#6B93AA]"}`,
+											children: [
+												"Llegó a ",
+												c.municipios,
+												" ",
+												c.municipios === 1 ? "municipio" : "municipios"
+											]
+										})
+									]
+								}, c.nombre);
+							})
+						})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+							ref: panelRef,
+							className: "scroll-mt-6 lg:sticky lg:top-6",
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Card, {
+								className: "relative",
+								children: [
+									categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 										type: "button",
-										onClick: () => enfocarCategoria(categoria.nombre),
-										className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
-										children: "Conozca dónde llegó  la ayuda"
+										onClick: () => setActiva(null),
+										"aria-label": `Cerrar ${categoria.nombre} y volver a lo más entregado`,
+										className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+											className: "size-5",
+											"aria-hidden": true
+										})
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "pr-10 text-sm font-bold uppercase tracking-[0.16em] text-[#0079C1]",
+										children: categoria ? categoria.nombre : "Lo más entregado"
+									}),
+									categoria && categoria.productosDistintos > categoria.productos.length && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+										className: "mt-1 text-[15px] text-[#6B93AA]",
+										children: [
+											"Los ",
+											categoria.productos.length,
+											" más entregados de",
+											" ",
+											categoria.productosDistintos,
+											" artículos distintos."
+										]
+									}),
+									productos.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+										className: "mt-4 flex flex-col gap-3",
+										children: productos.map((prod, i) => {
+											const maximo = Math.max(1, ...productos.map((x) => x.value));
+											return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+												style: { "--i": i },
+												className: "vc-aparece",
+												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+													className: "flex items-baseline justify-between gap-3",
+													children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+														className: "min-w-0 truncate text-base text-[#35708F]",
+														children: prod.label
+													}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+														className: "shrink-0 tabular-nums text-[#123E5C]",
+														children: prod.value.toLocaleString("es-CO")
+													})]
+												}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+													className: "mt-1.5 h-[5px] overflow-hidden rounded-full bg-[#DDF0FA]",
+													children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+														className: "vc-crece block h-full rounded-full",
+														style: {
+															width: `${prod.value / maximo * 100}%`,
+															background: prod.color ?? "#0079C1",
+															"--i": i
+														}
+													})
+												})]
+											}, prod.label);
+										})
+									}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "mt-4 text-base text-[#6B93AA]",
+										children: "No hay detalle de artículos para esta categoría."
+									}),
+									categoria && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-6 border-t border-[#0079C1]/12 pt-5",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+											type: "button",
+											onClick: () => enfocarCategoria(categoria.nombre),
+											className: "inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0079C1] px-5 py-3 text-base font-bold text-white transition hover:bg-[#00639F]",
+											children: "Conozca dónde llegó la ayuda"
+										})
 									})
-								})
-							]
-						}, categoria?.nombre ?? "general")
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								]
+							}, categoria?.nombre ?? "general")
+						})]
+					})
+				] }),
+				poblaciones.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-14 rounded-md bg-[#0079C1] p-6 sm:p-10",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
@@ -4844,7 +4815,7 @@ function AyudaSection() {
 							children: "¿A quién llegó la ayuda?"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 max-w text-base leading-7 text-white sm:text-lg",
+							className: "mt-3 max-w-3xl text-base leading-7 text-white sm:text-lg",
 							children: "Conozca los grupos a los que fue dirigida. Una misma entrega puede incluir varios grupos, por eso la suma puede ser mayor que el total de entregas."
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
@@ -4870,6 +4841,15 @@ function AyudaSection() {
 							})
 						})
 					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-6",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Aviso, { children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "Cómo leer estas cifras." }),
+						" Los porcentajes comparan cuánta ayuda de cada tipo se entregó.",
+						" ",
+						toneladasMedidas ? "Las toneladas son el peso registrado en todo el departamento, incluidas las rutas que no llegan a un municipio. No están desagregadas por categoría." : "Las toneladas son una estimación a partir del número de entregas."
+					] })
 				})
 			]
 		})
@@ -5562,15 +5542,13 @@ function rangoEnDias(desde, hasta) {
 	return Math.round(ms / 864e5) + 1;
 }
 /**
-* El ícono de mano haciendo clic del botón de Cali.
+* El botón de Cali, como pieza gráfica.
 *
-* El archivo es de 512 por 512 con fondo transparente, pero el dibujo
-* ocupa 474 por 372 centrado, así que sobra cerca de un 14 por ciento de
-* aire arriba y abajo. Por eso la caja va más grande de lo que parecería
-* necesario: a 28 px de caja la mano mide unos 20 px de alto, que es lo
-* que corresponde al lado de un texto de 16 a 18 px.
+* El archivo es de 512 por 512 con fondo transparente. Crece por pasos
+* en vez de quedarse en una medida: a 28 px, que era lo que tenía en
+* celular, el texto que trae dibujado adentro no se lee.
 */
-var ICONO_CLICK = "/marca/boton_cali_conozca.png";
+var BOTON_CALI = "/marca/boton_cali_conozca.png";
 function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	const op = useOperacion();
 	const indicadores = [
@@ -5589,10 +5567,10 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 	];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		id: "indice",
-		className: "flex min-h-dvh flex-col bg-[#22ABE2] lg:grid lg:min-h-dvh lg:grid-rows-[auto_1fr_1fr_auto]",
+		className: "flex min-h-dvh flex-col justify-center gap-5 bg-[#22ABE2] px-4 py-10 sm:gap-6 sm:px-8 sm:py-12 md:px-12",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mx-auto w-full max-w-[100rem] px-4 pt-8 sm:px-8 md:px-12 lg:pt-10",
+				className: "mx-auto w-full max-w-[100rem]",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "flex flex-col gap-5 md:flex-row md:items-center md:justify-between md:gap-10",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
@@ -5610,31 +5588,32 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
 						href: enlaceCali,
+						className: "shrink-0 self-start md:self-center",
 						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-							src: ICONO_CLICK,
+							src: BOTON_CALI,
 							alt: "Cali: conozca la ruta",
 							width: 512,
 							height: 512,
 							decoding: "async",
-							className: "h-7 w-auto md:h-22 select-none transition hover:scale-105"
+							className: "h-12 w-auto select-none transition duration-200 hover:scale-105 sm:h-16 md:h-[5.5rem] motion-reduce:transform-none"
 						})
 					})]
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mx-auto w-full max-w-[100rem] px-4 pt-6 sm:px-8 md:px-12 lg:min-h-0 lg:pt-8",
+				className: "mx-auto w-full max-w-[100rem]",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					className: "rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "grid min-h-0 w-full gap-8 text-center sm:grid-cols-3",
+						className: "grid gap-y-7 text-center sm:grid-cols-3 sm:gap-y-0 sm:divide-x sm:divide-white/25",
 						children: indicadores.map((i, idx) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 							style: { "--i": idx },
-							className: "vc-aparece",
+							className: "vc-aparece px-2 sm:px-6",
 							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-								className: "block text-[clamp(1.75rem,4vw,3.25rem)] font-extrabold leading-none text-[#FBF8C6]",
+								className: "block text-[clamp(2rem,4.6vw,3.75rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
 								children: i.valor
 							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-3 text-base leading-6 text-white sm:text-lg sm:leading-7",
+								className: "mx-auto mt-3 max-w-[16rem] text-base leading-6 text-white sm:text-lg sm:leading-7",
 								children: i.label
 							})]
 						}, i.label))
@@ -5642,13 +5621,10 @@ function IndiceSection({ enlaceCali = "#mapa-de-ayudas" }) {
 				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "mx-auto w-full max-w-[100rem] px-4 pt-4 pb-8 sm:px-8 md:px-12 lg:min-h-0 lg:pb-10",
+				className: "mx-auto w-full max-w-[100rem]",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex h-full min-h-0 items-center rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "min-h-0 w-full",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
-					})
+					className: "rounded-sm bg-[#0079C1] px-6 py-6 sm:px-10 sm:py-8",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanoramaDonuts, {})
 				})
 			})
 		]
@@ -5690,7 +5666,7 @@ function useNecesidades() {
 *
 * Agotado, Escaso o Buena cantidad. Son las palabras del papel del
 * acopio —NADA, POCO, BASTANTE— dichas en lenguaje corriente, y su
-* significado se explica en la leyenda del final de la sección.
+* significado se explica en la leyenda.
 *
 * Que aparezca el estado es lo que permite mostrar también lo que está
 * en buena cantidad. Sin etiqueta, una lista solo puede leerse como
@@ -5712,6 +5688,19 @@ function useNecesidades() {
 *
 * Quien lee esto está decidiendo si sale a comprar algo. No aparecen
 * «URGENTE», «nivel 0», «existencias en bodega» ni «inventario».
+*
+* POR QUÉ LAS CUATRO ILUSTRACIONES VAN EN UNA TARJETA
+*
+* Porque no comparten ninguna geometría. Cada PNG tiene su píldora en una
+* esquina distinta, su dibujo desbordando hacia otro lado y proporciones
+* que van de 1,97 a 2,84. Sueltas en la rejilla, con ancho fijo, la más
+* apaisada medía 146 px de alto y la más cuadrada 213: las filas quedaban
+* desparejas por 67 px, ninguna píldora coincidía con la de al lado y el
+* ojo buscaba una cuadrícula que no existía. Eso era la desconexión.
+*
+* La tarjeta lo resuelve con dos cosas: un contenedor idéntico para las
+* cuatro y una caja de imagen de ALTO FIJO con `object-contain`. Lo que
+* cambia entre una y otra pasa a ser el dibujo, no el encuadre.
 *
 * POR QUÉ EL CAJÓN OCUPA LA FILA ENTERA
 *
@@ -5811,12 +5800,14 @@ var ILUSTRACIONES = [
 			"MERCADO"
 		],
 		src: "/marca/que-hace-falta-alimentos.png",
-		alt: "Alimentos no perecederos: arroz, pasta, lentejas, frijoles, harina, azúcar, sal, atún, sardinas, enlatados, aceite."
+		alt: "Alimentos no perecederos: arroz, pasta, lentejas, frijoles, harina, azúcar, sal, atún, sardinas, enlatados, aceite.",
+		escala: .75
 	},
 	{
 		claves: ["ASEO", "HIGIENE"],
 		src: "/marca/que-hace-falta-aseo.png",
-		alt: "Aseo personal: papel higiénico, kit de higiene, cepillos y pasta dental, jabón."
+		alt: "Aseo personal: papel higiénico, kit de higiene, cepillos y pasta dental, jabón.",
+		escala: .75
 	},
 	{
 		claves: [
@@ -5826,14 +5817,25 @@ var ILUSTRACIONES = [
 			"DESCANSO"
 		],
 		src: "/marca/que-hace-falta-dormir.png",
-		alt: "Elementos para dormir y abrigo: colchonetas, almohadas, cobijas, sábanas y ropa de abrigo."
+		alt: "Elementos para dormir y abrigo: colchonetas, almohadas, cobijas, sábanas y ropa de abrigo.",
+		escala: .75
 	},
 	{
 		claves: ["OTRO"],
 		src: "/marca/que-hace-falta-otros.png",
-		alt: "Otros elementos necesarios: agua potable, pañales, detergente, cloro, limpiador multiusos, botiquín, bolsas de basura, linterna, pilas y guantes."
+		alt: "Otros elementos necesarios: agua potable, pañales, detergente, cloro, limpiador multiusos, botiquín, bolsas de basura, linterna, pilas y guantes.",
+		escala: .75
 	}
 ];
+/**
+* La caja de la ilustración.
+*
+* `flex-1` y no un alto fijo: la caja crece hasta llenar lo que le deja
+* la tarjeta, y la tarjeta se estira a la altura de su vecina por el
+* `stretch` de la rejilla. Así las dos de una fila terminan del mismo
+* alto sin que haya que declarar ningún número.
+*/
+var CAJA_ILUSTRACION = "flex w-full flex-1 items-center justify-center";
 function normalizar(texto) {
 	return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, " ").trim();
 }
@@ -5884,18 +5886,12 @@ function QueHaceFaltaSection() {
 	*
 	* El cajón puede medir varios cientos de píxeles. Al colapsarlo, todo
 	* lo que estaba debajo sube de golpe y la persona se queda mirando la
-	* sección siguiente sin haber pedido moverse: cerró algo y el mundo se
-	* desplazó solo. Recentrar las tarjetas devuelve el punto de partida y
-	* deja claro que puede abrir otra.
+	* sección siguiente sin haber pedido moverse. Recentrar las tarjetas
+	* devuelve el punto de partida y deja claro que puede abrir otra.
 	*
 	* `anterior` distingue un cierre real de la carga inicial, donde
-	* `abierta` ya vale null y no hay nada que recentrar. Y cambiar de una
-	* categoría a otra tampoco entra acá, porque ahí `abierta` pasa de un
-	* nombre a otro, nunca por null.
-	*
-	* El `setTimeout` dura lo que la transición: antes de eso el cajón
-	* todavía ocupa alto y el navegador calcularía el destino con la
-	* página que está por dejar de existir.
+	* `abierta` ya vale null. Cambiar de una categoría a otra tampoco entra
+	* acá, porque ahí `abierta` pasa de un nombre a otro, nunca por null.
 	*/
 	const tarjetasRef = (0, import_react.useRef)(null);
 	const anterior = (0, import_react.useRef)(null);
@@ -5930,12 +5926,12 @@ function QueHaceFaltaSection() {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Leyenda, {}),
 				secciones.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					ref: tarjetasRef,
-					className: "mt-8 space-y-6",
+					className: "mt-8 space-y-5",
 					children: filas.map((fila, indiceFila) => {
 						const enEstaFila = indiceAbierta >= 0 && Math.floor(indiceAbierta / columnas) === indiceFila ? secciones[indiceAbierta] : null;
 						const columnaAbierta = enEstaFila ? indiceAbierta % columnas : 0;
 						return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							className: "grid items-start gap-6 sm:grid-cols-2",
+							className: "grid gap-5 sm:grid-cols-2",
 							children: fila.map((s) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaCategoria, {
 								seccion: s,
 								abierta: abierta === s.nombre,
@@ -5945,18 +5941,27 @@ function QueHaceFaltaSection() {
 							seccion: enEstaFila,
 							columnaAbierta,
 							columnas,
-							fechaInventario: data?.fechaInventario ?? null,
 							onCerrar: () => setAbierta(null)
 						})] }, indiceFila);
 					})
 				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-					className: "mt-10 grid items-start gap-6 sm:grid-cols-2",
-					children: ILUSTRACIONES.map((arte) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-						src: arte.src,
-						alt: arte.alt,
-						loading: "lazy",
-						decoding: "async",
-						className: "h-auto w-full"
+					className: "mt-8 grid gap-5 sm:grid-cols-2",
+					children: ILUSTRACIONES.map((arte) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex h-full flex-col rounded-2xl bg-white/10 p-4",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: CAJA_ILUSTRACION,
+							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+								src: arte.src,
+								alt: arte.alt,
+								loading: "lazy",
+								decoding: "async",
+								style: {
+									filter: SOMBRA_REPOSO,
+									width: `${(arte.escala ?? 1) * 100}%`
+								},
+								className: "h-auto object-contain"
+							})
+						})
 					}) }, arte.src))
 				})
 			]
@@ -5964,24 +5969,18 @@ function QueHaceFaltaSection() {
 	});
 }
 /**
-* La instrucción y el significado de los tres estados.
+* El significado de los tres estados.
 *
-* Va sobre una tarjeta blanca y no directamente sobre el cyan: texto
-* blanco sobre el fondo de esta sección contrasta cerca de 3,6 a 1, por
-* debajo del 4,5 que pide la norma para cuerpo de texto. Sobre blanco,
-* el mismo texto en azul profundo pasa de sobra.
-*
-* Los tres estados van EN LÍNEA y no apilados, con el mismo patrón que
-* la leyenda de familias de AyudaSection. Apilados ocupaban siete
-* renglones y empujaban las tarjetas fuera de la primera pantalla, que
-* es donde tienen que estar: la leyenda explica algo que todavía no se
-* ha visto, así que cuanto menos espacio ocupe, mejor cumple su papel.
+* Va sobre una tarjeta blanca y no directamente sobre el cyan: el
+* degradado va de #40BBE5 en el centro a #0E8BB7 en los bordes, y no hay
+* un solo color de texto que pase el 4,5 de contraste en los dos
+* extremos. Sobre blanco, el azul profundo lo pasa de sobra.
 */
 function Leyenda() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mt-6 rounded-xl bg-white px-5 py-4 sm:px-6 sm:py-5",
+		className: "rounded-xl bg-white px-5 py-4 sm:px-6 sm:py-5",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-			className: "mt-3 grid gap-x-6 gap-y-4 sm:grid-cols-3",
+			className: "grid gap-x-6 gap-y-4 sm:grid-cols-3",
 			children: ESTADOS.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
 				className: "flex flex-col items-center text-center",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
@@ -6005,20 +6004,29 @@ function TarjetaCategoria({ seccion, abierta, onToggle }) {
 		type: "button",
 		"aria-expanded": abierta,
 		onClick: onToggle,
-		style: { filter: abierta ? SOMBRA_ACTIVA : SOMBRA_REPOSO },
-		className: `mx-auto block w-full max-w-[26rem] transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FBF8C6] motion-reduce:transform-none ${abierta ? "-translate-y-1.5" : "hover:-translate-y-1.5"}`,
-		children: [arte ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
-			src: arte.src,
-			alt: arte.alt,
-			loading: "lazy",
-			decoding: "async",
-			className: "h-auto w-full"
-		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "block rounded-xl bg-[#FBF8C6] px-6 py-8 text-xl font-bold text-[#0079C1]",
-			children: seccion.nombre
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
-			"aria-hidden": true,
-			className: `mx-auto mt-1 size-7 text-white transition-transform duration-200 motion-reduce:transform-none ${abierta ? "rotate-180" : ""}`
+		className: `flex h-full w-full flex-col rounded-2xl px-4 pb-2.5 pt-4 transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FBF8C6] motion-reduce:transform-none ${abierta ? "-translate-y-1.5 bg-white/25" : "bg-white/10 hover:-translate-y-1.5 hover:bg-white/20"}`,
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: CAJA_ILUSTRACION,
+			children: arte ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", {
+				src: arte.src,
+				alt: arte.alt,
+				loading: "lazy",
+				decoding: "async",
+				style: {
+					filter: abierta ? SOMBRA_ACTIVA : SOMBRA_REPOSO,
+					width: `${(arte.escala ?? 1) * 100}%`
+				},
+				className: "h-auto object-contain"
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "rounded-xl bg-[#FBF8C6] px-6 py-4 text-xl font-bold text-[#0079C1]",
+				children: seccion.nombre
+			})
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "mt-3 flex w-full justify-center border-t border-white/25 pt-2",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
+				"aria-hidden": true,
+				className: `size-6 text-white transition-transform duration-200 motion-reduce:transform-none ${abierta ? "rotate-180" : ""}`
+			})
 		})]
 	}) });
 }
@@ -6029,7 +6037,7 @@ function TarjetaCategoria({ seccion, abierta, onToggle }) {
 * desmonta: conserva el contenido de la última que estuvo abierta
 * mientras la altura vuelve a cero. Sin eso, cerrar sería un corte seco.
 */
-function CajonDeFila({ seccion, columnaAbierta, columnas, fechaInventario, onCerrar }) {
+function CajonDeFila({ seccion, columnaAbierta, columnas, onCerrar }) {
 	const panelId = (0, import_react.useId)();
 	const panelRef = (0, import_react.useRef)(null);
 	const ultima = (0, import_react.useRef)(null);
@@ -6089,17 +6097,14 @@ function CajonDeFila({ seccion, columnaAbierta, columnas, fechaInventario, onCer
 								"aria-hidden": true
 							})
 						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ListaDeNecesidades, {
-							seccion: contenido,
-							fechaInventario
-						})
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ListaDeNecesidades, { seccion: contenido })
 					]
 				})
 			})
 		}
 	);
 }
-function ListaDeNecesidades({ seccion, fechaInventario }) {
+function ListaDeNecesidades({ seccion }) {
 	/**
 	* Solo los que tienen estado. Los que la hoja dejó sin anotar no se
 	* pueden ordenar ni etiquetar, y ponerlos con una etiqueta inventada

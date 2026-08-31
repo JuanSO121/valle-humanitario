@@ -22,6 +22,32 @@ interface Props {
   logo?: string | undefined;
 }
 
+/**
+ * SidebarNav
+ * -----------------------------------------------------------------------
+ * CÓMO SE ABRE EN ESCRITORIO
+ *
+ * Haciendo clic en cualquier punto de la barra retraída. Antes había un
+ * botón de tres líneas dentro del riel, y el problema es que estaba
+ * compuesto exactamente igual que los ítems del menú: mismo tamaño de
+ * ícono, misma columna, apilado justo encima de ellos. Se leía como una
+ * sección más, no como un control.
+ *
+ * Ahora el riel entero es la zona de clic. Es más grande que cualquier
+ * botón, no compite con los íconos de sección y no hace falta apuntarle a
+ * nada. Los íconos de sección siguen navegando: cortan la propagación
+ * para que un clic sobre uno no haga las dos cosas a la vez.
+ *
+ * El clic sobre el `<nav>` es una comodidad para el mouse, no la única
+ * puerta. Quien navega con teclado llega al botón del logo, que retraído
+ * cambia su función y su etiqueta a "Abrir menú": un `div` con `onClick`
+ * no recibe foco y dejaría la barra inalcanzable sin mouse.
+ *
+ * En celular no cambia nada: el botón flotante de la esquina sigue
+ * siendo el que abre, y ahí sí tiene sentido, porque no está dentro de
+ * ninguna lista con la que confundirse.
+ * -----------------------------------------------------------------------
+ */
 export function SidebarNav({
   items,
   scrollRootId,
@@ -51,7 +77,6 @@ export function SidebarNav({
    */
   useEffect(() => {
     if (!abierto) return;
-
     const alTocarFuera = (evento: PointerEvent) => {
       const destino = evento.target as Node;
       if (navRef.current?.contains(destino)) return;
@@ -60,13 +85,11 @@ export function SidebarNav({
       if (abrirRef.current?.contains(destino)) return;
       setAbierto(false);
     };
-
     const alPresionar = (evento: KeyboardEvent) => {
       if (evento.key !== "Escape") return;
       setAbierto(false);
       abrirRef.current?.focus();
     };
-
     document.addEventListener("pointerdown", alTocarFuera);
     document.addEventListener("keydown", alPresionar);
     return () => {
@@ -78,7 +101,6 @@ export function SidebarNav({
   useEffect(() => {
     const root = document.getElementById(scrollRootId);
     if (!root) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
@@ -102,7 +124,6 @@ export function SidebarNav({
         threshold: 0,
       },
     );
-
     items.forEach((item) => {
       const el = document.getElementById(item.id);
       if (el) observer.observe(el);
@@ -143,31 +164,38 @@ export function SidebarNav({
         }`}
       />
 
+      {/* El `onClick` del riel: en celular la barra está fuera de
+          pantalla con `-translate-x-full`, así que este manejador solo
+          alcanza a dispararse en escritorio y no hace falta preguntar por
+          el tamaño. El cursor cambia solo cuando la barra está retraída,
+          porque abierta ya no es una zona de clic. */}
       <nav
         ref={navRef}
         aria-label="Secciones"
-        className={`fixed left-0 top-0 z-50 shadow-xl md:shadow-none flex h-dvh flex-col border-r border-[#0079C1]/12 bg-white py-5 transition-[width,transform] duration-300 ease-out motion-reduce:transition-none ${
+        onClick={abierto ? undefined : () => setAbierto(true)}
+        className={`fixed left-0 top-0 z-50 flex h-dvh flex-col border-r border-[#0079C1]/12 bg-white py-5 shadow-xl transition-[width,transform] duration-300 ease-out md:shadow-none motion-reduce:transition-none ${
           abierto
             ? "w-72 translate-x-0 px-4"
-            : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:px-3"
+            : "w-72 -translate-x-full px-4 md:w-20 md:translate-x-0 md:cursor-pointer md:px-3 md:hover:bg-[#FAFDFF]"
         }`}
       >
         {/* Encabezado.
-
-            Retraído los dos botones se APILAN. Antes iban lado a lado, y
-            en 80 px de ancho con relleno quedan 56 útiles: el logo de 44
-            y el botón de 44 no caben, así que el segundo se salía de la
-            barra y quedaba flotando sobre el contenido. */}
-        <div
-          className={`mb-5 ${
-            abierto ? "flex items-center gap-3 px-1" : "flex flex-col items-center gap-2"
-          }`}
-        >
+            Retraído queda solo el logo. El botón de tres líneas que había
+            acá se fue: apilado sobre los íconos de sección, con el mismo
+            cuerpo y en la misma columna, se leía como una sección más. */}
+        <div className={`mb-5 ${abierto ? "flex items-center gap-3 px-1" : "flex justify-center"}`}>
           <button
             type="button"
-            onClick={() => irA(inicioId)}
-            aria-label="Volver al inicio"
-            title="Volver al inicio"
+            onClick={(evento) => {
+              // Corta la propagación para decidir acá qué hace el clic:
+              // abierto lleva al inicio, retraído despliega la barra.
+              evento.stopPropagation();
+              if (abierto) irA(inicioId);
+              else setAbierto(true);
+            }}
+            aria-label={abierto ? "Volver al inicio" : "Abrir menú"}
+            aria-expanded={abierto ? undefined : false}
+            title={abierto ? "Volver al inicio" : "Abrir menú"}
             className={`flex shrink-0 items-center justify-center rounded-xl transition hover:bg-[#EAF7FC] ${
               abierto ? "h-12 px-2" : "h-11 w-full px-1"
             }`}
@@ -177,29 +205,23 @@ export function SidebarNav({
                 competía con las secciones del menú. */}
             <img
               src={logo}
-              alt="Gobernación del Valle del Cauca. Volver al inicio"
+              alt={abierto ? "Gobernación del Valle del Cauca. Volver al inicio" : ""}
               className={abierto ? "h-10 w-auto" : "h-8 w-full object-contain"}
             />
           </button>
 
-          {abierto ? (
+          {abierto && (
             <button
               type="button"
-              onClick={() => setAbierto(false)}
+              onClick={(evento) => {
+                evento.stopPropagation();
+                setAbierto(false);
+              }}
               aria-label="Cerrar menú"
               className="ml-auto flex size-9 shrink-0 items-center justify-center rounded-full text-[#35708F] transition hover:bg-[#F2FAFD]"
             >
               <X className="size-5 md:hidden" aria-hidden />
               <ChevronLeft className="hidden size-5 md:block" aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAbierto(true)}
-              aria-label="Abrir menú"
-              className="hidden size-11 shrink-0 items-center justify-center rounded-xl text-[#35708F] transition hover:bg-[#F2FAFD] md:flex"
-            >
-              <Menu className="size-6" aria-hidden />
             </button>
           )}
         </div>
@@ -209,9 +231,16 @@ export function SidebarNav({
             const esActivo = activo === id;
             return (
               <li key={id}>
+                {/* `stopPropagation` para que un clic sobre un ícono
+                    navegue y nada más. Sin esto, con la barra retraída el
+                    mismo clic navegaría Y desplegaría el menú, y quedaría
+                    la barra abierta encima de la sección recién abierta. */}
                 <button
                   type="button"
-                  onClick={() => irA(id)}
+                  onClick={(evento) => {
+                    evento.stopPropagation();
+                    irA(id);
+                  }}
                   aria-current={esActivo ? "true" : undefined}
                   title={abierto ? undefined : label}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base font-semibold transition ${
