@@ -3,18 +3,17 @@ import * as maplibregl from "maplibre-gl";
 import type { Map as MapLibreMap, MapLayerMouseEvent, PointLike } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
 maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 import type { Origen, Flujo, DestinoResumenLista } from "@/domain/entities";
 import { buildArcCoordinates, buildPulseGradient, easeOutCubic, type LngLat } from "./arcGeometry";
 import { createArcAnimationEngine } from "./arcAnimationEngine";
-
 import { normId } from "@/lib/id";
 import { normMunicipalityName, sameMunicipality } from "@/lib/municipalityName";
 import municipalBoundariesRaw from "@/data/valle-municipios.json";
 import { createArrivalPulseEngine } from "./arrivalPulseEngine";
 import { createDispatchActivityEngine, type ActivityFrame } from "./dispatchActivityEngine";
-
 import {
   TERRITORY_BLUE_RAMP,
   getTerritoryStatByCode,
@@ -49,7 +48,6 @@ export type MunicipiosMapa = ReadonlyMap<string, MunicipioMapa>;
 
 const OVERVIEW_CENTER: LngLat = [-76.35, 3.95];
 const OVERVIEW_ZOOM = 7.1;
-
 const ORIGIN_PULSE_PERIOD_MS = 1700;
 const ORIGIN_PULSE_MAX_RADIUS_GROWTH = 22;
 
@@ -75,7 +73,6 @@ const TERRITORY_NO_DATA = "#162936";
  */
 const TERRITORY_EXCLUDED = "#2A3D4A";
 const CALI_DANE = "76001";
-
 
 /**
  * Umbral heurístico de "verde pleno" para el mapa de calor de destinos.
@@ -173,9 +170,7 @@ function ringCenter(geometry: unknown): LngLat | null {
       : geo?.type === "MultiPolygon"
         ? (geo.coordinates as number[][][][] | undefined)?.[0]?.[0]
         : null;
-
   if (!Array.isArray(ring) || ring.length === 0) return null;
-
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -200,11 +195,9 @@ interface BoundaryFeature {
 
 function normalizeBoundaries(geojson: unknown): maplibregl.GeoJSONSourceSpecification["data"] {
   const collection = geojson as { features?: BoundaryFeature[] };
-
   if (!collection?.features) {
     return geojson as maplibregl.GeoJSONSourceSpecification["data"];
   }
-
   return {
     ...(collection as object),
     features: collection.features.map((feature) => {
@@ -212,7 +205,6 @@ function normalizeBoundaries(geojson: unknown): maplibregl.GeoJSONSourceSpecific
       const code = normId(String(feature.id ?? "")) || municipalityCodeFromProperties(properties);
       const name = municipalityNameFromProperties(properties);
       const center = ringCenter(feature.geometry);
-
       return {
         ...feature,
         id: code || `idx-${feature.id ?? name}`, // nunca undefined, sin id, feature-state no pega
@@ -245,6 +237,7 @@ const ORIGEN_COLOR: Record<string, string> = {
   "ORI-CALI": "#2f6fed",
   "ORI-CARTAGO": "#e6883c",
 };
+
 const ORIGEN_DIM_COLOR: Record<string, string> = {
   "ORI-CALI": "rgba(47,111,237,0.35)",
   "ORI-CARTAGO": "rgba(230,136,60,0.35)",
@@ -253,6 +246,7 @@ const ORIGEN_DIM_COLOR: Record<string, string> = {
 const ORIGEN_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
   Object.entries(ORIGEN_COLOR).map(([id, color]) => [normId(id), color]),
 );
+
 const ORIGEN_DIM_COLOR_BY_NORM_ID: Record<string, string> = Object.fromEntries(
   Object.entries(ORIGEN_DIM_COLOR).map(([id, color]) => [normId(id), color]),
 );
@@ -321,6 +315,15 @@ interface Props {
    */
   resaltados?: ReadonlySet<string> | null | undefined;
   routesMode: TerritoryRoutesMode;
+  /**
+   * Contador que pide devolver la cámara al encuadre inicial.
+   *
+   * Va como número y no como función imperativa ni como `boolean` a
+   * propósito: cada incremento es una orden nueva, así que pedir dos
+   * veces seguidas "volvé a centrar" funciona, cosa que con un booleano
+   * no pasaría porque el segundo cambio no sería un cambio.
+   */
+  vistaGeneralToken?: number;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
   onReset: () => void;
@@ -398,6 +401,7 @@ export function MapCanvas({
   municipios,
   resaltados = null,
   routesMode,
+  vistaGeneralToken = 0,
   onSelectDestino,
   onSelectOrigen,
   onReset,
@@ -414,6 +418,7 @@ export function MapCanvas({
   const activityEngineRef = useRef(createDispatchActivityEngine());
   const rafRef = useRef<number | null>(null);
   const coordsCacheRef = useRef<Map<string, LngLat[]>>(new Map());
+
   const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset, onActivity });
   handlersRef.current = { onSelectDestino, onSelectOrigen, onReset, onActivity };
 
@@ -433,7 +438,6 @@ export function MapCanvas({
 
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
-
   const destinoIdByNormNameRef = useRef<Map<string, string>>(new Map());
   // El handler de click se registra una sola vez, así que la lista de
   // destinos se lee por ref para no quedar fija al primer render.
@@ -444,8 +448,31 @@ export function MapCanvas({
   const prevWeightsRef = useRef<Map<string, number>>(new Map());
   const destinoAcumuladoRef = useRef<Map<string, number>>(new Map());
 
+  /**
+   * Firma del conjunto de arcos asentados: sus claves y sus pesos.
+   *
+   * Existe para NO reescribir la fuente cuando la geometría no cambió.
+   * El motivo largo está en animate(), donde se usa.
+   */
+  const firmaAsentadosRef = useRef("");
+  /** Si el frame anterior tenía arcos creciendo. */
+  const huboCreciendoRef = useRef(false);
+  /** Si el frame anterior tenía pulsos de llegada activos. */
+  const huboLlegadasRef = useRef(false);
+
+  /**
+   * Firma del conjunto de arcos visibles: sus claves, ordenadas.
+   *
+   * Sirve para saber si la selección cambió DE VERDAD. Este efecto vuelve
+   * a correr cada vez que React rearma el array de flujos, aunque su
+   * contenido sea el mismo, y sin esta comparación la red se reanimaría
+   * sola en cada render.
+   */
+  const firmaArcosRef = useRef("");
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: BASE_STYLE,
@@ -454,6 +481,7 @@ export function MapCanvas({
       attributionControl: { compact: true },
     });
     mapRef.current = map;
+
     // Abajo a la izquierda: arriba a la derecha vive el marcador y arriba
     // a la izquierda el panel de territorio. En móvil el gesto de pellizcar
     // ya cubre el zoom, así que estos botones no compiten por el espacio.
@@ -465,9 +493,9 @@ export function MapCanvas({
 
     map.on("load", () => {
       let hoveredMunicipalityId: string | null = null;
+
       try {
         map.addSource("municipios", { type: "geojson", data: municipalBoundaries });
-
         map.addLayer({
           id: "municipios-fill",
           type: "fill",
@@ -597,6 +625,7 @@ export function MapCanvas({
           }
           hoveredMunicipalityId = nextId;
         });
+
         map.on("mouseleave", "municipios-fill", () => {
           map.getCanvas().style.cursor = "";
           if (hoveredMunicipalityId != null) {
@@ -614,7 +643,6 @@ export function MapCanvas({
       }
 
       map.addSource("origenes", { type: "geojson", data: EMPTY_COLLECTION });
-
       map.addLayer({
         id: "origenes-glow",
         type: "circle",
@@ -672,7 +700,7 @@ export function MapCanvas({
           // justSettled y el weight-bump. Sin esta expresión todo ese
           // motor incremental corría sin producir nada visible: era el
           // bug por el que los destinos nunca cambiaban de color al
-                    // avanzar el timeline.
+          // avanzar el timeline.
           "circle-color": [
             "case",
             ["boolean", ["feature-state", "selected"], false],
@@ -769,6 +797,7 @@ export function MapCanvas({
           if (id != null) handlersRef.current.onSelectOrigen(String(id));
           return;
         }
+
         const destinoHits = map.queryRenderedFeatures(hitbox, { layers: ["destinos-point"] });
         if (destinoHits.length > 0) {
           const id = destinoHits[0]?.properties?.["id"];
@@ -784,15 +813,12 @@ export function MapCanvas({
           const municipioCode = String(
             municipio?.properties?.["municipalityCode"] ?? municipio?.id ?? "",
           );
-
           const municipioName = municipio?.properties?.["name"];
-
           // Se prueba por nombre del polígono, por el nombre que trae el
           // catálogo vivo para ese código DANE, y por el código. El
           // segundo cubre los casos donde el GeoJSON escribe el municipio
           // distinto del Excel, como Buga y Guadalajara de Buga.
           const nombreCatalogo = municipiosRef.current.get(normId(municipioCode))?.nombre;
-
           const destinoId =
             (municipioName != null
               ? destinoIdByNormNameRef.current.get(normMunicipalityName(String(municipioName)))
@@ -808,6 +834,7 @@ export function MapCanvas({
                 sameMunicipality(d.nombre, municipioName == null ? null : String(municipioName)) ||
                 sameMunicipality(d.nombre, nombreCatalogo ?? null),
             )?.id;
+
           if (destinoId != null) {
             handlersRef.current.onSelectDestino(destinoId);
             return;
@@ -845,6 +872,7 @@ export function MapCanvas({
           )
           .addTo(map);
       });
+
       map.on("mouseleave", "origenes-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredOrigenIdRef.current != null) {
@@ -867,6 +895,7 @@ export function MapCanvas({
           .setHTML(popupHtml(String(f.properties?.["nombre"] ?? ""), "Toca para ver el detalle"))
           .addTo(map);
       });
+
       map.on("mouseleave", "destinos-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredDestinoIdRef.current != null) {
@@ -911,7 +940,6 @@ export function MapCanvas({
                 { intensity: intensityFor(nuevoTotal) },
               );
               pulseEngineRef.current.spawn(destinoId, now);
-
               const meta = destinoMetaByIdRef.current.get(destinoId);
               if (meta) activityEngineRef.current.spawn(destinoId, meta.nombre, arc.weight, now);
             });
@@ -919,25 +947,36 @@ export function MapCanvas({
 
           handlersRef.current.onActivity?.(activityEngineRef.current.tick(now));
 
+          const pulsos = pulseEngineRef.current.tick(now);
           const arrivalsCollection = {
             type: "FeatureCollection" as const,
-            features: pulseEngineRef.current
-              .tick(now)
-              .flatMap((p: { destinoId: string; progress: number }) => {
-                const coords = destinoCoordsByIdRef.current.get(p.destinoId);
-                if (!coords) return [];
-                return [
-                  {
-                    type: "Feature" as const,
-                    properties: { radius: 5 + p.progress * 28, opacity: (1 - p.progress) * 0.85 },
-                    geometry: { type: "Point" as const, coordinates: coords },
-                  },
-                ];
-              }),
+            features: pulsos.flatMap((p: { destinoId: string; progress: number }) => {
+              const coords = destinoCoordsByIdRef.current.get(p.destinoId);
+              if (!coords) return [];
+              return [
+                {
+                  type: "Feature" as const,
+                  properties: { radius: 5 + p.progress * 28, opacity: (1 - p.progress) * 0.85 },
+                  geometry: { type: "Point" as const, coordinates: coords },
+                },
+              ];
+            }),
           };
-          (map.getSource("arrivals") as maplibregl.GeoJSONSource | undefined)?.setData(
-            arrivalsCollection,
-          );
+
+          // Mismo criterio que con los arcos: cuando no hay ninguna
+          // llegada activa no hace falta seguir escribiendo una colección
+          // vacía en cada frame, alcanza con vaciarla una vez.
+          if (pulsos.length > 0) {
+            huboLlegadasRef.current = true;
+            (map.getSource("arrivals") as maplibregl.GeoJSONSource | undefined)?.setData(
+              arrivalsCollection,
+            );
+          } else if (huboLlegadasRef.current) {
+            huboLlegadasRef.current = false;
+            (map.getSource("arrivals") as maplibregl.GeoJSONSource | undefined)?.setData(
+              arrivalsCollection,
+            );
+          }
 
           const growingCollection = {
             type: "FeatureCollection" as const,
@@ -954,9 +993,22 @@ export function MapCanvas({
               ];
             }),
           };
-          (map.getSource("arcos-creciendo") as maplibregl.GeoJSONSource | undefined)?.setData(
-            growingCollection,
-          );
+
+          // Los que crecen cambian de verdad en cada frame, así que acá el
+          // setData continuo está justificado. Lo que no hacía falta era
+          // seguir escribiendo una colección vacía indefinidamente cuando
+          // ya no queda ninguno.
+          if (frame.growing.length > 0) {
+            huboCreciendoRef.current = true;
+            (map.getSource("arcos-creciendo") as maplibregl.GeoJSONSource | undefined)?.setData(
+              growingCollection,
+            );
+          } else if (huboCreciendoRef.current) {
+            huboCreciendoRef.current = false;
+            (map.getSource("arcos-creciendo") as maplibregl.GeoJSONSource | undefined)?.setData(
+              growingCollection,
+            );
+          }
 
           const settledCollection = {
             type: "FeatureCollection" as const,
@@ -972,10 +1024,40 @@ export function MapCanvas({
               ];
             }),
           };
-          (map.getSource("arcos-asentados") as maplibregl.GeoJSONSource | undefined)?.setData(
-            settledCollection,
-          );
 
+          /**
+           * Solo se reescribe cuando el conjunto cambia de verdad.
+           *
+           * La geometría de los arcos asentados no cambia entre frames: lo
+           * único que se mueve es el gradiente, y ese es una propiedad de
+           * PINTURA, no de la fuente.
+           *
+           * Reescribirla en cada frame obligaba a MapLibre a recalcular
+           * las métricas de línea de todos los arcos —esta fuente lleva
+           * `lineMetrics: true`—, que es justo el insumo que
+           * `line-gradient` necesita para dibujarse: el gradiente se
+           * pintaba contra una geometría que se estaba regenerando debajo.
+           *
+           * Se notaba sobre todo SIN timeline, porque ahí snapTo() asienta
+           * los 54 arcos en el primer frame: unas 2.700 coordenadas
+           * reprocesadas sesenta veces por segundo. Con timeline arranca
+           * con pocos asentados y por eso ahí sí se veía fluido.
+           *
+           * La firma incluye el peso porque `bumpWeight` puede engordar
+           * una línea sin que cambie el conjunto de claves, y ese cambio sí
+           * tiene que llegar a la fuente.
+           */
+          const firmaAsentados = frame.settled.map((a) => `${a.key}:${a.weight}`).join("|");
+          if (firmaAsentados !== firmaAsentadosRef.current) {
+            firmaAsentadosRef.current = firmaAsentados;
+            (map.getSource("arcos-asentados") as maplibregl.GeoJSONSource | undefined)?.setData(
+              settledCollection,
+            );
+          }
+
+          // Este SÍ va en cada frame: es lo único que tiene que moverse, y
+          // como es propiedad de pintura no toca la fuente ni obliga a
+          // recalcular nada de la geometría.
           if (map.getLayer("arcos-asentados-line")) {
             map.setPaintProperty(
               "arcos-asentados-line",
@@ -998,6 +1080,7 @@ export function MapCanvas({
             document.visibilityState !== "hidden" ? requestAnimationFrame(animate) : null;
         }
       };
+
       rafRef.current = requestAnimationFrame(animate);
 
       subirEtiquetas(map);
@@ -1087,11 +1170,9 @@ export function MapCanvas({
       (d): d is DestinoResumenLista & { latitud: number; longitud: number } =>
         d.latitud != null && d.longitud != null,
     );
-
     destinoCoordsByIdRef.current = new Map(
       conCoordenada.map((d) => [d.id, [d.longitud, d.latitud] as LngLat]),
     );
-
     destinoMetaByIdRef.current = new Map(
       conCoordenada.map((d) => [
         d.id,
@@ -1132,6 +1213,7 @@ export function MapCanvas({
         );
         return;
       }
+
       const selectedDestinoName = destinos.find((d) => d.id === selectedDestinoId)?.nombre;
 
       if (import.meta.env.DEV) {
@@ -1146,7 +1228,6 @@ export function MapCanvas({
       boundaryFeatures.forEach((feature) => {
         const id = feature.id ?? feature.properties?.["municipalityCode"];
         if (id == null || String(id).trim() === "") return;
-
         const code = String(id);
         const esCali = normId(code) === CALI_DANE;
         const vivo = municipios.get(code);
@@ -1260,18 +1341,51 @@ export function MapCanvas({
         if (coordsCacheRef.current.has(key)) validKeys.push(key);
       });
 
-      // Sin línea de tiempo activa el mapa NO se reproduce solo: las
-      // rutas aparecen ya dibujadas. La cascada de crecimiento es parte
-      // de la narración por jornada, no de la carga de la página.
-      // Mismo criterio que la rama de intensidad de más abajo, que ya
-      // fijaba el color final en este caso.
-      if (instantTransition || !timelineActive) {
-        engine.snapTo(validKeys, weights, performance.now());
-      } else {
+      /**
+       * Cuándo se anima el crecimiento de los arcos.
+       *
+       * Un arco tiene dos aspectos distintos: mientras CRECE va del color
+       * de su origen —azul si salió de Cali, naranja si salió de
+       * Cartago—, y una vez ASENTADO pasa a la línea clara con el pulso
+       * recorriéndola. Si se salta la primera fase, la ruta aparece ya
+       * asentada y se pierde de dónde salió.
+       *
+       * Se anima siempre que el conjunto de arcos cambie, con una sola
+       * excepción: `instantTransition`, que es el seek del timeline.
+       * Nunca se anima un salto, porque redibujar una línea ya trazada se
+       * lee como un error visual y no como "retrocedió en el tiempo".
+       *
+       * La comparación por firma es lo que evita que se reanime sola: sin
+       * ella, cada render de React rearma el array de flujos y la red
+       * volvería a crecer desde cero aunque no haya cambiado nada.
+       */
+      const firmaArcos = validKeys.slice().sort().join("|");
+      const cambiaronLosArcos = firmaArcos !== firmaArcosRef.current;
+      firmaArcosRef.current = firmaArcos;
+
+      const animarEntrada =
+        !instantTransition && validKeys.length > 0 && (timelineActive || cambiaronLosArcos);
+
+      if (animarEntrada) {
+        // Sin timeline, los arcos que sobreviven al cambio de selección
+        // ya están en fase "settled" desde la vez anterior, y `enter()`
+        // solo actúa sobre los que están en "idle". Vaciar el registro
+        // primero es lo que los hace nacer de nuevo.
+        //
+        // Con timeline NO se vacía: ahí los arcos se van sumando jornada
+        // a jornada y reiniciar los ya dibujados rompería la continuidad.
+        if (!timelineActive) engine.snapTo([], {}, performance.now());
         engine.sync(validKeys, weights);
         validKeys.forEach((key) => engine.enter(key, performance.now()));
+      } else {
+        engine.snapTo(validKeys, weights, performance.now());
       }
 
+      // La intensidad de los puntos sigue atada al timeline, no a la
+      // cascada. Durante la entrada inicial los destinos ya toman su
+      // color final mientras las líneas se dibujan: el degradado
+      // progresivo es parte de la narración por jornada, y en la carga
+      // dejaría los puntos en rojo hasta que termine la ola.
       if (instantTransition || !timelineActive) {
         const totales = new Map<string, number>();
         flujos.forEach((f) => {
@@ -1298,15 +1412,38 @@ export function MapCanvas({
               { source: "destinos", id: destinoId },
               { intensity: intensityFor(nuevoTotal) },
             );
-
             const meta = destinoMetaByIdRef.current.get(destinoId);
             if (meta) activityEngineRef.current.spawn(destinoId, meta.nombre, delta, performance.now());
           }
         });
       }
+
       prevWeightsRef.current = new Map(Object.entries(weights));
     });
   }, [flujos, instantTransition, origenes, destinos, timelineActive]);
+
+  /**
+   * Devolver la cámara al encuadre inicial.
+   *
+   * El primer valor del contador se ignora: si no, el mapa haría un
+   * `easeTo` hacia el mismo sitio donde ya está apenas termina de
+   * montarse, y se vería un tirón sin motivo al cargar la página.
+   */
+  const primerTokenRef = useRef(true);
+  useEffect(() => {
+    if (primerTokenRef.current) {
+      primerTokenRef.current = false;
+      return;
+    }
+    whenReady(() => {
+      const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      mapRef.current?.easeTo({
+        center: OVERVIEW_CENTER,
+        zoom: OVERVIEW_ZOOM,
+        duration: prefiereQuieto ? 0 : 700,
+      });
+    });
+  }, [vistaGeneralToken]);
 
   // --- visibilidad de puntos y rutas --------------------------------------
   useEffect(() => {

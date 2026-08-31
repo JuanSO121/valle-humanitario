@@ -1,8 +1,8 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { _ as Building2, a as PackageCheck, c as MapPin, d as HeartHandshake, f as HandHeart, g as CalendarDays, h as ChevronDown, i as Package, l as List, m as ChevronLeft, n as Warehouse, o as Menu, p as FileText, r as Truck, s as Map$1, t as X, u as House, v as Boxes, y as ArrowLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BEeKFW4M.js
+import { _ as CalendarDays, a as Package, b as ArrowLeft, c as Map$1, d as House, f as HeartHandshake, g as ChevronDown, h as ChevronLeft, i as RotateCcw, l as MapPin, m as FileText, n as Warehouse, o as PackageCheck, p as HandHeart, r as Truck, s as Menu, t as X, u as List, v as Building2, y as Boxes } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DeUaJPfn.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -1892,114 +1892,6 @@ function leerCantidad(frame) {
 	].find((v) => typeof v === "number" && v > 0);
 	return typeof encontrado === "number" ? encontrado : 1;
 }
-/**
-* FlujosLegend.tsx
-* -----------------------------------------------------------------------
-* Leyenda fija de colores por origen. Deliberadamente NO se calcula a
-* partir de `origenes` (route=origenes) en tiempo real: solo hay dos
-* orígenes animables (Cali/Cartago, ver MapCanvas.ORIGEN_COLOR) y son
-* estables — derivar la leyenda del catálogo agregaría una dependencia de
-* red a un componente que es puro texto+color, y arriesgaría desincronía
-* de color si algún día MapCanvas cambia su paleta sin tocar este
-* archivo. Los colores están duplicados a propósito en las dos
-* constantes de abajo; si se tocan, se tocan juntas (mismo criterio que
-* ya se usó para ORIGEN_COLOR en MapCanvas.tsx).
-*
-* `compact`: variante mobile. NO es un MobileMenu-style drawer como el
-* del proyecto viejo — ese consolidaba 3 paneles de FILTRADO (buscar,
-* criticidad, mapa de calor) detrás de un botón, porque eran controles de
-* configuración que no hacía falta ver todo el tiempo. Acá el contenido
-* es 2 líneas de texto puramente informativas y no hay nada que
-* "configurar" — un drawer de pantalla completa sería sobre-ingeniería
-* para el tamaño real del contenido (ver frontend-design: "match
-* complexity to content"). Se resuelve con un botón redondo + popover,
-* del tamaño que el contenido realmente necesita.
-* -----------------------------------------------------------------------
-*/
-var ORIGENES_LEGEND = [{
-	id: "ORI-CALI",
-	nombre: "Centro de Acopio Antigua Licorera del Valle",
-	color: "#2f6fed"
-}, {
-	id: "ORI-CARTAGO",
-	nombre: "Centro de distribución Cartago",
-	color: "#e6883c"
-}];
-function LegendContent() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "label-caps text-[10px] text-muted-foreground",
-			children: "Origen del envío"
-		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-			className: "mt-2 flex flex-col gap-1.5",
-			children: ORIGENES_LEGEND.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-				className: "flex items-center gap-2",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "h-0.5 w-5 shrink-0 rounded-full",
-					style: { backgroundColor: o.color },
-					"aria-hidden": true
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "text-foreground",
-					children: o.nombre
-				})]
-			}, o.id))
-		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-2 max-w-[13rem] text-[10px] leading-snug text-muted-foreground",
-			children: "El grosor de cada arco refleja el número de despachos, no las unidades entregadas."
-		})
-	] });
-}
-function FlujosLegend({ compact = false }) {
-	const [open, setOpen] = (0, import_react.useState)(false);
-	if (!compact) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "pointer-events-none absolute bottom-4 left-4 z-10 flex flex-col gap-2 rounded-lg border border-border bg-surface/90 px-3.5 py-3 text-xs shadow-sm backdrop-blur",
-		"aria-label": "Leyenda de orígenes de ayuda",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LegendContent, {})
-	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 z-10",
-		children: [open && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "absolute bottom-11 left-0 w-52 rounded-lg border border-border bg-surface/95 px-3.5 py-3 text-xs shadow-lg backdrop-blur",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LegendContent, {})
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-			type: "button",
-			onClick: () => setOpen((v) => !v),
-			"aria-expanded": open,
-			"aria-label": open ? "Cerrar leyenda" : "Ver leyenda de orígenes",
-			className: "flex size-9 items-center justify-center rounded-full border border-border bg-surface/95 text-muted-foreground shadow-sm backdrop-blur",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-				width: "15",
-				height: "15",
-				viewBox: "0 0 24 24",
-				fill: "none",
-				"aria-hidden": true,
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
-						cx: "12",
-						cy: "12",
-						r: "9",
-						stroke: "currentColor",
-						strokeWidth: "2"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
-						d: "M12 11v5",
-						stroke: "currentColor",
-						strokeWidth: "2",
-						strokeLinecap: "round"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("circle", {
-						cx: "12",
-						cy: "8",
-						r: "1",
-						fill: "currentColor"
-					})
-				]
-			})
-		})]
-	});
-}
 function ContextualPanel({ isMobile, title, subtitle, onBack, onClose, children, transitionKey }) {
 	return isMobile ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MobileSheet, {
 		title,
@@ -2755,6 +2647,61 @@ function useAyuda() {
 		retryDelay: REINTENTO_ESCALONADO
 	});
 }
+/**
+* Dónde arranca la columna de la esquina superior izquierda.
+*
+* Va en una constante porque tres cosas dependen del mismo número: el
+* botón de volver, la leyenda de orígenes que va debajo de él, y la
+* píldora amarilla de categoría, que en móvil tiene que bajar cuando el
+* botón está presente. Repartido a mano en tres sitios, cambiar la
+* altura significaba acordarse de los tres.
+*/
+var COLUMNA_TOP = "top-[calc(3.5rem+env(safe-area-inset-top))]";
+var COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
+/**
+* Dónde cae la píldora de categoría en móvil cuando hay botón de volver.
+*
+* Es la altura de la columna más el alto del botón —unos 40 px— más aire.
+* Si cambia COLUMNA_TOP, este número se recalcula igual.
+*/
+var PILDORA_TOP_CON_BOTON = "top-[calc(6.5rem+env(safe-area-inset-top))]";
+var PILDORA_TOP_SOLA = "top-[calc(0.75rem+env(safe-area-inset-top))]";
+/**
+* Los dos orígenes, con el color exacto con el que MapCanvas pinta sus
+* arcos mientras crecen. Si allá cambian, acá también.
+*/
+var ORIGENES_LEYENDA = [{
+	nombre: "Cali",
+	color: "#2f6fed"
+}, {
+	nombre: "Cartago",
+	color: "#e6883c"
+}];
+/**
+* La leyenda de orígenes, reducida a lo único que hay que saber: qué
+* color salió de dónde.
+*
+* Reemplaza a FlujosLegend, que explicaba además el grosor, el pulso y
+* los estados de los puntos. Todo eso era cierto y ninguno hacía falta:
+* el mapa se entiende sin leerlo, y una leyenda larga en la esquina de
+* un mapa se convierte en un cartel que nadie lee y que tapa territorio.
+*
+* Va con `pointer-events-none`: no es interactiva y no debe robarle
+* clics al mapa que tiene debajo.
+*/
+function LeyendaOrigenes() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+		className: "pointer-events-none flex items-center gap-3 rounded-full bg-[#123E5C]/80 px-3 py-1.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur",
+		children: ORIGENES_LEYENDA.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+			className: "flex items-center gap-1.5",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				"aria-hidden": true,
+				className: "block size-2.5 rounded-full",
+				style: { background: o.color }
+			}), o.nombre]
+		}, o.nombre))
+	});
+}
 function useIsMobile(breakpointPx = 768) {
 	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
 	(0, import_react.useEffect)(() => {
@@ -2783,6 +2730,14 @@ function DashboardPage({ embedded = false }) {
 	const [lens, setLens] = (0, import_react.useState)("acumulado");
 	const [territoryZone, setTerritoryZone] = (0, import_react.useState)("todas");
 	const [routesMode, setRoutesMode] = (0, import_react.useState)("visibles");
+	/**
+	* Cada incremento le pide a MapCanvas que vuelva a encuadrar.
+	*
+	* Se hace con un contador y no con una función imperativa para no tener
+	* que exponer una ref del mapa hacia afuera: DashboardPage no necesita
+	* saber que adentro hay un MapLibre, solo declarar qué quiere.
+	*/
+	const [, setVistaGeneralToken] = (0, import_react.useState)(0);
 	const [visibleActivity, ,] = (0, import_react.useState)(null);
 	const isMobile = useIsMobile();
 	const { data: origenes } = useOrigenes();
@@ -2870,6 +2825,29 @@ function DashboardPage({ embedded = false }) {
 		viewState.origenId,
 		viewState.destinoId
 	]);
+	/**
+	* Zona de cada municipio, indexada por su nombre normalizado.
+	*
+	* Existe para que el filtro de zona de los ARCOS use exactamente la
+	* misma fuente que el coloreo de los POLÍGONOS. Antes no era así: los
+	* polígonos leían la zona viva por código DANE y los arcos la leían del
+	* catálogo estático por nombre, con `getTerritoryStat(f.destino.nombre)`.
+	*
+	* Cuando ese nombre no calzaba, la función devolvía undefined, la
+	* comparación fallaba contra CUALQUIER zona, y ese municipio se
+	* quedaba sin línea en Norte, en Centro y en Sur, pero seguía pintado
+	* porque el polígono había usado el código. Eso era el "algunos quedan
+	* como si no hicieran parte".
+	*
+	* Y no era un caso raro: 18 de los 42 municipios del Valle llevan
+	* tilde o nombre compuesto —Riofrío, Tuluá, Calima - El Darién,
+	* Guadalajara de Buga— y todos dependían de que esa búsqueda por texto
+	* acertara.
+	*
+	* `normMunicipalityName` es el mismo normalizador que usa el mapa para
+	* resolver el clic sobre un área: hace case-fold, saca tildes y
+	* resuelve los alias conocidos.
+	*/
 	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
 	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
 	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
@@ -2908,6 +2886,32 @@ function DashboardPage({ embedded = false }) {
 	* cierre.
 	*/
 	const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
+	/**
+	* Devolver el mapa a como estaba al abrirlo.
+	*
+	* Incluye la CÁMARA, que es lo que faltaba: `onReset` —el clic en una
+	* zona vacía— limpia la selección, pero si alguien hizo zoom o arrastró
+	* el mapa se quedaba donde lo dejó, y no había ninguna forma de
+	* recuperar el encuadre del Valle completo salvo recargar la página.
+	*
+	* También vuelven a su valor inicial los tres controles de territorio.
+	* Con solo limpiar la selección, quien había filtrado por Norte y
+	* apagado las rutas seguía viendo un mapa que no se parecía al que
+	* encontró al llegar, y el botón habría prometido más de lo que hace.
+	*
+	* El foco por categoría se limpia pero NO el regreso al relato: si la
+	* persona llegó desde "Aseo personal", reiniciar la vista no debería
+	* borrarle el camino de vuelta.
+	*/
+	const reiniciarVista = () => {
+		setLinesDismissed(false);
+		setViewState((prev) => viewTransitions.exitTimeline(viewTransitions.toAll(prev)));
+		setLens("acumulado");
+		setTerritoryZone("todas");
+		setRoutesMode("visibles");
+		foco.limpiar();
+		setVistaGeneralToken((n) => n + 1);
+	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		className: embedded ? "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background" : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
 		children: [
@@ -2922,22 +2926,34 @@ function DashboardPage({ embedded = false }) {
 				instant: viewState.timelineInstant
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex flex-col items-start gap-2 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]",
-				children: [puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-					type: "button",
-					onClick: volverAlRelato,
-					className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
-						className: "size-4 shrink-0",
-						"aria-hidden": true
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "min-w-0 truncate",
-						children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
-					})]
-				}), !viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(FlujosLegend, { compact: isMobile })]
+				className: `pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2 md:left-4 ${COLUMNA_TOP} ${COLUMNA_TOP_MD}`,
+				children: [
+					puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: volverAlRelato,
+						className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
+							className: "size-4 shrink-0",
+							"aria-hidden": true
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "min-w-0 truncate",
+							children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+						type: "button",
+						onClick: reiniciarVista,
+						className: "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
+							className: "size-4 shrink-0",
+							"aria-hidden": true
+						}), "Reiniciar vista"]
+					}),
+					!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LeyendaOrigenes, {})
+				]
 			}),
 			foco.categoria && resaltados && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: `pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${puedeVolver ? "top-[calc(3.75rem+env(safe-area-inset-top))]" : "top-[calc(0.75rem+env(safe-area-inset-top))]"}`,
+				className: `pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${puedeVolver ? PILDORA_TOP_CON_BOTON : PILDORA_TOP_SOLA}`,
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "pointer-events-auto flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {

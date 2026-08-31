@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RotateCcw } from "lucide-react";
 import { useOrigenes, useDestinos, useFlujos } from "@/application/hooks/useCatalogQueries";
 import { useFlujosPorLente } from "@/application/hooks/useFlujosPorLente";
 import {
@@ -12,14 +12,13 @@ import { MapCanvas, type MunicipioMapa } from "@/presentation/components/MapCanv
 import { Timeline } from "@/presentation/components/Timeline";
 import { MarcadorHUD } from "@/presentation/components/MarcadorHUD";
 import { AvisoEntrega } from "@/presentation/components/AvisoEntrega";
-import { FlujosLegend } from "@/presentation/components/FlujosLegend";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
 import { TopBar } from "@/presentation/components/TopBar";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useFoco } from "@/presentation/state/FocoContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
-import { sameMunicipality } from "@/lib/municipalityName";
+import { normMunicipalityName, sameMunicipality } from "@/lib/municipalityName";
 import {
   getTerritoryStat,
   type TerritoryMapMode,
@@ -32,6 +31,65 @@ import {
   valorTemporal,
 } from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
+
+/**
+ * Dónde arranca la columna de la esquina superior izquierda.
+ *
+ * Va en una constante porque tres cosas dependen del mismo número: el
+ * botón de volver, la leyenda de orígenes que va debajo de él, y la
+ * píldora amarilla de categoría, que en móvil tiene que bajar cuando el
+ * botón está presente. Repartido a mano en tres sitios, cambiar la
+ * altura significaba acordarse de los tres.
+ */
+const COLUMNA_TOP = "top-[calc(3.5rem+env(safe-area-inset-top))]";
+const COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
+
+/**
+ * Dónde cae la píldora de categoría en móvil cuando hay botón de volver.
+ *
+ * Es la altura de la columna más el alto del botón —unos 40 px— más aire.
+ * Si cambia COLUMNA_TOP, este número se recalcula igual.
+ */
+const PILDORA_TOP_CON_BOTON = "top-[calc(6.5rem+env(safe-area-inset-top))]";
+const PILDORA_TOP_SOLA = "top-[calc(0.75rem+env(safe-area-inset-top))]";
+
+/**
+ * Los dos orígenes, con el color exacto con el que MapCanvas pinta sus
+ * arcos mientras crecen. Si allá cambian, acá también.
+ */
+const ORIGENES_LEYENDA = [
+  { nombre: "Cali", color: "#2f6fed" },
+  { nombre: "Cartago", color: "#e6883c" },
+] as const;
+
+/**
+ * La leyenda de orígenes, reducida a lo único que hay que saber: qué
+ * color salió de dónde.
+ *
+ * Reemplaza a FlujosLegend, que explicaba además el grosor, el pulso y
+ * los estados de los puntos. Todo eso era cierto y ninguno hacía falta:
+ * el mapa se entiende sin leerlo, y una leyenda larga en la esquina de
+ * un mapa se convierte en un cartel que nadie lee y que tapa territorio.
+ *
+ * Va con `pointer-events-none`: no es interactiva y no debe robarle
+ * clics al mapa que tiene debajo.
+ */
+function LeyendaOrigenes() {
+  return (
+    <ul className="pointer-events-none flex items-center gap-3 rounded-full bg-[#123E5C]/80 px-3 py-1.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur">
+      {ORIGENES_LEYENDA.map((o) => (
+        <li key={o.nombre} className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="block size-2.5 rounded-full"
+            style={{ background: o.color }}
+          />
+          {o.nombre}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function useIsMobile(breakpointPx = 768): boolean {
   const [isMobile, setIsMobile] = useState(false);
@@ -67,6 +125,15 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const [lens, setLens] = useState<TerritoryMapMode>("acumulado");
   const [territoryZone, setTerritoryZone] = useState<TerritoryZone | "todas">("todas");
   const [routesMode, setRoutesMode] = useState<TerritoryRoutesMode>("visibles");
+
+  /**
+   * Cada incremento le pide a MapCanvas que vuelva a encuadrar.
+   *
+   * Se hace con un contador y no con una función imperativa para no tener
+   * que exponer una ref del mapa hacia afuera: DashboardPage no necesita
+   * saber que adentro hay un MapLibre, solo declarar qué quiere.
+   */
+  const [vistaGeneralToken, setVistaGeneralToken] = useState(0);
 
   // Actividad visible tipo "Instagram": no permitimos que una nueva llegada
   // reemplace inmediatamente la tarjeta que acaba de aparecer.
@@ -186,16 +253,63 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
     return flujosParaMapa;
   }, [flujosParaMapa, linesDismissed, viewState.origenId, viewState.destinoId]);
 
+  /**
+   * Zona de cada municipio, indexada por su nombre normalizado.
+   *
+   * Existe para que el filtro de zona de los ARCOS use exactamente la
+   * misma fuente que el coloreo de los POLÍGONOS. Antes no era así: los
+   * polígonos leían la zona viva por código DANE y los arcos la leían del
+   * catálogo estático por nombre, con `getTerritoryStat(f.destino.nombre)`.
+   *
+   * Cuando ese nombre no calzaba, la función devolvía undefined, la
+   * comparación fallaba contra CUALQUIER zona, y ese municipio se
+   * quedaba sin línea en Norte, en Centro y en Sur, pero seguía pintado
+   * porque el polígono había usado el código. Eso era el "algunos quedan
+   * como si no hicieran parte".
+   *
+   * Y no era un caso raro: 18 de los 42 municipios del Valle llevan
+   * tilde o nombre compuesto —Riofrío, Tuluá, Calima - El Darién,
+   * Guadalajara de Buga— y todos dependían de que esa búsqueda por texto
+   * acertara.
+   *
+   * `normMunicipalityName` es el mismo normalizador que usa el mapa para
+   * resolver el clic sobre un área: hace case-fold, saca tildes y
+   * resuelve los alias conocidos.
+   */
+  const zonaPorMunicipio = useMemo(() => {
+    const porNombre = new Map<string, string | null>();
+    for (const m of municipiosMapa.values()) {
+      porNombre.set(normMunicipalityName(m.nombre), m.zona);
+    }
+    return porNombre;
+  }, [municipiosMapa]);
+
   const flujosParaRutas = useMemo(() => {
     const byZone =
       territoryZone === "todas"
         ? flujosFiltrados
-        : flujosFiltrados.filter((f) => getTerritoryStat(f.destino.nombre)?.zone === territoryZone);
+        : flujosFiltrados.filter((f) => {
+            const zona =
+              zonaPorMunicipio.get(normMunicipalityName(f.destino.nombre)) ??
+              // Último recurso, para destinos que no son municipios del
+              // catálogo: el acopio de Cartago, las entidades, lo que
+              // salió del departamento.
+              getTerritoryStat(f.destino.nombre)?.zone ??
+              null;
+            return zona === territoryZone;
+          });
 
     if (routesMode === "color") return [];
     if (routesMode === "solo" && !viewState.origenId && !viewState.destinoId) return [];
     return byZone;
-  }, [flujosFiltrados, routesMode, territoryZone, viewState.destinoId, viewState.origenId]);
+  }, [
+    flujosFiltrados,
+    routesMode,
+    territoryZone,
+    viewState.destinoId,
+    viewState.origenId,
+    zonaPorMunicipio,
+  ]);
 
   const origenSeleccionado = useMemo(
     () => origenes?.find((o) => o.id === viewState.origenId) ?? null,
@@ -262,6 +376,33 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    */
   const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
 
+  /**
+   * Devolver el mapa a como estaba al abrirlo.
+   *
+   * Incluye la CÁMARA, que es lo que faltaba: `onReset` —el clic en una
+   * zona vacía— limpia la selección, pero si alguien hizo zoom o arrastró
+   * el mapa se quedaba donde lo dejó, y no había ninguna forma de
+   * recuperar el encuadre del Valle completo salvo recargar la página.
+   *
+   * También vuelven a su valor inicial los tres controles de territorio.
+   * Con solo limpiar la selección, quien había filtrado por Norte y
+   * apagado las rutas seguía viendo un mapa que no se parecía al que
+   * encontró al llegar, y el botón habría prometido más de lo que hace.
+   *
+   * El foco por categoría se limpia pero NO el regreso al relato: si la
+   * persona llegó desde "Aseo personal", reiniciar la vista no debería
+   * borrarle el camino de vuelta.
+   */
+  const reiniciarVista = () => {
+    setLinesDismissed(false);
+    setViewState((prev) => viewTransitions.exitTimeline(viewTransitions.toAll(prev)));
+    setLens("acumulado");
+    setTerritoryZone("todas");
+    setRoutesMode("visibles");
+    foco.limpiar();
+    setVistaGeneralToken((n) => n + 1);
+  };
+
   return (
     <div
       className={
@@ -291,6 +432,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           municipios={municipiosMapa}
           resaltados={resaltados}
           routesMode={routesMode}
+          vistaGeneralToken={vistaGeneralToken}
           onActivity={handleActivity}
           onSelectDestino={(id) => {
             setLinesDismissed(false);
@@ -319,10 +461,18 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           de regreso se le pone encima en vez de buscarle otro rincón,
           porque un "volver" en cualquier otro lado no se encuentra.
 
+          La columna entera arranca más abajo que el borde: pegada
+          arriba, el botón competía con el marcador y con la barra
+          superior del mapa. La leyenda baja con él a propósito, para que
+          la distancia entre los dos siga siendo la que se decidió y no un
+          resto de mover uno solo.
+
           El contenedor va sin `pointer-events`, y cada hijo activa los
           suyos: si no, esta caja invisible se comería los clics del mapa
           en toda la esquina, incluso cuando no hay botón. */}
-      <div className="pointer-events-none absolute left-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-20 flex flex-col items-start gap-2 md:left-4 md:top-[calc(1rem+env(safe-area-inset-top))]">
+      <div
+        className={`pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2 md:left-4 ${COLUMNA_TOP} ${COLUMNA_TOP_MD}`}
+      >
         {puedeVolver && (
           <button
             type="button"
@@ -338,9 +488,20 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           </button>
         )}
 
-        {!viewState.destinoId && !viewState.origenId && (
-          <FlujosLegend compact={isMobile} />
-        )}
+        {/* Siempre visible, no solo cuando hay algo seleccionado: la
+            razón más común para querer reiniciar es haber movido la
+            cámara, y eso este componente no puede detectarlo. Un botón
+            que aparece a veces obliga a recordar cuándo aparece. */}
+        <button
+          type="button"
+          onClick={reiniciarVista}
+          className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]"
+        >
+          <RotateCcw className="size-4 shrink-0" aria-hidden />
+          Reiniciar vista
+        </button>
+
+        {!viewState.destinoId && !viewState.origenId && <LeyendaOrigenes />}
       </div>
 
       {/* El contenedor va SIN pointer-events. Antes era
@@ -354,9 +515,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
       {foco.categoria && resaltados && (
         <div
           className={`pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${
-            puedeVolver
-              ? "top-[calc(3.75rem+env(safe-area-inset-top))]"
-              : "top-[calc(0.75rem+env(safe-area-inset-top))]"
+            puedeVolver ? PILDORA_TOP_CON_BOTON : PILDORA_TOP_SOLA
           }`}
         >
           <div className="pointer-events-auto flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg">
@@ -501,9 +660,7 @@ function TerritoryControls({
       {/* Dos datos en una línea. La cifra grande ya vive en el marcador,
           así que acá alcanza con decir qué se está viendo. */}
       <p className="text-[15px] leading-tight text-foreground">
-        <b className="font-semibold">
-          {plural(totalDespachos, "despacho", "despachos")}
-        </b>{" "}
+        <b className="font-semibold">{plural(totalDespachos, "despacho", "despachos")}</b>{" "}
         en {plural(conEntregas, "municipio", "municipios")}
         <span className="text-muted-foreground"> · {describeLens(lens, day)}</span>
       </p>
