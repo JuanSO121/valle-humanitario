@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ClientOnly } from "@tanstack/react-router";
-import { ArrowLeft, RotateCcw } from "lucide-react";
+import { ArrowLeft, RotateCcw, X } from "lucide-react";
 import { useOrigenes, useDestinos, useFlujos } from "@/application/hooks/useCatalogQueries";
 import { useFlujosPorLente } from "@/application/hooks/useFlujosPorLente";
 import {
@@ -8,7 +8,12 @@ import {
   viewTransitions,
   type ViewState,
 } from "@/presentation/state/viewState";
-import { MapCanvas, type MunicipioMapa } from "@/presentation/components/MapCanvas";
+import {
+  MapCanvas,
+  TERRITORY_EXCLUDED,
+  TERRITORY_NO_DATA,
+  type MunicipioMapa,
+} from "@/presentation/components/MapCanvas";
 import { Timeline } from "@/presentation/components/Timeline";
 import { MarcadorHUD } from "@/presentation/components/MarcadorHUD";
 import { AvisoEntrega } from "@/presentation/components/AvisoEntrega";
@@ -21,6 +26,7 @@ import { useAyuda } from "@/application/hooks/useAyuda";
 import { normMunicipalityName, sameMunicipality } from "@/lib/municipalityName";
 import {
   getTerritoryStat,
+  TERRITORY_BLUE_RAMP,
   type TerritoryMapMode,
   type TerritoryRoutesMode,
   type TerritoryZone,
@@ -91,6 +97,141 @@ function LeyendaOrigenes() {
   );
 }
 
+/**
+ * La guía que aparece la primera vez, encima del mapa.
+ *
+ * QUÉ EXPLICA Y QUÉ NO
+ *
+ * Solo lo que no está dicho en ninguna otra parte de la pantalla. Los
+ * colores de origen ya los dice la leyenda; qué hace cada control lo dice
+ * su propia etiqueta; la línea de tiempo tiene su aviso cuando está
+ * quieta. Repetir todo eso convertiría la guía en un texto que se cierra
+ * sin leer, y entonces tampoco se leería lo único que sí hace falta.
+ *
+ * Lo que falta explicar es la rampa de color del territorio, que es
+ * justamente lo primero que se ve al llegar y lo único que nadie puede
+ * deducir: que el color de cada municipio significa cuánta ayuda recibió,
+ * y que hay dos grises que no pertenecen a esa escala.
+ *
+ * Y una sola acción: que los municipios se pueden tocar. Los puntos ya lo
+ * dicen en su globo al pasar el mouse, pero el área no, y en celular no
+ * hay globo que valga porque no existe el paso del cursor.
+ */
+function GuiaDelMapa({
+  raizRef,
+  onCerrar,
+}: {
+  /** El contenedor del mapa. Es lo que delimita el "fuera". */
+  raizRef: React.RefObject<HTMLDivElement | null>;
+  onCerrar: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Cerrar al tocar fuera del panel PERO DENTRO DEL MAPA.
+   *
+   * La escucha va sobre el contenedor del mapa y no sobre `document`, y
+   * esa diferencia es todo: la guía se monta cuando carga la página, no
+   * cuando el mapa aparece en pantalla, así que con `document` cualquier
+   * clic del relato la cerraba sin que nadie la hubiera visto. El del
+   * ícono del sidebar que lleva al mapa, entre otros.
+   *
+   * `pointerdown` y no `click`: el mapa reacciona al arrastre, y
+   * esperando al `click` un gesto de desplazamiento la dejaría abierta
+   * mientras el mapa ya se movió debajo.
+   *
+   * Escape sí va en `document`: una tecla no tiene "dónde", y quien la
+   * presiona ya está mirando el mapa.
+   */
+  useEffect(() => {
+    const raiz = raizRef.current;
+    if (!raiz) return;
+
+    const alTocarFuera = (evento: PointerEvent) => {
+      if (panelRef.current?.contains(evento.target as Node)) return;
+      onCerrar();
+    };
+    const alPresionar = (evento: KeyboardEvent) => {
+      if (evento.key === "Escape") onCerrar();
+    };
+    raiz.addEventListener("pointerdown", alTocarFuera);
+    document.addEventListener("keydown", alPresionar);
+    return () => {
+      raiz.removeEventListener("pointerdown", alTocarFuera);
+      document.removeEventListener("keydown", alPresionar);
+    };
+  }, [onCerrar, raizRef]);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-label="Cómo leer este mapa"
+        className="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-7"
+      >
+        <button
+          type="button"
+          onClick={onCerrar}
+          aria-label="Cerrar"
+          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]"
+        >
+          <X className="size-5" aria-hidden />
+        </button>
+
+        <h2 className="vc-rotulo pr-10 text-[clamp(1.25rem,3vw,1.75rem)] text-[#0079C1]">
+          ¿Cómo leer este mapa?
+        </h2>
+
+        <p className="mt-3 text-base leading-7 text-[#123E5C]">
+          El color de cada municipio refleja la cantidad de ayudas recibidas. Los tonos más claros
+          indican una menor cantidad y los más intensos, una mayor.
+        </p>
+
+        {/* OJO: la frase de arriba y esta rampa dicen cosas contrarias.
+            TERRITORY_BLUE_RAMP va de oscuro a claro para menos → más
+            volumen, así que acá el extremo claro es el de MAYOR cantidad.
+            El texto es el aprobado y se deja tal cual; la contradicción
+            está reportada y la resuelve quien lo redactó. */}
+        <div className="mt-3 flex overflow-hidden rounded-md">
+          {TERRITORY_BLUE_RAMP.map((color) => (
+            <i key={color} className="block h-5 flex-1" style={{ background: color }} />
+          ))}
+        </div>
+        <div className="mt-1.5 flex justify-between text-sm text-[#6B93AA]">
+          <span>Menor cantidad</span>
+          <span>Mayor cantidad</span>
+        </div>
+
+        <ul className="mt-5 flex flex-col gap-3">
+          <li className="flex items-start gap-3">
+            <span
+              aria-hidden
+              className="mt-1 block size-4 shrink-0 rounded-sm"
+              style={{ background: TERRITORY_NO_DATA }}
+            />
+            <span className="text-base leading-6 text-[#35708F]">Sin registro</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <span
+              aria-hidden
+              className="mt-1 block size-4 shrink-0 rounded-sm"
+              style={{ background: TERRITORY_EXCLUDED }}
+            />
+            <span className="text-base leading-6 text-[#35708F]">
+              Cali sigue una ruta independiente y no se incluye en el conteo municipal.
+            </span>
+          </li>
+        </ul>
+
+        <p className="mt-5 border-t border-[#0079C1]/12 pt-4 text-base leading-7 text-[#123E5C]">
+          Haz clic en cualquier municipio para conocer qué recibió.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function useIsMobile(breakpointPx = 768): boolean {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -134,6 +275,18 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    * saber que adentro hay un MapLibre, solo declarar qué quiere.
    */
   const [vistaGeneralToken, setVistaGeneralToken] = useState(0);
+
+  /**
+   * La guía se muestra hasta que la persona toca el mapa por primera vez.
+   *
+   * No se guarda si ya se vio: el mapa vive dentro de una página que se
+   * lee de una sentada, y quien vuelve a abrirla probablemente pasó
+   * bastante tiempo desde la anterior. Recordarlo entre sesiones haría
+   * falta si esto fuera una herramienta de uso diario, y no lo es.
+   */
+  const [mostrarGuia, setMostrarGuia] = useState(true);
+  const cerrarGuia = useCallback(() => setMostrarGuia(false), []);
+  const raizRef = useRef<HTMLDivElement>(null);
 
   // Actividad visible tipo "Instagram": no permitimos que una nueva llegada
   // reemplace inmediatamente la tarjeta que acaba de aparecer.
@@ -405,6 +558,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
   return (
     <div
+      ref={raizRef}
       className={
         embedded
           ? "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background"
@@ -433,21 +587,30 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           resaltados={resaltados}
           routesMode={routesMode}
           vistaGeneralToken={vistaGeneralToken}
+          /* Con la guía abierta el mapa no dibuja arcos: la cascada de
+             entrada es lo primero que hay que ver, y reproducirla detrás
+             de un panel es gastarla. Al cerrar la guía, arranca. */
+          entradaHabilitada={!mostrarGuia}
           onActivity={handleActivity}
           onSelectDestino={(id) => {
+            cerrarGuia();
             setLinesDismissed(false);
             setViewState((prev) => viewTransitions.toDestino(id, prev));
           }}
           onSelectOrigen={(id) => {
+            cerrarGuia();
             setLinesDismissed(false);
             setViewState((prev) => viewTransitions.toOrigen(id, prev));
           }}
           onReset={() => {
+            cerrarGuia();
             setLinesDismissed(true);
             setViewState((prev) => viewTransitions.exitTimeline(viewTransitions.toAll(prev)));
           }}
         />
       </ClientOnly>
+
+      {mostrarGuia && <GuiaDelMapa raizRef={raizRef} onCerrar={cerrarGuia} />}
 
       <MarcadorHUD
         despachos={totalDespachosAsOf}
@@ -571,6 +734,15 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           origenNombre={origenSeleccionado.nombre}
           flujos={flujosFiltrados}
           isMobile={isMobile}
+          enFechaSeleccionada={isoDate !== null}
+          /* Mismo camino que el clic en el mapa: al elegir un destino
+             desde la lista del origen, el panel del origen se reemplaza
+             por el del destino. No hace falta cerrarlo antes, la
+             transición de nivel del viewState ya se encarga. */
+          onSelectDestino={(id) => {
+            setLinesDismissed(false);
+            setViewState((prev) => viewTransitions.toDestino(id, prev));
+          }}
           onClose={() => setViewState((prev) => viewTransitions.toAll(prev))}
         />
       )}

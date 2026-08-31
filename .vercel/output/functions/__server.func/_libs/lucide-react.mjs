@@ -284,6 +284,16 @@ var ChevronLeft = createLucideIcon("chevron-left", [["path", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var ChevronRight = createLucideIcon("chevron-right", [["path", {
+	d: "m9 18 6-6-6-6",
+	key: "mthhwq"
+}]]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var FileText = createLucideIcon("file-text", [
 	["path", {
 		d: "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
@@ -353,6 +363,28 @@ var House = createLucideIcon("house", [["path", {
 	d: "M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
 	key: "r6nss1"
 }]]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Info = createLucideIcon("info", [
+	["circle", {
+		cx: "12",
+		cy: "12",
+		r: "10",
+		key: "1mglay"
+	}],
+	["path", {
+		d: "M12 16v-4",
+		key: "1dtifu"
+	}],
+	["path", {
+		d: "M12 8h.01",
+		key: "e9boi3"
+	}]
+]);
 /**
 * @license lucide-react v0.575.0 - ISC
 *
@@ -578,4 +610,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { CalendarDays as _, Package as a, ArrowLeft as b, Map as c, House as d, HeartHandshake as f, ChevronDown as g, ChevronLeft as h, RotateCcw as i, MapPin as l, FileText as m, Warehouse as n, PackageCheck as o, HandHeart as p, Truck as r, Menu as s, X as t, List as u, Building2 as v, Boxes as y };
+export { ArrowLeft as S, ChevronLeft as _, Package as a, Building2 as b, Map as c, Info as d, House as f, ChevronRight as g, FileText as h, RotateCcw as i, MapPin as l, HandHeart as m, Warehouse as n, PackageCheck as o, HeartHandshake as p, Truck as r, Menu as s, X as t, List as u, ChevronDown as v, Boxes as x, CalendarDays as y };

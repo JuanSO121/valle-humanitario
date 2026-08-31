@@ -63,15 +63,19 @@ const POINT_HIT_TOLERANCE_PX = 8;
  * tablero HTML de referencia. Por eso territoryToneIndex devuelve null
  * para valor 0 y no 0, ver territoryColorForTone.
  */
-const TERRITORY_NO_DATA = "#162936";
+export const TERRITORY_NO_DATA = "#162936";
 
 /**
  * Santiago de Cali: excluida del consolidado municipal por instrucción
  * expresa (ver panoramaData / nivel "Canales"). Se pinta con un gris
- * propio para que no se lea ni como "sin datos" ni como un volumen bajo,
- * y no es clickeable.
+ * propio para que no se lea ni como "sin datos" ni como un volumen bajo.
+ *
+ * SÍ es clickeable: recibió sus propios despachos y tiene panel, y su
+ * globo lo dice. Lo único que la distingue es el color de reposo; el
+ * resaltado de selección y el de paso del cursor se comportan igual que
+ * en cualquier otro municipio.
  */
-const TERRITORY_EXCLUDED = "#2A3D4A";
+export const TERRITORY_EXCLUDED = "#2A3D4A";
 const CALI_DANE = "76001";
 
 /**
@@ -324,6 +328,15 @@ interface Props {
    * no pasaría porque el segundo cambio no sería un cambio.
    */
   vistaGeneralToken?: number;
+  /**
+   * Si el mapa puede dibujar y animar arcos.
+   *
+   * En false, la red de rutas no se dibuja: los municipios se pintan y
+   * los puntos toman su color final, pero no hay líneas. Sirve para que
+   * la cascada de entrada no se reproduzca detrás de la guía inicial,
+   * que es lo mismo que no reproducirla.
+   */
+  entradaHabilitada?: boolean;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
   onReset: () => void;
@@ -402,6 +415,7 @@ export function MapCanvas({
   resaltados = null,
   routesMode,
   vistaGeneralToken = 0,
+  entradaHabilitada = true,
   onSelectDestino,
   onSelectOrigen,
   onReset,
@@ -417,6 +431,14 @@ export function MapCanvas({
   const pulseEngineRef = useRef(createArrivalPulseEngine());
   const activityEngineRef = useRef(createDispatchActivityEngine());
   const rafRef = useRef<number | null>(null);
+  /**
+   * El bucle de animación, guardado para poder reanudarlo desde afuera.
+   *
+   * `animate` se define dentro del handler de `load` del mapa, así que no
+   * es visible para los demás efectos. Sin esta referencia no habría
+   * forma de volver a arrancarlo cuando la pestaña regresa.
+   */
+  const animateRef = useRef<((now: number) => void) | null>(null);
   const coordsCacheRef = useRef<Map<string, LngLat[]>>(new Map());
 
   const handlersRef = useRef({ onSelectDestino, onSelectOrigen, onReset, onActivity });
@@ -513,12 +535,16 @@ export function MapCanvas({
               "#102332",
               ["coalesce", ["feature-state", "territoryToneColor"], ["get", "territoryToneColor"]],
             ],
+            // El salto de opacidad al pasar el cursor sube de 0.82 a
+            // 0.95: sobre los azules de la rampa el cambio anterior se
+            // notaba, pero sobre el gris plano de Cali era invisible y
+            // parecía que ese municipio no respondiera.
             "fill-opacity": [
               "case",
               ["boolean", ["feature-state", "filteredOut"], false],
               0.11,
               ["boolean", ["feature-state", "hovered"], false],
-              0.82,
+              0.95,
               0.62,
             ],
             "fill-opacity-transition": { duration: 150, delay: 0 },
@@ -1081,6 +1107,7 @@ export function MapCanvas({
         }
       };
 
+      animateRef.current = animate;
       rafRef.current = requestAnimationFrame(animate);
 
       subirEtiquetas(map);
@@ -1103,7 +1130,37 @@ export function MapCanvas({
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
+      animateRef.current = null;
+      // Sin esto, los callbacks encolados antes de que el mapa estuviera
+      // listo sobreviven al desmontaje y se ejecutan contra un mapa que
+      // ya no existe si el componente vuelve a montarse.
+      pendingRef.current = [];
     };
+  }, []);
+
+  /**
+   * Reanudar la animación al volver a la pestaña.
+   *
+   * El bucle se detiene solo cuando la pestaña se oculta —ver el `finally`
+   * de animate()— y hasta acá no había nada que lo volviera a arrancar:
+   * `rafRef` quedaba en null y el mapa se veía congelado al regresar. Los
+   * arcos dejaban de crecer, el pulso de las líneas se detenía y los
+   * anillos de llegada quedaban clavados a mitad de camino.
+   *
+   * La comprobación de `rafRef.current != null` evita el otro extremo: si
+   * el bucle sigue vivo y se dispara un `visibilitychange` de todos
+   * modos, arrancar un segundo bucle duplicaría el trabajo de cada frame
+   * y aceleraría al doble todas las animaciones.
+   */
+  useEffect(() => {
+    const alCambiarVisibilidad = () => {
+      if (document.visibilityState === "hidden") return;
+      if (rafRef.current != null) return;
+      const animate = animateRef.current;
+      if (animate) rafRef.current = requestAnimationFrame(animate);
+    };
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+    return () => document.removeEventListener("visibilitychange", alCambiarVisibilidad);
   }, []);
 
   useEffect(() => {
@@ -1251,12 +1308,16 @@ export function MapCanvas({
             // Este SÍ va por nombre (el destino no trae código DANE),
             // pero con un normalizador que hace case-fold y saca tildes:
             // normId no lo hacía y "Riofrío" nunca matcheaba "RIOFRIO".
-            selected:
-              !esCali &&
-              sameMunicipality(
-                selectedDestinoName,
-                vivo?.nombre ?? getTerritoryStatByCode(code)?.name ?? null,
-              ),
+            //
+            // Sin `!esCali`: ese guardián venía de cuando Cali no se
+            // podía tocar, y hacía que fuera el único municipio que
+            // nunca se marcaba en amarillo al abrir su panel. Hoy Cali
+            // se abre igual que los demás, así que se resalta igual.
+            // Lo único que conserva propio es su color de reposo.
+            selected: sameMunicipality(
+              selectedDestinoName,
+              vivo?.nombre ?? getTerritoryStatByCode(code)?.name ?? null,
+            ),
           },
         );
       });
@@ -1342,6 +1403,33 @@ export function MapCanvas({
       });
 
       /**
+       * Con la entrada deshabilitada, ninguna línea se dibuja.
+       *
+       * Los puntos SÍ toman su color final: dejarlos en rojo, que es lo
+       * que da una intensidad de cero, haría creer que ningún municipio
+       * recibió nada.
+       *
+       * La firma NO se actualiza acá a propósito. Así, cuando la entrada
+       * se habilite, el conjunto de arcos contará como cambiado y la
+       * cascada arrancará desde el primero.
+       */
+      if (!entradaHabilitada) {
+        engine.snapTo([], {}, performance.now());
+        const totales = new Map<string, number>();
+        flujos.forEach((f) => {
+          totales.set(f.destino.id, (totales.get(f.destino.id) ?? 0) + f.despachosCount);
+        });
+        destinoAcumuladoRef.current = totales;
+        destinos.forEach((d) => {
+          map.setFeatureState(
+            { source: "destinos", id: d.id },
+            { intensity: intensityFor(totales.get(d.id) ?? 0) },
+          );
+        });
+        return;
+      }
+
+      /**
        * Cuándo se anima el crecimiento de los arcos.
        *
        * Un arco tiene dos aspectos distintos: mientras CRECE va del color
@@ -1420,7 +1508,7 @@ export function MapCanvas({
 
       prevWeightsRef.current = new Map(Object.entries(weights));
     });
-  }, [flujos, instantTransition, origenes, destinos, timelineActive]);
+  }, [flujos, instantTransition, origenes, destinos, timelineActive, entradaHabilitada]);
 
   /**
    * Devolver la cámara al encuadre inicial.
