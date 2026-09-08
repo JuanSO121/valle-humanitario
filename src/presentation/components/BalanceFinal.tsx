@@ -66,11 +66,30 @@
  * y la cifra un punto más chica, el conjunto se lee como una unidad y no
  * como tres carteles.
  *
- * Debajo van las bandas de corte, en crema. Son dos y no una porque las
- * ayudas recibidas se consolidan en el centro de acopio unos días antes
- * que el registro de despachos: cada banda abarca las columnas de las
- * cifras que fecha, de modo que ningún número queda fechado con un corte
- * que no le corresponde.
+ * EN ESCRITORIO, debajo van las bandas de corte, en crema. Son dos y no
+ * una porque las ayudas recibidas se consolidan en el centro de acopio
+ * unos días antes que el registro de despachos: cada banda abarca las
+ * columnas de las cifras que fecha, de modo que ningún número queda
+ * fechado con un corte que no le corresponde.
+ *
+ * EN CELULAR ESE SISTEMA NO PUEDE EXISTIR, y por eso la maqueta es otra.
+ *
+ * Una banda fecha por posición: se entiende porque está debajo de las
+ * columnas a las que pertenece. En una sola columna no hay columnas a
+ * las que pertenecer, así que las dos bandas caían apiladas al final y
+ * "Con corte al 3 de septiembre" parecía fechar a la última tarjeta, que
+ * es justamente la que va al 7. No era que se viera apretado: la maqueta
+ * decía algo falso.
+ *
+ * En celular cada cifra lleva su fecha adentro. Se pierde la elegancia
+ * de la banda compartida y se gana que cada número diga a qué día
+ * corresponde sin depender de dónde quedó en la pantalla.
+ *
+ * De paso la tarjeta pasa a ser horizontal: la cifra a la izquierda y el
+ * rótulo a la derecha. Apiladas en vertical, tres tarjetas centradas
+ * ocupaban casi dos pantallas para decir tres números, y quien llegaba
+ * al final de la tercera ya no tenía a la vista la primera, que es
+ * exactamente lo que un bloque de cifras comparables no puede permitirse.
  *
  * SOBRE LAS DOS MAQUETAS DE LAS RUTAS
  *
@@ -261,10 +280,40 @@ export function BalanceFinal() {
     <div className="mx-auto max-w-6xl">
       <SectionTitle>Así se distribuyó la ayuda en el Valle del Cauca</SectionTitle>
 
-      {/* Las tres cifras de cierre y, debajo, la fecha de corte. Van en
-          el mismo contenedor y con una separación menor que la del resto
-          de la sección: son un solo bloque, no dos. */}
-      <div className="mt-9 space-y-2">
+      {/* CELULAR: una fila por cifra, con su fecha adentro.
+          Ver la nota de cabecera sobre por qué acá no hay bandas. */}
+      <div className="mt-9 space-y-2 sm:hidden">
+        {cifras.map((c, i) => (
+          <div
+            key={`cifra-movil-${c.label}`}
+            style={{ "--i": i } as CSSProperties}
+            className="vc-aparece flex items-center gap-4 rounded-lg bg-[#123E5C] px-4 py-3.5"
+          >
+            {/* Ancho mínimo para que los tres rótulos arranquen en el
+                mismo eje. Sin él, "536" deja el suyo cuarenta píxeles a
+                la izquierda del de "889 t" y las tres filas se leen como
+                tres tarjetas sueltas en vez de como una tabla. */}
+            <b className="min-w-[5rem] shrink-0 text-[1.75rem] font-extrabold leading-none tabular-nums text-[#FBF8C6]">
+              {c.valor}
+            </b>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-bold leading-tight text-white">
+                {c.label}
+              </span>
+              {c.corte && (
+                <span className="mt-1 block text-[13px] leading-tight text-[#A8CFE2]">
+                  Con corte al {c.corte}
+                </span>
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ESCRITORIO: la rejilla de tres y, debajo, las bandas de corte.
+          Van en el mismo contenedor y con una separación menor que la del
+          resto de la sección: son un solo bloque, no dos. */}
+      <div className="mt-9 hidden space-y-2 sm:block">
         <div className="grid gap-2 sm:grid-cols-3">
           {cifras.map((c, i) => (
             <div

@@ -3,7 +3,7 @@ import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { C as Boxes, S as Building2, _ as FileText, a as RotateCcw, b as ChevronDown, c as Menu, d as List, f as Landmark, g as HandHeart, h as HeartHandshake, i as SlidersHorizontal, l as Map$1, m as House, n as Warehouse, o as Package, p as Info, r as Truck, s as PackageCheck, t as X, u as MapPin, v as ChevronRight, w as ArrowLeft, x as CalendarDays, y as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BhSzHSFv.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DJ5pF45G.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -29460,8 +29460,28 @@ function BalanceFinal() {
 		className: "mx-auto max-w-6xl",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionTitle, { children: "Así se distribuyó la ayuda en el Valle del Cauca" }),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-9 space-y-2 sm:hidden",
+				children: cifras.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					style: { "--i": i },
+					className: "vc-aparece flex items-center gap-4 rounded-lg bg-[#123E5C] px-4 py-3.5",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "min-w-[5rem] shrink-0 text-[1.75rem] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
+						children: c.valor
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						className: "min-w-0 flex-1",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "block text-[15px] font-bold leading-tight text-white",
+							children: c.label
+						}), c.corte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "mt-1 block text-[13px] leading-tight text-[#A8CFE2]",
+							children: ["Con corte al ", c.corte]
+						})]
+					})]
+				}, `cifra-movil-${c.label}`))
+			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-9 space-y-2",
+				className: "mt-9 hidden space-y-2 sm:block",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "grid gap-2 sm:grid-cols-3",
 					children: cifras.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
