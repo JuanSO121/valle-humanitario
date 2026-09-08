@@ -116,18 +116,10 @@ export function CanalesSection() {
   const entregasFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
   const unidadesFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.unidades, 0);
 
-  /**
-   * Toneladas por ruta, estimadas. El peso se reparte entre TODAS las
-   * entregas conocidas: las que el mapa dibuja más las que no tienen
-   * coordenada y por eso no llegan a route=flujos.
-   */
-  const entregasSinCoordenada = rutas
-    .filter((r) => FUERA_DEL_MAPA.includes(r.id))
-    .reduce((sum, r) => sum + r.entregas, 0);
-  const baseEntregas = op.entregasTodas + entregasSinCoordenada;
-
-  const toneladasDe = (entregas: number) =>
-    baseEntregas > 0 ? Math.round(entregas * (op.totalToneladas / baseEntregas)) : 0;
+  // El mismo factor que usan el balance, el podio y las zonas. Sale de
+  // la derivación y ya incluye en su denominador las entregas que el
+  // mapa no dibuja, así que las partes suman el total del departamento.
+  const toneladasDe = (entregas: number) => Math.round(entregas * op.pesoPorEntrega);
 
   // Orden fijo y no por tamaño: cuál ruta es más grande cambia con cada
   // actualización del Excel, y la jerarquía visual de la sección no
@@ -161,8 +153,10 @@ export function CanalesSection() {
       ) : (
         <>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-[#35708F]">
-            El conteo por municipio deja fuera estas rutas.
-             Suman 121 entregas y unas 166 toneladas que también se movieron.
+            El conteo por municipio deja fuera estas rutas. Suman{" "}
+            {entregasFuera.toLocaleString("es-CO")} entregas y unas{" "}
+            {toneladasDe(entregasFuera).toLocaleString("es-CO")} toneladas que también se
+            movieron.
           </p>
 
           {/* Las rutas con nombre propio. */}
@@ -191,7 +185,7 @@ export function CanalesSection() {
                         rutas tienen. */}
                     <div>
                       <b className="block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]">
-                        {r.unidades.toLocaleString("es-CO")}
+                        {Math.round(r.unidades).toLocaleString("es-CO")}
                       </b>
                       <span className="mt-1 block text-base text-[#A8CFE2]">unidades</span>
                     </div>
@@ -274,7 +268,7 @@ export function CanalesSection() {
 
                   <p className="mt-4 flex items-baseline gap-2">
                     <b className="text-3xl font-extrabold leading-none text-[#0079C1]">
-                      {r.unidades.toLocaleString("es-CO")}
+                      {Math.round(r.unidades).toLocaleString("es-CO")}
                     </b>
                     <span className="text-base text-[#6B93AA]">unidades</span>
                   </p>

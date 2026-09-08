@@ -3,48 +3,33 @@
  * -----------------------------------------------------------------------
  * Serie diaria de toneladas, desde `route=toneladas`.
  *
- * Sigue el mismo patrón que useCatalogQueries: una queryKey de un
- * elemento y el mismo staleTime.
+ * CAMBIO: se quita `retry: false`, por la misma razón que en useAyuda.
  *
- * Una diferencia a propósito: `retry: false`. Mientras la ruta no esté
- * publicada, el backend responde 404 y no tiene sentido reintentar tres
- * veces en cada carga. El tablero cae al estimado por entregas y sigue
- * funcionando. Ver OperacionContext.
+ * Estaba puesto cuando la ruta todavía no existía: reintentar un 404
+ * permanente no sirve de nada. Pero la ruta ya está publicada y responde,
+ * así que ahora ese flag hace daño.
  *
- * ANTES DE USARLO hay que agregar el método al repositorio, junto a los
- * otros seis GET sin parámetros:
+ * Un Web App de Apps Script serializa las ejecuciones por usuario. El
+ * tablero monta ocho consultas a la vez y las que se pisan reciben un 404
+ * de la infraestructura de Google, no del script. Con `retry: false`, ese
+ * fallo de un segundo se vuelve definitivo para toda la sesión: el peso
+ * cae al respaldo por entregas y ahí se queda, aunque el backend esté
+ * perfecto y la hoja tenga los datos.
  *
- *     getToneladas(): Promise<ToneladasResponse> {
- *       return this.get<ToneladasResponse>("toneladas");
- *     }
- *
- * Y el tipo en domain/entities.ts:
- *
- *     export interface ToneladasPunto {
- *       dia: string;
- *       toneladas: number;
- *       acumulado: number;
- *     }
- *
- *     export interface ToneladasResponse {
- *       serie: ToneladasPunto[];
- *       total: number;
- *       fuente: "TONELADAS";
- *       disclaimer: string;
- *     }
+ * Es un fallo especialmente silencioso: no aparece ningún mensaje, solo
+ * una cifra de toneladas parecida a la buena pero distinta.
  */
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { ayudasApiRepository } from "@/infrastructure/api/container";
 import type { ToneladasResponse } from "@/domain/entities";
-
-/** Igual que en useCatalogQueries. Si cambia allá, cambia acá. */
-const CATALOG_STALE_TIME_MS = 5 * 60 * 1000;
+import { CATALOG_STALE_TIME_MS, REINTENTO_ESCALONADO } from "./useCatalogQueries";
 
 export function useToneladas(): UseQueryResult<ToneladasResponse> {
   return useQuery({
     queryKey: ["toneladas"],
     queryFn: () => ayudasApiRepository.getToneladas(),
     staleTime: CATALOG_STALE_TIME_MS,
-    retry: false,
+    retry: 3,
+    retryDelay: REINTENTO_ESCALONADO,
   });
 }

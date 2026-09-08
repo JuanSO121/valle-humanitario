@@ -4,62 +4,110 @@
  * El cierre del recorrido: cuánto se entregó, cuánto pesó y por qué
  * rutas.
  *
- * SOBRE LAS CUATRO RUTAS Y POR QUÉ NO SE SOLAPAN
+ * TRES CORRECCIONES EN ESTA VERSIÓN
+ *
+ * 1. LAS TONELADAS DE LAS RUTAS YA NO SUMAN MÁS QUE EL TOTAL.
+ *
+ *    Decía 582 + 56 + 146 = 784 t debajo de un titular que decía 725. El
+ *    reparto dividía entre `op.entregasTodas`, que son solo las entregas
+ *    con coordenada (496), mientras repartía sobre las 536 reales. Cada
+ *    ruta cargaba con el peso de las que el mapa no dibuja.
+ *
+ *    Ahora se multiplica por `op.pesoPorEntrega`, que sale de la misma
+ *    derivación que usan el podio, las zonas y la sección de canales. Un
+ *    solo factor para toda la página, y las partes suman el entero.
+ *
+ * 2. CALI DEJA DE ESCONDERSE DENTRO DE "OTRAS AYUDAS HUMANITARIAS".
+ *
+ *    El filtro excluía `multiples` y `cartago` pero no `cali`, así que la
+ *    capital entraba en la Ruta 4 y esa ruta declaraba 100 despachos
+ *    mientras su propia tarjeta, unas secciones más abajo, decía 40. El
+ *    mismo nombre con dos cifras en la misma página. Y la descripción
+ *    —"sin estar asociadas a un municipio específico"— era falsa
+ *    justamente para Cali.
+ *
+ *    Cali pasa a ser su quinta ruta, con nombre propio, igual que en la
+ *    sección de canales. Las cinco siguen sin solaparse y siguen sumando
+ *    exactamente las entregas del departamento.
+ *
+ * 3. LA CIFRA DE ARRIBA DICE QUÉ CUENTA.
+ *
+ *    Decía "Despachos en total" sobre un número que son enlaces
+ *    despacho-destino: un formato que reparte a tres municipios aporta
+ *    tres. La hoja DESPACHOS tiene 524 filas y el mapa muestra 436, así
+ *    que había tres números distintos con la misma etiqueta.
+ *
+ * SOBRE LAS CINCO RUTAS Y POR QUÉ NO SE SOLAPAN
  *
  * Cartago es un ORIGEN, no un destino: sus entregas llegan a municipios
  * del norte. Si se listara "municipios" con el total y "Cartago" aparte,
- * esas entregas se contarían dos veces y la suma daría más que el total
- * de la operación.
- *
- * Por eso la primera ruta es "municipios desde Cali", que es el total
- * municipal menos lo que salió de Cartago. Así las cuatro suman
- * exactamente las entregas del departamento.
+ * esas entregas se contarían dos veces. Por eso la primera ruta es el
+ * total municipal menos lo que salió de Cartago.
  *
  * Todo se deriva de la API. La lista de canales viene de route=ayuda; el
  * catálogo estático solo aporta el color, que es diseño y no dato.
  *
+ * SOBRE LOS DÍAS SIN PESO REGISTRADO
+ *
+ * La hoja TONELADAS no siempre cubre todos los días con entregas, y
+ * cuando faltan filas el total de toneladas cuenta esos días como cero.
+ * La derivación los detecta y los expone en `diasSinPesoMedido`.
+ *
+ * Eso NO se muestra acá. Durante un momento estuvo como una nota al pie
+ * del balance y fue un error: al lector de la página no le sirve saber
+ * que a una hoja de cálculo le faltan filas, y no puede hacer nada al
+ * respecto. Es un aviso para quien mantiene el Excel, y ese no entra por
+ * la página pública. Vive en la consola, desde OperacionContext.
+ *
  * SOBRE EL BLOQUE DE CIFRAS
  *
- * Las tres tarjetas tenían el relleno de un bloque protagonista, y no lo
- * son: son la entrada al balance, y abajo vienen las cuatro rutas, que
- * es donde está el detalle. Con el relleno apretado y la cifra un punto
- * más chica, el conjunto se lee como una sola unidad y no como tres
- * carteles.
+ * Las tres tarjetas son la entrada al balance, no el protagonista: abajo
+ * vienen las rutas, que es donde está el detalle. Con el relleno apretado
+ * y la cifra un punto más chica, el conjunto se lee como una unidad y no
+ * como tres carteles.
  *
- * Debajo van las bandas de corte, en crema. Contrastan con el navy de
- * las tarjetas y con el fondo claro de la sección. Son dos y no una
- * porque las ayudas recibidas se consolidan en el centro de acopio unos
- * días antes que el registro de despachos: cada banda abarca las
- * columnas de las cifras que fecha, de modo que ningún número queda
- * fechado con un corte que no le corresponde.
+ * Debajo van las bandas de corte, en crema. Son dos y no una porque las
+ * ayudas recibidas se consolidan en el centro de acopio unos días antes
+ * que el registro de despachos: cada banda abarca las columnas de las
+ * cifras que fecha, de modo que ningún número queda fechado con un corte
+ * que no le corresponde.
  *
  * SOBRE LAS DOS MAQUETAS DE LAS RUTAS
  *
  * En escritorio la fila es una línea de tiempo: rótulo y óvalo a la
  * izquierda, círculo al centro sobre el hilo vertical, descripción a la
  * derecha. Esa composición necesita tres columnas y en un teléfono no
- * cabe: el óvalo quedaba con dos palabras por línea y la descripción,
- * arrinconada contra el margen.
- *
- * En celular cada ruta se cierra como una burbuja: una tarjeta con el
- * rótulo arriba, el óvalo de color con el icono adentro y la descripción
- * debajo. Se lee de arriba abajo, que es como se lee un teléfono, y cada
- * ruta queda separada de la siguiente sin depender del hilo, que ahí se
- * oculta.
- *
- * El cambio entre las dos maquetas lo hace `md:contents` en el envoltorio
- * de la burbuja: en escritorio ese div se disuelve y sus tres hijos pasan
- * a ser celdas de la rejilla del `li`. Así el HTML es uno solo y no hay
- * bloques duplicados que después se desincronicen.
+ * cabe. En celular cada ruta se cierra como una burbuja y se lee de
+ * arriba abajo. El cambio lo hace `md:contents` en el envoltorio: en
+ * escritorio ese div se disuelve y sus tres hijos pasan a ser celdas de
+ * la rejilla del `li`, así que el HTML es uno solo.
  * -----------------------------------------------------------------------
  */
 import { type CSSProperties } from "react";
-import { Boxes, Building2, HeartHandshake, Warehouse } from "lucide-react";
+import { Boxes, Building2, HeartHandshake, Landmark, Warehouse } from "lucide-react";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
 import { SectionTitle } from "./storyPrimitives";
 
 const ORIGEN_CARTAGO = "ORI-CARTAGO";
+
+/**
+ * Ayudas recibidas en el centro de acopio.
+ *
+ * ES EL ÚLTIMO DATO ESCRITO A MANO DE ESTA SECCIÓN, y hay que sacarlo.
+ * Sale de la hoja AYUDAS RECIBIDAS del Excel, que ninguna ruta expone
+ * todavía. Mientras no exista `route=ayudas-recibidas`, cada corte
+ * obliga a editar este archivo.
+ *
+ * OJO CON LA FECHA: la hoja dice "03 Agosto de 2026" para este mismo
+ * 889. Una de las dos está mal y hay que confirmarlo antes de publicar
+ * otro corte. Agosto sería tres semanas antes del cierre del resto de
+ * las cifras, y el 3 de agosto es anterior al terremoto.
+ *
+ * El valor y el corte van juntos en un objeto a propósito: separados, la
+ * próxima actualización cambia uno y deja el otro quieto.
+ */
+const RECIBIDAS = { valor: "889 t", corte: "3 de septiembre de 2026" };
 
 interface Ruta {
   id: string;
@@ -81,12 +129,12 @@ interface Ruta {
   /**
    * La versión del color que puede ir como texto sobre fondo claro.
    *
-   * Va aparte y no se calcula porque los cuatro colores no se comportan
-   * igual: el cyan #22ABE2 contrasta 2.4 a 1 contra el fondo de la
-   * sección y el naranja #E2690E, 3.2 a 1, así que como rótulo se
-   * volverían ilegibles. Estas variantes conservan el tono y pasan de 5
-   * a 1. El óvalo y el círculo se quedan con el color vivo: ahí el color
-   * es un fondo, no un soporte de lectura.
+   * Va aparte y no se calcula porque los colores no se comportan igual:
+   * el cyan #22ABE2 contrasta 2.4 a 1 contra el fondo de la sección y el
+   * naranja #E2690E, 3.2 a 1, así que como rótulo se volverían
+   * ilegibles. Estas variantes conservan el tono y pasan de 5 a 1. El
+   * óvalo y el círculo se quedan con el color vivo: ahí el color es un
+   * fondo, no un soporte de lectura.
    */
   tinta: string;
   icono: typeof Building2;
@@ -99,27 +147,15 @@ export function BalanceFinal() {
   const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
   const entregasCartago = cartago?.entregas ?? 0;
 
-  // Los canales que la API conoce. Si la ruta no responde, se usa el
-  // catálogo para no dejar la sección vacía.
-  // Los grupos vienen con id estable desde el backend, así que no hay
-  // que adivinar por el nombre.
+  // Los canales que la API conoce. Los grupos vienen con id estable desde
+  // el backend, así que no hay que adivinar por el nombre.
   const canalesVivos = ayuda?.canales ?? [];
 
-  const entregasDeGrupo = (id: string) =>
-    canalesVivos.filter((c) => c.id === id).reduce((sum, c) => sum + c.entregas, 0);
+  const canal = (id: string) => canalesVivos.find((c) => c.id === id);
 
-  const multiples = entregasDeGrupo("multiples");
-  const unidadesMultiples = canalesVivos
-    .filter((c) => c.id === "multiples")
-    .reduce((sum, c) => sum + c.unidades, 0);
-
-  // Todo lo que no es municipio, ni Cartago, ni el agregado múltiple:
-  // Cali, las entidades y lo que salió del departamento.
-  // Cartago tiene su propia ruta y sale de los orígenes, así que no
-  // entra acá: contarlo dos veces inflaría el total.
-  const otras = canalesVivos
-    .filter((c) => c.id !== "multiples" && c.id !== "cartago")
-    .reduce((sum, c) => sum + c.entregas, 0);
+  const multiples = canal("multiples");
+  const cali = canal("cali");
+  const otras = canal("otras-ayudas-solidarias");
 
   const rutas: Ruta[] = [
     {
@@ -137,7 +173,7 @@ export function BalanceFinal() {
       id: "cartago",
       titulo: "Centro de distribución Cartago",
       descripcion:
-        "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
+        "Segunda bodega. Lo que sale de aquí llega a municipios del norte por una ruta propia.",
       entregas: entregasCartago,
       unidades: 0,
       color: "#E2690E",
@@ -145,55 +181,60 @@ export function BalanceFinal() {
       icono: Warehouse,
     },
     {
-      id: "multiples",
-      titulo: "Municipios múltiples",
-      descripcion: "Ruta de entrega que atendió a varios municipios.",
-      entregas: multiples,
-      unidades: unidadesMultiples,
+      // Cali va como ruta propia y no dentro de "otras": es un municipio,
+      // y meterla ahí hacía que esta sección y la de canales publicaran
+      // dos cifras distintas para el mismo nombre.
+      id: "cali",
+      titulo: "Cali",
+      descripcion:
+        "La capital del departamento va por su propio canal y queda fuera del conteo por municipio.",
+      entregas: cali?.entregas ?? 0,
+      unidades: 0,
       color: "#7F207F",
       tinta: "#7F207F",
+      icono: Landmark,
+    },
+    {
+      id: "multiples",
+      titulo: "Municipios múltiples",
+      descripcion: "Ruta de entrega que atendió a varios municipios sin desagregar cuál recibió qué.",
+      entregas: multiples?.entregas ?? 0,
+      unidades: multiples?.unidades ?? 0,
+      color: "#5CC46B",
+      tinta: "#2E7D3F",
       icono: Boxes,
     },
     {
       id: "otras",
       titulo: "Otras ayudas humanitarias",
       descripcion:
-        "Ayudas entregadas a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
-      entregas: otras,
-      unidades: 0,
+        "Ayudas entregadas a entidades y a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
+      entregas: otras?.entregas ?? 0,
+      unidades: otras?.unidades ?? 0,
       color: "#22ABE2",
       tinta: "#0F6E96",
       icono: HeartHandshake,
     },
     // Se muestra una ruta si movió entregas O unidades. Filtrar solo por
     // entregas dejaba fuera a Municipios múltiples, que no tiene enlaces
-    // propios en DESPACHO_DESTINO pero sí 1.817 unidades.
+    // propios en DESPACHO_DESTINO pero sí sus unidades.
   ].filter((r) => r.entregas > 0 || r.unidades > 0);
 
   const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
 
-  /**
-   * Las ayudas recibidas van con su propia fecha porque no salen de la
-   * misma fuente que las demás: es el consolidado del centro de acopio,
-   * que se cierra unos días antes que el registro de despachos. Con una
-   * sola banda de corte al pie, esta cifra quedaba fechada tres días
-   * después de lo que realmente cubre.
-   *
-   * Las dos van juntas y a mano hasta que la API publique el dato; si se
-   * separan, la próxima actualización cambia una y deja la otra quieta.
-   */
-  const RECIBIDAS = { valor: "889 t", corte: "3 de septiembre de 2026" };
-
   const cifras = [
     { valor: RECIBIDAS.valor, label: "Ayudas recibidas", corte: RECIBIDAS.corte },
     {
-      valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
+      valor: `${Math.round(op.totalToneladas).toLocaleString("es-CO")} t`,
       label: "Ayudas distribuidas",
       corte: op.fechaCorteLarga,
     },
     {
+      // "Entregas" y no "despachos": cada formato que reparte a varios
+      // municipios aporta una entrega por cada uno. La hoja DESPACHOS
+      // tiene menos filas que este número y las dos cosas son correctas.
       valor: totalRutas.toLocaleString("es-CO"),
-      label: "Despachos en total",
+      label: "Entregas en total",
       corte: op.fechaCorteLarga,
     },
   ];
@@ -239,19 +280,13 @@ export function BalanceFinal() {
           ))}
         </div>
 
-        {/* Las bandas de corte, en la misma rejilla que las tarjetas:
-            cada una abarca las columnas de las cifras que fecha, así que
-            se lee sin ambigüedad cuál corte aplica a cuál número. */}
         <div className="grid gap-2 sm:grid-cols-3">
           {bandas.map((b, i) =>
             b.corte ? (
               <div
                 key={`corte-${b.corte}`}
                 style={
-                  {
-                    "--i": cifras.length + i,
-                    gridColumn: `span ${b.columnas}`,
-                  } as CSSProperties
+                  { "--i": cifras.length + i, gridColumn: `span ${b.columnas}` } as CSSProperties
                 }
                 className="vc-aparece rounded-lg bg-[#FBF8C6] px-5 py-3.5 text-center"
               >
@@ -263,8 +298,6 @@ export function BalanceFinal() {
                 </b>
               </div>
             ) : (
-              // Sin fecha no hay banda, pero el hueco se mantiene para
-              // que las bandas vecinas no se corran de columna.
               <div key={`corte-vacio-${i}`} style={{ gridColumn: `span ${b.columnas}` }} />
             ),
           )}
@@ -272,8 +305,8 @@ export function BalanceFinal() {
       </div>
 
       {/* Las rutas. En escritorio, una línea de tiempo: el círculo del
-          centro las encadena y el hilo vertical hace leer las cuatro como
-          una sola secuencia. En celular, cuatro burbujas apiladas. */}
+          centro las encadena y el hilo vertical hace leer todas como una
+          sola secuencia. En celular, burbujas apiladas. */}
       <ol className="relative mt-10 space-y-4 md:mt-12 md:space-y-0">
         {/* El hilo que une los círculos. Decorativo, así que se oculta a
             los lectores de pantalla. Y se oculta también en celular: ahí
@@ -288,13 +321,11 @@ export function BalanceFinal() {
           const Icono = r.icono;
           const porcentaje = totalRutas > 0 ? Math.round((r.entregas / totalRutas) * 100) : 0;
 
-          // El peso se reparte según la proporción de despachos. Una ruta
-          // sin despachos propios, como Municipios múltiples, no puede
-          // tener toneladas atribuidas sin inventarlas.
-          const toneladas =
-            op.entregasTodas > 0
-              ? Math.round(r.entregas * (op.totalToneladas / op.entregasTodas))
-              : 0;
+          // El mismo factor que usan el podio, las zonas y la sección de
+          // canales. Una ruta sin entregas propias, como Municipios
+          // múltiples, no puede tener toneladas atribuidas sin
+          // inventarlas, y por eso muestra sus unidades en su lugar.
+          const toneladas = Math.round(r.entregas * op.pesoPorEntrega);
 
           return (
             <li
@@ -310,19 +341,17 @@ export function BalanceFinal() {
                 {/* Rótulo y óvalo. En celular se apilan; en escritorio
                     comparten línea y el `justify-between` separa el
                     rótulo, anclado a la izquierda, del óvalo, que queda
-                    junto al círculo. Ese aire entre los dos es lo que
-                    hace que los cuatro "Ruta n" caigan sobre el mismo
-                    eje vertical: pegados al óvalo se moverían con el
-                    largo de cada título. */}
+                    junto al círculo. Ese aire es lo que hace que todos
+                    los "Ruta n" caigan sobre el mismo eje vertical:
+                    pegados al óvalo se moverían con el largo de cada
+                    título. */}
                 <div className="flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4 md:pr-6">
-<span
-  className="shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-tight md:min-w-24"
-  style={{ color: r.tinta }}
->
-  Ruta {i + 1}
-</span>
-
-
+                  <span
+                    className="shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-tight md:min-w-24"
+                    style={{ color: r.tinta }}
+                  >
+                    Ruta {i + 1}
+                  </span>
 
                   {/* En celular el óvalo ocupa todo el ancho de la
                       burbuja y se lleva el icono adentro, que es lo que
@@ -331,11 +360,10 @@ export function BalanceFinal() {
                       En escritorio crece hasta un tope y se detiene ahí.
                       Con `flex-none` medía su contenido, y "Centro de
                       distribución Cartago" salía casi el doble de ancho
-                      que "Municipios múltiples": cuatro píldoras de
-                      largos distintos alineadas contra el mismo círculo
-                      se leen como un error de maqueta. Como las cuatro
-                      filas comparten ancho de columna, el tope las deja
-                      exactamente iguales. */}
+                      que "Cali": píldoras de largos distintos alineadas
+                      contra el mismo círculo se leen como un error de
+                      maqueta. Como todas las filas comparten ancho de
+                      columna, el tope las deja exactamente iguales. */}
                   <div
                     className="flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:max-w-[24rem] md:flex-1 md:rounded-full md:px-6 md:text-right"
                     style={{ background: r.color }}
@@ -357,7 +385,7 @@ export function BalanceFinal() {
                               <b className="text-base font-extrabold text-white">
                                 {r.entregas.toLocaleString("es-CO")}
                               </b>{" "}
-                              despachos · {porcentaje}%
+                              entregas · {porcentaje}%
                             </span>
                             <span className="text-[15px] font-bold text-white/90">
                               <b className="text-base font-extrabold text-white">
@@ -369,7 +397,7 @@ export function BalanceFinal() {
                         ) : (
                           <span className="text-[15px] font-bold text-white/90">
                             <b className="text-base font-extrabold text-white">
-                              {r.unidades.toLocaleString("es-CO")}
+                              {Math.round(r.unidades).toLocaleString("es-CO")}
                             </b>{" "}
                             unidades sin desagregar
                           </span>
@@ -400,11 +428,14 @@ export function BalanceFinal() {
       </ol>
 
       {/* Si faltan rutas, es porque route=ayuda no respondió. Decirlo es
-          mejor que mostrar un balance incompleto como si fuera completo. */}
+          mejor que mostrar un balance incompleto como si fuera completo.
+          El texto no nombra rutas concretas: la condición se cumple
+          cuando faltan TODAS, y nombrar dos hacía buscar un problema de
+          catálogo donde había un fallo de red. */}
       {canalesVivos.length === 0 && (
         <p className="mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]">
-          Faltan las rutas de municipios múltiples y otras ayudas solidarias. Se muestran cuando el
-          servicio de datos las devuelve.
+          El detalle por ruta no está disponible en este momento. Aparece apenas el servicio de
+          datos responde; si persiste, recargue la página.
         </p>
       )}
     </div>

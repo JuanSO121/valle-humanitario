@@ -1,10 +1,30 @@
 /**
- * BrechasSection.tsx — Nivel 7, "¿Qué más están pidiendo los municipios?"
+ * BrechasSection.tsx — "¿Qué más están pidiendo los municipios?"
  * -----------------------------------------------------------------------
- * La tabla de brecha se CALCULA cruzando pmuData con territoryData en
- * vez de transcribirse: así, si mañana se regenera cualquiera de las dos
+ * La tabla de brecha se CALCULA cruzando pmuData con las entregas vivas
+ * en vez de transcribirse: así, si mañana cambia cualquiera de las dos
  * fuentes, la tabla sigue diciendo la verdad y no hay que acordarse de
  * actualizar una lista paralela.
+ *
+ * CAMBIO: los despachos ya no salen del catálogo estático.
+ *
+ * La columna leía `getTerritoryStatByCode(codigoDane)?.despachos`, un
+ * campo que vivía en territoryData.ts con corte del 24 de agosto. Dos
+ * problemas, y el segundo es el grave:
+ *
+ * 1. Las cifras estaban congeladas. Candelaria y Florida figuraban con
+ *    cero despachos porque en esa fecha no habían recibido nada; hoy
+ *    Candelaria tiene 1 y Florida 2.
+ *
+ * 2. Ese campo ya no existe. Al sacarlo del catálogo, la expresión
+ *    devolvía `undefined` y el `?? 0` la convertía en cero SIN error: los
+ *    41 municipios aparecían con cero despachos y la tabla los marcaba a
+ *    todos en rojo como "sin un solo despacho". Un fallo silencioso que
+ *    se lee como un dato alarmante.
+ *
+ * Ahora la columna sale de `useOperacion()`, que es la misma fuente que
+ * alimenta el mapa y el podio. La tarjeta de Candelaria pasa a
+ * calcularse en vez de estar escrita, por lo mismo.
  * -----------------------------------------------------------------------
  */
 import { useMemo } from "react";
@@ -16,21 +36,51 @@ import {
   sectoresRequerimientos,
   UMBRAL_ALERTA_ABIERTOS,
 } from "@/presentation/data/pmuData";
-import { getTerritoryStatByCode } from "@/presentation/data/territoryData";
+import { useOperacion } from "@/presentation/state/OperacionContext";
 import { Aviso, Card, MiniList, SectionLabel, SectionTitle } from "./storyPrimitives";
 
 const AYUDA_HUMANITARIA = sectoresRequerimientos.find(([s]) => s === "Ayuda humanitaria")?.[1] ?? 0;
 
 export function BrechasSection() {
+  const { municipios } = useOperacion();
+
+  /** Entregas por código DANE. Es el cruce con la matriz del PMU. */
+  const entregasPorDane = useMemo(() => {
+    const mapa = new Map<string, number>();
+    for (const m of municipios) {
+      if (m.codigoDane) mapa.set(String(m.codigoDane), m.entregas);
+    }
+    return mapa;
+  }, [municipios]);
+
   const filas = useMemo(
     () =>
       pmuPorMunicipio
-        .map((r) => ({ ...r, despachos: getTerritoryStatByCode(r.codigoDane)?.despachos ?? 0 }))
+        .map((r) => ({ ...r, despachos: entregasPorDane.get(String(r.codigoDane)) ?? 0 }))
         .filter((r) => r.abiertos > 0 || (r.total > 0 && r.despachos === 0))
         .sort((a, b) => b.abiertos - a.abiertos || b.total - a.total)
         .slice(0, 14),
-    [],
+    [entregasPorDane],
   );
+
+  /**
+   * Municipios que radicaron requerimientos y todavía no reciben nada.
+   *
+   * Antes la tarjeta de abajo decía "Candelaria: 6 requerimientos y cero
+   * despachos, el único municipio del Valle en esa situación", escrito a
+   * mano. Candelaria ya recibió, así que la tarjeta pasó a ser falsa sin
+   * que nadie lo notara. Calculado, el bloque se apaga solo cuando deja
+   * de haber casos.
+   */
+  const sinDespacho = useMemo(
+    () =>
+      pmuPorMunicipio
+        .filter((r) => r.total > 0 && (entregasPorDane.get(String(r.codigoDane)) ?? 0) === 0)
+        .sort((a, b) => b.total - a.total),
+    [entregasPorDane],
+  );
+
+  const caso = sinDespacho[0];
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -50,7 +100,7 @@ export function BrechasSection() {
           <b>Qué significa acá «no atendido».</b> Es el estado que el propio PMU escribió en su
           matriz de seguimiento, con corte al <b>{PMU_FECHA_CORTE}</b>. Marca que en esa fecha el
           requerimiento todavía no tenía acción registrada, no que se haya negado ni abandonado. Como
-          los despachos van cuatro jornadas por delante de ese archivo,{" "}
+          los despachos van varias jornadas por delante de ese archivo,{" "}
           <b>una parte de estos casos ya puede estar resuelta</b> y aún no reflejada. La lectura útil
           no es el porcentaje: es <b>dónde se concentran</b> las peticiones abiertas.
         </Aviso>
@@ -87,19 +137,17 @@ export function BrechasSection() {
             <table className="w-full min-w-[520px] border-collapse text-[13.2px]">
               <thead>
                 <tr>
-                  {["Municipio", "Req.", "Atend.", "Parcial", "Abiertos", "Despachos"].map(
-                    (h, i) => (
-                      <th
-                        key={h}
-                        scope="col"
-                        className={`border-b-2 border-[#00578C]/15 px-2 py-2 text-[10.6px] font-bold uppercase tracking-[0.07em] text-[#6E8B9E] ${
-                          i === 0 ? "text-left" : "text-right"
-                        }`}
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {["Municipio", "Req.", "Atend.", "Parcial", "Abiertos", "Entregas"].map((h, i) => (
+                    <th
+                      key={h}
+                      scope="col"
+                      className={`border-b-2 border-[#00578C]/15 px-2 py-2 text-[10.6px] font-bold uppercase tracking-[0.07em] text-[#6E8B9E] ${
+                        i === 0 ? "text-left" : "text-right"
+                      }`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -128,7 +176,7 @@ export function BrechasSection() {
             </table>
             <p className="mt-3 text-[12.2px] leading-5 text-[#6E8B9E]">
               Resaltadas, las filas que piden una mirada: {UMBRAL_ALERTA_ABIERTOS} o más
-              requerimientos todavía abiertos al corte, o municipios sin un solo despacho.
+              requerimientos todavía abiertos al corte, o municipios sin una sola entrega.
             </p>
           </div>
         </Card>
@@ -151,19 +199,30 @@ export function BrechasSection() {
             </p>
           </Card>
 
-          <Card className="border-l-[3px] border-l-[#F26049]">
-            <b className="block font-serif text-[30px] leading-none text-[#00578C]">Candelaria</b>
-            <p className="mt-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#6E8B9E]">
-              El caso que hay que mirar
-            </p>
-            <p className="mt-3 text-[13.4px] leading-6 text-[#4E6B7C]">
-              <b className="text-[#0B2233]">6 requerimientos radicados y cero despachos</b> en toda la
-              emergencia. Es el único municipio del Valle en esa situación.
-            </p>
-            <p className="mt-3 text-[13px] leading-6 text-[#6E8B9E]">
-              Florida tampoco registra despacho, pero tampoco ha radicado requerimientos ante el PMU.
-            </p>
-          </Card>
+          {/* Se apaga solo cuando ya no queda ningún municipio con
+              requerimientos y sin entregas, que es hacia donde debería ir
+              la operación. Escrito a mano, este bloque seguiría señalando
+              a Candelaria mucho después de que dejara de aplicar. */}
+          {caso && (
+            <Card className="border-l-[3px] border-l-[#F26049]">
+              <b className="block font-serif text-[30px] leading-none text-[#00578C]">
+                {caso.municipio}
+              </b>
+              <p className="mt-1.5 text-[11.5px] font-bold uppercase tracking-[0.06em] text-[#6E8B9E]">
+                El caso que hay que mirar
+              </p>
+              <p className="mt-3 text-[13.4px] leading-6 text-[#4E6B7C]">
+                <b className="text-[#0B2233]">
+                  {caso.total} {caso.total === 1 ? "requerimiento radicado" : "requerimientos radicados"}{" "}
+                  y ninguna entrega
+                </b>{" "}
+                en toda la emergencia.
+                {sinDespacho.length === 1
+                  ? " Es el único municipio del Valle en esa situación."
+                  : ` Son ${sinDespacho.length} municipios en esa situación.`}
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

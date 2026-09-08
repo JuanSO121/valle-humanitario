@@ -1,12 +1,22 @@
 /**
  * MovimientoExtras.tsx
  * -----------------------------------------------------------------------
- * Tarjetas de jornada y municipios nuevos. Las tarjetas se calculan desde
- * la API, incluida la glosa de cada una. Antes la cifra venía de un
- * archivo y el texto estaba escrito en el JSX, así que al cambiar los
- * datos las tarjetas seguían nombrando el día equivocado.
+ * Tarjetas de jornada y municipios nuevos.
+ *
+ * CORRECCIÓN: el mes deja de estar escrito a mano.
+ *
+ * Las tres notas decían "de agosto" fijo y componían la fecha con
+ * `Number(j.dia)`, que es solo el día del mes. Cuando la operación pasó a
+ * septiembre, la primera entrega a Candelaria —del 3 de septiembre— se
+ * publicó como "3 de agosto": una semana ANTES del terremoto que originó
+ * la operación. Y las dos tarjetas de arriba quedaban expuestas al mismo
+ * error apenas el pico cayera en el mes siguiente.
+ *
+ * Ahora se usa `j.fecha`, que es la ISO completa, formateada con
+ * `fechaCorta` de la derivación. El mes sale del dato.
  */
 import { useOperacion } from "@/presentation/state/OperacionContext";
+import { fechaCorta } from "@/application/derivations/operacion";
 
 const ORIGEN_CARTAGO = "ORI-CARTAGO";
 
@@ -14,8 +24,7 @@ const ORIGEN_CARTAGO = "ORI-CARTAGO";
  * Las dos versiones de la pieza "Así avanzó la ruta".
  *
  * REVISAR QUE LOS NOMBRES COINCIDAN CON LOS ARCHIVOS REALES de
- * `public/marca/`. El de escritorio es una suposición: en la conversación
- * solo quedó nombrado el de celular.
+ * `public/marca/`. El de escritorio es una suposición.
  *
  * Se recomienda renombrar los dos sin tildes ni mayúsculas. Una eñe o una
  * tilde en una URL obliga al navegador a codificarla, y hay servidores
@@ -32,24 +41,20 @@ const MOVIL_ALTO = 1738;
 export function MovimientoStatCards() {
   const op = useOperacion();
   const primeras48 = op.jornadas.slice(0, 2).reduce((sum, j) => sum + j.entregas, 0);
-  const porcentaje48 =
-    op.totalEntregas > 0 ? Math.round((primeras48 / op.totalEntregas) * 100) : 0;
-  const promedio =
-    op.diasConEntrega > 0 ? (op.totalEntregas / op.diasConEntrega).toFixed(1) : "0";
+  const porcentaje48 = op.totalEntregas > 0 ? Math.round((primeras48 / op.totalEntregas) * 100) : 0;
   const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO);
 
   const tarjetas = [
     op.picoEntregas && {
-      valor: String(op.picoEntregas.entregas) + " - Entregas",
-      //subtitulo: ` - Entregas.`, debe ser pequeño es mas una alclaracion y toca ver como acomodarlo para no ser redundante
+      valor: `${op.picoEntregas.entregas} entregas`,
       label: "Día con más entregas",
-      nota: `El ${Number(op.picoEntregas.dia)} de agosto, hacia ${op.picoEntregas.municipios} municipios.`,
+      nota: `El ${fechaCorta(op.picoEntregas.fecha)}, hacia ${op.picoEntregas.municipios} municipios.`,
       color: "#F0801E",
     },
     op.picoCobertura && {
-      valor: String(op.picoCobertura.municipios) + " - Municipios",
+      valor: `${op.picoCobertura.municipios} municipios`,
       label: "Día con más municipios atendidos",
-      nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
+      nota: `El ${fechaCorta(op.picoCobertura.fecha)}.`,
       color: "#5CC46B",
     },
     {
@@ -65,7 +70,9 @@ export function MovimientoStatCards() {
       color: "#B57BB5",
     },
   ].filter(Boolean) as Array<{ valor: string; label: string; nota: string; color: string }>;
+
   if (tarjetas.length === 0) return null;
+
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {tarjetas.slice(0, 4).map((c) => (
@@ -90,9 +97,7 @@ export function MovimientoStatCards() {
  *
  * ESCRITORIO: la pieza completa, con titular, camión y los bloques por
  * jornada ya compuestos adentro. La lista en código desaparece de la
- * vista, porque estaba diciendo dos veces lo mismo: la captura del
- * problema mostraba los municipios dentro de la imagen y otra vez al
- * lado.
+ * vista, porque estaba diciendo dos veces lo mismo.
  *
  * CELULAR: la pieza de celular, que trae el titular y el camión pero no
  * los bloques, más la lista en código debajo.
@@ -100,10 +105,9 @@ export function MovimientoStatCards() {
  * LO QUE CUESTA ESTA DECISIÓN
  *
  * En escritorio los nombres de municipio dejan de venir de route=flujos y
- * pasan a estar quemados en un JPG. Hoy van 39 de 41 municipios: si la
- * ruta llega a los dos que faltan y alguien los carga al Excel, el
- * celular va a mostrar el municipio nuevo y el escritorio no. Cada vez
- * que cambien las jornadas hay que reexportar la pieza.
+ * pasan a estar quemados en un JPG. Cada vez que cambien las jornadas hay
+ * que reexportar la pieza, y mientras no se haga, el celular muestra un
+ * municipio nuevo que el escritorio no.
  *
  * Por eso la lista NO se borra en escritorio: se vuelve `sr-only`. Sigue
  * en el documento con los datos vivos, así que un lector de pantalla y un
@@ -153,8 +157,7 @@ export function MunicipiosNuevosCallouts() {
 
       {/* `lg:sr-only` y no `lg:hidden`: en escritorio la lista sale de la
           vista pero se queda en el documento, con los nombres que
-          devuelve la API. `mt-6` no molesta cuando está oculta, porque
-          `sr-only` la saca del flujo. */}
+          devuelve la API. */}
       <ol className="mt-6 flex flex-col gap-3 lg:sr-only">
         {conNuevos.map((j, i) => {
           const enCrema = i % 2 === 1;
@@ -166,12 +169,9 @@ export function MunicipiosNuevosCallouts() {
               }`}
             >
               <p className="text-lg font-bold">
-                {Number(j.dia)} de agosto / +{j.nuevos}{" "}
-                {j.nuevos === 1 ? "municipio" : "municipios"}
+                {fechaCorta(j.fecha)} / +{j.nuevos} {j.nuevos === 1 ? "municipio" : "municipios"}
               </p>
-              <p className="mt-1.5 text-lg leading-7 font-medium">
-                {j.nombresNuevos.join(", ")}.
-              </p>
+              <p className="mt-1.5 text-lg font-medium leading-7">{j.nombresNuevos.join(", ")}.</p>
             </li>
           );
         })}

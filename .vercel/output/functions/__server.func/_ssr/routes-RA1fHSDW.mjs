@@ -2,14 +2,15 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { S as ArrowLeft, _ as ChevronLeft, a as Package, b as Building2, c as Map$1, d as Info, f as House, g as ChevronRight, h as FileText, i as RotateCcw, l as MapPin, m as HandHeart, n as Warehouse, o as PackageCheck, p as HeartHandshake, r as Truck, s as Menu, t as X, u as List, v as ChevronDown, x as Boxes, y as CalendarDays } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BWbsSLsP.js
+import { C as ArrowLeft, S as Boxes, _ as ChevronRight, a as Package, b as CalendarDays, c as Map$1, d as Landmark, f as Info, g as FileText, h as HandHeart, i as RotateCcw, l as MapPin, m as HeartHandshake, n as Warehouse, o as PackageCheck, p as House, r as Truck, s as Menu, t as X, u as List, v as ChevronLeft, x as Building2, y as ChevronDown } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-RA1fHSDW.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
 * colaDePeticiones.ts
 * -----------------------------------------------------------------------
-* Limita cuántas peticiones al Web App viajan al mismo tiempo.
+* Limita cuántas peticiones al Web App viajan al mismo tiempo, y
+* reintenta las que se caen por concurrencia.
 *
 * EL PROBLEMA
 *
@@ -23,40 +24,136 @@ var import_jsx_runtime = require_jsx_runtime();
 * Hasta `errorResponse_(..., 404)` devuelve un 200 con el 404 adentro del
 * JSON. Un 404 de HTTP significa que la petición no llegó a ejecutarse.
 *
-* LA SOLUCIÓN
+* TRES CAMBIOS EN ESTA VERSIÓN
 *
-* Una cola: como mucho dos peticiones en vuelo, el resto espera turno.
-* La página tarda una fracción de segundo más en terminar de cargar y a
-* cambio no se cae ninguna sección.
+* 1. UNA SOLA EN VUELO.
 *
-* Dos y no una: con una sola en vuelo, ocho rutas en serie se sienten
-* lentas. Con dos, Apps Script las atiende sin pisarse y la carga se
-* mantiene corta. Si aun así aparecen 404 sueltos, bajarlo a 1.
+*    Estaba en dos con el argumento de que la carga se sentía lenta en
+*    serie. Pero Apps Script YA las serializa por dentro: las dos no se
+*    atienden en paralelo, se atropellan. El paralelismo era aparente y
+*    el costo, un 404 intermitente en una ruta al azar.
+*
+*    La carga tarda algo más. A cambio, ninguna sección se cae.
+*
+* 2. EL SEMÁFORO DEJA DE PERMITIR MÁS DEL MÁXIMO.
+*
+*    El `if` de la versión anterior tenía una carrera. Al liberarse un
+*    cupo, el contador baja y se despierta al que esperaba, pero ese
+*    despertar es un microtask: no retoma en el acto. En esa rendija,
+*    una petición nueva encuentra el contador por debajo del máximo, se
+*    salta la cola entera y ocupa el cupo. Cuando el que esperaba
+*    retoma, suma igual, sin volver a comprobar nada.
+*
+*    Resultado: con el máximo en 2 llegaba a haber 3 en vuelo, y era
+*    justo bajo carga —las ocho del arranque— cuando pasaba. La cola
+*    fallaba precisamente en el escenario para el que existe.
+*
+*    Con `while` en vez de `if`, el que despierta vuelve a comprobar y,
+*    si le ganaron el cupo, se vuelve a formar.
+*
+* 3. LA COLA REINTENTA LOS 404 DE INFRAESTRUCTURA.
+*
+*    React Query ya reintenta, pero espera un tiempo fijo y no sabe nada
+*    de la cola: puede volver a disparar justo cuando el Web App sigue
+*    ocupado. La cola sí sabe cuándo hay hueco, así que reintentar acá
+*    es más barato y más certero.
+*
+*    Las dos capas se complementan. Esta cubre el atropello entre rutas;
+*    la de React Query cubre lo que la cola no puede ver, como un corte
+*    de red del lado de la persona.
+*
+*    El cupo se SUELTA mientras se espera entre intentos. Retenerlo
+*    convertiría la espera de un reintento en una pausa para todas las
+*    demás rutas.
 * -----------------------------------------------------------------------
 */
-/** Peticiones simultáneas como máximo. Bajar a 1 si siguen los 404. */
-var MAX_EN_VUELO = 2;
+/**
+* Peticiones simultáneas como máximo.
+*
+* Subirlo no acelera nada: el Web App atiende de a una de todos modos.
+* Lo único que cambia es cuántas se pisan.
+*/
+var MAX_EN_VUELO = 1;
+/** Intentos adicionales cuando la respuesta parece un atropello. */
+var REINTENTOS = 3;
+/** Espera antes de cada reintento: 400 ms, 800, 1600. */
+var espera = (intento) => Math.min(400 * 2 ** intento, 4e3);
+/**
+* Códigos que valen la pena reintentar.
+*
+* El 404 está acá por el motivo de arriba, y es el caso importante. Los
+* demás son los de un backend momentáneamente saturado. Un 404 legítimo
+* —una URL de despliegue mal escrita— también se reintenta tres veces,
+* que son dos segundos perdidos una sola vez: barato comparado con
+* perder una sección entera de la página.
+*/
+var ESTADOS_REINTENTABLES = /* @__PURE__ */ new Set([
+	404,
+	408,
+	429,
+	500,
+	502,
+	503,
+	504
+]);
 var enVuelo = 0;
 var esperando = [];
+function liberarCupo() {
+	enVuelo -= 1;
+	const siguiente = esperando.shift();
+	if (siguiente) siguiente();
+}
+/** Espera turno. El `while` es lo que sostiene el máximo, ver arriba. */
+async function tomarCupo() {
+	while (enVuelo >= MAX_EN_VUELO) await new Promise((liberar) => esperando.push(liberar));
+	enVuelo += 1;
+}
+var dormir = (ms) => new Promise((seguir) => setTimeout(seguir, ms));
 /**
-* Ejecuta `tarea` cuando haya cupo.
+* `true` si el resultado es una respuesta HTTP que conviene repetir.
 *
-* El `finally` es lo que sostiene la cola: si una petición falla y no se
-* libera el cupo, las que esperan quedan colgadas para siempre y la
-* página se congela a medio cargar. Por eso el contador baja pase lo que
-* pase, y el error se vuelve a lanzar para que React Query lo vea y
-* reintente.
+* Se comprueba en tiempo de ejecución y no por tipos porque `enCola` es
+* genérica: hoy solo la usa el `fetch` del repositorio, pero nada impide
+* que mañana encole otra cosa, y en ese caso el resultado simplemente no
+* es un `Response` y se devuelve tal cual.
+*/
+function convieneReintentar(resultado) {
+	return typeof Response !== "undefined" && resultado instanceof Response && ESTADOS_REINTENTABLES.has(resultado.status);
+}
+/**
+* Ejecuta `tarea` cuando haya cupo, y la repite si se cae por
+* concurrencia.
+*
+* El cupo se libera pase lo que pase. Si una petición falla y no se
+* libera, las que esperan quedan colgadas para siempre y la página se
+* congela a medio cargar; por eso cada camino de salida pasa por
+* `liberarCupo`.
+*
+* Lo que la tarea devuelva —incluida una respuesta con error tras
+* agotar los intentos— sale de acá sin tocar, para que el repositorio
+* haga su propio diagnóstico y React Query decida si reintenta.
 */
 async function enCola(tarea) {
-	if (enVuelo >= MAX_EN_VUELO) await new Promise((liberar) => esperando.push(liberar));
-	enVuelo += 1;
-	try {
-		return await tarea();
-	} finally {
-		enVuelo -= 1;
-		const siguiente = esperando.shift();
-		if (siguiente) siguiente();
+	let ultimoError = null;
+	for (let intento = 0; intento <= REINTENTOS; intento += 1) {
+		await tomarCupo();
+		try {
+			const resultado = await tarea();
+			if (intento < REINTENTOS && convieneReintentar(resultado)) {
+				liberarCupo();
+				await dormir(espera(intento));
+				continue;
+			}
+			liberarCupo();
+			return resultado;
+		} catch (error) {
+			ultimoError = error;
+			liberarCupo();
+			if (intento >= REINTENTOS) break;
+			await dormir(espera(intento));
+		}
 	}
+	throw ultimoError ?? /* @__PURE__ */ new Error("La petición falló tras agotar los reintentos de la cola.");
 }
 /**
 * AyudasApiRepository.ts
@@ -271,21 +368,40 @@ var ayudasApiRepository = new AyudasApiRepository(baseUrl);
 * consecuencia que costó caro: cuando se corrige el Excel y se invalida
 * la caché del backend, una pestaña abierta sigue mostrando lo viejo
 * durante 6 horas. Para un dataset que se actualiza a diario, 5 minutos
-* es un intercambio mejor. El costo de un request de más es despreciable
-* frente a mostrar cifras equivocadas.
+* es un intercambio mejor.
 *
 * Si esto se cambia, cambiar también CONFIG.CACHE.TTL_SECONDS en
 * Config.gs: el frontend nunca puede ser más fresco que el backend.
+*
+* CAMBIO: los seis reintentan, igual que useAyuda y useToneladas.
+*
+* Apps Script serializa las ejecuciones por usuario y el tablero monta
+* ocho consultas a la vez. Las que se pisan reciben un 404 de la
+* infraestructura de Google, no del script, y sin reintento ese fallo de
+* un segundo se vuelve permanente para toda la sesión.
+*
+* El síntoma es distinto en cada ruta y ninguno se parece a un error de
+* red: sin `municipios` las zonas caen al catálogo estático, sin
+* `toneladas` el peso cae al estimado, sin `ayuda` desaparecen las
+* cuatro rutas del balance. Tres bugs de datos aparentes, una sola causa.
+*
+* La espera creciente importa: sin ella los tres reintentos salen casi
+* juntos y se vuelven a pisar entre sí, que es justo lo que se quiere
+* evitar.
 * -----------------------------------------------------------------------
 */
-var CATALOG_STALE_TIME_MS$2 = 3e5;
+var CATALOG_STALE_TIME_MS$1 = 3e5;
+/** Espera creciente entre intentos: 1s, 2s, 4s, con tope de 8. */
+var REINTENTO_ESCALONADO$1 = (intento) => Math.min(1e3 * 2 ** intento, 8e3);
 function createCatalogQuery(key, fetcher) {
 	return function useThisCatalogQuery() {
 		return useQuery({
 			queryKey: [key],
 			queryFn: fetcher,
-			staleTime: CATALOG_STALE_TIME_MS$2,
-			refetchOnWindowFocus: true
+			staleTime: CATALOG_STALE_TIME_MS$1,
+			refetchOnWindowFocus: true,
+			retry: 3,
+			retryDelay: REINTENTO_ESCALONADO$1
 		});
 	};
 }
@@ -23913,6 +24029,7 @@ var valle_municipios_default = {
 		}
 	]
 };
+/** La escala del mapa, de menos a más volumen. Es diseño, no dato. */
 var TERRITORY_BLUE_RAMP = [
 	"#0F3149",
 	"#175A80",
@@ -23922,772 +24039,329 @@ var TERRITORY_BLUE_RAMP = [
 	"#C6ECFB"
 ];
 /**
-* Datos reales extraídos de BD_Entregas_Operativa_v2.xlsx (hojas
-* RESUMEN + ENVIOS_CATEGORIA + DESPACHOS + DESPACHO_DESTINO +
-* CAT_MUNICIPIOS), corte del 24 de agosto de 2026. Reemplaza al set
-* anterior extraído a mano del HTML de referencia, que tenía nombres sin
-* tilde/en mayúsculas (rompía el matching con el GeoJSON) y al menos una
-* zona mal asignada (Dagua figuraba como "Pacífico"; el catálogo real
-* dice "Sur").
+* Los 41 municipios con su zona, como respaldo de `route=municipios`.
 *
-* `despachos`/`unidades` vienen directo de RESUMEN (fórmulas vivas del
-* workbook). `renglones` es la suma por destino de ENVIOS_CATEGORIA.
-* `dias` sale de unir DESPACHOS.fecha con DESPACHO_DESTINO por
-* despacho_id — validado 1:1 contra RESUMEN.despachos para los 41
-* municipios (0 discrepancias).
+* Santiago de Cali queda fuera a propósito: va por su propio canal y no
+* entra en el consolidado municipal, por instrucción expresa.
 *
-* `toneladas` NO tiene fuente real por municipio (la hoja TONELADAS solo
-* trae el total por día, no desagregado). Se estima con la razón global
-* toneladas/despacho de toda la operación: 531 t acumuladas / 397
-* despachos totales (todos los tipos de destino, ver fila TOTAL de
-* RESUMEN) ≈ 1.34 t por despacho. Es un estimado, igual que el `* 1.75`
-* que ya usaba MapCanvas.municipalityPopupHtml para el modo "jornada" —
-* no un valor medido por municipio.
-*
-* Santiago de Cali queda excluida a propósito (igual que antes): ver
-* panoramaData.ts, "Cali: Excluida del consolidado por instrucción
-* expresa".
-*
-* IMPORTANTE — descuadre conocido con el resto de la narrativa: esta
-* base (v2) es más reciente/completa que la que generó los totales
-* "307 despachos" / "553 t" de movimientoData.ts y panoramaData.ts
-* (StoryPage). El total real de despachos en estos 41 municipios es 321,
-* no 307. Las `unidades` sí cuadran exactamente (256.650 en ambas
-* fuentes). No se tocó movimientoData.ts/panoramaData.ts en este cambio
-* porque afecta a toda la narrativa del Story y no era lo pedido — pero
-* si se quiere que TODA la app hable del mismo número, esos dos archivos
-* también necesitan regenerarse desde este Excel.
+* NO agregar cifras a esta lista. Todo lo cuantitativo viene de la API.
 */
 var territoryMunicipalities = [
 	{
 		name: "Alcalá",
 		codigoDane: "76020",
-		zone: "Norte",
-		despachos: 6,
-		toneladas: 8,
-		unidades: 3279,
-		renglones: 82,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"16": 1,
-			"17": 1,
-			"20": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Andalucía",
 		codigoDane: "76036",
-		zone: "Centro",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 5691,
-		renglones: 85,
-		dias: {
-			"12": 1,
-			"14": 1,
-			"18": 1,
-			"19": 1,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Ansermanuevo",
 		codigoDane: "76041",
-		zone: "Norte",
-		despachos: 9,
-		toneladas: 12,
-		unidades: 1561,
-		renglones: 64,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"17": 4,
-			"19": 1,
-			"22": 2
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Argelia",
 		codigoDane: "76054",
-		zone: "Norte",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 4379,
-		renglones: 167,
-		dias: {
-			"12": 2,
-			"13": 2,
-			"15": 1,
-			"17": 4,
-			"19": 1,
-			"20": 1,
-			"21": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Bolívar",
 		codigoDane: "76100",
-		zone: "Norte",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 6564,
-		renglones: 236,
-		dias: {
-			"12": 1,
-			"13": 3,
-			"14": 2,
-			"15": 2,
-			"17": 2,
-			"19": 1,
-			"20": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Buenaventura",
 		codigoDane: "76109",
-		zone: "Pacífico",
-		despachos: 10,
-		toneladas: 13,
-		unidades: 11558,
-		renglones: 77,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"16": 1,
-			"19": 1,
-			"20": 1,
-			"21": 1,
-			"22": 3,
-			"24": 1
-		}
+		zone: "Pacífico"
 	},
 	{
 		name: "Bugalagrande",
 		codigoDane: "76113",
-		zone: "Centro",
-		despachos: 7,
-		toneladas: 9,
-		unidades: 2464,
-		renglones: 30,
-		dias: {
-			"12": 2,
-			"17": 2,
-			"19": 1,
-			"20": 1,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Caicedonia",
 		codigoDane: "76122",
-		zone: "Centro",
-		despachos: 7,
-		toneladas: 9,
-		unidades: 9715,
-		renglones: 223,
-		dias: {
-			"12": 2,
-			"13": 1,
-			"15": 1,
-			"17": 1,
-			"18": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
-		name: "Calima",
+		name: "Calima - El Darién",
 		codigoDane: "76126",
-		zone: "Centro",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 5102,
-		renglones: 142,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"14": 1,
-			"15": 2,
-			"16": 1,
-			"20": 1,
-			"21": 3,
-			"22": 2
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Candelaria",
 		codigoDane: "76130",
-		zone: "Sur",
-		despachos: 0,
-		toneladas: 0,
-		unidades: 0,
-		renglones: 0,
-		dias: {}
+		zone: "Sur"
 	},
 	{
 		name: "Cartago",
 		codigoDane: "76147",
-		zone: "Norte",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 1400,
-		renglones: 25,
-		dias: {
-			"17": 1,
-			"18": 5,
-			"19": 4,
-			"20": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Dagua",
 		codigoDane: "76233",
-		zone: "Sur",
-		despachos: 21,
-		toneladas: 28,
-		unidades: 12123,
-		renglones: 266,
-		dias: {
-			"12": 3,
-			"13": 3,
-			"14": 3,
-			"15": 2,
-			"16": 2,
-			"17": 3,
-			"18": 3,
-			"21": 1,
-			"22": 1
-		}
+		zone: "Pacífico"
 	},
 	{
 		name: "El Cairo",
 		codigoDane: "76246",
-		zone: "Norte",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 3626,
-		renglones: 133,
-		dias: {
-			"12": 2,
-			"14": 1,
-			"17": 2
-		}
+		zone: "Norte"
 	},
 	{
 		name: "El Cerrito",
 		codigoDane: "76248",
-		zone: "Sur",
-		despachos: 3,
-		toneladas: 4,
-		unidades: 1511,
-		renglones: 63,
-		dias: {
-			"11": 1,
-			"12": 1,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "El Dovio",
 		codigoDane: "76250",
-		zone: "Norte",
-		despachos: 4,
-		toneladas: 5,
-		unidades: 3579,
-		renglones: 58,
-		dias: {
-			"12": 1,
-			"17": 2,
-			"24": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "El Águila",
 		codigoDane: "76243",
-		zone: "Norte",
-		despachos: 11,
-		toneladas: 15,
-		unidades: 3676,
-		renglones: 96,
-		dias: {
-			"11": 1,
-			"12": 1,
-			"13": 1,
-			"15": 1,
-			"16": 4,
-			"22": 3
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Florida",
 		codigoDane: "76275",
-		zone: "Sur",
-		despachos: 0,
-		toneladas: 0,
-		unidades: 0,
-		renglones: 0,
-		dias: {}
+		zone: "Sur"
 	},
 	{
 		name: "Ginebra",
 		codigoDane: "76306",
-		zone: "Sur",
-		despachos: 1,
-		toneladas: 1,
-		unidades: 562,
-		renglones: 26,
-		dias: { "12": 1 }
+		zone: "Centro"
 	},
 	{
 		name: "Guacarí",
 		codigoDane: "76318",
-		zone: "Centro",
-		despachos: 3,
-		toneladas: 4,
-		unidades: 2933,
-		renglones: 81,
-		dias: {
-			"13": 1,
-			"15": 1,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Guadalajara de Buga",
 		codigoDane: "76111",
-		zone: "Centro",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 3638,
-		renglones: 92,
-		dias: {
-			"13": 1,
-			"15": 1,
-			"17": 2,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Jamundí",
 		codigoDane: "76364",
-		zone: "Sur",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 1913,
-		renglones: 55,
-		dias: {
-			"12": 3,
-			"18": 1,
-			"22": 1
-		}
+		zone: "Sur"
 	},
 	{
 		name: "La Cumbre",
 		codigoDane: "76377",
-		zone: "Sur",
-		despachos: 11,
-		toneladas: 15,
-		unidades: 6020,
-		renglones: 178,
-		dias: {
-			"12": 3,
-			"13": 2,
-			"15": 2,
-			"17": 3,
-			"19": 1
-		}
+		zone: "Sur"
 	},
 	{
 		name: "La Unión",
 		codigoDane: "76400",
-		zone: "Norte",
-		despachos: 10,
-		toneladas: 13,
-		unidades: 6758,
-		renglones: 99,
-		dias: {
-			"11": 1,
-			"12": 2,
-			"15": 1,
-			"17": 4,
-			"20": 1,
-			"21": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "La Victoria",
 		codigoDane: "76403",
-		zone: "Norte",
-		despachos: 7,
-		toneladas: 9,
-		unidades: 2487,
-		renglones: 72,
-		dias: {
-			"12": 1,
-			"14": 1,
-			"17": 3,
-			"18": 1,
-			"19": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Obando",
 		codigoDane: "76497",
-		zone: "Norte",
-		despachos: 6,
-		toneladas: 8,
-		unidades: 2544,
-		renglones: 134,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"15": 2,
-			"17": 1,
-			"18": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Palmira",
 		codigoDane: "76520",
-		zone: "Sur",
-		despachos: 7,
-		toneladas: 9,
-		unidades: 3596,
-		renglones: 84,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"14": 1,
-			"16": 1,
-			"17": 2,
-			"21": 1
-		}
+		zone: "Sur"
 	},
 	{
 		name: "Pradera",
 		codigoDane: "76563",
-		zone: "Sur",
-		despachos: 2,
-		toneladas: 3,
-		unidades: 4013,
-		renglones: 61,
-		dias: {
-			"18": 1,
-			"19": 1
-		}
+		zone: "Sur"
 	},
 	{
 		name: "Restrepo",
 		codigoDane: "76606",
-		zone: "Centro",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 5885,
-		renglones: 223,
-		dias: {
-			"12": 1,
-			"13": 3,
-			"14": 3,
-			"17": 2,
-			"18": 2,
-			"19": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Riofrío",
 		codigoDane: "76616",
-		zone: "Centro",
-		despachos: 11,
-		toneladas: 15,
-		unidades: 7241,
-		renglones: 178,
-		dias: {
-			"12": 3,
-			"13": 2,
-			"14": 2,
-			"15": 1,
-			"16": 1,
-			"18": 1,
-			"20": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Roldanillo",
 		codigoDane: "76622",
-		zone: "Norte",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 3984,
-		renglones: 53,
-		dias: {
-			"12": 3,
-			"17": 3,
-			"18": 2,
-			"19": 2,
-			"21": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "San Pedro",
 		codigoDane: "76670",
-		zone: "Centro",
-		despachos: 3,
-		toneladas: 4,
-		unidades: 3732,
-		renglones: 98,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"14": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Sevilla",
 		codigoDane: "76736",
-		zone: "Centro",
-		despachos: 20,
-		toneladas: 27,
-		unidades: 24982,
-		renglones: 817,
-		dias: {
-			"12": 3,
-			"13": 3,
-			"14": 1,
-			"15": 2,
-			"16": 3,
-			"17": 2,
-			"18": 3,
-			"19": 1,
-			"20": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Toro",
 		codigoDane: "76823",
-		zone: "Norte",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 4218,
-		renglones: 73,
-		dias: {
-			"11": 1,
-			"13": 1,
-			"14": 1,
-			"17": 2
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Trujillo",
 		codigoDane: "76828",
-		zone: "Centro",
-		despachos: 12,
-		toneladas: 16,
-		unidades: 6539,
-		renglones: 209,
-		dias: {
-			"13": 1,
-			"14": 2,
-			"15": 1,
-			"17": 3,
-			"18": 4,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Tuluá",
 		codigoDane: "76834",
-		zone: "Centro",
-		despachos: 4,
-		toneladas: 5,
-		unidades: 1172,
-		renglones: 28,
-		dias: {
-			"17": 1,
-			"18": 2,
-			"21": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Ulloa",
 		codigoDane: "76845",
-		zone: "Norte",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 2267,
-		renglones: 58,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"16": 1,
-			"20": 1,
-			"22": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Versalles",
 		codigoDane: "76863",
-		zone: "Norte",
-		despachos: 10,
-		toneladas: 13,
-		unidades: 3152,
-		renglones: 101,
-		dias: {
-			"11": 1,
-			"12": 1,
-			"13": 2,
-			"14": 1,
-			"16": 1,
-			"17": 3,
-			"18": 1
-		}
+		zone: "Norte"
 	},
 	{
 		name: "Vijes",
 		codigoDane: "76869",
-		zone: "Sur",
-		despachos: 6,
-		toneladas: 8,
-		unidades: 1612,
-		renglones: 75,
-		dias: {
-			"12": 1,
-			"13": 1,
-			"15": 1,
-			"17": 1,
-			"20": 2
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Yotoco",
 		codigoDane: "76890",
-		zone: "Centro",
-		despachos: 16,
-		toneladas: 21,
-		unidades: 10140,
-		renglones: 237,
-		dias: {
-			"12": 4,
-			"13": 4,
-			"15": 1,
-			"17": 1,
-			"18": 2,
-			"19": 1,
-			"21": 1,
-			"22": 1
-		}
+		zone: "Centro"
 	},
 	{
 		name: "Yumbo",
 		codigoDane: "76892",
-		zone: "Sur",
-		despachos: 5,
-		toneladas: 7,
-		unidades: 2423,
-		renglones: 110,
-		dias: {
-			"12": 1,
-			"15": 1,
-			"18": 2,
-			"21": 1
-		}
+		zone: "Sur"
 	},
 	{
 		name: "Zarzal",
 		codigoDane: "76895",
-		zone: "Norte",
-		despachos: 7,
-		toneladas: 9,
-		unidades: 5739,
-		renglones: 39,
-		dias: {
-			"12": 1,
-			"15": 1,
-			"17": 3,
-			"19": 1,
-			"20": 1
-		}
+		zone: "Norte"
 	}
 ];
 /**
-* Normaliza un nombre de municipio para comparar TEXTO contra texto
-* (ej. el nombre de un destino seleccionado vs. este catálogo) cuando no
-* hay código DANE a mano en el otro lado. Nunca usar esto para unir
-* contra el GeoJSON de límites — ahí usar codigoDane vía
-* getTerritoryStatByCode, que no depende de mayúsculas/tildes en
-* absoluto. `normId` (@/lib/id) NO sirve para esto: solo recorta ceros a
-* la izquierda de IDs numéricos, no hace case-fold ni saca tildes.
+* Normaliza un nombre de municipio para comparar TEXTO contra texto,
+* cuando no hay código DANE a mano del otro lado. Nunca usar esto para
+* unir contra el GeoJSON de límites: ahí va `getTerritoryStatByCode`, que
+* no depende de mayúsculas ni tildes.
 */
 function normMunicipalityName(name) {
 	return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase().replace(/\s+/g, " ");
 }
+/**
+* Nombres que aparecen escritos de más de una forma en las fuentes.
+*
+* "Calima" es el que faltaba: DETALLE_PRODUCTO lo escribe corto y
+* CAT_DESTINOS largo, así que cuando el respaldo entraba en juego ese
+* municipio se quedaba sin zona y caía en el grupo "Sin zona" de la
+* galería. El backend ya lo resuelve con CONFIG.DESTINO_ALIAS; acá hacía
+* falta el equivalente.
+*/
 var NAME_ALIASES = /* @__PURE__ */ new Map([
 	[normMunicipalityName("Guadalajara de Buga"), "Buga"],
 	[normMunicipalityName("Buga"), "Guadalajara de Buga"],
-	[normMunicipalityName("Cali"), "Santiago de Cali"]
+	[normMunicipalityName("Cali"), "Santiago de Cali"],
+	[normMunicipalityName("Calima"), "Calima - El Darién"],
+	[normMunicipalityName("Calima - El Darién"), "Calima"],
+	[normMunicipalityName("Calima El Darién"), "Calima - El Darién"]
 ]);
 new Map(territoryMunicipalities.map((m) => [m.codigoDane, m]));
 var territoryByName = new Map(territoryMunicipalities.map((m) => [normMunicipalityName(m.name), m]));
-/** Fallback por nombre, para cuando no hay código DANE disponible del otro lado (ej. DestinoResumenLista). */
+/** Respaldo por nombre, para cuando no hay código DANE del otro lado. */
 function getTerritoryStat(name) {
 	const key = normMunicipalityName(name);
-	return territoryByName.get(key) ?? territoryByName.get(normMunicipalityName(NAME_ALIASES.get(key) ?? ""));
+	const directo = territoryByName.get(key);
+	if (directo) return directo;
+	const alias = NAME_ALIASES.get(key);
+	return alias ? territoryByName.get(normMunicipalityName(alias)) : void 0;
 }
-[...new Set(territoryMunicipalities.flatMap((m) => Object.keys(m.dias)))].sort((a, b) => Number(a) - Number(b));
-/** "2026-08-14" → "14". Devuelve null si no hay fecha. */
+var MESES$1 = [
+	"enero",
+	"febrero",
+	"marzo",
+	"abril",
+	"mayo",
+	"junio",
+	"julio",
+	"agosto",
+	"septiembre",
+	"octubre",
+	"noviembre",
+	"diciembre"
+];
+/** "2026-09-03" a "03". Devuelve null si no hay fecha. */
 function dayFromIsoDate(iso) {
 	if (!iso) return null;
 	const dd = iso.slice(-2);
 	return /^\d{2}$/.test(dd) ? dd : null;
 }
-function valorTemporal(stat, lens, day) {
+/** Acumulado hasta `day` inclusive. Con day null, el total. */
+function territoryValueAsOf(stat, day) {
 	if (!stat) return 0;
 	if (day === null) return stat.entregas;
-	if (lens === "jornada") return stat.dias[day] ?? 0;
 	const limite = Number(day);
-	return Object.entries(stat.dias).reduce((sum, [d, v]) => Number(d) <= limite ? sum + v : sum, 0);
+	return Object.entries(stat.dias ?? {}).reduce((sum, [d, v]) => Number(d) <= limite ? sum + v : sum, 0);
 }
-/** Etiqueta del estado temporal, para el HUD y los popups. */
-function describeLens(lens, day) {
-	if (day === null) return "Total del departamento";
-	return lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
+/** Lo que se movió exactamente ese día. Con day null, 0. */
+function territoryValueOnDay(stat, day) {
+	if (!stat || day === null) return 0;
+	return stat.dias?.[day] ?? 0;
 }
 /**
-* Toneladas por despacho.
+* Punto de entrada único del mapa.
 *
-* La hoja TONELADAS del workbook trae el dato medido por día, pero es
-* DEPARTAMENTAL y no es proporcional a los despachos: la razón va de 0,68
-* t/despacho el día 19 a 11,5 el día 24, porque la tonelada se siguió
-* reportando cuando los formatos de esos días todavía no estaban
-* transcritos. Cruzar las dos series deja el marcador diciendo cosas que
-* el mapa no muestra.
-*
-* Por eso acá la tonelada se ESTIMA sobre los despachos visibles: 531 t
-* medidas / 384 despachos con fecha = 1,38 t por despacho. Es un
-* estimado declarado, no una medición, y tiene la ventaja de moverse
-* siempre junto con el mapa.
-*
-* Consecuencia a tener presente: aplicado a los 321 despachos
-* municipales da ~444 t, no las 531 t del total departamental. La
-* diferencia es Cali, el acopio de Cartago y las otras ayudas
-* solidarias, que no se dibujan en el mapa.
+* Sin día elegido no hay jornada que mostrar, así que se cae a acumulado
+* total en vez de pintar el departamento entero en gris.
 */
-var TONELADAS_POR_DESPACHO = 1.38;
+function valorTemporal(stat, lens, day) {
+	if (lens === "jornada" && day !== null) return territoryValueOnDay(stat, day);
+	return territoryValueAsOf(stat, day);
+}
+/**
+* Etiqueta del estado temporal, para el HUD y los popups.
+*
+* CORRECCIÓN: el mes deja de estar escrito a mano. Decía "Solo el 03 de
+* agosto" para el 3 de septiembre, el mismo error que tenían las
+* tarjetas de jornada.
+*
+* `iso` es opcional para no romper a quien todavía llame con dos
+* argumentos. Sin ella no se inventa un mes: se dice "el día 3" y
+* listo. Quien la pase obtiene la etiqueta completa, que es lo que
+* debería hacer todo el mundo — en DashboardPage es cambiar
+* `describeLens(lens, day)` por `describeLens(lens, day, isoDate)`.
+*/
+function describeLens(lens, day, iso) {
+	if (day === null) return "Total del departamento";
+	const [, mes, dia] = (iso ?? "").split("-");
+	const nombreMes = MESES$1[Number(mes) - 1];
+	const cuando = nombreMes && dia ? `${Number(dia)} de ${nombreMes}` : `día ${Number(day)}`;
+	return lens === "jornada" ? `Solo el ${cuando}` : `Hasta el ${cuando}`;
+}
 dm(maplibre_gl_worker_default);
 /**
 * Municipio sin despacho documentado. NO es "el tono más bajo de la
-* rampa": es una categoría aparte, igual que `DATA.sinDato` en el
-* tablero HTML de referencia. Por eso territoryToneIndex devuelve null
-* para valor 0 y no 0, ver territoryColorForTone.
+* rampa": es una categoría aparte. Por eso territoryToneIndex devuelve
+* null para valor 0 y no 0, ver territoryColorForTone.
 */
 var TERRITORY_NO_DATA = "#162936";
 /**
 * Santiago de Cali: excluida del consolidado municipal por instrucción
-* expresa (ver panoramaData / nivel "Canales"). Se pinta con un gris
-* propio para que no se lea ni como "sin datos" ni como un volumen bajo.
+* expresa. Se pinta con un gris propio para que no se lea ni como "sin
+* datos" ni como un volumen bajo.
 *
 * SÍ es clickeable: recibió sus propios despachos y tiene panel, y su
 * globo lo dice. Lo único que la distingue es el color de reposo; el
@@ -24929,44 +24603,29 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 * -----------------------------------------------------------------------
 * Serie diaria de toneladas, desde `route=toneladas`.
 *
-* Sigue el mismo patrón que useCatalogQueries: una queryKey de un
-* elemento y el mismo staleTime.
+* CAMBIO: se quita `retry: false`, por la misma razón que en useAyuda.
 *
-* Una diferencia a propósito: `retry: false`. Mientras la ruta no esté
-* publicada, el backend responde 404 y no tiene sentido reintentar tres
-* veces en cada carga. El tablero cae al estimado por entregas y sigue
-* funcionando. Ver OperacionContext.
+* Estaba puesto cuando la ruta todavía no existía: reintentar un 404
+* permanente no sirve de nada. Pero la ruta ya está publicada y responde,
+* así que ahora ese flag hace daño.
 *
-* ANTES DE USARLO hay que agregar el método al repositorio, junto a los
-* otros seis GET sin parámetros:
+* Un Web App de Apps Script serializa las ejecuciones por usuario. El
+* tablero monta ocho consultas a la vez y las que se pisan reciben un 404
+* de la infraestructura de Google, no del script. Con `retry: false`, ese
+* fallo de un segundo se vuelve definitivo para toda la sesión: el peso
+* cae al respaldo por entregas y ahí se queda, aunque el backend esté
+* perfecto y la hoja tenga los datos.
 *
-*     getToneladas(): Promise<ToneladasResponse> {
-*       return this.get<ToneladasResponse>("toneladas");
-*     }
-*
-* Y el tipo en domain/entities.ts:
-*
-*     export interface ToneladasPunto {
-*       dia: string;
-*       toneladas: number;
-*       acumulado: number;
-*     }
-*
-*     export interface ToneladasResponse {
-*       serie: ToneladasPunto[];
-*       total: number;
-*       fuente: "TONELADAS";
-*       disclaimer: string;
-*     }
+* Es un fallo especialmente silencioso: no aparece ningún mensaje, solo
+* una cifra de toneladas parecida a la buena pero distinta.
 */
-/** Igual que en useCatalogQueries. Si cambia allá, cambia acá. */
-var CATALOG_STALE_TIME_MS$1 = 3e5;
 function useToneladas() {
 	return useQuery({
 		queryKey: ["toneladas"],
 		queryFn: () => ayudasApiRepository.getToneladas(),
 		staleTime: CATALOG_STALE_TIME_MS$1,
-		retry: false
+		retry: 3,
+		retryDelay: REINTENTO_ESCALONADO$1
 	});
 }
 var CALI = "Santiago de Cali";
@@ -24984,6 +24643,16 @@ var MESES = [
 	"noviembre",
 	"diciembre"
 ];
+/**
+* Último recurso, solo si la hoja TONELADAS no responde en absoluto.
+*
+* Antes esto era la fuente normal del peso por municipio, importada de
+* territoryTime. Ahora el factor se deriva de la serie medida y esta
+* constante solo actúa cuando no hay serie: sin ella, un fallo de
+* `route=toneladas` dejaría todas las toneladas en cero, que se lee como
+* un dato real y no como un dato ausente.
+*/
+var PESO_DE_RESPALDO = 1.3;
 var OPERACION_VACIA = {
 	fechas: [],
 	jornadas: [],
@@ -24994,7 +24663,11 @@ var OPERACION_VACIA = {
 	totalToneladas: 0,
 	toneladasMunicipales: 0,
 	entregasTodas: 0,
+	entregasSinCoordenada: 0,
+	entregasTotales: 0,
+	pesoPorEntrega: 0,
 	factorMunicipal: 1,
+	diasSinPesoMedido: [],
 	municipiosAtendidos: 0,
 	municipiosTotales: territoryMunicipalities.length,
 	diasConEntrega: 0,
@@ -25014,13 +24687,28 @@ var OPERACION_VACIA = {
 function normalizar$1(nombre) {
 	return nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
-/** "2026-08-25" a "25 de agosto de 2026". */
+/**
+* "2026-09-03" a "3 de septiembre de 2026".
+*
+* Lee el MES de la fecha en vez de asumirlo. La versión anterior de las
+* tarjetas escribía "de agosto" a mano, así que la primera entrega a
+* Candelaria, del 3 de septiembre, se publicaba como "3 de agosto": una
+* semana antes del terremoto que originó la operación.
+*/
 function fechaLarga(iso) {
 	if (!iso) return "";
 	const [anio, mes, dia] = iso.split("-");
 	const nombreMes = MESES[Number(mes) - 1];
 	if (!anio || !dia || !nombreMes) return iso;
 	return `${Number(dia)} de ${nombreMes} de ${anio}`;
+}
+/** "3 de septiembre", sin el año. Para rótulos y notas cortas. */
+function fechaCorta(iso) {
+	if (!iso) return "";
+	const [, mes, dia] = iso.split("-");
+	const nombreMes = MESES[Number(mes) - 1];
+	if (!dia || !nombreMes) return iso;
+	return `${Number(dia)} de ${nombreMes}`;
 }
 function diaDe(iso) {
 	return iso.slice(-2);
@@ -25030,7 +24718,7 @@ function esMunicipal(f) {
 	if (f.destino.tipo !== "municipio") return false;
 	return !sameMunicipality(f.destino.nombre, CALI);
 }
-function derivarOperacion(flujos, serieToneladas, municipiosApi) {
+function derivarOperacion(flujos, serieToneladas, municipiosApi, excluidos) {
 	const medidas = new Map((serieToneladas ?? []).map((p) => [p.dia, p]));
 	const hayMedidas = medidas.size > 0;
 	const catalogo = (municipiosApi ?? []).filter((m) => !sameMunicipality(m.nombre, CALI)).map((m) => ({
@@ -25070,10 +24758,6 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		}
 		porDestino.set(f.destino.id, actual);
 	}
-	const municipios = [...porDestino.values()].map((m) => ({
-		...m,
-		toneladas: Math.round(m.entregas * TONELADAS_POR_DESPACHO)
-	})).sort((a, b) => b.entregas - a.entregas || a.nombre.localeCompare(b.nombre, "es"));
 	const porFecha = /* @__PURE__ */ new Map();
 	for (const f of municipales) for (const punto of f.porFecha ?? []) {
 		const acc = porFecha.get(punto.fecha) ?? {
@@ -25086,29 +24770,42 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 	}
 	const fechas = [...porFecha.keys()].sort();
 	const vistos = /* @__PURE__ */ new Set();
+	const diasSinPesoMedido = [];
 	let acumuladoEntregas = 0;
 	let acumuladoToneladas = 0;
-	const nombrePorId = new Map(municipios.map((m) => [m.destinoId, m.nombre]));
+	const nombrePorId = new Map([...porDestino.values()].map((m) => [m.destinoId, m.nombre]));
 	const jornadas = fechas.map((fecha) => {
 		const acc = porFecha.get(fecha);
 		const nuevos = [...acc.destinos].filter((id) => !vistos.has(id));
 		nuevos.forEach((id) => vistos.add(id));
 		acumuladoEntregas += acc.entregas;
 		const punto = medidas.get(diaDe(fecha));
-		const toneladas = punto ? punto.toneladas : Math.round(acc.entregas * TONELADAS_POR_DESPACHO);
+		if (!punto) diasSinPesoMedido.push(fecha);
+		const toneladas = punto ? punto.toneladas : 0;
 		acumuladoToneladas += toneladas;
 		return {
 			fecha,
 			dia: diaDe(fecha),
+			fechaLarga: fechaLarga(fecha),
 			entregas: acc.entregas,
 			municipios: acc.destinos.size,
 			nuevos: nuevos.length,
 			nombresNuevos: nuevos.map((id) => nombrePorId.get(id) ?? id).sort((a, b) => a.localeCompare(b, "es")),
 			acumuladoEntregas,
 			toneladas,
-			acumuladoToneladas
+			acumuladoToneladas,
+			pesoMedido: Boolean(punto)
 		};
 	});
+	const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
+	const entregasSinCoordenada = excluidos?.length ?? 0;
+	const entregasTotales = entregasTodas + entregasSinCoordenada;
+	const pesoPorEntrega = hayMedidas && entregasTotales > 0 ? acumuladoToneladas / entregasTotales : PESO_DE_RESPALDO;
+	const totalToneladas = hayMedidas ? acumuladoToneladas : Math.round(entregasTotales * PESO_DE_RESPALDO);
+	const municipios = [...porDestino.values()].map((m) => ({
+		...m,
+		toneladas: Math.round(m.entregas * pesoPorEntrega)
+	})).sort((a, b) => b.entregas - a.entregas || a.nombre.localeCompare(b.nombre, "es"));
 	const porOrigen = /* @__PURE__ */ new Map();
 	for (const f of municipales) {
 		const acc = porOrigen.get(f.origenId) ?? {
@@ -25146,9 +24843,8 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		zona,
 		...acc
 	})).sort((a, b) => b.total - a.total || a.zona.localeCompare(b.zona, "es"));
-	const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
-	const factorMunicipal = entregasTodas > 0 ? totalEntregas / entregasTodas : 1;
-	const toneladasMunicipales = Math.round(acumuladoToneladas * factorMunicipal);
+	const factorMunicipal = entregasTotales > 0 ? totalEntregas / entregasTotales : 1;
+	const toneladasMunicipales = Math.round(totalToneladas * factorMunicipal);
 	const primeraFecha = fechas[0] ?? null;
 	const ultimaFecha = fechas.at(-1) ?? null;
 	const picoEntregas = jornadas.reduce((mejor, j) => mejor === null || j.entregas > mejor.entregas ? j : mejor, null);
@@ -25160,10 +24856,14 @@ function derivarOperacion(flujos, serieToneladas, municipiosApi) {
 		totalEntregas,
 		entregasConFecha: acumuladoEntregas,
 		entregasSinFecha: totalEntregas - acumuladoEntregas,
-		totalToneladas: acumuladoToneladas,
+		totalToneladas,
 		toneladasMunicipales,
 		entregasTodas,
+		entregasSinCoordenada,
+		entregasTotales,
+		pesoPorEntrega,
 		factorMunicipal,
+		diasSinPesoMedido,
 		toneladasMedidas: hayMedidas,
 		municipiosAtendidos: porDestino.size,
 		municipiosTotales: catalogoFinal.length,
@@ -25206,8 +24906,30 @@ function rangoLargoDe(desde, hasta) {
 * contexto evita que cada sección repita el hook y que el árbol se llene
 * de props que solo pasan de largo.
 *
-* Las secciones que consumen esto dejan de depender de movimientoData.ts
-* y por lo tanto se actualizan solas cuando cambia el Excel.
+* DOS CAMBIOS EN ESTA VERSIÓN
+*
+* 1. SE LE PASAN LOS `excluidos` A LA DERIVACIÓN.
+*
+*    `route=flujos` devuelve dos listas: los pares que el mapa puede
+*    dibujar y los que no, porque su destino no tiene coordenada. Hasta
+*    ahora solo viajaba la primera, así que el reparto del peso usaba
+*    496 entregas cuando la operación tiene 536. Cada entrega visible
+*    cargaba con el peso de las 40 invisibles, y las toneladas por ruta
+*    sumaban más que el total del departamento.
+*
+* 2. LOS HUECOS DE LA HOJA TONELADAS SE AVISAN POR CONSOLA, NO EN
+*    PANTALLA.
+*
+*    La derivación detecta los días con entregas que no tienen peso
+*    registrado, y durante un momento eso se mostró como una nota al pie
+*    del balance. Fue un error: al lector de la página no le sirve
+*    saberlo y no puede hacer nada al respecto. Es un aviso para quien
+*    mantiene el Excel, y ese no entra por la página pública.
+*
+*    Sigue siendo importante que quede rastro: sin él, el total de
+*    toneladas cubre menos días que el de entregas y nadie se entera. Va
+*    a la consola y solo en desarrollo.
+* -----------------------------------------------------------------------
 */
 /**
 * `null` en vez de un valor por defecto a propósito. Con un valor por
@@ -25229,7 +24951,7 @@ function OperacionProvider({ children }) {
 	const { data: toneladas } = useToneladas();
 	const { data: municipios } = useMunicipios();
 	const value = (0, import_react.useMemo)(() => ({
-		operacion: derivarOperacion(data?.flujos, toneladas?.serie, municipios),
+		operacion: derivarOperacion(data?.flujos, toneladas?.serie, municipios, data?.excluidos),
 		cargando: isLoading,
 		error: isError
 	}), [
@@ -25239,6 +24961,16 @@ function OperacionProvider({ children }) {
 		isLoading,
 		isError
 	]);
+	/**
+	* Días con entregas y sin peso en la hoja TONELADAS.
+	*
+	* Es un dato de mantenimiento del Excel, no de la operación, así que
+	* no se muestra en la página. Pero tampoco puede quedar en silencio:
+	* mientras falten filas, el total de toneladas cubre menos días que el
+	* de entregas y las dos cifras del balance no son comparables.
+	*/
+	const { diasSinPesoMedido, toneladasMedidas } = value.operacion;
+	(0, import_react.useEffect)(() => {}, [diasSinPesoMedido, toneladasMedidas]);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OperacionContext.Provider, {
 		value,
 		children
@@ -27037,18 +26769,26 @@ function topeRedondo(max, divisiones) {
 /**
 * MovimientoExtras.tsx
 * -----------------------------------------------------------------------
-* Tarjetas de jornada y municipios nuevos. Las tarjetas se calculan desde
-* la API, incluida la glosa de cada una. Antes la cifra venía de un
-* archivo y el texto estaba escrito en el JSX, así que al cambiar los
-* datos las tarjetas seguían nombrando el día equivocado.
+* Tarjetas de jornada y municipios nuevos.
+*
+* CORRECCIÓN: el mes deja de estar escrito a mano.
+*
+* Las tres notas decían "de agosto" fijo y componían la fecha con
+* `Number(j.dia)`, que es solo el día del mes. Cuando la operación pasó a
+* septiembre, la primera entrega a Candelaria —del 3 de septiembre— se
+* publicó como "3 de agosto": una semana ANTES del terremoto que originó
+* la operación. Y las dos tarjetas de arriba quedaban expuestas al mismo
+* error apenas el pico cayera en el mes siguiente.
+*
+* Ahora se usa `j.fecha`, que es la ISO completa, formateada con
+* `fechaCorta` de la derivación. El mes sale del dato.
 */
 var ORIGEN_CARTAGO$2 = "ORI-CARTAGO";
 /**
 * Las dos versiones de la pieza "Así avanzó la ruta".
 *
 * REVISAR QUE LOS NOMBRES COINCIDAN CON LOS ARCHIVOS REALES de
-* `public/marca/`. El de escritorio es una suposición: en la conversación
-* solo quedó nombrado el de celular.
+* `public/marca/`. El de escritorio es una suposición.
 *
 * Se recomienda renombrar los dos sin tildes ni mayúsculas. Una eñe o una
 * tilde en una URL obliga al navegador a codificarla, y hay servidores
@@ -27064,19 +26804,18 @@ function MovimientoStatCards() {
 	const op = useOperacion();
 	const primeras48 = op.jornadas.slice(0, 2).reduce((sum, j) => sum + j.entregas, 0);
 	const porcentaje48 = op.totalEntregas > 0 ? Math.round(primeras48 / op.totalEntregas * 100) : 0;
-	op.diasConEntrega > 0 && (op.totalEntregas / op.diasConEntrega).toFixed(1);
 	const cartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO$2);
 	const tarjetas = [
 		op.picoEntregas && {
-			valor: String(op.picoEntregas.entregas) + " - Entregas",
+			valor: `${op.picoEntregas.entregas} entregas`,
 			label: "Día con más entregas",
-			nota: `El ${Number(op.picoEntregas.dia)} de agosto, hacia ${op.picoEntregas.municipios} municipios.`,
+			nota: `El ${fechaCorta(op.picoEntregas.fecha)}, hacia ${op.picoEntregas.municipios} municipios.`,
 			color: "#F0801E"
 		},
 		op.picoCobertura && {
-			valor: String(op.picoCobertura.municipios) + " - Municipios",
+			valor: `${op.picoCobertura.municipios} municipios`,
 			label: "Día con más municipios atendidos",
-			nota: `El ${Number(op.picoCobertura.dia)} de agosto.`,
+			nota: `El ${fechaCorta(op.picoCobertura.fecha)}.`,
 			color: "#5CC46B"
 		},
 		{
@@ -27120,9 +26859,7 @@ function MovimientoStatCards() {
 *
 * ESCRITORIO: la pieza completa, con titular, camión y los bloques por
 * jornada ya compuestos adentro. La lista en código desaparece de la
-* vista, porque estaba diciendo dos veces lo mismo: la captura del
-* problema mostraba los municipios dentro de la imagen y otra vez al
-* lado.
+* vista, porque estaba diciendo dos veces lo mismo.
 *
 * CELULAR: la pieza de celular, que trae el titular y el camión pero no
 * los bloques, más la lista en código debajo.
@@ -27130,10 +26867,9 @@ function MovimientoStatCards() {
 * LO QUE CUESTA ESTA DECISIÓN
 *
 * En escritorio los nombres de municipio dejan de venir de route=flujos y
-* pasan a estar quemados en un JPG. Hoy van 39 de 41 municipios: si la
-* ruta llega a los dos que faltan y alguien los carga al Excel, el
-* celular va a mostrar el municipio nuevo y el escritorio no. Cada vez
-* que cambien las jornadas hay que reexportar la pieza.
+* pasan a estar quemados en un JPG. Cada vez que cambien las jornadas hay
+* que reexportar la pieza, y mientras no se haga, el celular muestra un
+* municipio nuevo que el escritorio no.
 *
 * Por eso la lista NO se borra en escritorio: se vuelve `sr-only`. Sigue
 * en el documento con los datos vivos, así que un lector de pantalla y un
@@ -27180,14 +26916,14 @@ function MunicipiosNuevosCallouts() {
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "text-lg font-bold",
 						children: [
-							Number(j.dia),
-							" de agosto / +",
+							fechaCorta(j.fecha),
+							" / +",
 							j.nuevos,
 							" ",
 							j.nuevos === 1 ? "municipio" : "municipios"
 						]
 					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-						className: "mt-1.5 text-lg leading-7 font-medium",
+						className: "mt-1.5 text-lg font-medium leading-7",
 						children: [j.nombresNuevos.join(", "), "."]
 					})]
 				}, j.fecha);
@@ -28693,12 +28429,6 @@ function presentacionDe(id) {
 var ORIGEN_CARTAGO$1 = "ORI-CARTAGO";
 /** Rutas con identidad propia. Van como tarjeta grande, en este orden. */
 var RUTAS_PRINCIPALES = ["cali", "cartago"];
-/**
-* Grupos cuyas entregas NO aparecen en route=flujos, porque sus destinos
-* no tienen coordenada. Hacen falta para completar el denominador de la
-* estimación de toneladas.
-*/
-var FUERA_DEL_MAPA = ["multiples", "otras-ayudas-solidarias"];
 function CanalesSection() {
 	const op = useOperacion();
 	const { data: ayuda } = useAyuda();
@@ -28732,16 +28462,9 @@ function CanalesSection() {
 	* entra: sus entregas llegaron a municipios que ya están contados.
 	*/
 	const rutasFueraDelConteo = rutas.filter((r) => r.id !== "cartago");
-	rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
+	const entregasFuera = rutasFueraDelConteo.reduce((sum, r) => sum + r.entregas, 0);
 	rutasFueraDelConteo.reduce((sum, r) => sum + r.unidades, 0);
-	/**
-	* Toneladas por ruta, estimadas. El peso se reparte entre TODAS las
-	* entregas conocidas: las que el mapa dibuja más las que no tienen
-	* coordenada y por eso no llegan a route=flujos.
-	*/
-	const entregasSinCoordenada = rutas.filter((r) => FUERA_DEL_MAPA.includes(r.id)).reduce((sum, r) => sum + r.entregas, 0);
-	const baseEntregas = op.entregasTodas + entregasSinCoordenada;
-	const toneladasDe = (entregas) => baseEntregas > 0 ? Math.round(entregas * (op.totalToneladas / baseEntregas)) : 0;
+	const toneladasDe = (entregas) => Math.round(entregas * op.pesoPorEntrega);
 	const principales = RUTAS_PRINCIPALES.map((id) => rutas.find((r) => r.id === id)).filter((r) => r !== void 0);
 	const secundarias = rutas.filter((r) => !RUTAS_PRINCIPALES.includes(r.id)).sort((a, b) => b.unidades - a.unidades);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
@@ -28771,9 +28494,17 @@ function CanalesSection() {
 					]
 				}, c.id))
 			})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 					className: "mt-5 max-w-2xl text-lg leading-8 text-[#35708F]",
-					children: "El conteo por municipio deja fuera estas rutas. Suman 121 entregas y unas 166 toneladas que también se movieron."
+					children: [
+						"El conteo por municipio deja fuera estas rutas. Suman",
+						" ",
+						entregasFuera.toLocaleString("es-CO"),
+						" entregas y unas",
+						" ",
+						toneladasDe(entregasFuera).toLocaleString("es-CO"),
+						" toneladas que también se movieron."
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					className: "mt-9 grid gap-4 lg:grid-cols-2",
@@ -28799,7 +28530,7 @@ function CanalesSection() {
 									className: "mt-6 flex flex-wrap gap-x-10 gap-y-4",
 									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 										className: "block text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-none text-[#FBF8C6]",
-										children: r.unidades.toLocaleString("es-CO")
+										children: Math.round(r.unidades).toLocaleString("es-CO")
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 										className: "mt-1 block text-base text-[#A8CFE2]",
 										children: "unidades"
@@ -28870,7 +28601,7 @@ function CanalesSection() {
 								className: "mt-4 flex items-baseline gap-2",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 									className: "text-3xl font-extrabold leading-none text-[#0079C1]",
-									children: r.unidades.toLocaleString("es-CO")
+									children: Math.round(r.unidades).toLocaleString("es-CO")
 								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 									className: "text-base text-[#6B93AA]",
 									children: "unidades"
@@ -28945,15 +28676,35 @@ function CanalesSection() {
 	});
 }
 var ORIGEN_CARTAGO = "ORI-CARTAGO";
+/**
+* Ayudas recibidas en el centro de acopio.
+*
+* ES EL ÚLTIMO DATO ESCRITO A MANO DE ESTA SECCIÓN, y hay que sacarlo.
+* Sale de la hoja AYUDAS RECIBIDAS del Excel, que ninguna ruta expone
+* todavía. Mientras no exista `route=ayudas-recibidas`, cada corte
+* obliga a editar este archivo.
+*
+* OJO CON LA FECHA: la hoja dice "03 Agosto de 2026" para este mismo
+* 889. Una de las dos está mal y hay que confirmarlo antes de publicar
+* otro corte. Agosto sería tres semanas antes del cierre del resto de
+* las cifras, y el 3 de agosto es anterior al terremoto.
+*
+* El valor y el corte van juntos en un objeto a propósito: separados, la
+* próxima actualización cambia uno y deja el otro quieto.
+*/
+var RECIBIDAS = {
+	valor: "889 t",
+	corte: "3 de septiembre de 2026"
+};
 function BalanceFinal() {
 	const op = useOperacion();
 	const { data: ayuda } = useAyuda();
 	const entregasCartago = op.entregasPorOrigen.find((o) => o.origenId === ORIGEN_CARTAGO)?.entregas ?? 0;
 	const canalesVivos = ayuda?.canales ?? [];
-	const entregasDeGrupo = (id) => canalesVivos.filter((c) => c.id === id).reduce((sum, c) => sum + c.entregas, 0);
-	const multiples = entregasDeGrupo("multiples");
-	const unidadesMultiples = canalesVivos.filter((c) => c.id === "multiples").reduce((sum, c) => sum + c.unidades, 0);
-	const otras = canalesVivos.filter((c) => c.id !== "multiples" && c.id !== "cartago").reduce((sum, c) => sum + c.entregas, 0);
+	const canal = (id) => canalesVivos.find((c) => c.id === id);
+	const multiples = canal("multiples");
+	const cali = canal("cali");
+	const otras = canal("otras-ayudas-solidarias");
 	const rutas = [
 		{
 			id: "municipios",
@@ -28968,7 +28719,7 @@ function BalanceFinal() {
 		{
 			id: "cartago",
 			titulo: "Centro de distribución Cartago",
-			descripcion: "Lugares fuera de Cali donde se recibieron y distribuyeron las ayudas.",
+			descripcion: "Segunda bodega. Lo que sale de aquí llega a municipios del norte por una ruta propia.",
 			entregas: entregasCartago,
 			unidades: 0,
 			color: "#E2690E",
@@ -28976,41 +28727,37 @@ function BalanceFinal() {
 			icono: Warehouse
 		},
 		{
-			id: "multiples",
-			titulo: "Municipios múltiples",
-			descripcion: "Ruta de entrega que atendió a varios municipios.",
-			entregas: multiples,
-			unidades: unidadesMultiples,
+			id: "cali",
+			titulo: "Cali",
+			descripcion: "La capital del departamento va por su propio canal y queda fuera del conteo por municipio.",
+			entregas: cali?.entregas ?? 0,
+			unidades: 0,
 			color: "#7F207F",
 			tinta: "#7F207F",
+			icono: Landmark
+		},
+		{
+			id: "multiples",
+			titulo: "Municipios múltiples",
+			descripcion: "Ruta de entrega que atendió a varios municipios sin desagregar cuál recibió qué.",
+			entregas: multiples?.entregas ?? 0,
+			unidades: multiples?.unidades ?? 0,
+			color: "#5CC46B",
+			tinta: "#2E7D3F",
 			icono: Boxes
 		},
 		{
 			id: "otras",
 			titulo: "Otras ayudas humanitarias",
-			descripcion: "Ayudas entregadas a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
-			entregas: otras,
-			unidades: 0,
+			descripcion: "Ayudas entregadas a entidades y a otros grupos de personas afectadas, sin estar asociadas a un municipio específico.",
+			entregas: otras?.entregas ?? 0,
+			unidades: otras?.unidades ?? 0,
 			color: "#22ABE2",
 			tinta: "#0F6E96",
 			icono: HeartHandshake
 		}
 	].filter((r) => r.entregas > 0 || r.unidades > 0);
 	const totalRutas = rutas.reduce((sum, r) => sum + r.entregas, 0);
-	/**
-	* Las ayudas recibidas van con su propia fecha porque no salen de la
-	* misma fuente que las demás: es el consolidado del centro de acopio,
-	* que se cierra unos días antes que el registro de despachos. Con una
-	* sola banda de corte al pie, esta cifra quedaba fechada tres días
-	* después de lo que realmente cubre.
-	*
-	* Las dos van juntas y a mano hasta que la API publique el dato; si se
-	* separan, la próxima actualización cambia una y deja la otra quieta.
-	*/
-	const RECIBIDAS = {
-		valor: "889 t",
-		corte: "3 de septiembre de 2026"
-	};
 	const cifras = [
 		{
 			valor: RECIBIDAS.valor,
@@ -29018,13 +28765,13 @@ function BalanceFinal() {
 			corte: RECIBIDAS.corte
 		},
 		{
-			valor: `${op.totalToneladas.toLocaleString("es-CO")} t`,
+			valor: `${Math.round(op.totalToneladas).toLocaleString("es-CO")} t`,
 			label: "Ayudas distribuidas",
 			corte: op.fechaCorteLarga
 		},
 		{
 			valor: totalRutas.toLocaleString("es-CO"),
-			label: "Despachos en total",
+			label: "Entregas en total",
 			corte: op.fechaCorteLarga
 		}
 	];
@@ -29093,7 +28840,7 @@ function BalanceFinal() {
 				}), rutas.map((r, i) => {
 					const Icono = r.icono;
 					const porcentaje = totalRutas > 0 ? Math.round(r.entregas / totalRutas * 100) : 0;
-					const toneladas = op.entregasTodas > 0 ? Math.round(r.entregas * (op.totalToneladas / op.entregasTodas)) : 0;
+					const toneladas = Math.round(r.entregas * op.pesoPorEntrega);
 					return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
 						style: { "--i": i },
 						className: "vc-aparece relative md:grid md:grid-cols-[1fr_4.5rem_1fr] md:items-center md:py-2.5",
@@ -29128,7 +28875,7 @@ function BalanceFinal() {
 															children: r.entregas.toLocaleString("es-CO")
 														}),
 														" ",
-														"despachos · ",
+														"entregas · ",
 														porcentaje,
 														"%"
 													]
@@ -29147,7 +28894,7 @@ function BalanceFinal() {
 													children: [
 														/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 															className: "text-base font-extrabold text-white",
-															children: r.unidades.toLocaleString("es-CO")
+															children: Math.round(r.unidades).toLocaleString("es-CO")
 														}),
 														" ",
 														"unidades sin desagregar"
@@ -29179,7 +28926,7 @@ function BalanceFinal() {
 			}),
 			canalesVivos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]",
-				children: "Faltan las rutas de municipios múltiples y otras ayudas solidarias. Se muestran cuando el servicio de datos las devuelve."
+				children: "El detalle por ruta no está disponible en este momento. Aparece apenas el servicio de datos responde; si persiste, recargue la página."
 			})
 		]
 	});
@@ -30263,7 +30010,7 @@ function Contenido() {
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DashboardPage, { embedded: true })
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("footer", {
-				className: "bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-33",
+				className: "bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-32",
 				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 						className: "block font-serif text-xl text-[#fbf8c6]",

@@ -1,7 +1,8 @@
 /**
  * colaDePeticiones.ts
  * -----------------------------------------------------------------------
- * Limita cuántas peticiones al Web App viajan al mismo tiempo.
+ * Limita cuántas peticiones al Web App viajan al mismo tiempo, y
+ * reintenta las que se caen por concurrencia.
  *
  * EL PROBLEMA
  *
@@ -15,44 +16,169 @@
  * Hasta `errorResponse_(..., 404)` devuelve un 200 con el 404 adentro del
  * JSON. Un 404 de HTTP significa que la petición no llegó a ejecutarse.
  *
- * LA SOLUCIÓN
+ * TRES CAMBIOS EN ESTA VERSIÓN
  *
- * Una cola: como mucho dos peticiones en vuelo, el resto espera turno.
- * La página tarda una fracción de segundo más en terminar de cargar y a
- * cambio no se cae ninguna sección.
+ * 1. UNA SOLA EN VUELO.
  *
- * Dos y no una: con una sola en vuelo, ocho rutas en serie se sienten
- * lentas. Con dos, Apps Script las atiende sin pisarse y la carga se
- * mantiene corta. Si aun así aparecen 404 sueltos, bajarlo a 1.
+ *    Estaba en dos con el argumento de que la carga se sentía lenta en
+ *    serie. Pero Apps Script YA las serializa por dentro: las dos no se
+ *    atienden en paralelo, se atropellan. El paralelismo era aparente y
+ *    el costo, un 404 intermitente en una ruta al azar.
+ *
+ *    La carga tarda algo más. A cambio, ninguna sección se cae.
+ *
+ * 2. EL SEMÁFORO DEJA DE PERMITIR MÁS DEL MÁXIMO.
+ *
+ *    El `if` de la versión anterior tenía una carrera. Al liberarse un
+ *    cupo, el contador baja y se despierta al que esperaba, pero ese
+ *    despertar es un microtask: no retoma en el acto. En esa rendija,
+ *    una petición nueva encuentra el contador por debajo del máximo, se
+ *    salta la cola entera y ocupa el cupo. Cuando el que esperaba
+ *    retoma, suma igual, sin volver a comprobar nada.
+ *
+ *    Resultado: con el máximo en 2 llegaba a haber 3 en vuelo, y era
+ *    justo bajo carga —las ocho del arranque— cuando pasaba. La cola
+ *    fallaba precisamente en el escenario para el que existe.
+ *
+ *    Con `while` en vez de `if`, el que despierta vuelve a comprobar y,
+ *    si le ganaron el cupo, se vuelve a formar.
+ *
+ * 3. LA COLA REINTENTA LOS 404 DE INFRAESTRUCTURA.
+ *
+ *    React Query ya reintenta, pero espera un tiempo fijo y no sabe nada
+ *    de la cola: puede volver a disparar justo cuando el Web App sigue
+ *    ocupado. La cola sí sabe cuándo hay hueco, así que reintentar acá
+ *    es más barato y más certero.
+ *
+ *    Las dos capas se complementan. Esta cubre el atropello entre rutas;
+ *    la de React Query cubre lo que la cola no puede ver, como un corte
+ *    de red del lado de la persona.
+ *
+ *    El cupo se SUELTA mientras se espera entre intentos. Retenerlo
+ *    convertiría la espera de un reintento en una pausa para todas las
+ *    demás rutas.
  * -----------------------------------------------------------------------
  */
 
-/** Peticiones simultáneas como máximo. Bajar a 1 si siguen los 404. */
-const MAX_EN_VUELO = 2;
+/**
+ * Peticiones simultáneas como máximo.
+ *
+ * Subirlo no acelera nada: el Web App atiende de a una de todos modos.
+ * Lo único que cambia es cuántas se pisan.
+ */
+const MAX_EN_VUELO = 1;
+
+/** Intentos adicionales cuando la respuesta parece un atropello. */
+const REINTENTOS = 3;
+
+/** Espera antes de cada reintento: 400 ms, 800, 1600. */
+const espera = (intento: number) => Math.min(400 * 2 ** intento, 4000);
+
+/**
+ * Códigos que valen la pena reintentar.
+ *
+ * El 404 está acá por el motivo de arriba, y es el caso importante. Los
+ * demás son los de un backend momentáneamente saturado. Un 404 legítimo
+ * —una URL de despliegue mal escrita— también se reintenta tres veces,
+ * que son dos segundos perdidos una sola vez: barato comparado con
+ * perder una sección entera de la página.
+ */
+const ESTADOS_REINTENTABLES = new Set([404, 408, 429, 500, 502, 503, 504]);
 
 let enVuelo = 0;
 const esperando: Array<() => void> = [];
 
-/**
- * Ejecuta `tarea` cuando haya cupo.
- *
- * El `finally` es lo que sostiene la cola: si una petición falla y no se
- * libera el cupo, las que esperan quedan colgadas para siempre y la
- * página se congela a medio cargar. Por eso el contador baja pase lo que
- * pase, y el error se vuelve a lanzar para que React Query lo vea y
- * reintente.
- */
-export async function enCola<T>(tarea: () => Promise<T>): Promise<T> {
-  if (enVuelo >= MAX_EN_VUELO) {
+function liberarCupo() {
+  enVuelo -= 1;
+  const siguiente = esperando.shift();
+  if (siguiente) siguiente();
+}
+
+/** Espera turno. El `while` es lo que sostiene el máximo, ver arriba. */
+async function tomarCupo(): Promise<void> {
+  while (enVuelo >= MAX_EN_VUELO) {
     await new Promise<void>((liberar) => esperando.push(liberar));
   }
-
   enVuelo += 1;
-  try {
-    return await tarea();
-  } finally {
-    enVuelo -= 1;
-    const siguiente = esperando.shift();
-    if (siguiente) siguiente();
+}
+
+const dormir = (ms: number) => new Promise<void>((seguir) => setTimeout(seguir, ms));
+
+/**
+ * `true` si el resultado es una respuesta HTTP que conviene repetir.
+ *
+ * Se comprueba en tiempo de ejecución y no por tipos porque `enCola` es
+ * genérica: hoy solo la usa el `fetch` del repositorio, pero nada impide
+ * que mañana encole otra cosa, y en ese caso el resultado simplemente no
+ * es un `Response` y se devuelve tal cual.
+ */
+function convieneReintentar(resultado: unknown): resultado is Response {
+  return (
+    typeof Response !== "undefined" &&
+    resultado instanceof Response &&
+    ESTADOS_REINTENTABLES.has(resultado.status)
+  );
+}
+
+/**
+ * Ejecuta `tarea` cuando haya cupo, y la repite si se cae por
+ * concurrencia.
+ *
+ * El cupo se libera pase lo que pase. Si una petición falla y no se
+ * libera, las que esperan quedan colgadas para siempre y la página se
+ * congela a medio cargar; por eso cada camino de salida pasa por
+ * `liberarCupo`.
+ *
+ * Lo que la tarea devuelva —incluida una respuesta con error tras
+ * agotar los intentos— sale de acá sin tocar, para que el repositorio
+ * haga su propio diagnóstico y React Query decida si reintenta.
+ */
+export async function enCola<T>(tarea: () => Promise<T>): Promise<T> {
+  let ultimoError: unknown = null;
+
+  for (let intento = 0; intento <= REINTENTOS; intento += 1) {
+    await tomarCupo();
+
+    try {
+      const resultado = await tarea();
+
+      if (intento < REINTENTOS && convieneReintentar(resultado)) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[cola] HTTP ${resultado.status} en el intento ${intento + 1}. ` +
+              `Reintentando en ${espera(intento)} ms. ` +
+              "Casi siempre es el Web App atendiendo otra petición.",
+          );
+        }
+        // El cupo se suelta ANTES de dormir: si no, la espera de este
+        // reintento sería una pausa para todas las demás rutas.
+        liberarCupo();
+        await dormir(espera(intento));
+        continue;
+      }
+
+      liberarCupo();
+      return resultado;
+    } catch (error) {
+      // Un fallo de red, no una respuesta con error. `fetch` solo lanza
+      // cuando la petición ni siquiera llegó a completarse.
+      ultimoError = error;
+      liberarCupo();
+      if (intento >= REINTENTOS) break;
+      await dormir(espera(intento));
+    }
   }
+
+  throw ultimoError ?? new Error("La petición falló tras agotar los reintentos de la cola.");
+}
+
+/**
+ * Estado de la cola, para diagnosticar desde la consola.
+ *
+ * Si `esperando` crece y no baja, algún camino dejó de liberar su cupo y
+ * la página se va a quedar a medio cargar.
+ */
+export function estadoDeLaCola(): { enVuelo: number; esperando: number; maximo: number } {
+  return { enVuelo, esperando: esperando.length, maximo: MAX_EN_VUELO };
 }

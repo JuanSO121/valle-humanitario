@@ -14,11 +14,26 @@
  * consecuencia que costó caro: cuando se corrige el Excel y se invalida
  * la caché del backend, una pestaña abierta sigue mostrando lo viejo
  * durante 6 horas. Para un dataset que se actualiza a diario, 5 minutos
- * es un intercambio mejor. El costo de un request de más es despreciable
- * frente a mostrar cifras equivocadas.
+ * es un intercambio mejor.
  *
  * Si esto se cambia, cambiar también CONFIG.CACHE.TTL_SECONDS en
  * Config.gs: el frontend nunca puede ser más fresco que el backend.
+ *
+ * CAMBIO: los seis reintentan, igual que useAyuda y useToneladas.
+ *
+ * Apps Script serializa las ejecuciones por usuario y el tablero monta
+ * ocho consultas a la vez. Las que se pisan reciben un 404 de la
+ * infraestructura de Google, no del script, y sin reintento ese fallo de
+ * un segundo se vuelve permanente para toda la sesión.
+ *
+ * El síntoma es distinto en cada ruta y ninguno se parece a un error de
+ * red: sin `municipios` las zonas caen al catálogo estático, sin
+ * `toneladas` el peso cae al estimado, sin `ayuda` desaparecen las
+ * cuatro rutas del balance. Tres bugs de datos aparentes, una sola causa.
+ *
+ * La espera creciente importa: sin ella los tres reintentos salen casi
+ * juntos y se vuelven a pisar entre sí, que es justo lo que se quiere
+ * evitar.
  * -----------------------------------------------------------------------
  */
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
@@ -32,7 +47,10 @@ import type {
   DestinoResumenLista,
 } from "@/domain/entities";
 
-const CATALOG_STALE_TIME_MS = 5 * 60 * 1000;
+export const CATALOG_STALE_TIME_MS = 5 * 60 * 1000;
+
+/** Espera creciente entre intentos: 1s, 2s, 4s, con tope de 8. */
+export const REINTENTO_ESCALONADO = (intento: number) => Math.min(1000 * 2 ** intento, 8000);
 
 function createCatalogQuery<T>(key: string, fetcher: () => Promise<T>) {
   return function useThisCatalogQuery(): UseQueryResult<T> {
@@ -41,15 +59,25 @@ function createCatalogQuery<T>(key: string, fetcher: () => Promise<T>) {
       queryFn: fetcher,
       staleTime: CATALOG_STALE_TIME_MS,
       refetchOnWindowFocus: true,
+      retry: 3,
+      retryDelay: REINTENTO_ESCALONADO,
     });
   };
 }
 
 export const useMeta = createCatalogQuery<Meta>("meta", () => ayudasApiRepository.getMeta());
-export const useOrigenes = createCatalogQuery<Origen[]>("origenes", () => ayudasApiRepository.getOrigenes());
-export const useMunicipios = createCatalogQuery<Municipio[]>("municipios", () => ayudasApiRepository.getMunicipios());
-export const useCategorias = createCatalogQuery<Categoria[]>("categorias", () => ayudasApiRepository.getCategorias());
-export const useFlujos = createCatalogQuery<FlujosResponse>("flujos", () => ayudasApiRepository.getFlujos());
+export const useOrigenes = createCatalogQuery<Origen[]>("origenes", () =>
+  ayudasApiRepository.getOrigenes(),
+);
+export const useMunicipios = createCatalogQuery<Municipio[]>("municipios", () =>
+  ayudasApiRepository.getMunicipios(),
+);
+export const useCategorias = createCatalogQuery<Categoria[]>("categorias", () =>
+  ayudasApiRepository.getCategorias(),
+);
+export const useFlujos = createCatalogQuery<FlujosResponse>("flujos", () =>
+  ayudasApiRepository.getFlujos(),
+);
 export const useDestinos = createCatalogQuery<DestinoResumenLista[]>("destinos", () =>
   ayudasApiRepository.getDestinos(),
 );

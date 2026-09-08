@@ -1,3 +1,42 @@
+/**
+ * territoryData.ts
+ * -----------------------------------------------------------------------
+ * Catálogo de respaldo de los 41 municipios, y la escala de color del
+ * mapa.
+ *
+ * QUÉ CAMBIÓ, Y POR QUÉ IMPORTA
+ *
+ * Este archivo dejó de ser una copia del Excel. Antes traía por municipio
+ * `despachos`, `unidades`, `renglones`, `toneladas` y el detalle día por
+ * día, todo con corte del 24 de agosto de 2026. Eran cifras que
+ * envejecían solas y que nadie recordaba regenerar: su propio comentario
+ * ya avisaba de un descuadre con movimientoData.ts y panoramaData.ts.
+ *
+ * Hoy todo eso llega de la API. `route=municipios` da el código DANE y la
+ * subregión, `route=flujos` las entregas por día, `route=toneladas` el
+ * peso. Nada de eso tiene por qué estar acá.
+ *
+ * Lo único que queda es lo que la API NO puede dar: el nombre y la zona
+ * de cada municipio como último recurso si `route=municipios` no
+ * responde, más la rampa de color, que es diseño.
+ *
+ * LAS ZONAS SON LAS DEL EXCEL, Y NO SE CORRIGEN ACÁ
+ *
+ * La versión anterior "arreglaba" seis zonas por su cuenta —pasaba Dagua
+ * de Pacífico a Sur, Sevilla de Norte a Centro, El Cerrito, Ginebra y
+ * Vijes de Centro a Sur, Caicedonia de Norte a Centro— y dejaba escrito
+ * que el catálogo estaba equivocado. No lo estaba. La agrupación
+ * confirmada por la Gobernación es Norte 18, Centro 14, Sur 7 y
+ * Pacífico 2, que es la que está abajo.
+ *
+ * El efecto de aquella corrección era peor que el problema que creía
+ * resolver: como el respaldo solo entra en juego cuando la API falla, un
+ * municipio podía aparecer en Pacífico en el mapa y en Sur en la galería
+ * dentro de la misma carga. Si mañana la Gobernación reclasifica un
+ * municipio, se cambia en CAT_MUNICIPIOS y acá también, en ese orden.
+ * -----------------------------------------------------------------------
+ */
+
 export type TerritoryZone = "Norte" | "Centro" | "Sur" | "Pacífico";
 export type TerritoryMapMode = "acumulado" | "jornada";
 export type TerritoryRoutesMode = "visibles" | "solo" | "color";
@@ -5,24 +44,17 @@ export type TerritoryRoutesMode = "visibles" | "solo" | "color";
 export interface TerritoryMunicipalityStat {
   name: string;
   /**
-   * Código DANE del municipio (string, con ceros a la izquierda tal cual
-   * lo trae la fuente). Es la ÚNICA llave que debería usarse para unir
-   * este catálogo con el GeoJSON de límites municipales
-   * (`properties.municipalityCode` en MapCanvas) — nunca comparar por
-   * nombre entre esas dos fuentes: el GeoJSON trae los nombres en
-   * MAYÚSCULAS y sin garantía de tilde, mientras que acá se preserva la
-   * capitalización real (ver getTerritoryStatByCode).
+   * Código DANE del municipio, con los ceros a la izquierda tal cual los
+   * trae la fuente. Es la ÚNICA llave que debería usarse para unir contra
+   * el GeoJSON de límites municipales (`properties.municipalityCode` en
+   * MapCanvas): ese archivo trae los nombres en mayúsculas y sin garantía
+   * de tilde.
    */
   codigoDane: string;
   zone: TerritoryZone;
-  despachos: number;
-  toneladas: number;
-  unidades: number;
-  renglones: number;
-  dias: Record<string, number>;
 }
 
-export const TERRITORY_DAYS = ["11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "24", "25"];
+/** La escala del mapa, de menos a más volumen. Es diseño, no dato. */
 export const TERRITORY_BLUE_RAMP = [
   "#0F3149",
   "#175A80",
@@ -31,98 +63,97 @@ export const TERRITORY_BLUE_RAMP = [
   "#86D3F0",
   "#C6ECFB",
 ] as const;
-export const TERRITORY_ACCUMULATED_BREAKS = [1, 4, 7, 11, 16];
-export const TERRITORY_DAILY_BREAKS = [1, 1, 2, 3, 4];
 
 /**
- * Datos reales extraídos de BD_Entregas_Operativa_v2.xlsx (hojas
- * RESUMEN + ENVIOS_CATEGORIA + DESPACHOS + DESPACHO_DESTINO +
- * CAT_MUNICIPIOS), corte del 24 de agosto de 2026. Reemplaza al set
- * anterior extraído a mano del HTML de referencia, que tenía nombres sin
- * tilde/en mayúsculas (rompía el matching con el GeoJSON) y al menos una
- * zona mal asignada (Dagua figuraba como "Pacífico"; el catálogo real
- * dice "Sur").
+ * Cortes de la rampa, calculados sobre los datos del día.
  *
- * `despachos`/`unidades` vienen directo de RESUMEN (fórmulas vivas del
- * workbook). `renglones` es la suma por destino de ENVIOS_CATEGORIA.
- * `dias` sale de unir DESPACHOS.fecha con DESPACHO_DESTINO por
- * despacho_id — validado 1:1 contra RESUMEN.despachos para los 41
- * municipios (0 discrepancias).
+ * Antes eran dos listas fijas, `[1, 4, 7, 11, 16]` y `[1, 1, 2, 3, 4]`,
+ * calibradas cuando el municipio que más había recibido tenía 21
+ * entregas. Hoy Dagua tiene 34, y La Cumbre, Sevilla, Yotoco, Restrepo y
+ * Trujillo caen todos por encima del último corte: seis municipios
+ * pintados del mismo tono, con el mapa incapaz de distinguir al primero
+ * del sexto.
  *
- * `toneladas` NO tiene fuente real por municipio (la hoja TONELADAS solo
- * trae el total por día, no desagregado). Se estima con la razón global
- * toneladas/despacho de toda la operación: 531 t acumuladas / 397
- * despachos totales (todos los tipos de destino, ver fila TOTAL de
- * RESUMEN) ≈ 1.34 t por despacho. Es un estimado, igual que el `* 1.75`
- * que ya usaba MapCanvas.municipalityPopupHtml para el modo "jornada" —
- * no un valor medido por municipio.
+ * Con cortes derivados, la escala se recalibra sola en cada corte del
+ * Excel y el mapa no vuelve a saturarse. Se reparte por cuantiles y no en
+ * tramos iguales porque la distribución tiene una cola larga: un solo
+ * municipio muy por encima del resto aplastaría a todos los demás en el
+ * primer tono.
+ */
+export function calcularCortes(valores: number[]): number[] {
+  const positivos = valores.filter((v) => v > 0).sort((a, b) => a - b);
+  if (positivos.length === 0) return [1, 2, 3, 4, 5];
+
+  const tramos = TERRITORY_BLUE_RAMP.length - 1;
+  const cortes: number[] = [];
+  for (let i = 1; i <= tramos; i += 1) {
+    const pos = Math.ceil((positivos.length * i) / (tramos + 1)) - 1;
+    const valor = positivos[Math.max(0, Math.min(pos, positivos.length - 1))] ?? 1;
+    // Estrictamente creciente: con pocos municipios, dos cuantiles
+    // pueden caer en el mismo valor y un corte repetido deja un tono de
+    // la rampa sin usar.
+    cortes.push(Math.max(valor, (cortes[cortes.length - 1] ?? 0) + 1));
+  }
+  return cortes;
+}
+
+/**
+ * Los 41 municipios con su zona, como respaldo de `route=municipios`.
  *
- * Santiago de Cali queda excluida a propósito (igual que antes): ver
- * panoramaData.ts, "Cali: Excluida del consolidado por instrucción
- * expresa".
+ * Santiago de Cali queda fuera a propósito: va por su propio canal y no
+ * entra en el consolidado municipal, por instrucción expresa.
  *
- * IMPORTANTE — descuadre conocido con el resto de la narrativa: esta
- * base (v2) es más reciente/completa que la que generó los totales
- * "307 despachos" / "553 t" de movimientoData.ts y panoramaData.ts
- * (StoryPage). El total real de despachos en estos 41 municipios es 321,
- * no 307. Las `unidades` sí cuadran exactamente (256.650 en ambas
- * fuentes). No se tocó movimientoData.ts/panoramaData.ts en este cambio
- * porque afecta a toda la narrativa del Story y no era lo pedido — pero
- * si se quiere que TODA la app hable del mismo número, esos dos archivos
- * también necesitan regenerarse desde este Excel.
+ * NO agregar cifras a esta lista. Todo lo cuantitativo viene de la API.
  */
 export const territoryMunicipalities: TerritoryMunicipalityStat[] = [
-  { name: "Alcalá", codigoDane: "76020", zone: "Norte", despachos: 6, toneladas: 8, unidades: 3279, renglones: 82, dias: {"12": 1, "13": 1, "16": 1, "17": 1, "20": 1, "22": 1} },
-  { name: "Andalucía", codigoDane: "76036", zone: "Centro", despachos: 5, toneladas: 7, unidades: 5691, renglones: 85, dias: {"12": 1, "14": 1, "18": 1, "19": 1, "21": 1} },
-  { name: "Ansermanuevo", codigoDane: "76041", zone: "Norte", despachos: 9, toneladas: 12, unidades: 1561, renglones: 64, dias: {"12": 1, "13": 1, "17": 4, "19": 1, "22": 2} },
-  { name: "Argelia", codigoDane: "76054", zone: "Norte", despachos: 12, toneladas: 16, unidades: 4379, renglones: 167, dias: {"12": 2, "13": 2, "15": 1, "17": 4, "19": 1, "20": 1, "21": 1} },
-  { name: "Bolívar", codigoDane: "76100", zone: "Norte", despachos: 12, toneladas: 16, unidades: 6564, renglones: 236, dias: {"12": 1, "13": 3, "14": 2, "15": 2, "17": 2, "19": 1, "20": 1} },
-  { name: "Buenaventura", codigoDane: "76109", zone: "Pacífico", despachos: 10, toneladas: 13, unidades: 11558, renglones: 77, dias: {"12": 1, "13": 1, "16": 1, "19": 1, "20": 1, "21": 1, "22": 3, "24": 1} },
-  { name: "Bugalagrande", codigoDane: "76113", zone: "Centro", despachos: 7, toneladas: 9, unidades: 2464, renglones: 30, dias: {"12": 2, "17": 2, "19": 1, "20": 1, "21": 1} },
-  { name: "Caicedonia", codigoDane: "76122", zone: "Centro", despachos: 7, toneladas: 9, unidades: 9715, renglones: 223, dias: {"12": 2, "13": 1, "15": 1, "17": 1, "18": 1, "22": 1} },
-  { name: "Calima", codigoDane: "76126", zone: "Centro", despachos: 12, toneladas: 16, unidades: 5102, renglones: 142, dias: {"12": 1, "13": 1, "14": 1, "15": 2, "16": 1, "20": 1, "21": 3, "22": 2} },
-  { name: "Candelaria", codigoDane: "76130", zone: "Sur", despachos: 0, toneladas: 0, unidades: 0, renglones: 0, dias: {} },
-  { name: "Cartago", codigoDane: "76147", zone: "Norte", despachos: 12, toneladas: 16, unidades: 1400, renglones: 25, dias: {"17": 1, "18": 5, "19": 4, "20": 1, "22": 1} },
-  { name: "Dagua", codigoDane: "76233", zone: "Sur", despachos: 21, toneladas: 28, unidades: 12123, renglones: 266, dias: {"12": 3, "13": 3, "14": 3, "15": 2, "16": 2, "17": 3, "18": 3, "21": 1, "22": 1} },
-  { name: "El Cairo", codigoDane: "76246", zone: "Norte", despachos: 5, toneladas: 7, unidades: 3626, renglones: 133, dias: {"12": 2, "14": 1, "17": 2} },
-  { name: "El Cerrito", codigoDane: "76248", zone: "Sur", despachos: 3, toneladas: 4, unidades: 1511, renglones: 63, dias: {"11": 1, "12": 1, "21": 1} },
-  { name: "El Dovio", codigoDane: "76250", zone: "Norte", despachos: 4, toneladas: 5, unidades: 3579, renglones: 58, dias: {"12": 1, "17": 2, "24": 1} },
-  { name: "El Águila", codigoDane: "76243", zone: "Norte", despachos: 11, toneladas: 15, unidades: 3676, renglones: 96, dias: {"11": 1, "12": 1, "13": 1, "15": 1, "16": 4, "22": 3} },
-  { name: "Florida", codigoDane: "76275", zone: "Sur", despachos: 0, toneladas: 0, unidades: 0, renglones: 0, dias: {} },
-  { name: "Ginebra", codigoDane: "76306", zone: "Sur", despachos: 1, toneladas: 1, unidades: 562, renglones: 26, dias: {"12": 1} },
-  { name: "Guacarí", codigoDane: "76318", zone: "Centro", despachos: 3, toneladas: 4, unidades: 2933, renglones: 81, dias: {"13": 1, "15": 1, "21": 1} },
-  { name: "Guadalajara de Buga", codigoDane: "76111", zone: "Centro", despachos: 5, toneladas: 7, unidades: 3638, renglones: 92, dias: {"13": 1, "15": 1, "17": 2, "21": 1} },
-  { name: "Jamundí", codigoDane: "76364", zone: "Sur", despachos: 5, toneladas: 7, unidades: 1913, renglones: 55, dias: {"12": 3, "18": 1, "22": 1} },
-  { name: "La Cumbre", codigoDane: "76377", zone: "Sur", despachos: 11, toneladas: 15, unidades: 6020, renglones: 178, dias: {"12": 3, "13": 2, "15": 2, "17": 3, "19": 1} },
-  { name: "La Unión", codigoDane: "76400", zone: "Norte", despachos: 10, toneladas: 13, unidades: 6758, renglones: 99, dias: {"11": 1, "12": 2, "15": 1, "17": 4, "20": 1, "21": 1} },
-  { name: "La Victoria", codigoDane: "76403", zone: "Norte", despachos: 7, toneladas: 9, unidades: 2487, renglones: 72, dias: {"12": 1, "14": 1, "17": 3, "18": 1, "19": 1} },
-  { name: "Obando", codigoDane: "76497", zone: "Norte", despachos: 6, toneladas: 8, unidades: 2544, renglones: 134, dias: {"12": 1, "13": 1, "15": 2, "17": 1, "18": 1} },
-  { name: "Palmira", codigoDane: "76520", zone: "Sur", despachos: 7, toneladas: 9, unidades: 3596, renglones: 84, dias: {"12": 1, "13": 1, "14": 1, "16": 1, "17": 2, "21": 1} },
-  { name: "Pradera", codigoDane: "76563", zone: "Sur", despachos: 2, toneladas: 3, unidades: 4013, renglones: 61, dias: {"18": 1, "19": 1} },
-  { name: "Restrepo", codigoDane: "76606", zone: "Centro", despachos: 12, toneladas: 16, unidades: 5885, renglones: 223, dias: {"12": 1, "13": 3, "14": 3, "17": 2, "18": 2, "19": 1} },
-  { name: "Riofrío", codigoDane: "76616", zone: "Centro", despachos: 11, toneladas: 15, unidades: 7241, renglones: 178, dias: {"12": 3, "13": 2, "14": 2, "15": 1, "16": 1, "18": 1, "20": 1} },
-  { name: "Roldanillo", codigoDane: "76622", zone: "Norte", despachos: 12, toneladas: 16, unidades: 3984, renglones: 53, dias: {"12": 3, "17": 3, "18": 2, "19": 2, "21": 1, "22": 1} },
-  { name: "San Pedro", codigoDane: "76670", zone: "Centro", despachos: 3, toneladas: 4, unidades: 3732, renglones: 98, dias: {"12": 1, "13": 1, "14": 1} },
-  { name: "Sevilla", codigoDane: "76736", zone: "Centro", despachos: 20, toneladas: 27, unidades: 24982, renglones: 817, dias: {"12": 3, "13": 3, "14": 1, "15": 2, "16": 3, "17": 2, "18": 3, "19": 1, "20": 1, "22": 1} },
-  { name: "Toro", codigoDane: "76823", zone: "Norte", despachos: 5, toneladas: 7, unidades: 4218, renglones: 73, dias: {"11": 1, "13": 1, "14": 1, "17": 2} },
-  { name: "Trujillo", codigoDane: "76828", zone: "Centro", despachos: 12, toneladas: 16, unidades: 6539, renglones: 209, dias: {"13": 1, "14": 2, "15": 1, "17": 3, "18": 4, "21": 1} },
-  { name: "Tuluá", codigoDane: "76834", zone: "Centro", despachos: 4, toneladas: 5, unidades: 1172, renglones: 28, dias: {"17": 1, "18": 2, "21": 1} },
-  { name: "Ulloa", codigoDane: "76845", zone: "Norte", despachos: 5, toneladas: 7, unidades: 2267, renglones: 58, dias: {"12": 1, "13": 1, "16": 1, "20": 1, "22": 1} },
-  { name: "Versalles", codigoDane: "76863", zone: "Norte", despachos: 10, toneladas: 13, unidades: 3152, renglones: 101, dias: {"11": 1, "12": 1, "13": 2, "14": 1, "16": 1, "17": 3, "18": 1} },
-  { name: "Vijes", codigoDane: "76869", zone: "Sur", despachos: 6, toneladas: 8, unidades: 1612, renglones: 75, dias: {"12": 1, "13": 1, "15": 1, "17": 1, "20": 2} },
-  { name: "Yotoco", codigoDane: "76890", zone: "Centro", despachos: 16, toneladas: 21, unidades: 10140, renglones: 237, dias: {"12": 4, "13": 4, "15": 1, "17": 1, "18": 2, "19": 1, "21": 1, "22": 1} },
-  { name: "Yumbo", codigoDane: "76892", zone: "Sur", despachos: 5, toneladas: 7, unidades: 2423, renglones: 110, dias: {"12": 1, "15": 1, "18": 2, "21": 1} },
-  { name: "Zarzal", codigoDane: "76895", zone: "Norte", despachos: 7, toneladas: 9, unidades: 5739, renglones: 39, dias: {"12": 1, "15": 1, "17": 3, "19": 1, "20": 1} },
+  { name: "Alcalá", codigoDane: "76020", zone: "Norte" },
+  { name: "Andalucía", codigoDane: "76036", zone: "Centro" },
+  { name: "Ansermanuevo", codigoDane: "76041", zone: "Norte" },
+  { name: "Argelia", codigoDane: "76054", zone: "Norte" },
+  { name: "Bolívar", codigoDane: "76100", zone: "Norte" },
+  { name: "Buenaventura", codigoDane: "76109", zone: "Pacífico" },
+  { name: "Bugalagrande", codigoDane: "76113", zone: "Centro" },
+  { name: "Caicedonia", codigoDane: "76122", zone: "Norte" },
+  { name: "Calima - El Darién", codigoDane: "76126", zone: "Centro" },
+  { name: "Candelaria", codigoDane: "76130", zone: "Sur" },
+  { name: "Cartago", codigoDane: "76147", zone: "Norte" },
+  { name: "Dagua", codigoDane: "76233", zone: "Pacífico" },
+  { name: "El Cairo", codigoDane: "76246", zone: "Norte" },
+  { name: "El Cerrito", codigoDane: "76248", zone: "Centro" },
+  { name: "El Dovio", codigoDane: "76250", zone: "Norte" },
+  { name: "El Águila", codigoDane: "76243", zone: "Norte" },
+  { name: "Florida", codigoDane: "76275", zone: "Sur" },
+  { name: "Ginebra", codigoDane: "76306", zone: "Centro" },
+  { name: "Guacarí", codigoDane: "76318", zone: "Centro" },
+  { name: "Guadalajara de Buga", codigoDane: "76111", zone: "Centro" },
+  { name: "Jamundí", codigoDane: "76364", zone: "Sur" },
+  { name: "La Cumbre", codigoDane: "76377", zone: "Sur" },
+  { name: "La Unión", codigoDane: "76400", zone: "Norte" },
+  { name: "La Victoria", codigoDane: "76403", zone: "Norte" },
+  { name: "Obando", codigoDane: "76497", zone: "Norte" },
+  { name: "Palmira", codigoDane: "76520", zone: "Sur" },
+  { name: "Pradera", codigoDane: "76563", zone: "Sur" },
+  { name: "Restrepo", codigoDane: "76606", zone: "Centro" },
+  { name: "Riofrío", codigoDane: "76616", zone: "Centro" },
+  { name: "Roldanillo", codigoDane: "76622", zone: "Norte" },
+  { name: "San Pedro", codigoDane: "76670", zone: "Centro" },
+  { name: "Sevilla", codigoDane: "76736", zone: "Norte" },
+  { name: "Toro", codigoDane: "76823", zone: "Norte" },
+  { name: "Trujillo", codigoDane: "76828", zone: "Centro" },
+  { name: "Tuluá", codigoDane: "76834", zone: "Centro" },
+  { name: "Ulloa", codigoDane: "76845", zone: "Norte" },
+  { name: "Versalles", codigoDane: "76863", zone: "Norte" },
+  { name: "Vijes", codigoDane: "76869", zone: "Centro" },
+  { name: "Yotoco", codigoDane: "76890", zone: "Centro" },
+  { name: "Yumbo", codigoDane: "76892", zone: "Sur" },
+  { name: "Zarzal", codigoDane: "76895", zone: "Norte" },
 ];
 
 /**
- * Normaliza un nombre de municipio para comparar TEXTO contra texto
- * (ej. el nombre de un destino seleccionado vs. este catálogo) cuando no
- * hay código DANE a mano en el otro lado. Nunca usar esto para unir
- * contra el GeoJSON de límites — ahí usar codigoDane vía
- * getTerritoryStatByCode, que no depende de mayúsculas/tildes en
- * absoluto. `normId` (@/lib/id) NO sirve para esto: solo recorta ceros a
- * la izquierda de IDs numéricos, no hace case-fold ni saca tildes.
+ * Normaliza un nombre de municipio para comparar TEXTO contra texto,
+ * cuando no hay código DANE a mano del otro lado. Nunca usar esto para
+ * unir contra el GeoJSON de límites: ahí va `getTerritoryStatByCode`, que
+ * no depende de mayúsculas ni tildes.
  */
 function normMunicipalityName(name: string): string {
   return name
@@ -133,10 +164,22 @@ function normMunicipalityName(name: string): string {
     .replace(/\s+/g, " ");
 }
 
+/**
+ * Nombres que aparecen escritos de más de una forma en las fuentes.
+ *
+ * "Calima" es el que faltaba: DETALLE_PRODUCTO lo escribe corto y
+ * CAT_DESTINOS largo, así que cuando el respaldo entraba en juego ese
+ * municipio se quedaba sin zona y caía en el grupo "Sin zona" de la
+ * galería. El backend ya lo resuelve con CONFIG.DESTINO_ALIAS; acá hacía
+ * falta el equivalente.
+ */
 const NAME_ALIASES = new Map<string, string>([
   [normMunicipalityName("Guadalajara de Buga"), "Buga"],
   [normMunicipalityName("Buga"), "Guadalajara de Buga"],
   [normMunicipalityName("Cali"), "Santiago de Cali"],
+  [normMunicipalityName("Calima"), "Calima - El Darién"],
+  [normMunicipalityName("Calima - El Darién"), "Calima"],
+  [normMunicipalityName("Calima El Darién"), "Calima - El Darién"],
 ]);
 
 export const territoryByCode = new Map(territoryMunicipalities.map((m) => [m.codigoDane, m]));
@@ -145,25 +188,25 @@ export const territoryByName = new Map(
 );
 
 /** Preferido: join robusto por código DANE, sin ambigüedad de texto. */
-export function getTerritoryStatByCode(codigoDane: string | null | undefined): TerritoryMunicipalityStat | undefined {
+export function getTerritoryStatByCode(
+  codigoDane: string | null | undefined,
+): TerritoryMunicipalityStat | undefined {
   if (!codigoDane) return undefined;
   return territoryByCode.get(codigoDane);
 }
 
-/** Fallback por nombre, para cuando no hay código DANE disponible del otro lado (ej. DestinoResumenLista). */
+/** Respaldo por nombre, para cuando no hay código DANE del otro lado. */
 export function getTerritoryStat(name: string): TerritoryMunicipalityStat | undefined {
   const key = normMunicipalityName(name);
-  return territoryByName.get(key) ?? territoryByName.get(normMunicipalityName(NAME_ALIASES.get(key) ?? ""));
+  const directo = territoryByName.get(key);
+  if (directo) return directo;
+  const alias = NAME_ALIASES.get(key);
+  return alias ? territoryByName.get(normMunicipalityName(alias)) : undefined;
 }
 
-export function territoryValueFor(stat: TerritoryMunicipalityStat | undefined, mode: TerritoryMapMode, day: string): number {
-  if (!stat) return 0;
-  return mode === "acumulado" ? stat.despachos : stat.dias[day] ?? 0;
-}
-
-export function territoryToneIndex(value: number, mode: TerritoryMapMode): number | null {
+/** El tono de la rampa que corresponde a un valor. `null` si no recibió. */
+export function territoryToneIndex(value: number, cortes: number[]): number | null {
   if (value <= 0) return null;
-  const breaks = mode === "acumulado" ? TERRITORY_ACCUMULATED_BREAKS : TERRITORY_DAILY_BREAKS;
-  const idx = breaks.findIndex((limit) => value <= limit);
-  return idx === -1 ? breaks.length : idx;
+  const idx = cortes.findIndex((limite) => value <= limite);
+  return idx === -1 ? cortes.length : idx;
 }

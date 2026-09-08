@@ -1,34 +1,56 @@
 /**
  * operacion.ts
  * -----------------------------------------------------------------------
- * Convierte `Flujo[]` de la API en todo lo que el tablero necesita
- * contar. Sin React ni fetch, para poder probarlo sin navegador.
+ * Convierte `route=flujos` en todo lo que el tablero necesita contar.
+ * Sin React ni fetch, para poder probarlo sin navegador.
  *
- * Antes las jornadas, los totales y los días con entrega vivían escritos
- * a mano en movimientoData.ts. Cada vez que alguien agregaba una entrega
- * al Excel había que editar el código. Acá todo se recalcula solo,
- * porque `route=flujos` ya devuelve `porFecha` por cada par de origen y
- * destino.
+ * TRES CORRECCIONES EN ESTA VERSIÓN
  *
- * La zona de cada municipio sale de CAT_MUNICIPIOS vía route=municipios,
- * que es donde la Gobernación la mantiene. El catálogo estático quedó
- * como respaldo mientras esa consulta no responde, pero no manda: tenía
- * a Dagua en Sur cuando el Excel dice Pacífico, y los totales por zona
- * quedaban corridos.
+ * 1. EL PESO YA NO SE INVENTA EN LOS DÍAS QUE FALTAN.
  *
- * Las toneladas admiten dos fuentes. Si `route=toneladas` responde, se
- * usa la serie medida de la hoja TONELADAS. Si no, se estiman sobre las
- * entregas. `toneladasMedidas` dice cuál de las dos está en pantalla,
- * para poder etiquetarlo sin adivinar.
+ *    La hoja TONELADAS trae 22 días; la operación tiene 25. Faltan el 4,
+ *    el 5 y el 7 de septiembre. La versión anterior rellenaba esos tres
+ *    con el estimado por entregas y los sumaba al total sin distinguir,
+ *    así que el tablero publicaba 725 t: 697 medidas más 28 inventadas,
+ *    presentadas como una sola cifra medida.
  *
- * La serie medida es DEPARTAMENTAL: incluye Cali, el centro de acopio de
- * Cartago y las otras ayudas solidarias. El conteo de entregas es solo
- * municipal. Las dos cifras conviven en el tablero pero no son
- * divisibles entre sí.
+ *    Ahora un día sin fila en la hoja aporta 0 y queda listado en
+ *    `diasSinPesoMedido`. El total baja a 697, que es lo que dice la
+ *    fuente, y la sección puede avisar que faltan tres días en vez de
+ *    taparlos. Cuando alguien agregue esas filas al Excel, la cifra sube
+ *    sola y nadie tiene que acordarse de nada.
+ *
+ * 2. UN SOLO FACTOR DE TONELADAS POR ENTREGA, Y DERIVADO.
+ *
+ *    Había tres en la misma página: 1,38 acá (la constante
+ *    TONELADAS_POR_DESPACHO), 1,46 en BalanceFinal y 1,35 en
+ *    CanalesSection. Por eso las cuatro rutas sumaban 784 t debajo de un
+ *    titular que decía 725: las partes se pasaban del entero en 59.
+ *
+ *    Ahora `pesoPorEntrega` se calcula una vez, se expone, y lo usan
+ *    todos. Ninguna constante escrita a mano.
+ *
+ * 3. EL DENOMINADOR INCLUYE LAS ENTREGAS SIN COORDENADA.
+ *
+ *    `entregasTodas` solo sumaba `flujos`, que son las que el mapa puede
+ *    dibujar: 496. Las otras 40 —"Otras ayudas solidarias" y
+ *    "Municipios múltiples", que no están atadas a un municipio— viajan
+ *    en `excluidos` y quedaban fuera, así que cada entrega visible
+ *    cargaba con el peso de las invisibles.
+ *
+ *    `route=flujos` ya devuelve `excluidos`. Con eso el denominador es
+ *    536, que coincide exactamente con las filas de DESPACHO_DESTINO.
+ *
+ * SOBRE LAS DOS ESCALAS QUE CONVIVEN
+ *
+ * La serie de TONELADAS es DEPARTAMENTAL: incluye Cali, el centro de
+ * acopio de Cartago y las otras ayudas solidarias. El conteo de entregas
+ * municipales es un subconjunto. Las dos cifras conviven en el tablero
+ * pero no son divisibles entre sí, y por eso el reparto por ruta es un
+ * estimado declarado y no una medición.
  */
 import type { Flujo, Municipio } from "@/domain/entities";
 import { getTerritoryStat, territoryMunicipalities } from "@/presentation/data/territoryData";
-import { TONELADAS_POR_DESPACHO } from "@/presentation/data/territoryTime";
 import { sameMunicipality } from "@/lib/municipalityName";
 
 const CALI = "Santiago de Cali";
@@ -36,6 +58,17 @@ const MESES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
+
+/**
+ * Último recurso, solo si la hoja TONELADAS no responde en absoluto.
+ *
+ * Antes esto era la fuente normal del peso por municipio, importada de
+ * territoryTime. Ahora el factor se deriva de la serie medida y esta
+ * constante solo actúa cuando no hay serie: sin ella, un fallo de
+ * `route=toneladas` dejaría todas las toneladas en cero, que se lee como
+ * un dato real y no como un dato ausente.
+ */
+const PESO_DE_RESPALDO = 1.3;
 
 export interface MunicipioOperacion {
   destinoId: string;
@@ -51,10 +84,12 @@ export interface MunicipioOperacion {
 }
 
 export interface JornadaOperacion {
-  /** Fecha ISO completa. */
+  /** Fecha ISO completa. Es la que hay que usar para escribir el día. */
   fecha: string;
   /** Día del mes en dos dígitos, la llave que usa el mapa. */
   dia: string;
+  /** "3 de septiembre de 2026", ya formateado. Ver la nota de abajo. */
+  fechaLarga: string;
   entregas: number;
   municipios: number;
   /** Municipios que reciben por primera vez ese día. */
@@ -63,6 +98,13 @@ export interface JornadaOperacion {
   acumuladoEntregas: number;
   toneladas: number;
   acumuladoToneladas: number;
+  /**
+   * `false` cuando ese día no tiene fila en la hoja TONELADAS.
+   *
+   * No es lo mismo que cero toneladas: es que nadie anotó el peso de ese
+   * día. La curva puede dibujar el hueco distinto y el total no lo suma.
+   */
+  pesoMedido: boolean;
 }
 
 export interface ToneladasPunto {
@@ -90,7 +132,7 @@ export interface Operacion {
   fechas: string[];
   jornadas: JornadaOperacion[];
   municipios: MunicipioOperacion[];
-  /** Todas las entregas municipales, tengan fecha o no. */
+  /** Todas las entregas municipales, tengan fecha o no. Cali va aparte. */
   totalEntregas: number;
   /**
    * Las que sí tienen fecha, que son las que aparecen en la curva, en la
@@ -101,43 +143,55 @@ export interface Operacion {
   entregasConFecha: number;
   entregasSinFecha: number;
   /**
-   * Toneladas de TODO el departamento. Incluye Cali, el centro de acopio
-   * de Cartago y las otras ayudas solidarias, porque así se registra el
-   * peso en la hoja: por día y para toda la operación.
+   * Toneladas de TODO el departamento, solo de los días que la hoja
+   * TONELADAS registra. Incluye Cali, el centro de acopio de Cartago y
+   * las otras ayudas solidarias, porque así se anota el peso: por día y
+   * para toda la operación.
    */
   totalToneladas: number;
   /**
    * Toneladas que corresponden solo a los municipios del consolidado.
-   *
-   * Es un estimado: el peso no se registra por envío, así que el total
-   * departamental se reparte según qué proporción de las entregas fue
-   * municipal. Sin esto, una tarjeta que dice "39 de 41 municipios"
-   * quedaba al lado de una cifra que incluye Cali y las rutas
-   * institucionales.
+   * Estimado: el peso no se registra por envío.
    */
   toneladasMunicipales: number;
-  /** Entregas de todas las rutas con coordenada, municipales o no. */
+  /** Entregas con coordenada, las que el mapa puede dibujar. */
   entregasTodas: number;
-  /** Proporción de las entregas que fue municipal. Reparte el peso. */
+  /** Entregas sin coordenada: agregados y destinos no municipales. */
+  entregasSinCoordenada: number;
+  /**
+   * TODAS las entregas de la operación, se dibujen o no.
+   * Es el denominador de cualquier reparto de peso.
+   */
+  entregasTotales: number;
+  /**
+   * Toneladas por entrega. Se deriva de la serie medida y del total de
+   * entregas, así que las partes siempre suman el total.
+   *
+   * Todo lo que muestre toneladas por ruta, por municipio o por zona
+   * tiene que multiplicar por esto. Ninguna sección debe traer su propia
+   * constante: fue lo que produjo tres cifras distintas para lo mismo.
+   */
+  pesoPorEntrega: number;
+  /** Proporción de las entregas que fue municipal. */
   factorMunicipal: number;
+  /**
+   * Días con entregas que NO tienen peso en la hoja TONELADAS, en ISO.
+   *
+   * Si esta lista no está vacía, el total de toneladas cubre menos días
+   * que el de entregas y la sección debería decirlo.
+   */
+  diasSinPesoMedido: string[];
   municipiosAtendidos: number;
   municipiosTotales: number;
   diasConEntrega: number;
   primeraFecha: string | null;
   ultimaFecha: string | null;
-  /** "25 de agosto de 2026", listo para mostrar. */
+  /** "7 de septiembre de 2026", listo para mostrar. */
   fechaCorteLarga: string;
-  /** "del 11 al 25 de agosto", listo para mostrar. */
+  /** "del 11 de agosto al 7 de septiembre", listo para mostrar. */
   rangoLargo: string;
-  /** Jornada con más entregas. */
   picoEntregas: JornadaOperacion | null;
-  /** Jornada que alcanzó más municipios. */
   picoCobertura: JornadaOperacion | null;
-  /**
-   * Entregas por centro de acopio, con el detalle de a qué municipios
-   * llegó cada uno. La sección "De dónde salió" lo usa para no volver a
-   * mostrar una cifra escrita a mano al lado de una calculada.
-   */
   entregasPorOrigen: Array<{
     origenId: string;
     entregas: number;
@@ -146,11 +200,9 @@ export interface Operacion {
   }>;
   /** Entregas a Cali, que queda fuera del consolidado municipal. */
   entregasCali: number;
-  /** Los municipios del departamento, incluidos los que no recibieron. */
   catalogo: MunicipioCatalogo[];
-  /** Cobertura y volumen por zona, con la zona que dice el Excel. */
   zonas: ZonaOperacion[];
-  /** true si las toneladas salen de la hoja TONELADAS y no del estimado. */
+  /** true si las toneladas salen de la hoja y no del respaldo. */
   toneladasMedidas: boolean;
 }
 
@@ -164,7 +216,11 @@ export const OPERACION_VACIA: Operacion = {
   totalToneladas: 0,
   toneladasMunicipales: 0,
   entregasTodas: 0,
+  entregasSinCoordenada: 0,
+  entregasTotales: 0,
+  pesoPorEntrega: 0,
   factorMunicipal: 1,
+  diasSinPesoMedido: [],
   municipiosAtendidos: 0,
   municipiosTotales: territoryMunicipalities.length,
   diasConEntrega: 0,
@@ -190,13 +246,29 @@ function normalizar(nombre: string): string {
     .trim();
 }
 
-/** "2026-08-25" a "25 de agosto de 2026". */
+/**
+ * "2026-09-03" a "3 de septiembre de 2026".
+ *
+ * Lee el MES de la fecha en vez de asumirlo. La versión anterior de las
+ * tarjetas escribía "de agosto" a mano, así que la primera entrega a
+ * Candelaria, del 3 de septiembre, se publicaba como "3 de agosto": una
+ * semana antes del terremoto que originó la operación.
+ */
 export function fechaLarga(iso: string | null): string {
   if (!iso) return "";
   const [anio, mes, dia] = iso.split("-");
   const nombreMes = MESES[Number(mes) - 1];
   if (!anio || !dia || !nombreMes) return iso;
   return `${Number(dia)} de ${nombreMes} de ${anio}`;
+}
+
+/** "3 de septiembre", sin el año. Para rótulos y notas cortas. */
+export function fechaCorta(iso: string | null): string {
+  if (!iso) return "";
+  const [, mes, dia] = iso.split("-");
+  const nombreMes = MESES[Number(mes) - 1];
+  if (!dia || !nombreMes) return iso;
+  return `${Number(dia)} de ${nombreMes}`;
 }
 
 function diaDe(iso: string): string {
@@ -211,10 +283,16 @@ function esMunicipal(f: Flujo): boolean {
 
 export function derivarOperacion(
   flujos: Flujo[] | undefined,
-  /** Serie de `route=toneladas`. Si falta, las toneladas se estiman. */
+  /** Serie de `route=toneladas`. Sin ella el peso cae al respaldo. */
   serieToneladas?: ToneladasPunto[] | undefined,
   /** Catálogo de `route=municipios`. Si falta, se usa el estático. */
   municipiosApi?: Municipio[] | undefined,
+  /**
+   * `excluidos` de `route=flujos`: las entregas que no se dibujan porque
+   * su destino no tiene coordenada. No aparecen en el mapa pero existen,
+   * y sin ellas el reparto del peso queda corrido.
+   */
+  excluidos?: unknown[] | undefined,
 ): Operacion {
   const medidas = new Map((serieToneladas ?? []).map((p) => [p.dia, p]));
   const hayMedidas = medidas.size > 0;
@@ -238,17 +316,15 @@ export function derivarOperacion(
           zona: m.zone,
         }));
 
-  const zonaPorNombre = new Map(
-    catalogoFinal.map((m) => [normalizar(m.nombre), m.zona]),
-  );
-  const codigoPorNombre = new Map(
-    catalogoFinal.map((m) => [normalizar(m.nombre), m.codigoDane]),
-  );
+  const zonaPorNombre = new Map(catalogoFinal.map((m) => [normalizar(m.nombre), m.zona]));
+  const codigoPorNombre = new Map(catalogoFinal.map((m) => [normalizar(m.nombre), m.codigoDane]));
+
   if (!flujos || flujos.length === 0) return OPERACION_VACIA;
 
   const municipales = flujos.filter(esMunicipal);
 
-  // --- municipios ---------------------------------------------------------
+  // --- municipios (sin toneladas todavía) ---------------------------------
+  // El peso se aplica al final, cuando ya se conoce `pesoPorEntrega`.
   const porDestino = new Map<string, MunicipioOperacion>();
   for (const f of municipales) {
     const clave = normalizar(f.destino.nombre);
@@ -257,7 +333,8 @@ export function derivarOperacion(
       ({
         destinoId: f.destino.id,
         nombre: f.destino.nombre,
-        codigoDane: codigoPorNombre.get(clave) ?? getTerritoryStat(f.destino.nombre)?.codigoDane ?? null,
+        codigoDane:
+          codigoPorNombre.get(clave) ?? getTerritoryStat(f.destino.nombre)?.codigoDane ?? null,
         zona: zonaPorNombre.get(clave) ?? getTerritoryStat(f.destino.nombre)?.zone ?? null,
         entregas: 0,
         toneladas: 0,
@@ -270,15 +347,12 @@ export function derivarOperacion(
     for (const punto of f.porFecha ?? []) {
       const dia = diaDe(punto.fecha);
       actual.dias[dia] = (actual.dias[dia] ?? 0) + punto.despachosCount;
-      if (!actual.primeraFecha || punto.fecha < actual.primeraFecha) actual.primeraFecha = punto.fecha;
+      if (!actual.primeraFecha || punto.fecha < actual.primeraFecha)
+        actual.primeraFecha = punto.fecha;
       if (!actual.ultimaFecha || punto.fecha > actual.ultimaFecha) actual.ultimaFecha = punto.fecha;
     }
     porDestino.set(f.destino.id, actual);
   }
-
-  const municipios = [...porDestino.values()]
-    .map((m) => ({ ...m, toneladas: Math.round(m.entregas * TONELADAS_POR_DESPACHO) }))
-    .sort((a, b) => b.entregas - a.entregas || a.nombre.localeCompare(b.nombre, "es"));
 
   // --- jornadas -----------------------------------------------------------
   const porFecha = new Map<string, { entregas: number; destinos: Set<string> }>();
@@ -293,10 +367,13 @@ export function derivarOperacion(
 
   const fechas = [...porFecha.keys()].sort();
   const vistos = new Set<string>();
+  const diasSinPesoMedido: string[] = [];
   let acumuladoEntregas = 0;
   let acumuladoToneladas = 0;
 
-  const nombrePorId = new Map(municipios.map((m) => [m.destinoId, m.nombre]));
+  const nombrePorId = new Map(
+    [...porDestino.values()].map((m) => [m.destinoId, m.nombre] as const),
+  );
 
   const jornadas: JornadaOperacion[] = fechas.map((fecha) => {
     const acc = porFecha.get(fecha)!;
@@ -305,16 +382,19 @@ export function derivarOperacion(
 
     acumuladoEntregas += acc.entregas;
 
-    // La serie medida manda cuando existe. Un día sin fila propia en la
-    // hoja no significa cero toneladas, así que se cae al estimado en vez
-    // de cortar la curva.
+    // Un día sin fila en la hoja NO se rellena con un estimado. Aporta
+    // cero al total y queda anotado, porque "nadie anotó el peso" y "ese
+    // día no se movió nada" son cosas distintas y el tablero no puede
+    // mostrarlas iguales.
     const punto = medidas.get(diaDe(fecha));
-    const toneladas = punto ? punto.toneladas : Math.round(acc.entregas * TONELADAS_POR_DESPACHO);
+    if (!punto) diasSinPesoMedido.push(fecha);
+    const toneladas = punto ? punto.toneladas : 0;
     acumuladoToneladas += toneladas;
 
     return {
       fecha,
       dia: diaDe(fecha),
+      fechaLarga: fechaLarga(fecha),
       entregas: acc.entregas,
       municipios: acc.destinos.size,
       nuevos: nuevos.length,
@@ -324,8 +404,29 @@ export function derivarOperacion(
       acumuladoEntregas,
       toneladas,
       acumuladoToneladas,
+      pesoMedido: Boolean(punto),
     };
   });
+
+  // --- denominador del peso ------------------------------------------------
+  const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
+  const entregasSinCoordenada = excluidos?.length ?? 0;
+  const entregasTotales = entregasTodas + entregasSinCoordenada;
+
+  // Un solo factor, derivado. Si no hay serie medida cae al respaldo, y
+  // `toneladasMedidas` avisa cuál de los dos está en pantalla.
+  const pesoPorEntrega =
+    hayMedidas && entregasTotales > 0
+      ? acumuladoToneladas / entregasTotales
+      : PESO_DE_RESPALDO;
+
+  const totalToneladas = hayMedidas
+    ? acumuladoToneladas
+    : Math.round(entregasTotales * PESO_DE_RESPALDO);
+
+  const municipios = [...porDestino.values()]
+    .map((m) => ({ ...m, toneladas: Math.round(m.entregas * pesoPorEntrega) }))
+    .sort((a, b) => b.entregas - a.entregas || a.nombre.localeCompare(b.nombre, "es"));
 
   // --- orígenes -----------------------------------------------------------
   const porOrigen = new Map<string, { entregas: number; destinos: Map<string, number> }>();
@@ -336,16 +437,12 @@ export function derivarOperacion(
     porOrigen.set(f.origenId, acc);
   }
 
-  // Cali no entra en el consolidado municipal pero sí existe, y la
-  // sección de canales necesita su cifra.
   const entregasCali = flujos
     .filter((f) => f.destino.tipo === "municipio" && sameMunicipality(f.destino.nombre, CALI))
     .reduce((sum, f) => sum + f.despachosCount, 0);
 
   // El total sale de los municipios, no de las jornadas: una entrega sin
-  // fecha no aparece en ninguna jornada pero existe igual. Antes se
-  // calculaba sumando jornadas y el panel del mapa mostraba un número
-  // distinto al del resumen.
+  // fecha no aparece en ninguna jornada pero existe igual.
   const totalEntregas = municipios.reduce((sum, m) => sum + m.entregas, 0);
 
   // --- zonas --------------------------------------------------------------
@@ -369,11 +466,8 @@ export function derivarOperacion(
     .map(([zona, acc]) => ({ zona, ...acc }))
     .sort((a, b) => b.total - a.total || a.zona.localeCompare(b.zona, "es"));
 
-  // Todas las entregas con coordenada, municipales o no. Es el
-  // denominador para repartir el peso departamental.
-  const entregasTodas = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
-  const factorMunicipal = entregasTodas > 0 ? totalEntregas / entregasTodas : 1;
-  const toneladasMunicipales = Math.round(acumuladoToneladas * factorMunicipal);
+  const factorMunicipal = entregasTotales > 0 ? totalEntregas / entregasTotales : 1;
+  const toneladasMunicipales = Math.round(totalToneladas * factorMunicipal);
 
   const primeraFecha = fechas[0] ?? null;
   const ultimaFecha = fechas.at(-1) ?? null;
@@ -394,10 +488,14 @@ export function derivarOperacion(
     totalEntregas,
     entregasConFecha: acumuladoEntregas,
     entregasSinFecha: totalEntregas - acumuladoEntregas,
-    totalToneladas: acumuladoToneladas,
+    totalToneladas,
     toneladasMunicipales,
     entregasTodas,
+    entregasSinCoordenada,
+    entregasTotales,
+    pesoPorEntrega,
     factorMunicipal,
+    diasSinPesoMedido,
     toneladasMedidas: hayMedidas,
     municipiosAtendidos: porDestino.size,
     municipiosTotales: catalogoFinal.length,

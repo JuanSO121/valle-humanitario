@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { Map as MapLibreMap, MapLayerMouseEvent, PointLike } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -16,25 +16,20 @@ import { createArrivalPulseEngine } from "./arrivalPulseEngine";
 import { createDispatchActivityEngine, type ActivityFrame } from "./dispatchActivityEngine";
 import {
   TERRITORY_BLUE_RAMP,
+  calcularCortes,
   getTerritoryStatByCode,
   territoryToneIndex,
   type TerritoryMapMode,
   type TerritoryRoutesMode,
   type TerritoryZone,
 } from "@/presentation/data/territoryData";
-import {
-  describeLens,
-  TONELADAS_POR_DESPACHO,
-  valorTemporal,
-} from "@/presentation/data/territoryTime";
+import { describeLens, valorTemporal } from "@/presentation/data/territoryTime";
 
 /**
  * Lo que el mapa necesita saber de cada municipio. Viene de la API a
  * través de DashboardPage, no del catálogo estático: ese quedaba viejo
  * apenas alguien agregaba una entrega al Excel, y el panel del mapa
  * mostraba un total distinto al del resto de la página.
- *
- * La zona sí sale del catálogo, porque no cambia con las entregas.
  */
 export interface MunicipioMapa {
   nombre: string;
@@ -59,16 +54,15 @@ const POINT_HIT_TOLERANCE_PX = 8;
 
 /**
  * Municipio sin despacho documentado. NO es "el tono más bajo de la
- * rampa": es una categoría aparte, igual que `DATA.sinDato` en el
- * tablero HTML de referencia. Por eso territoryToneIndex devuelve null
- * para valor 0 y no 0, ver territoryColorForTone.
+ * rampa": es una categoría aparte. Por eso territoryToneIndex devuelve
+ * null para valor 0 y no 0, ver territoryColorForTone.
  */
 export const TERRITORY_NO_DATA = "#162936";
 
 /**
  * Santiago de Cali: excluida del consolidado municipal por instrucción
- * expresa (ver panoramaData / nivel "Canales"). Se pinta con un gris
- * propio para que no se lea ni como "sin datos" ni como un volumen bajo.
+ * expresa. Se pinta con un gris propio para que no se lea ni como "sin
+ * datos" ni como un volumen bajo.
  *
  * SÍ es clickeable: recibió sus propios despachos y tiene panel, y su
  * globo lo dice. Lo único que la distingue es el color de reposo; el
@@ -87,9 +81,7 @@ const CALI_DANE = "76001";
  */
 const INTENSITY_FULL_THRESHOLD = 5;
 
-/**
- * Ids de las capas de etiqueta. Se mantienen arriba de todo el resto.
- */
+/** Ids de las capas de etiqueta. Se mantienen arriba de todo el resto. */
 const CAPAS_ETIQUETA = ["municipios-etq-nombre", "municipios-etq-valor"] as const;
 
 /**
@@ -122,7 +114,7 @@ function intensityFor(totalWeight: number): number {
 /**
  * tone es el índice devuelto por territoryToneIndex: entra DIRECTO a la
  * rampa, sin invertir. TERRITORY_BLUE_RAMP ya está ordenada de menos a
- * más volumen (oscuro → claro), igual que DATA.rampa del HTML.
+ * más volumen (oscuro a claro).
  */
 function territoryColorForTone(tone: number | null): string {
   if (tone === null) return TERRITORY_NO_DATA;
@@ -157,7 +149,9 @@ function municipalityCodeFromProperties(properties: Record<string, unknown> | un
     properties["code"],
     properties["codigo"],
   ];
-  return normId(String(candidates.find((value) => value != null && String(value).trim() !== "") ?? ""));
+  return normId(
+    String(candidates.find((value) => value != null && String(value).trim() !== "") ?? ""),
+  );
 }
 
 /**
@@ -302,14 +296,34 @@ interface Props {
   /** Cómo se lee el día elegido: acumulado hasta él, o solo ese día. */
   territoryMode: TerritoryMapMode;
   /**
-   * Día de agosto en dos dígitos, derivado del timeline. null = toda la
+   * Día del mes en dos dígitos, derivado del timeline. null = toda la
    * operación. Antes era un `string` con su propio slider, y por eso los
    * polígonos podían mostrar el total mientras los arcos iban por el 14.
    */
   territoryDay: string | null;
+  /**
+   * La fecha ISO completa del día elegido, para poder nombrar el mes.
+   *
+   * `territoryDay` es solo el día, así que el globo del municipio decía
+   * "Hasta el 03 de agosto" cuando el timeline estaba parado en el 3 de
+   * septiembre. Es opcional para no obligar a nadie a pasarla: sin ella,
+   * la etiqueta dice "día 3" y no inventa un mes.
+   */
+  fechaActual?: string | null;
   territoryZone: TerritoryZone | "todas";
   /** Entregas por municipio, indexadas por código DANE. Vienen de la API. */
   municipios: MunicipiosMapa;
+  /**
+   * Toneladas por entrega, de OperacionContext.
+   *
+   * Llega como prop y no se importa a propósito. Antes el globo del
+   * municipio multiplicaba por la constante TONELADAS_POR_DESPACHO, que
+   * era 1,38, mientras el resto de la página usaba otros dos factores
+   * distintos: la misma entrega mostraba tres tonelajes según dónde se
+   * mirara. Ahora el valor se deriva una sola vez, del peso medido de la
+   * hoja TONELADAS repartido entre todas las entregas de la operación.
+   */
+  pesoPorEntrega: number;
   /**
    * Códigos DANE a resaltar. El resto se atenúa.
    *
@@ -346,8 +360,9 @@ interface Props {
 const flujoKey = (f: Flujo) => `${f.origenId}::${f.destino.id}`;
 
 function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  return s.replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
   );
 }
 
@@ -364,6 +379,8 @@ function municipalityPopupHtml(
   mode: TerritoryMapMode,
   day: string | null,
   municipios: MunicipiosMapa,
+  pesoPorEntrega: number,
+  iso: string | null,
 ): string {
   const stat = municipios.get(codigoDane);
   if (!stat) {
@@ -378,17 +395,17 @@ function municipalityPopupHtml(
   }
 
   const value = valorTemporal(stat, mode, day);
-  // stat.toneladas es el total FINAL del municipio: solo sirve cuando no
-  // hay día elegido. Con día, se estima sobre los despachos de ese corte.
-  const toneladas =
-    day === null ? stat.toneladas : Math.round(value * TONELADAS_POR_DESPACHO);
+  // stat.toneladas es el total FINAL del municipio, ya calculado con el
+  // mismo factor: solo sirve cuando no hay día elegido. Con día, se
+  // estima sobre las entregas de ese corte.
+  const toneladas = day === null ? stat.toneladas : Math.round(value * pesoPorEntrega);
   const moveLabel = value === 1 ? "entrega" : "entregas";
   const sinDespacho = value === 0;
 
   return `<div style="font-family:'IBM Plex Sans',sans-serif;min-width:200px;font-size:15px">
     <strong style="display:block;font-size:17px;margin-bottom:4px">${escapeHtml(label)}</strong>
     ${stat.zona ? `<span style="display:block;color:#22ABE2;font-size:13px;margin-bottom:2px">${escapeHtml(stat.zona)} del Valle</span>` : ""}
-    <span style="display:block;color:#A8CFE2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day))}</span>
+    <span style="display:block;color:#A8CFE2;font-size:13px;margin-bottom:10px">${escapeHtml(describeLens(mode, day, iso))}</span>
     ${
       sinDespacho
         ? `<span style="color:#F58A76;font-size:14px;font-weight:600">Sin entregas en este periodo</span>`
@@ -410,8 +427,10 @@ export function MapCanvas({
   selectedOrigenId,
   territoryMode,
   territoryDay,
+  fechaActual = null,
   territoryZone,
   municipios,
+  pesoPorEntrega,
   resaltados = null,
   routesMode,
   vistaGeneralToken = 0,
@@ -457,6 +476,13 @@ export function MapCanvas({
   routesModeRef.current = routesMode;
   const municipiosRef = useRef(municipios);
   municipiosRef.current = municipios;
+  // Mismo motivo que los de arriba: el handler de `mousemove` se registra
+  // una sola vez, así que si estos se leyeran por closure el globo
+  // seguiría usando el factor y la fecha del primer render.
+  const pesoPorEntregaRef = useRef(pesoPorEntrega);
+  pesoPorEntregaRef.current = pesoPorEntrega;
+  const fechaActualRef = useRef(fechaActual);
+  fechaActualRef.current = fechaActual;
 
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
@@ -492,6 +518,26 @@ export function MapCanvas({
    */
   const firmaArcosRef = useRef("");
 
+  /**
+   * Los cortes de la rampa, derivados de los valores que se van a
+   * pintar.
+   *
+   * Antes eran dos constantes, [1,4,7,11,16] y [1,1,2,3,4], calibradas
+   * cuando el municipio que más había recibido tenía 21 entregas. Hoy
+   * Dagua tiene 34, y La Cumbre, Sevilla, Yotoco, Restrepo y Trujillo
+   * también quedan por encima del último corte: seis municipios del mismo
+   * tono, con el mapa incapaz de distinguir al primero del sexto.
+   *
+   * Dependen del lente y del día porque en jornada los valores son mucho
+   * más chicos que en acumulado, y una sola escala para los dos deja el
+   * modo jornada casi monocromo.
+   */
+  const cortes = useMemo(
+    () =>
+      calcularCortes([...municipios.values()].map((m) => valorTemporal(m, territoryMode, territoryDay))),
+    [municipios, territoryMode, territoryDay],
+  );
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -509,9 +555,21 @@ export function MapCanvas({
     // ya cubre el zoom, así que estos botones no compiten por el espacio.
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
 
-    const destinoPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
-    const origenPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
-    const municipalityPopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
+    const destinoPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 10,
+    });
+    const origenPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 10,
+    });
+    const municipalityPopup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 8,
+    });
 
     map.on("load", () => {
       let hoveredMunicipalityId: string | null = null;
@@ -630,7 +688,10 @@ export function MapCanvas({
             return;
           }
           if (hoveredMunicipalityId != null) {
-            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
+            map.setFeatureState(
+              { source: "municipios", id: hoveredMunicipalityId },
+              { hovered: false },
+            );
           }
           if (nextId != null) {
             map.setFeatureState({ source: "municipios", id: nextId }, { hovered: true });
@@ -645,6 +706,8 @@ export function MapCanvas({
                   territoryModeRef.current,
                   territoryDayRef.current,
                   municipiosRef.current,
+                  pesoPorEntregaRef.current,
+                  fechaActualRef.current,
                 ),
               )
               .addTo(map);
@@ -655,7 +718,10 @@ export function MapCanvas({
         map.on("mouseleave", "municipios-fill", () => {
           map.getCanvas().style.cursor = "";
           if (hoveredMunicipalityId != null) {
-            map.setFeatureState({ source: "municipios", id: hoveredMunicipalityId }, { hovered: false });
+            map.setFeatureState(
+              { source: "municipios", id: hoveredMunicipalityId },
+              { hovered: false },
+            );
             hoveredMunicipalityId = null;
           }
           municipalityPopup.remove();
@@ -701,7 +767,12 @@ export function MapCanvas({
           ],
           "circle-radius-transition": { duration: 180, delay: 0 },
           "circle-color": ["get", "color"],
-          "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3.5, 2.5],
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            3.5,
+            2.5,
+          ],
           "circle-stroke-width-transition": { duration: 180, delay: 0 },
           "circle-stroke-color": "#0b0e14",
         },
@@ -902,7 +973,10 @@ export function MapCanvas({
       map.on("mouseleave", "origenes-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredOrigenIdRef.current != null) {
-          map.setFeatureState({ source: "origenes", id: hoveredOrigenIdRef.current }, { hover: false });
+          map.setFeatureState(
+            { source: "origenes", id: hoveredOrigenIdRef.current },
+            { hover: false },
+          );
           hoveredOrigenIdRef.current = null;
         }
         origenPopup.remove();
@@ -925,7 +999,10 @@ export function MapCanvas({
       map.on("mouseleave", "destinos-point", () => {
         map.getCanvas().style.cursor = "";
         if (hoveredDestinoIdRef.current != null) {
-          map.setFeatureState({ source: "destinos", id: hoveredDestinoIdRef.current }, { hover: false });
+          map.setFeatureState(
+            { source: "destinos", id: hoveredDestinoIdRef.current },
+            { hover: false },
+          );
           hoveredDestinoIdRef.current = null;
         }
         destinoPopup.remove();
@@ -1143,9 +1220,7 @@ export function MapCanvas({
    *
    * El bucle se detiene solo cuando la pestaña se oculta —ver el `finally`
    * de animate()— y hasta acá no había nada que lo volviera a arrancar:
-   * `rafRef` quedaba en null y el mapa se veía congelado al regresar. Los
-   * arcos dejaban de crecer, el pulso de las líneas se detenía y los
-   * anillos de llegada quedaban clavados a mitad de camino.
+   * `rafRef` quedaba en null y el mapa se veía congelado al regresar.
    *
    * La comprobación de `rafRef.current != null` evita el otro extremo: si
    * el bucle sigue vivo y se dispara un `visibilitychange` de todos
@@ -1254,7 +1329,10 @@ export function MapCanvas({
     whenReady(() => {
       const map = mapRef.current!;
       origenes.forEach((o) => {
-        map.setFeatureState({ source: "origenes", id: o.id }, { selected: o.id === selectedOrigenId });
+        map.setFeatureState(
+          { source: "origenes", id: o.id },
+          { selected: o.id === selectedOrigenId },
+        );
       });
     });
   }, [selectedOrigenId, origenes]);
@@ -1289,10 +1367,7 @@ export function MapCanvas({
         const esCali = normId(code) === CALI_DANE;
         const vivo = municipios.get(code);
         const zona = vivo?.zona ?? getTerritoryStatByCode(code)?.zone ?? null;
-        const tone = territoryToneIndex(
-          valorTemporal(vivo, territoryMode, territoryDay),
-          territoryMode,
-        );
+        const tone = territoryToneIndex(valorTemporal(vivo, territoryMode, territoryDay), cortes);
 
         map.setFeatureState(
           { source: "municipios", id: code },
@@ -1327,7 +1402,16 @@ export function MapCanvas({
       // quedar debajo del relleno.
       subirEtiquetas(map);
     });
-  }, [destinos, municipios, resaltados, selectedDestinoId, territoryDay, territoryMode, territoryZone]);
+  }, [
+    cortes,
+    destinos,
+    municipios,
+    resaltados,
+    selectedDestinoId,
+    territoryDay,
+    territoryMode,
+    territoryZone,
+  ]);
 
   // --- etiquetas de municipio (nombre + conteo) ---------------------------
   useEffect(() => {
@@ -1501,7 +1585,8 @@ export function MapCanvas({
               { intensity: intensityFor(nuevoTotal) },
             );
             const meta = destinoMetaByIdRef.current.get(destinoId);
-            if (meta) activityEngineRef.current.spawn(destinoId, meta.nombre, delta, performance.now());
+            if (meta)
+              activityEngineRef.current.spawn(destinoId, meta.nombre, delta, performance.now());
           }
         });
       }
@@ -1539,7 +1624,6 @@ export function MapCanvas({
       const map = mapRef.current!;
       // En modo jornada los nodos estorban: el municipio ya lleva su
       // propio número y la lectura es el color del área, no el punto.
-      // Mismo criterio que el `#capa-nodos { opacity: 0 }` del HTML.
       const hideNodes = routesMode === "color" || territoryMode === "jornada";
       const pointOpacity = hideNodes ? 0 : 1;
       const routeOpacity = routesMode === "color" ? 0 : 1;

@@ -391,6 +391,38 @@ var Info = createLucideIcon("info", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var Landmark = createLucideIcon("landmark", [
+	["path", {
+		d: "M10 18v-7",
+		key: "wt116b"
+	}],
+	["path", {
+		d: "M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z",
+		key: "1m329m"
+	}],
+	["path", {
+		d: "M14 18v-7",
+		key: "vav6t3"
+	}],
+	["path", {
+		d: "M18 18v-7",
+		key: "aexdmj"
+	}],
+	["path", {
+		d: "M3 22h18",
+		key: "8prr45"
+	}],
+	["path", {
+		d: "M6 18v-7",
+		key: "1ivflk"
+	}]
+]);
+/**
+* @license lucide-react v0.575.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var List = createLucideIcon("list", [
 	["path", {
 		d: "M3 5h.01",
@@ -610,4 +642,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { ArrowLeft as S, ChevronLeft as _, Package as a, Building2 as b, Map as c, Info as d, House as f, ChevronRight as g, FileText as h, RotateCcw as i, MapPin as l, HandHeart as m, Warehouse as n, PackageCheck as o, HeartHandshake as p, Truck as r, Menu as s, X as t, List as u, ChevronDown as v, Boxes as x, CalendarDays as y };
+export { ArrowLeft as C, Boxes as S, ChevronRight as _, Package as a, CalendarDays as b, Map as c, Landmark as d, Info as f, FileText as g, HandHeart as h, RotateCcw as i, MapPin as l, HeartHandshake as m, Warehouse as n, PackageCheck as o, House as p, Truck as r, Menu as s, X as t, List as u, ChevronLeft as v, Building2 as x, ChevronDown as y };

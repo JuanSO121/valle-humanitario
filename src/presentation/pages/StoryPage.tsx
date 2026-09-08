@@ -339,7 +339,7 @@ function Contenido() {
         <section id="mapa-de-ayudas" className="relative h-dvh bg-[#123E5C]">
           <DashboardPage embedded />
         </section>
-        <footer className="bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-33">
+        <footer className="bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-32">
           <div>
             <b className="block font-serif text-xl text-[#fbf8c6]">Ruta de la Solidaridad</b>
             <p className="mt-3">
