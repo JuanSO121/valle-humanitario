@@ -132,8 +132,14 @@ function convieneReintentar(resultado: unknown): resultado is Response {
  * Lo que la tarea devuelva —incluida una respuesta con error tras
  * agotar los intentos— sale de acá sin tocar, para que el repositorio
  * haga su propio diagnóstico y React Query decida si reintenta.
+ *
+ * `etiqueta` es solo para el registro, pero hace toda la diferencia al
+ * diagnosticar. La cola recibe una función, no una URL, así que sin este
+ * dato el aviso decía "HTTP 404 en el intento 1" sin nombrar la ruta, y
+ * un tropiezo aislado se lee igual que una ruta rota. Con el nombre, dos
+ * avisos seguidos de la misma ruta ya son un patrón y no una casualidad.
  */
-export async function enCola<T>(tarea: () => Promise<T>): Promise<T> {
+export async function enCola<T>(tarea: () => Promise<T>, etiqueta = "petición"): Promise<T> {
   let ultimoError: unknown = null;
 
   for (let intento = 0; intento <= REINTENTOS; intento += 1) {
@@ -146,9 +152,11 @@ export async function enCola<T>(tarea: () => Promise<T>): Promise<T> {
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.warn(
-            `[cola] HTTP ${resultado.status} en el intento ${intento + 1}. ` +
-              `Reintentando en ${espera(intento)} ms. ` +
-              "Casi siempre es el Web App atendiendo otra petición.",
+            `[cola] ${etiqueta}: HTTP ${resultado.status} en el intento ${intento + 1} de ` +
+              `${REINTENTOS + 1}. Reintentando en ${espera(intento)} ms.\n` +
+              "Si el siguiente intento pasa, no hay nada que corregir: es el Web App " +
+              "atendiendo otra petición. Si SIEMPRE falla la misma ruta, no es " +
+              "concurrencia: republicar con Nueva versión y correr probarRutas().",
           );
         }
         // El cupo se suelta ANTES de dormir: si no, la espera de este
@@ -166,11 +174,18 @@ export async function enCola<T>(tarea: () => Promise<T>): Promise<T> {
       ultimoError = error;
       liberarCupo();
       if (intento >= REINTENTOS) break;
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn(`[cola] ${etiqueta}: la red falló en el intento ${intento + 1}.`, error);
+      }
       await dormir(espera(intento));
     }
   }
 
-  throw ultimoError ?? new Error("La petición falló tras agotar los reintentos de la cola.");
+  throw (
+    ultimoError ??
+    new Error(`La ${etiqueta} falló tras ${REINTENTOS + 1} intentos de la cola.`)
+  );
 }
 
 /**

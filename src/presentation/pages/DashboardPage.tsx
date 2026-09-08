@@ -20,6 +20,7 @@ import { AvisoEntrega } from "@/presentation/components/AvisoEntrega";
 import { DestinoPanel } from "@/presentation/components/DestinoPanel";
 import { OrigenPanel } from "@/presentation/components/OrigenPanel";
 import { TopBar } from "@/presentation/components/TopBar";
+import { BarraMovil, HojaFiltros } from "@/presentation/components/ControlesMovil";
 import { useOperacion } from "@/presentation/state/OperacionContext";
 import { useFoco } from "@/presentation/state/FocoContext";
 import { useAyuda } from "@/application/hooks/useAyuda";
@@ -31,11 +32,7 @@ import {
   type TerritoryRoutesMode,
   type TerritoryZone,
 } from "@/presentation/data/territoryData";
-import {
-  dayFromIsoDate,
-  describeLens,
-  valorTemporal,
-} from "@/presentation/data/territoryTime";
+import { dayFromIsoDate, describeLens, valorTemporal } from "@/presentation/data/territoryTime";
 import type { ActivityFrame } from "@/presentation/components/dispatchActivityEngine";
 
 /**
@@ -47,7 +44,7 @@ import type { ActivityFrame } from "@/presentation/components/dispatchActivityEn
  * botón está presente. Repartido a mano en tres sitios, cambiar la
  * altura significaba acordarse de los tres.
  */
-const COLUMNA_TOP = "top-[calc(3.5rem+env(safe-area-inset-top))]";
+const COLUMNA_TOP = "top-[calc(4.25rem+env(safe-area-inset-top))]";
 const COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
 
 /**
@@ -56,8 +53,17 @@ const COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
  * Es la altura de la columna más el alto del botón —unos 40 px— más aire.
  * Si cambia COLUMNA_TOP, este número se recalcula igual.
  */
-const PILDORA_TOP_CON_BOTON = "top-[calc(6.5rem+env(safe-area-inset-top))]";
+const PILDORA_TOP_CON_BOTON = "top-[calc(7.25rem+env(safe-area-inset-top))]";
 const PILDORA_TOP_SOLA = "top-[calc(0.75rem+env(safe-area-inset-top))]";
+
+/**
+ * A partir de qué proporción de la pantalla la hoja inferior estorba.
+ *
+ * Por debajo de la mitad queda espacio de sobra para el mapa y para los
+ * controles, y esconderlos ahí sería quitarle a la persona el filtro de
+ * zonas justo cuando está comparando municipios, que es cuando lo usa.
+ */
+const HOJA_TAPA_DESDE = 0.5;
 
 /**
  * Los dos orígenes, con el color exacto con el que MapCanvas pinta sus
@@ -133,8 +139,7 @@ function GuiaDelMapa({
    * La escucha va sobre el contenedor del mapa y no sobre `document`, y
    * esa diferencia es todo: la guía se monta cuando carga la página, no
    * cuando el mapa aparece en pantalla, así que con `document` cualquier
-   * clic del relato la cerraba sin que nadie la hubiera visto. El del
-   * ícono del sidebar que lleva al mapa, entre otros.
+   * clic del relato la cerraba sin que nadie la hubiera visto.
    *
    * `pointerdown` y no `click`: el mapa reacciona al arrastre, y
    * esperando al `click` un gesto de desplazamiento la dejaría abierta
@@ -174,7 +179,7 @@ function GuiaDelMapa({
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar"
-          className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]"
+          className="absolute right-3 top-3 grid size-11 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]"
         >
           <X className="size-5" aria-hidden />
         </button>
@@ -244,6 +249,30 @@ function useIsMobile(breakpointPx = 768): boolean {
   return isMobile;
 }
 
+/**
+ * Alto de la ventana, en píxeles, o 0 mientras no se conozca.
+ *
+ * Va como estado y no se lee `window.innerHeight` en el render porque
+ * esta página se dibuja también en el servidor, donde `window` no
+ * existe. Leerlo directo tumba el render con "window is not defined".
+ */
+function useAltoPantalla(): number {
+  const [alto, setAlto] = useState(0);
+  useEffect(() => {
+    const medir = () => setAlto(window.innerHeight);
+    medir();
+    window.addEventListener("resize", medir);
+    // En iOS la barra del navegador aparece y desaparece al desplazarse,
+    // y eso cambia el alto sin disparar `resize` en todos los casos.
+    window.visualViewport?.addEventListener("resize", medir);
+    return () => {
+      window.removeEventListener("resize", medir);
+      window.visualViewport?.removeEventListener("resize", medir);
+    };
+  }, []);
+  return alto;
+}
+
 interface DashboardPageProps {
   embedded?: boolean;
 }
@@ -266,6 +295,28 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const [lens, setLens] = useState<TerritoryMapMode>("acumulado");
   const [territoryZone, setTerritoryZone] = useState<TerritoryZone | "todas">("todas");
   const [routesMode, setRoutesMode] = useState<TerritoryRoutesMode>("visibles");
+
+  /**
+   * Cuánto ocupa la hoja inferior en celular, en píxeles. 0 si no hay
+   * ninguna abierta.
+   *
+   * Lo reporta HojaInferior en cada cuadro del arrastre, y lo consumen
+   * tres cosas: el mapa, para correr su centro hacia arriba y que el
+   * municipio tocado no quede detrás de la hoja; el timeline, para
+   * subirse encima; y los controles, para apartarse cuando ya no caben.
+   */
+  const [altoHoja, setAltoHoja] = useState(0);
+
+  /**
+   * Si la hoja de filtros está abierta.
+   *
+   * El estado vive acá y no dentro de la barra porque la hoja se monta
+   * al nivel de los paneles, no dentro del bloque inferior. Ahí abajo
+   * heredaría el `pointer-events-none` del contenedor y se abriría sin
+   * responder a nada, además de quedar atrapada en su contexto de
+   * apilamiento.
+   */
+  const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
 
   /**
    * Cada incremento le pide a MapCanvas que vuelva a encuadrar.
@@ -295,6 +346,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
   const MIN_GAP_BETWEEN_POPS_MS = 1200;
 
   const isMobile = useIsMobile();
+  const altoPantalla = useAltoPantalla();
 
   const { data: origenes } = useOrigenes();
   const { data: destinos } = useDestinos();
@@ -417,17 +469,12 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    * Cuando ese nombre no calzaba, la función devolvía undefined, la
    * comparación fallaba contra CUALQUIER zona, y ese municipio se
    * quedaba sin línea en Norte, en Centro y en Sur, pero seguía pintado
-   * porque el polígono había usado el código. Eso era el "algunos quedan
-   * como si no hicieran parte".
+   * porque el polígono había usado el código.
    *
    * Y no era un caso raro: 18 de los 42 municipios del Valle llevan
    * tilde o nombre compuesto —Riofrío, Tuluá, Calima - El Darién,
    * Guadalajara de Buga— y todos dependían de que esa búsqueda por texto
    * acertara.
-   *
-   * `normMunicipalityName` es el mismo normalizador que usa el mapa para
-   * resolver el clic sobre un área: hace case-fold, saca tildes y
-   * resuelve los alias conocidos.
    */
   const zonaPorMunicipio = useMemo(() => {
     const porNombre = new Map<string, string | null>();
@@ -463,6 +510,37 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
     viewState.origenId,
     zonaPorMunicipio,
   ]);
+
+  /**
+   * Las zonas que existen en los datos, no una lista escrita a mano: si
+   * el Excel reclasifica un municipio, el filtro se actualiza solo.
+   *
+   * Se calcula acá y no dentro de los controles porque ahora hay dos
+   * juegos de controles, el de escritorio y el de celular, y duplicar el
+   * cálculo es duplicar la regla.
+   */
+  const zonasDisponibles = useMemo(
+    () =>
+      [
+        ...new Set(
+          [...municipiosMapa.values()]
+            .map((m) => m.zona)
+            .filter((z): z is string => typeof z === "string" && z.length > 0),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "es")),
+    [municipiosMapa],
+  );
+
+  /** Lo que se está mirando ahora mismo, con el lente y el día puestos. */
+  const resumenVisible = useMemo(() => {
+    const visibles = [...municipiosMapa.values()].filter(
+      (m) => territoryZone === "todas" || m.zona === territoryZone,
+    );
+    return {
+      entregas: visibles.reduce((sum, m) => sum + valorTemporal(m, lens, territoryDay), 0),
+      municipios: visibles.filter((m) => valorTemporal(m, lens, territoryDay) > 0).length,
+    };
+  }, [municipiosMapa, territoryZone, lens, territoryDay]);
 
   const origenSeleccionado = useMemo(
     () => origenes?.find((o) => o.id === viewState.origenId) ?? null,
@@ -500,7 +578,43 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
     setViewState((prev) => viewTransitions.clearInstantFlag(prev));
   }, [viewState.timelineInstant, viewState.timelineDate]);
 
-  const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
+  const hayPanelAbierto = Boolean(viewState.destinoId || viewState.origenId);
+  const hayPanelAbiertoEnMobile = isMobile && hayPanelAbierto;
+
+  /**
+   * Cuando no hay panel, la hoja no ocupa nada.
+   *
+   * HojaInferior ya avisa al desmontarse, pero este efecto es la red de
+   * seguridad: si un panel se cierra por un camino que no desmonta la
+   * hoja, el mapa se quedaría descentrado y el timeline flotando a media
+   * pantalla, sin nada visible que explique por qué.
+   */
+  useEffect(() => {
+    if (!hayPanelAbiertoEnMobile) setAltoHoja(0);
+  }, [hayPanelAbiertoEnMobile]);
+
+  /**
+   * Abrir una ficha cierra los filtros.
+   *
+   * Las dos son hojas inferiores y se montarían una encima de la otra,
+   * con la de filtros tapando justo la ficha que se acaba de pedir. Se
+   * cierra la que la persona ya no está mirando.
+   */
+  useEffect(() => {
+    if (hayPanelAbierto) setFiltrosAbiertos(false);
+  }, [hayPanelAbierto]);
+
+  /**
+   * Los controles solo se esconden cuando la hoja pasa de la mitad de la
+   * pantalla.
+   *
+   * Antes desaparecían apenas se abría una ficha. Eso le quitaba a la
+   * persona el filtro de zonas y la línea de tiempo justo en el momento
+   * en que estaba comparando municipios, que es cuando los usa. Con la
+   * hoja asomada hay sitio de sobra para los tres.
+   */
+  const hojaTapaLosControles =
+    hayPanelAbiertoEnMobile && altoPantalla > 0 && altoHoja > altoPantalla * HOJA_TAPA_DESDE;
 
   /**
    * Volver a donde estaba la persona antes de bajar al mapa.
@@ -523,9 +637,8 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
    * bajó con el scroll no ve el botón, porque no habría nada distinto a
    * donde ya está.
    *
-   * En móvil se oculta mientras hay un panel abierto, igual que los
-   * demás controles: el panel ya ocupa la pantalla y tiene su propio
-   * cierre.
+   * En móvil se oculta apenas hay una ficha abierta, y no solo cuando la
+   * hoja crece: queda en la esquina donde cae el pulgar al arrastrar.
    */
   const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
 
@@ -582,10 +695,14 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           selectedOrigenId={viewState.origenId}
           territoryMode={lens}
           territoryDay={territoryDay}
+          fechaActual={isoDate}
           territoryZone={territoryZone}
           municipios={municipiosMapa}
           pesoPorEntrega={operacion.pesoPorEntrega}
-          fechaActual={isoDate}
+          /* Lo que ocupa la hoja abajo. El mapa corre su centro hacia
+             arriba, así que el municipio recién tocado queda en la franja
+             que sí se ve en vez de justo detrás de la hoja. */
+          desplazamientoInferior={isMobile ? altoHoja : 0}
           resaltados={resaltados}
           routesMode={routesMode}
           vistaGeneralToken={vistaGeneralToken}
@@ -614,23 +731,26 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
 
       {mostrarGuia && <GuiaDelMapa raizRef={raizRef} onCerrar={cerrarGuia} />}
 
-      <MarcadorHUD
-        despachos={totalDespachosAsOf}
-        day={territoryDay}
-        lens={lens}
-        instant={viewState.timelineInstant}
-      />
+      {/* El marcador flotante NO se dibuja en celular.
+          Decía "142 entregas" mientras el panel de abajo decía "215
+          entregas": son cosas distintas —arcos dibujados contra enlaces a
+          municipio— pero nadie que lea un mapa tiene por qué saberlo, y
+          dos números con la misma etiqueta a un dedo de distancia son
+          peor que ninguno. En celular manda la cifra de la barra
+          inferior, que es la que responde a los filtros. */}
+      {!isMobile && (
+        <MarcadorHUD
+          despachos={totalDespachosAsOf}
+          day={territoryDay}
+          lens={lens}
+          instant={viewState.timelineInstant}
+        />
+      )}
 
       {/* Esquina superior izquierda, en una columna: primero cómo salir,
           después cómo leer. La leyenda de orígenes ya vivía acá; el botón
           de regreso se le pone encima en vez de buscarle otro rincón,
           porque un "volver" en cualquier otro lado no se encuentra.
-
-          La columna entera arranca más abajo que el borde: pegada
-          arriba, el botón competía con el marcador y con la barra
-          superior del mapa. La leyenda baja con él a propósito, para que
-          la distancia entre los dos siga siendo la que se decidió y no un
-          resto de mover uno solo.
 
           El contenedor va sin `pointer-events`, y cada hijo activa los
           suyos: si no, esta caja invisible se comería los clics del mapa
@@ -653,30 +773,35 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           </button>
         )}
 
-        {/* Siempre visible, no solo cuando hay algo seleccionado: la
-            razón más común para querer reiniciar es haber movido la
-            cámara, y eso este componente no puede detectarlo. Un botón
-            que aparece a veces obliga a recordar cuándo aparece. */}
-        <button
-          type="button"
-          onClick={reiniciarVista}
-          className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]"
-        >
-          <RotateCcw className="size-4 shrink-0" aria-hidden />
-          Reiniciar vista
-        </button>
+        {/* Reiniciar y la leyenda solo en escritorio. En celular los dos
+            se mudaron a la barra inferior y a la hoja de filtros: acá
+            arriba se pisaban con la barra superior y con el marcador, y
+            entre los tres tapaban el cuarto superior del mapa. */}
+        {!isMobile && (
+          <>
+            {/* Siempre visible, no solo cuando hay algo seleccionado: la
+                razón más común para querer reiniciar es haber movido la
+                cámara, y eso este componente no puede detectarlo. Un
+                botón que aparece a veces obliga a recordar cuándo
+                aparece. */}
+            <button
+              type="button"
+              onClick={reiniciarVista}
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]"
+            >
+              <RotateCcw className="size-4 shrink-0" aria-hidden />
+              Reiniciar vista
+            </button>
 
-        {!viewState.destinoId && !viewState.origenId && <LeyendaOrigenes />}
+            {!viewState.destinoId && !viewState.origenId && <LeyendaOrigenes />}
+          </>
+        )}
       </div>
 
       {/* El contenedor va SIN pointer-events. Antes era
           `pointer-events-auto` y, como abarca todo el ancho, funcionaba
           como una barra invisible que se comía los clics del borde
-          superior del mapa. Quien tiene que recibirlos es la píldora.
-
-          En móvil baja cuando hay botón de regreso, que ocupa la esquina
-          izquierda a esa misma altura. En escritorio no hace falta: uno
-          está a la izquierda y la otra al centro. */}
+          superior del mapa. Quien tiene que recibirlos es la píldora. */}
       {foco.categoria && resaltados && (
         <div
           className={`pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${
@@ -698,7 +823,11 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         </div>
       )}
 
-      <AvisoEntrega frame={visibleActivity} />
+      {/* En celular solo mientras corre la línea de tiempo, que es
+          cuando "nueva entrega" significa algo. Fuera de ese momento era
+          una tarjeta flotando sobre los controles sin nada que la
+          hubiera pedido. */}
+      {(!isMobile || isoDate !== null) && <AvisoEntrega frame={visibleActivity} />}
 
       <TopBar
         viewState={viewState}
@@ -709,11 +838,12 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         }}
       />
 
-      {!hayPanelAbiertoEnMobile && (
+      {!isMobile && (
         <TerritoryControls
           municipios={municipiosMapa}
           lens={lens}
           day={territoryDay}
+          iso={isoDate}
           zone={territoryZone}
           routesMode={routesMode}
           onLensChange={setLens}
@@ -722,10 +852,33 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         />
       )}
 
+      {/* La hoja de filtros va acá, a la altura de los paneles, y no
+          dentro del bloque inferior: ahí heredaría su `pointer-events-none`
+          y se abriría sin poder tocarse. */}
+      {isMobile && (
+        <HojaFiltros
+          abierta={filtrosAbiertos}
+          onCerrar={() => setFiltrosAbiertos(false)}
+          zonasDisponibles={zonasDisponibles}
+          lens={lens}
+          day={territoryDay}
+          iso={isoDate}
+          zone={territoryZone}
+          routesMode={routesMode}
+          onLensChange={setLens}
+          onZoneChange={setTerritoryZone}
+          onRoutesModeChange={setRoutesMode}
+          onReiniciar={reiniciarVista}
+        />
+      )}
+
       {viewState.level === "DESTINO" && viewState.destinoId && (
         <DestinoPanel
           destinoId={viewState.destinoId}
           isMobile={isMobile}
+          /* En celular el panel se dibuja dentro de una HojaInferior y
+             reporta acá cuánto ocupa. Ver DestinoPanel. */
+          onAlturaChange={setAltoHoja}
           onClose={() => setViewState((prev) => viewTransitions.toAll(prev))}
         />
       )}
@@ -737,6 +890,7 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
           flujos={flujosFiltrados}
           isMobile={isMobile}
           enFechaSeleccionada={isoDate !== null}
+          onAlturaChange={setAltoHoja}
           /* Mismo camino que el clic en el mapa: al elegir un destino
              desde la lista del origen, el panel del origen se reemplaza
              por el del destino. No hace falta cerrarlo antes, la
@@ -749,30 +903,63 @@ export function DashboardPage({ embedded = false }: DashboardPageProps) {
         />
       )}
 
-      {!hayPanelAbiertoEnMobile && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-3">
-          <Timeline
-            dates={timelineDates}
-            currentDate={viewState.timelineDate}
-            onActivate={(first) => {
-              setLinesDismissed(false);
-              setViewState((prev) => viewTransitions.startTimeline(first, prev));
-            }}
-            onSeek={(date) => {
-              setLinesDismissed(false);
-              setViewState((prev) => viewTransitions.seekTimeline(date, prev));
-            }}
-            onAdvance={(date) => {
-              setLinesDismissed(false);
-              setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
-            }}
-            onExit={() => {
-              setLinesDismissed(false);
-              setViewState((prev) => viewTransitions.exitTimeline(prev));
-            }}
+      {/* UNA sola región abajo, no dos flotando por separado. Antes los
+          controles vivían pegados al borde izquierdo y la línea de tiempo
+          centrada más abajo, y entre las dos partían el tercio inferior
+          en dos franjas que no se leían como un conjunto.
+
+          Sube con la hoja para no quedar debajo de ella. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 flex flex-col items-stretch gap-2 px-3 md:items-center"
+        style={{
+          bottom: `calc(0.75rem + env(safe-area-inset-bottom) + ${isMobile ? altoHoja : 0}px)`,
+          transition: "bottom 220ms cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {isMobile && !hojaTapaLosControles && (
+          <BarraMovil
+            entregas={resumenVisible.entregas}
+            municipios={resumenVisible.municipios}
+            lens={lens}
+            day={territoryDay}
+            iso={isoDate}
+            zone={territoryZone}
+            routesMode={routesMode}
+            filtrosAbiertos={filtrosAbiertos}
+            onAbrirFiltros={() => setFiltrosAbiertos(true)}
+            onReiniciar={reiniciarVista}
           />
-        </div>
-      )}
+        )}
+
+        {!hojaTapaLosControles && (
+          /* `justify-center` para que en escritorio la píldora quede
+             centrada, y `w-full` en el hijo para que en celular ocupe
+             todo el ancho disponible: ahí el deslizador necesita cada
+             píxel que haya. */
+          <div className="flex w-full justify-center [&>*]:w-full md:[&>*]:w-auto">
+            <Timeline
+              dates={timelineDates}
+              currentDate={viewState.timelineDate}
+              onActivate={(first) => {
+                setLinesDismissed(false);
+                setViewState((prev) => viewTransitions.startTimeline(first, prev));
+              }}
+              onSeek={(date) => {
+                setLinesDismissed(false);
+                setViewState((prev) => viewTransitions.seekTimeline(date, prev));
+              }}
+              onAdvance={(date) => {
+                setLinesDismissed(false);
+                setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
+              }}
+              onExit={() => {
+                setLinesDismissed(false);
+                setViewState((prev) => viewTransitions.exitTimeline(prev));
+              }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -782,6 +969,8 @@ interface TerritoryControlsProps {
   lens: TerritoryMapMode;
   /** Derivado del timeline. null = toda la operación. */
   day: string | null;
+  /** La fecha ISO del día elegido, para poder nombrar el mes. */
+  iso: string | null;
   zone: TerritoryZone | "todas";
   routesMode: TerritoryRoutesMode;
   onLensChange: (lens: TerritoryMapMode) => void;
@@ -795,6 +984,7 @@ function TerritoryControls({
   municipios,
   lens,
   day,
+  iso,
   zone,
   routesMode,
   onLensChange,
@@ -822,21 +1012,21 @@ function TerritoryControls({
     (sum, m) => sum + valorTemporal(m, lens, day),
     0,
   );
-  const conEntregas = visibleMunicipalities.filter(
-    (m) => valorTemporal(m, lens, day) > 0,
-  ).length;
+  const conEntregas = visibleMunicipalities.filter((m) => valorTemporal(m, lens, day) > 0).length;
 
   return (
-    /* Esquina inferior izquierda. Antes iba arriba a la izquierda, donde
-       ahora está la leyenda de orígenes: primero se entiende de dónde
-       sale cada línea y después se filtra el territorio. */
-    <aside className="pointer-events-auto absolute inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[45dvh] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:inset-x-auto md:left-4 md:max-h-[52dvh] md:w-[20rem]">
+    /* Solo escritorio. Esquina inferior izquierda, donde primero se
+       entiende de dónde sale cada línea con la leyenda y después se
+       filtra el territorio. En celular esto lo reemplaza ControlesMovil:
+       nueve botones en el borde de un teléfono dejaban al mapa sin
+       espacio y ninguno llegaba al tamaño mínimo de un pulgar. */
+    <aside className="pointer-events-auto absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 z-10 hidden max-h-[52dvh] w-[20rem] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:block">
       {/* Dos datos en una línea. La cifra grande ya vive en el marcador,
           así que acá alcanza con decir qué se está viendo. */}
       <p className="text-[15px] leading-tight text-foreground">
-        <b className="font-semibold">{plural(totalDespachos, "despacho", "despachos")}</b>{" "}
-        en {plural(conEntregas, "municipio", "municipios")}
-        <span className="text-muted-foreground"> · {describeLens(lens, day)}</span>
+        <b className="font-semibold">{plural(totalDespachos, "entrega", "entregas")}</b> en{" "}
+        {plural(conEntregas, "municipio", "municipios")}
+        <span className="text-muted-foreground"> · {describeLens(lens, day, iso)}</span>
       </p>
 
       <div className="mt-2 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1">
@@ -914,7 +1104,11 @@ function ToggleButton({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+      /* `min-h-11` es el mínimo cómodo para un pulgar. Con el alto que
+         daba el padding solo, estos botones medían 32 px y en celular
+         obligaban a apuntar, justo en el borde inferior de la pantalla,
+         que es donde peor se acierta. */
+      className={`min-h-11 rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 ${
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"

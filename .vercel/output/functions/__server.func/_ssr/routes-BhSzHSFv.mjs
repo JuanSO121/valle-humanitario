@@ -2,8 +2,8 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-import { C as ArrowLeft, S as Boxes, _ as ChevronRight, a as Package, b as CalendarDays, c as Map$1, d as Landmark, f as Info, g as FileText, h as HandHeart, i as RotateCcw, l as MapPin, m as HeartHandshake, n as Warehouse, o as PackageCheck, p as House, r as Truck, s as Menu, t as X, u as List, v as ChevronLeft, x as Building2, y as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-RA1fHSDW.js
+import { C as Boxes, S as Building2, _ as FileText, a as RotateCcw, b as ChevronDown, c as Menu, d as List, f as Landmark, g as HandHeart, h as HeartHandshake, i as SlidersHorizontal, l as Map$1, m as House, n as Warehouse, o as Package, p as Info, r as Truck, s as PackageCheck, t as X, u as MapPin, v as ChevronRight, w as ArrowLeft, x as CalendarDays, y as ChevronLeft } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BhSzHSFv.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -132,8 +132,14 @@ function convieneReintentar(resultado) {
 * Lo que la tarea devuelva —incluida una respuesta con error tras
 * agotar los intentos— sale de acá sin tocar, para que el repositorio
 * haga su propio diagnóstico y React Query decida si reintenta.
+*
+* `etiqueta` es solo para el registro, pero hace toda la diferencia al
+* diagnosticar. La cola recibe una función, no una URL, así que sin este
+* dato el aviso decía "HTTP 404 en el intento 1" sin nombrar la ruta, y
+* un tropiezo aislado se lee igual que una ruta rota. Con el nombre, dos
+* avisos seguidos de la misma ruta ya son un patrón y no una casualidad.
 */
-async function enCola(tarea) {
+async function enCola(tarea, etiqueta = "petición") {
 	let ultimoError = null;
 	for (let intento = 0; intento <= REINTENTOS; intento += 1) {
 		await tomarCupo();
@@ -153,7 +159,7 @@ async function enCola(tarea) {
 			await dormir(espera(intento));
 		}
 	}
-	throw ultimoError ?? /* @__PURE__ */ new Error("La petición falló tras agotar los reintentos de la cola.");
+	throw ultimoError ?? /* @__PURE__ */ new Error(`La ${etiqueta} falló tras 4 intentos de la cola.`);
 }
 /**
 * AyudasApiRepository.ts
@@ -24455,179 +24461,6 @@ var ORIGEN_DIM_COLOR = {
 };
 Object.fromEntries(Object.entries(ORIGEN_COLOR).map(([id, color]) => [normId(id), color]));
 Object.fromEntries(Object.entries(ORIGEN_DIM_COLOR).map(([id, color]) => [normId(id), color]));
-/**
-* Timeline.tsx
-* -----------------------------------------------------------------------
-* Control de jornadas del mapa. Componente de presentación puro: recibe
-* las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
-*
-* La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
-* dibujadas y solo se anima si la persona toca reproducir.
-*
-* El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
-* que sale el presupuesto de la cascada de arcos. Una jornada dura lo
-* que tarda su último arco en salir y llegar, así que las líneas siempre
-* alcanzan a completarse antes de que cambie el día.
-*
-* Seek contra advance, la distinción que ya vive en viewState.ts:
-*   · Reproducir o avanzar un día llama a onAdvance, que anima.
-*   · Arrastrar varios días llama a onSeek, que salta sin animar.
-*     Animar un salto de seis días se lee como un error visual.
-*
-* El efecto del intervalo depende solo de [playing]. Eso deja la función
-* del tick con las props del momento en que arrancó, así que dates y
-* currentDate se leen desde refs que se actualizan en cada render. Sin
-* eso, cada tick recalcula el siguiente de la misma fecha inicial y la
-* reproducción avanza una vez y se traba.
-* -----------------------------------------------------------------------
-*/
-function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
-	const [playing, setPlaying] = (0, import_react.useState)(false);
-	const intervalRef = (0, import_react.useRef)(null);
-	const datesRef = (0, import_react.useRef)(dates);
-	datesRef.current = dates;
-	const currentDateRef = (0, import_react.useRef)(currentDate);
-	currentDateRef.current = currentDate;
-	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
-	const activo = currentIndex >= 0;
-	const alFinal = activo && currentIndex === dates.length - 1;
-	(0, import_react.useEffect)(() => {
-		if (currentDate === null) setPlaying(false);
-	}, [currentDate]);
-	(0, import_react.useEffect)(() => {
-		if (!playing) {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
-			intervalRef.current = null;
-			return;
-		}
-		const stepMs = computeTimelineStepMs(datesRef.current.length);
-		intervalRef.current = setInterval(() => {
-			const freshDates = datesRef.current;
-			const freshCurrent = currentDateRef.current;
-			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
-			if (next === void 0) {
-				setPlaying(false);
-				return;
-			}
-			onAdvance(next);
-		}, stepMs);
-		return () => {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
-		};
-	}, [playing]);
-	const alternarReproduccion = () => {
-		if (!activo && dates.length > 0) {
-			const primera = dates[0];
-			if (primera !== void 0) onActivate(primera);
-		} else if (alFinal) {
-			const primera = dates[0];
-			if (primera !== void 0) onSeek(primera);
-		}
-		setPlaying((v) => !v);
-	};
-	const handleScrub = (event) => {
-		setPlaying(false);
-		const index = Number(event.target.value);
-		const date = dates[index];
-		if (date === void 0) return;
-		if (!activo) onActivate(date);
-		else if (index === currentIndex + 1) onAdvance(date);
-		else onSeek(date);
-	};
-	if (dates.length === 0) return null;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-surface/95 px-4 py-2.5 shadow-sm backdrop-blur",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: alternarReproduccion,
-				"aria-label": playing ? "Pausar" : "Reproducir día por día",
-				className: "flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90",
-				children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-					width: "14",
-					height: "14",
-					viewBox: "0 0 24 24",
-					fill: "currentColor",
-					"aria-hidden": true,
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-						x: "5",
-						y: "4",
-						width: "5",
-						height: "16",
-						rx: "1"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-						x: "14",
-						y: "4",
-						width: "5",
-						height: "16",
-						rx: "1"
-					})]
-				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-					width: "14",
-					height: "14",
-					viewBox: "0 0 24 24",
-					fill: "currentColor",
-					"aria-hidden": true,
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
-				})
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-				type: "range",
-				min: 0,
-				max: dates.length - 1,
-				step: 1,
-				value: currentIndex >= 0 ? currentIndex : 0,
-				onChange: handleScrub,
-				"aria-label": "Día",
-				className: "h-1.5 w-44 shrink-0 accent-foreground md:w-72"
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "min-w-[6rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground",
-				"aria-live": "polite",
-				children: currentDate ?? dates[0]
-			}),
-			activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: () => {
-					setPlaying(false);
-					onExit();
-				},
-				className: "ml-1 shrink-0 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground",
-				children: "Ver todo"
-			})
-		]
-	});
-}
-/**
-* useToneladas.ts
-* -----------------------------------------------------------------------
-* Serie diaria de toneladas, desde `route=toneladas`.
-*
-* CAMBIO: se quita `retry: false`, por la misma razón que en useAyuda.
-*
-* Estaba puesto cuando la ruta todavía no existía: reintentar un 404
-* permanente no sirve de nada. Pero la ruta ya está publicada y responde,
-* así que ahora ese flag hace daño.
-*
-* Un Web App de Apps Script serializa las ejecuciones por usuario. El
-* tablero monta ocho consultas a la vez y las que se pisan reciben un 404
-* de la infraestructura de Google, no del script. Con `retry: false`, ese
-* fallo de un segundo se vuelve definitivo para toda la sesión: el peso
-* cae al respaldo por entregas y ahí se queda, aunque el backend esté
-* perfecto y la hoja tenga los datos.
-*
-* Es un fallo especialmente silencioso: no aparece ningún mensaje, solo
-* una cifra de toneladas parecida a la buena pero distinta.
-*/
-function useToneladas() {
-	return useQuery({
-		queryKey: ["toneladas"],
-		queryFn: () => ayudasApiRepository.getToneladas(),
-		staleTime: CATALOG_STALE_TIME_MS$1,
-		retry: 3,
-		retryDelay: REINTENTO_ESCALONADO$1
-	});
-}
 var CALI = "Santiago de Cali";
 var MESES = [
 	"enero",
@@ -24898,6 +24731,218 @@ function rangoLargoDe(desde, hasta) {
 	if (!diaA || !diaB || !nombreA || !nombreB) return "";
 	if (mesA === mesB) return `del ${Number(diaA)} al ${Number(diaB)} de ${nombreB}`;
 	return `del ${Number(diaA)} de ${nombreA} al ${Number(diaB)} de ${nombreB}`;
+}
+/**
+* Timeline.tsx
+* -----------------------------------------------------------------------
+* Control de jornadas del mapa. Componente de presentación puro: recibe
+* las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
+*
+* La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
+* dibujadas y solo se anima si la persona toca reproducir.
+*
+* El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
+* que sale el presupuesto de la cascada de arcos. Una jornada dura lo
+* que tarda su último arco en salir y llegar, así que las líneas siempre
+* alcanzan a completarse antes de que cambie el día.
+*
+* Seek contra advance, la distinción que ya vive en viewState.ts:
+*   · Reproducir o avanzar un día llama a onAdvance, que anima.
+*   · Arrastrar varios días llama a onSeek, que salta sin animar.
+*     Animar un salto de seis días se lee como un error visual.
+*
+* El efecto del intervalo depende solo de [playing]. Eso deja la función
+* del tick con las props del momento en que arrancó, así que dates y
+* currentDate se leen desde refs que se actualizan en cada render. Sin
+* eso, cada tick recalcula el siguiente de la misma fecha inicial y la
+* reproducción avanza una vez y se traba.
+*
+* DOS FILAS EN CELULAR
+*
+* En una sola línea no cabía: el botón, un deslizador de 176 px, la
+* fecha de 96 y "Ver todo" suman más de 450 px, y un teléfono común
+* tiene 390 de ancho. El control se salía por la derecha y "Ver todo"
+* quedaba cortado a la mitad, o sea que la única forma de volver al
+* total quedaba fuera de la pantalla.
+*
+* En celular la fecha y "Ver todo" suben a su propia línea, y el
+* deslizador se queda con todo el ancho de la de abajo. No es solo que
+* quepa: el deslizador es el gesto principal de este control, y con 176
+* px cada día medía nueve píxeles. Con el ancho completo mide el doble.
+*
+* En escritorio nada cambia: sigue siendo una píldora de una línea.
+*
+* LA FECHA SE ESCRIBE, NO SE CODIFICA
+*
+* Decía "2026-08-16". Es una fecha ISO, que es un formato para
+* máquinas: quien lee un mapa de ayudas no tiene por qué descifrar el
+* orden de los campos ni traducir el 08. Ahora dice "16 de agosto", con
+* el mes leído del dato y no escrito a mano, que es el error que ya
+* apareció en tres sitios de este proyecto.
+* -----------------------------------------------------------------------
+*/
+function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
+	const [playing, setPlaying] = (0, import_react.useState)(false);
+	const intervalRef = (0, import_react.useRef)(null);
+	const datesRef = (0, import_react.useRef)(dates);
+	datesRef.current = dates;
+	const currentDateRef = (0, import_react.useRef)(currentDate);
+	currentDateRef.current = currentDate;
+	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
+	const activo = currentIndex >= 0;
+	const alFinal = activo && currentIndex === dates.length - 1;
+	(0, import_react.useEffect)(() => {
+		if (currentDate === null) setPlaying(false);
+	}, [currentDate]);
+	(0, import_react.useEffect)(() => {
+		if (!playing) {
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+			intervalRef.current = null;
+			return;
+		}
+		const stepMs = computeTimelineStepMs(datesRef.current.length);
+		intervalRef.current = setInterval(() => {
+			const freshDates = datesRef.current;
+			const freshCurrent = currentDateRef.current;
+			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
+			if (next === void 0) {
+				setPlaying(false);
+				return;
+			}
+			onAdvance(next);
+		}, stepMs);
+		return () => {
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+		};
+	}, [playing]);
+	const alternarReproduccion = () => {
+		if (!activo && dates.length > 0) {
+			const primera = dates[0];
+			if (primera !== void 0) onActivate(primera);
+		} else if (alFinal) {
+			const primera = dates[0];
+			if (primera !== void 0) onSeek(primera);
+		}
+		setPlaying((v) => !v);
+	};
+	const handleScrub = (event) => {
+		setPlaying(false);
+		const index = Number(event.target.value);
+		const date = dates[index];
+		if (date === void 0) return;
+		if (!activo) onActivate(date);
+		else if (index === currentIndex + 1) onAdvance(date);
+		else onSeek(date);
+	};
+	if (dates.length === 0) return null;
+	const etiqueta = fechaCorta(currentDate ?? dates[0] ?? null);
+	const botonVerTodo = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick: () => {
+			setPlaying(false);
+			onExit();
+		},
+		className: "min-h-11 shrink-0 rounded-lg px-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground md:ml-1 md:min-h-0 md:px-0",
+		children: "Ver todo"
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "pointer-events-auto w-full max-w-[28rem] rounded-2xl border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur md:w-auto md:max-w-none md:rounded-full md:px-4 md:py-2.5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center justify-between gap-3 md:hidden",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "min-w-0 truncate text-sm font-semibold tabular-nums text-foreground",
+				"aria-live": "polite",
+				children: etiqueta
+			}), activo && botonVerTodo]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center gap-3",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: alternarReproduccion,
+					"aria-label": playing ? "Pausar" : "Reproducir día por día",
+					className: "flex size-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 md:size-10",
+					children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "currentColor",
+						"aria-hidden": true,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+							x: "5",
+							y: "4",
+							width: "5",
+							height: "16",
+							rx: "1"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+							x: "14",
+							y: "4",
+							width: "5",
+							height: "16",
+							rx: "1"
+						})]
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "currentColor",
+						"aria-hidden": true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					type: "range",
+					min: 0,
+					max: dates.length - 1,
+					step: 1,
+					value: currentIndex >= 0 ? currentIndex : 0,
+					onChange: handleScrub,
+					"aria-label": "Día de la operación",
+					"aria-valuetext": etiqueta,
+					className: "h-11 w-full min-w-0 flex-1 cursor-pointer accent-foreground md:h-1.5 md:w-72 md:flex-none"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "hidden min-w-[7rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground md:inline",
+					"aria-live": "polite",
+					children: etiqueta
+				}),
+				activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "hidden md:inline",
+					children: botonVerTodo
+				})
+			]
+		})]
+	});
+}
+/**
+* useToneladas.ts
+* -----------------------------------------------------------------------
+* Serie diaria de toneladas, desde `route=toneladas`.
+*
+* CAMBIO: se quita `retry: false`, por la misma razón que en useAyuda.
+*
+* Estaba puesto cuando la ruta todavía no existía: reintentar un 404
+* permanente no sirve de nada. Pero la ruta ya está publicada y responde,
+* así que ahora ese flag hace daño.
+*
+* Un Web App de Apps Script serializa las ejecuciones por usuario. El
+* tablero monta ocho consultas a la vez y las que se pisan reciben un 404
+* de la infraestructura de Google, no del script. Con `retry: false`, ese
+* fallo de un segundo se vuelve definitivo para toda la sesión: el peso
+* cae al respaldo por entregas y ahí se queda, aunque el backend esté
+* perfecto y la hoja tenga los datos.
+*
+* Es un fallo especialmente silencioso: no aparece ningún mensaje, solo
+* una cifra de toneladas parecida a la buena pero distinta.
+*/
+function useToneladas() {
+	return useQuery({
+		queryKey: ["toneladas"],
+		queryFn: () => ayudasApiRepository.getToneladas(),
+		staleTime: CATALOG_STALE_TIME_MS$1,
+		retry: 3,
+		retryDelay: REINTENTO_ESCALONADO$1
+	});
 }
 /**
 * OperacionContext.tsx
@@ -25348,6 +25393,213 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 	})] });
 }
 /**
+* HojaInferior.tsx
+* -----------------------------------------------------------------------
+* El panel de celular: una hoja que sube desde abajo y se arrastra.
+*
+* EL PROBLEMA QUE RESUELVE
+*
+* En celular, abrir la ficha de un municipio tapaba la pantalla entera.
+* El mapa desaparecía, y con él todo el contexto: cuál municipio se
+* había tocado, dónde queda, qué hay alrededor. La única salida era
+* cerrar, y para comparar dos municipios había que abrir, memorizar,
+* cerrar y volver a abrir.
+*
+* Un panel a pantalla completa no es una versión móvil de un panel
+* lateral. En escritorio el panel ocupa un tercio y el mapa sigue ahí;
+* la traducción honesta de eso a un teléfono es una hoja que deja ver el
+* mapa por encima, no un reemplazo.
+*
+* LOS TRES ANCLAJES
+*
+* · ASOMADA (32%): el título y una línea de resumen. Suficiente para
+*   saber qué se tocó sin perder el mapa. Es donde abre.
+* · MEDIA (62%): la ficha completa, con el mapa todavía visible arriba.
+* · LLENA (94%): para leer listas largas. Acá sí aparece el velo.
+*
+* Abre en ASOMADA y no en MEDIA a propósito. El gesto de tocar un
+* municipio en un mapa suele ser exploratorio —"¿y este cuánto?"—, no
+* una decisión de ponerse a leer. Que abra bajo respeta eso: quien
+* quiera más, arrastra, y ese gesto es más barato que cerrar.
+*
+* POR QUÉ SOLO SE ARRASTRA DESDE EL ENCABEZADO
+*
+* El cuerpo tiene su propio desplazamiento. Si el arrastre naciera
+* también ahí, cada intento de leer hacia abajo competiría con el de
+* mover la hoja, y el resultado es el gesto ambiguo que hace que estas
+* hojas se sientan rotas. El encabezado, con su agarradera visible, es
+* la zona de arrastre; el cuerpo, la de lectura. Cada gesto en un sitio.
+*
+* EL VELO
+*
+* Solo en LLENA, y con opacidad proporcional a lo que subió. En los
+* otros dos anclajes el mapa TIENE que seguir siendo tocable: es la
+* mitad de para qué existe la hoja. Un velo permanente convertiría esto
+* en el mismo diálogo a pantalla completa de antes, solo que más bajo.
+* -----------------------------------------------------------------------
+*/
+/** Fracción de la pantalla que ocupa la hoja en cada anclaje. */
+var ANCLAJES = [
+	.32,
+	.62,
+	.94
+];
+var ASOMADA = 0;
+var LLENA = ANCLAJES.length - 1;
+/**
+* Cuánto hay que arrastrar hacia abajo desde el anclaje más bajo para
+* que la hoja se cierre.
+*
+* 64 px es aproximadamente el recorrido de un pulgar sin mover la mano.
+* Más corto y la hoja se cierra sola al intentar ajustarla; más largo y
+* el gesto de descartar se siente trabado.
+*/
+var CERRAR_PX = 64;
+/** Arrastre mínimo para considerar que hubo gesto y no un toque. */
+var UMBRAL_GESTO_PX = 6;
+function HojaInferior({ abierta, onCerrar, titulo, resumen, children, onAlturaChange, anclajeInicial = ASOMADA }) {
+	const [anclaje, setAnclaje] = (0, import_react.useState)(anclajeInicial);
+	/** Desplazamiento del dedo respecto del anclaje actual. Positivo = hacia abajo. */
+	const [arrastre, setArrastre] = (0, import_react.useState)(0);
+	const [arrastrando, setArrastrando] = (0, import_react.useState)(false);
+	const [altoPantalla, setAltoPantalla] = (0, import_react.useState)(0);
+	const hojaRef = (0, import_react.useRef)(null);
+	const cuerpoRef = (0, import_react.useRef)(null);
+	const inicioRef = (0, import_react.useRef)(0);
+	(0, import_react.useLayoutEffect)(() => {
+		const medir = () => setAltoPantalla(window.innerHeight);
+		medir();
+		window.addEventListener("resize", medir);
+		window.visualViewport?.addEventListener("resize", medir);
+		return () => {
+			window.removeEventListener("resize", medir);
+			window.visualViewport?.removeEventListener("resize", medir);
+		};
+	}, []);
+	(0, import_react.useEffect)(() => {
+		if (abierta) {
+			setAnclaje(anclajeInicial);
+			setArrastre(0);
+		}
+	}, [abierta, anclajeInicial]);
+	const altoMaximo = altoPantalla * ANCLAJES[LLENA];
+	const altoDelAnclaje = altoPantalla * ANCLAJES[anclaje];
+	const altoVisible = Math.min(altoMaximo, Math.max(0, altoDelAnclaje - arrastre));
+	const desplazamiento = altoMaximo - altoVisible;
+	(0, import_react.useEffect)(() => {
+		onAlturaChange?.(abierta ? altoVisible : 0);
+	}, [
+		abierta,
+		altoVisible,
+		onAlturaChange
+	]);
+	(0, import_react.useEffect)(() => () => onAlturaChange?.(0), [onAlturaChange]);
+	const alPresionar = (evento) => {
+		inicioRef.current = evento.clientY;
+		setArrastrando(true);
+		evento.currentTarget.setPointerCapture(evento.pointerId);
+	};
+	const alMover = (evento) => {
+		if (!arrastrando) return;
+		setArrastre(evento.clientY - inicioRef.current);
+	};
+	const alSoltar = (evento) => {
+		if (!arrastrando) return;
+		evento.currentTarget.releasePointerCapture(evento.pointerId);
+		setArrastrando(false);
+		const recorrido = arrastre;
+		setArrastre(0);
+		if (Math.abs(recorrido) < UMBRAL_GESTO_PX) {
+			setAnclaje((actual) => actual === ASOMADA ? 1 : ASOMADA);
+			return;
+		}
+		if (anclaje === ASOMADA && recorrido > CERRAR_PX) {
+			onCerrar();
+			return;
+		}
+		const objetivo = altoDelAnclaje - recorrido;
+		let cercano = ASOMADA;
+		let menorDistancia = Infinity;
+		ANCLAJES.forEach((fraccion, i) => {
+			const distancia = Math.abs(fraccion * altoPantalla - objetivo);
+			if (distancia < menorDistancia) {
+				menorDistancia = distancia;
+				cercano = i;
+			}
+		});
+		setAnclaje(cercano);
+	};
+	const cerrarConTeclado = (0, import_react.useCallback)((evento) => {
+		if (evento.key === "Escape") onCerrar();
+	}, [onCerrar]);
+	(0, import_react.useEffect)(() => {
+		if (!abierta) return;
+		document.addEventListener("keydown", cerrarConTeclado);
+		return () => document.removeEventListener("keydown", cerrarConTeclado);
+	}, [abierta, cerrarConTeclado]);
+	const cuerpoDesplazable = anclaje > ASOMADA;
+	(0, import_react.useEffect)(() => {
+		if (!cuerpoDesplazable) cuerpoRef.current?.scrollTo({ top: 0 });
+	}, [cuerpoDesplazable]);
+	if (!abierta || altoPantalla === 0) return null;
+	const proporcionLlena = ANCLAJES[LLENA] - ANCLAJES[1];
+	const velo = altoVisible <= altoPantalla * ANCLAJES[1] ? 0 : Math.min(.5, (altoVisible / altoPantalla - ANCLAJES[1]) / proporcionLlena * .5);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		"aria-hidden": true,
+		onClick: onCerrar,
+		className: "absolute inset-0 z-30 bg-[#08202E] md:hidden",
+		style: {
+			opacity: velo,
+			pointerEvents: velo > .05 ? "auto" : "none",
+			transition: arrastrando ? "none" : "opacity 220ms ease-out"
+		}
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		ref: hojaRef,
+		role: "dialog",
+		"aria-label": titulo,
+		className: "absolute inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[1.5rem] bg-white shadow-[0_-8px_32px_rgba(8,32,46,0.28)] md:hidden",
+		style: {
+			height: altoMaximo,
+			transform: `translateY(${desplazamiento}px)`,
+			transition: arrastrando ? "none" : "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)",
+			paddingBottom: "env(safe-area-inset-bottom)"
+		},
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			onPointerDown: alPresionar,
+			onPointerMove: alMover,
+			onPointerUp: alSoltar,
+			onPointerCancel: alSoltar,
+			className: "shrink-0 cursor-grab touch-none select-none px-5 pb-3 pt-2.5 active:cursor-grabbing",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mx-auto mb-3 h-1.5 w-11 rounded-full bg-[#123E5C]/25" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex items-start justify-between gap-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "min-w-0 flex-1",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
+						className: "truncate text-xl font-bold leading-tight text-[#123E5C]",
+						children: titulo
+					}), resumen && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-1 text-[15px] leading-6 text-[#35708F]",
+						children: resumen
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: onCerrar,
+					"aria-label": "Cerrar",
+					className: "-mr-2 -mt-1 grid size-11 shrink-0 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+						className: "size-5",
+						"aria-hidden": true
+					})
+				})]
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			ref: cuerpoRef,
+			className: `min-h-0 flex-1 px-5 pb-6 ${cuerpoDesplazable ? "overflow-y-auto overscroll-contain" : "overflow-hidden"}`,
+			children
+		})]
+	})] });
+}
+/**
 * useDestinoLogistica.ts
 * -----------------------------------------------------------------------
 * Vista SECUNDARIA de un destino (route=destino-logistica&id=), solo
@@ -25495,11 +25747,32 @@ function useDestinoResumen(destinoId) {
 * `enabled: expanded` ya vive en el hook, este componente solo controla
 * el booleano de UI.
 *
-* Reutiliza ContextualPanel del proyecto de criticidad sísmica tal cual:
-* es un chrome de panel completamente genérico (header con back/close,
-* scroll, transición de entrada, cierre en click-fuera respetando el
-* mapa) sin ningún concepto de sismos/sedes en su implementación —
-* reescribirlo hubiera sido duplicar código idéntico sin ninguna ganancia.
+* DOS CHROMES, UN CONTENIDO
+*
+* En escritorio sigue siendo ContextualPanel, el panel lateral de
+* siempre, sin ningún cambio. En celular el mismo contenido va dentro de
+* una HojaInferior.
+*
+* El motivo es que un panel a pantalla completa no es la versión móvil
+* de un panel lateral. En escritorio el panel ocupa un tercio y el mapa
+* sigue ahí: se ve qué municipio se tocó, dónde queda, qué hay al lado.
+* En celular ese mismo panel tapaba todo, y la única salida era cerrar.
+* Comparar dos municipios exigía abrir, memorizar, cerrar y volver a
+* abrir.
+*
+* El contenido no se duplica: se arma una vez y cambia el envoltorio.
+*
+* EL TOTAL SE MUEVE AL ENCABEZADO EN CELULAR
+*
+* En la hoja, el resumen del encabezado es lo ÚNICO que se lee sin
+* arrastrar, así que ahí va la cifra que responde la pregunta que motivó
+* el toque: cuántas unidades recibió. Y por eso mismo el bloque "Total
+* recibido" no se repite en el cuerpo: mostrar el mismo número dos veces
+* a diez píxeles de distancia gasta el primer golpe de vista, que en una
+* hoja es lo más caro que hay.
+*
+* En escritorio ese bloque se queda donde estaba: ahí el encabezado solo
+* lleva el nombre y el tipo, y el total necesita su sitio.
 *
 * SOBRE LA LISTA DE CATEGORÍAS
 *
@@ -25515,95 +25788,114 @@ function useDestinoResumen(destinoId) {
 * en un teléfono, no un operador frente a un monitor.
 * -----------------------------------------------------------------------
 */
-function DestinoPanel({ destinoId, isMobile, onClose }) {
+function DestinoPanel({ destinoId, isMobile, onAlturaChange, onClose }) {
 	const { data, isLoading, isError } = useDestinoResumen(destinoId);
 	const [logisticaExpanded, setLogisticaExpanded] = (0, import_react.useState)(false);
 	const transitionKey = `destino-${destinoId}`;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(ContextualPanel, {
-		isMobile,
-		title: data?.destino.nombre ?? "Cargando destino…",
-		subtitle: data ? tipoLabel(data.destino.tipo) : void 0,
-		onClose,
-		transitionKey,
-		children: [
-			isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelSkeleton, {}),
-			isError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "p-4 text-sm text-muted-foreground",
-				children: "No se pudo cargar la información de este destino."
-			}),
-			data && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex flex-col",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-						className: "border-b border-border p-4",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "label-caps text-xs",
-								children: "Total recibido"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-								className: "font-display mt-1 text-3xl font-semibold tabular-nums",
-								children: [data.resumen.totalUnidades.toLocaleString("es-CO"), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "ml-1.5 text-base font-normal text-muted-foreground",
-									children: "unidades"
-								})]
-							}),
-							data.resumen.fechaCorte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-								className: "mt-1 text-[13px] text-muted-foreground",
-								children: ["Corte al ", data.resumen.fechaCorte]
-							})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-						className: "border-b border-border p-4",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "label-caps text-xs",
-								children: "Categorías entregadas"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-								className: "mt-3 flex flex-col gap-1.5",
-								children: data.categorias.map((c) => {
-									const porcentaje = Math.round(c.porcentaje * 100);
-									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-										className: "relative overflow-hidden rounded-md bg-surface-raised/60",
+	const titulo = data?.destino.nombre ?? "Cargando destino…";
+	const tipo = data ? tipoLabel(data.destino.tipo) : void 0;
+	const contenido = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelSkeleton, {}),
+		isError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "p-4 text-sm text-muted-foreground",
+			children: "No se pudo cargar la información de este destino."
+		}),
+		data && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-col",
+			children: [
+				!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+					className: "border-b border-border p-4",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "label-caps text-xs",
+							children: "Total recibido"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "font-display mt-1 text-3xl font-semibold tabular-nums",
+							children: [data.resumen.totalUnidades.toLocaleString("es-CO"), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "ml-1.5 text-base font-normal text-muted-foreground",
+								children: "unidades"
+							})]
+						}),
+						data.resumen.fechaCorte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+							className: "mt-1 text-[13px] text-muted-foreground",
+							children: ["Corte al ", data.resumen.fechaCorte]
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+					className: `border-b border-border ${isMobile ? "pb-4" : "p-4"}`,
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "label-caps text-xs",
+							children: "Categorías entregadas"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+							className: "mt-3 flex flex-col gap-1.5",
+							children: data.categorias.map((c) => {
+								const porcentaje = Math.round(c.porcentaje * 100);
+								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+									className: "relative overflow-hidden rounded-md bg-surface-raised/60",
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										"aria-hidden": true,
+										className: "absolute inset-y-0 left-0 bg-primary/25",
+										style: { width: `${Math.max(2, c.porcentaje * 100)}%` }
+									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "relative flex items-baseline justify-between gap-3 px-3 py-2",
 										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											"aria-hidden": true,
-											className: "absolute inset-y-0 left-0 bg-primary/25",
-											style: { width: `${Math.max(2, c.porcentaje * 100)}%` }
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-											className: "relative flex items-baseline justify-between gap-3 px-3 py-2",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: "min-w-0 truncate text-[15px] text-foreground",
-												children: c.nombre
+											className: "min-w-0 truncate text-[15px] text-foreground",
+											children: c.nombre
+										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "shrink-0 tabular-nums",
+											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+												className: "text-[15px] font-semibold text-foreground",
+												children: Math.round(c.unidades).toLocaleString("es-CO")
 											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												className: "shrink-0 tabular-nums",
-												children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-													className: "text-[15px] font-semibold text-foreground",
-													children: c.unidades.toLocaleString("es-CO")
-												}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-													className: "ml-2 text-[13px] text-muted-foreground",
-													children: [porcentaje, "%"]
-												})]
+												className: "ml-2 text-[13px] text-muted-foreground",
+												children: [porcentaje, "%"]
 											})]
 										})]
-									}, c.id);
-								})
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-3 text-[13px] leading-snug text-muted-foreground",
-								children: data.disclaimer
+									})]
+								}, c.id);
 							})
-						]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogisticaDrawer, {
-						destinoId,
-						expanded: logisticaExpanded,
-						onToggle: () => setLogisticaExpanded((v) => !v)
-					})
-				]
-			})
-		]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "mt-3 text-[13px] leading-snug text-muted-foreground",
+							children: data.disclaimer
+						})
+					]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogisticaDrawer, {
+					destinoId,
+					expanded: logisticaExpanded,
+					onToggle: () => setLogisticaExpanded((v) => !v)
+				})
+			]
+		})
+	] });
+	if (isMobile) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
+		abierta: true,
+		onCerrar: onClose,
+		titulo,
+		onAlturaChange,
+		resumen: data ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "font-semibold text-[#123E5C]",
+				children: Math.round(data.resumen.totalUnidades).toLocaleString("es-CO")
+			}),
+			" ",
+			"unidades",
+			tipo ? ` · ${tipo}` : ""
+		] }) : tipo,
+		children: contenido
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
+		isMobile: false,
+		title: titulo,
+		subtitle: tipo,
+		onClose,
+		transitionKey,
+		children: contenido
 	});
 }
 function tipoLabel(tipo) {
@@ -25638,6 +25930,25 @@ function PanelSkeleton() {
 * array que ya se le pasa a MapCanvas para dibujar los arcos, así que no
 * hay una segunda fuente de verdad ni un fetch adicional.
 *
+* DOS CHROMES, UN CONTENIDO
+*
+* En escritorio sigue siendo ContextualPanel, sin cambios. En celular el
+* mismo contenido va dentro de una HojaInferior, que deja el mapa
+* visible arriba.
+*
+* Acá el cambio pesa incluso más que en el panel de destino: la lista de
+* este panel son municipios, y cada fila abre el suyo. Con el panel a
+* pantalla completa, tocar una fila reemplazaba una pantalla llena por
+* otra y se perdía por completo dónde estaba uno. Con la hoja, el mapa
+* de atrás mueve su selección mientras la lista sigue ahí.
+*
+* LAS DOS CIFRAS SE MUEVEN AL ENCABEZADO EN CELULAR
+*
+* En la hoja, el resumen es lo único que se lee sin arrastrar. Ahí van
+* los despachos y los destinos alcanzados, y por eso el bloque de dos
+* columnas no se repite en el cuerpo: lo primero que aparece al
+* arrastrar es la lista, que es a lo que se vino.
+*
 * CADA FILA ABRE SU DESTINO
 *
 * Las cuarenta filas son destinos y todas tienen panel propio, así que
@@ -25646,18 +25957,18 @@ function PanelSkeleton() {
 *
 * La fila de Cali NO lleva ninguna glosa. Llegó a tener una que decía
 * "se quedó en la ciudad, sin salir a otro municipio", y era una
-* interpretación inventada: esos 59 son despachos que llegaron a Cali
-* como destino, igual que los 22 de Dagua. Que el origen esté en la
-* misma ciudad no dice nada sobre si la ayuda se entregó o se quedó
-* guardada, y el dato no distingue esas dos cosas.
+* interpretación inventada: esos despachos llegaron a Cali como destino,
+* igual que los de Dagua. Que el origen esté en la misma ciudad no dice
+* nada sobre si la ayuda se entregó o se quedó guardada, y el dato no
+* distingue esas dos cosas.
 *
 * SOBRE EL TOTAL
 *
 * Los despachos de este panel son los que el MAPA puede dibujar, o sea
 * los que fueron a un destino con coordenada. Desde Cali salieron además
-* 23 hacia destinos sin ubicación —entidades, casos especiales, veredas
-* sin especificar—, que no aparecen acá. La cifra es consistente con lo
-* que se ve en el mapa, no con el total de la operación.
+* varios hacia destinos sin ubicación —entidades, casos especiales,
+* veredas sin especificar—, que no aparecen acá. La cifra es consistente
+* con lo que se ve en el mapa, no con el total de la operación.
 *
 * SOBRE LA COMPOSICIÓN
 *
@@ -25666,12 +25977,9 @@ function PanelSkeleton() {
 * y en los destinos chicos dibujaba doce píxeles de color en un panel de
 * casi cuatrocientos: la proporción no se leía y la lista era el doble de
 * larga.
-*
-* Los cuerpos subieron de 10 y 12 px a 13 y 15. Diez píxeles es más chico
-* que cualquier texto del resto de la página.
 * -----------------------------------------------------------------------
 */
-function OrigenPanel({ origenId, origenNombre, flujos, isMobile, enFechaSeleccionada = false, onSelectDestino, onClose }) {
+function OrigenPanel({ origenId, origenNombre, flujos, isMobile, enFechaSeleccionada = false, onSelectDestino, onAlturaChange, onClose }) {
 	const despachosTotal = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
 	/**
 	* No hay toneladas por arco y no las va a haber: la hoja TONELADAS es
@@ -25681,109 +25989,132 @@ function OrigenPanel({ origenId, origenNombre, flujos, isMobile, enFechaSeleccio
 	* igual. Por eso este panel cuenta despachos y no kilos.
 	*/
 	const destinosOrdenados = [...flujos].sort((a, b) => b.despachosCount - a.despachosCount);
+	const contenido = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "flex flex-col",
+		children: [!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: "grid grid-cols-2 divide-x divide-border border-b border-border",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "p-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "label-caps block min-h-[2.4em] text-xs leading-tight",
+					children: "Despachos"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
+					children: despachosTotal.toLocaleString("es-CO")
+				})]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "p-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "label-caps block min-h-[2.4em] text-xs leading-tight",
+					children: "Destinos alcanzados"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
+					children: flujos.length.toLocaleString("es-CO")
+				})]
+			})]
+		}), flujos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: `text-[15px] text-muted-foreground ${isMobile ? "py-2" : "p-4"}`,
+			children: [
+				"No hay despachos registrados desde este origen",
+				enFechaSeleccionada ? " en la fecha seleccionada" : "",
+				"."
+			]
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+			className: `border-b border-border ${isMobile ? "pb-4" : "p-4"}`,
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "label-caps text-xs",
+					children: "Despachos por destino"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-1 text-[15px] text-foreground",
+					children: "Selecciona un municipio para ver qué recibió."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-2 flex gap-2 rounded-md bg-surface-raised/60 px-3 py-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Info, {
+						className: "mt-0.5 size-4 shrink-0 text-muted-foreground",
+						"aria-hidden": true
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-[13px] leading-5 text-muted-foreground",
+						children: "Cada despacho corresponde a una ruta. El porcentaje muestra la proporción de rutas que llegó a cada municipio, no la cantidad de ayuda enviada. Un municipio puede recibir más ayuda en menos rutas."
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					className: "mt-3 flex flex-col gap-1.5",
+					children: destinosOrdenados.map((f, i) => {
+						const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
+						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+							type: "button",
+							onClick: () => onSelectDestino?.(f.destino.id),
+							disabled: !onSelectDestino,
+							className: "group relative block min-h-11 w-full overflow-hidden rounded-md bg-surface-raised/60 text-left transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default md:min-h-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"aria-hidden": true,
+								className: "absolute inset-y-0 left-0 origin-left bg-primary/25",
+								style: {
+									width: `${Math.max(2, porcentaje * 100)}%`,
+									animation: "bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both",
+									animationDelay: `${Math.min(i, 12) * 40}ms`
+								}
+							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+								className: "relative flex h-full items-center justify-between gap-3 px-3 py-2",
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "min-w-0 truncate text-[15px] text-foreground",
+									children: f.destino.nombre
+								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+									className: "flex shrink-0 items-baseline gap-2 tabular-nums",
+									children: [
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+											className: "text-[15px] font-semibold text-foreground",
+											children: f.despachosCount.toLocaleString("es-CO")
+										}),
+										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+											className: "text-[13px] text-muted-foreground",
+											children: [Math.round(porcentaje * 100), "%"]
+										}),
+										onSelectDestino && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, {
+											"aria-hidden": true,
+											className: "size-4 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
+										})
+									]
+								})]
+							})]
+						}) }, f.destino.id);
+					})
+				})
+			]
+		})]
+	});
+	if (isMobile) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
+		abierta: true,
+		onCerrar: onClose,
+		titulo: origenNombre,
+		onAlturaChange,
+		resumen: flujos.length === 0 ? "Punto de despacho" : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "font-semibold text-[#123E5C]",
+				children: despachosTotal.toLocaleString("es-CO")
+			}),
+			" ",
+			"despachos hacia",
+			" ",
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "font-semibold text-[#123E5C]",
+				children: flujos.length
+			}),
+			" ",
+			flujos.length === 1 ? "destino" : "destinos"
+		] }),
+		children: contenido
+	});
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
-		isMobile,
+		isMobile: false,
 		title: origenNombre,
 		subtitle: "Punto de despacho",
 		onClose,
 		transitionKey: `origen-${origenId}`,
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex flex-col",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-				className: "grid grid-cols-2 divide-x divide-border border-b border-border",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "p-4",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "label-caps block min-h-[2.4em] text-xs leading-tight",
-						children: "Despachos"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
-						children: despachosTotal.toLocaleString("es-CO")
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "p-4",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "label-caps block min-h-[2.4em] text-xs leading-tight",
-						children: "Destinos alcanzados"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
-						children: flujos.length.toLocaleString("es-CO")
-					})]
-				})]
-			}), flujos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "p-4 text-[15px] text-muted-foreground",
-				children: [
-					"No hay despachos registrados desde este origen",
-					enFechaSeleccionada ? " en la fecha seleccionada" : "",
-					"."
-				]
-			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-				className: "border-b border-border p-4",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "label-caps text-xs",
-						children: "Despachos por destino"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-1 text-[15px] text-foreground",
-						children: "Selecciona un municipio para ver qué recibió."
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-2 flex gap-2 rounded-md bg-surface-raised/60 px-3 py-2",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Info, {
-							className: "mt-0.5 size-4 shrink-0 text-muted-foreground",
-							"aria-hidden": true
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "text-[13px] leading-5 text-muted-foreground",
-							children: "Cada despacho corresponde a una ruta. El porcentaje muestra la proporción de rutas que llegó a cada municipio, no la cantidad de ayuda enviada. Un municipio puede recibir más ayuda en menos rutas."
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "mt-3 flex flex-col gap-1.5",
-						children: destinosOrdenados.map((f, i) => {
-							const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
-							return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-								type: "button",
-								onClick: () => onSelectDestino?.(f.destino.id),
-								disabled: !onSelectDestino,
-								className: "group relative block w-full overflow-hidden rounded-md bg-surface-raised/60 text-left transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									"aria-hidden": true,
-									className: "absolute inset-y-0 left-0 origin-left bg-primary/25",
-									style: {
-										width: `${Math.max(2, porcentaje * 100)}%`,
-										animation: "bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both",
-										animationDelay: `${Math.min(i, 12) * 40}ms`
-									}
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "relative flex items-center justify-between gap-3 px-3 py-2",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										className: "min-w-0 truncate text-[15px] text-foreground",
-										children: f.destino.nombre
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "flex shrink-0 items-baseline gap-2 tabular-nums",
-										children: [
-											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-												className: "text-[15px] font-semibold text-foreground",
-												children: f.despachosCount.toLocaleString("es-CO")
-											}),
-											/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												className: "text-[13px] text-muted-foreground",
-												children: [Math.round(porcentaje * 100), "%"]
-											}),
-											onSelectDestino && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, {
-												"aria-hidden": true,
-												className: "size-4 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
-											})
-										]
-									})]
-								})]
-							}) }, f.destino.id);
-						})
-					})
-				]
-			})]
-		})
+		children: contenido
 	});
 }
 function Breadcrumb({ viewState, seleccionNombre, onGoToAll }) {
@@ -25820,9 +26151,9 @@ function Sep() {
 }
 function TopBar({ viewState, seleccionNombre, onGoToAll }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex items-center gap-2 px-4",
+		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex items-center gap-2 pl-[4.75rem] pr-4 md:px-4",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "pointer-events-auto flex max-w-[55vw] items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur sm:max-w-none",
+			className: "pointer-events-auto hidden min-w-0 items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur sm:flex",
 			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 				className: "truncate",
 				children: "Ayudas Humanitarias"
@@ -25832,6 +26163,208 @@ function TopBar({ viewState, seleccionNombre, onGoToAll }) {
 			seleccionNombre,
 			onGoToAll
 		})]
+	});
+}
+var TODAS$2 = "todas";
+/** Los mismos colores con los que MapCanvas pinta los arcos. */
+var ORIGENES_LEYENDA$1 = [{
+	nombre: "Salió de Cali",
+	color: "#2f6fed"
+}, {
+	nombre: "Salió de Cartago",
+	color: "#e6883c"
+}];
+/**
+* Qué filtros se apartan del estado de reposo.
+*
+* Se listan solo esos. Poner siempre los tres —"Todas · Todo lo
+* entregado · Ver rutas"— sería ruido constante y volvería invisible
+* justo lo que hay que notar.
+*/
+function filtrosActivos(zone, lens, routesMode) {
+	const activos = [];
+	if (zone !== TODAS$2) activos.push(zone);
+	if (lens === "jornada") activos.push("Solo ese día");
+	if (routesMode === "solo") activos.push("Solo lo elegido");
+	if (routesMode === "color") activos.push("Sin rutas");
+	return activos;
+}
+/** La barra de una línea que queda sobre el mapa. */
+function BarraMovil({ entregas, municipios, lens, day, iso, zone, routesMode, filtrosAbiertos, onAbrirFiltros, onReiniciar }) {
+	const activos = filtrosActivos(zone, lens, routesMode);
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "pointer-events-auto flex items-center gap-2 rounded-xl border border-border bg-surface/95 p-2 shadow-lg backdrop-blur",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-w-0 flex-1 px-1",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "truncate text-[15px] leading-tight text-foreground",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "font-semibold",
+							children: entregas.toLocaleString("es-CO")
+						}),
+						" ",
+						entregas === 1 ? "entrega" : "entregas",
+						" en ",
+						municipios,
+						" ",
+						municipios === 1 ? "municipio" : "municipios"
+					]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "truncate text-[13px] leading-tight text-muted-foreground",
+					children: describeLens(lens, day, iso)
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: onReiniciar,
+				"aria-label": "Reiniciar vista",
+				className: "grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface-raised hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
+					className: "size-5",
+					"aria-hidden": true
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: onAbrirFiltros,
+				"aria-expanded": filtrosAbiertos,
+				className: `relative flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-[14px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${activos.length > 0 ? "bg-primary text-primary-foreground" : "bg-surface-raised text-foreground"}`,
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SlidersHorizontal, {
+						className: "size-4 shrink-0",
+						"aria-hidden": true
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "max-w-[9rem] truncate",
+						children: activos.length > 0 ? activos.join(" · ") : "Filtros"
+					}),
+					activos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						"aria-hidden": true,
+						className: "size-1.5 shrink-0 rounded-full bg-[#FFD400]"
+					})
+				]
+			})
+		]
+	});
+}
+/**
+* Los nueve controles, en una hoja.
+*
+* Se monta al mismo nivel que los paneles de destino y origen, NO dentro
+* de la barra: ver la nota de cabecera.
+*/
+function HojaFiltros({ abierta, onCerrar, zonasDisponibles, lens, day, iso, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange, onReiniciar }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
+		abierta,
+		onCerrar,
+		titulo: "Filtros del mapa",
+		resumen: describeLens(lens, day, iso),
+		anclajeInicial: 1,
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex flex-col gap-5 pt-1",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Grupo, {
+					titulo: "Cómo se lee el día",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+							active: lens === "acumulado",
+							onClick: () => onLensChange("acumulado"),
+							children: "Todo lo entregado"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+							active: lens === "jornada",
+							onClick: () => onLensChange("jornada"),
+							disabled: day === null,
+							children: "Solo ese día"
+						})]
+					}), day === null && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-2 text-[13px] leading-5 text-muted-foreground",
+						children: "Mueva la línea de tiempo para ver cómo se entregaron las ayudas día por día."
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Grupo, {
+					titulo: "Zona del Valle",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "flex flex-wrap gap-1.5",
+						children: [TODAS$2, ...zonasDisponibles].map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+							active: zone === item,
+							onClick: () => onZoneChange(item),
+							children: item === TODAS$2 ? "Todas" : item
+						}, item))
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Grupo, {
+					titulo: "Rutas",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+								active: routesMode === "visibles",
+								onClick: () => onRoutesModeChange("visibles"),
+								children: "Ver rutas"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+								active: routesMode === "solo",
+								onClick: () => onRoutesModeChange("solo"),
+								children: "Solo lo elegido"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
+								active: routesMode === "color",
+								onClick: () => onRoutesModeChange("color"),
+								children: "Sin rutas"
+							})
+						]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+						className: "mt-3 flex flex-col gap-2",
+						children: ORIGENES_LEYENDA$1.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2 text-[14px] text-foreground",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								"aria-hidden": true,
+								className: "block size-3 shrink-0 rounded-full",
+								style: { background: o.color }
+							}), o.nombre]
+						}, o.nombre))
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => {
+						onReiniciar();
+						onCerrar();
+					},
+					className: "min-h-11 rounded-lg border border-border text-[15px] font-semibold text-foreground transition hover:bg-surface-raised",
+					children: "Reiniciar la vista del mapa"
+				})
+			]
+		})
+	});
+}
+/**
+* Un bloque con su rótulo.
+*
+* En la barra anterior los nueve botones iban seguidos sin nada que los
+* separara, así que había que deducir qué hacía cada trío por el texto
+* de sus etiquetas. En una hoja hay sitio para decirlo.
+*/
+function Grupo({ titulo, children }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: "label-caps text-xs",
+		children: titulo
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "mt-2",
+		children
+	})] });
+}
+function Toggle({ active, onClick, children, disabled = false }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick,
+		disabled,
+		"aria-pressed": active,
+		className: `min-h-11 rounded px-3 text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
+		children
 	});
 }
 /**
@@ -26032,7 +26565,7 @@ function useAyuda() {
 * botón está presente. Repartido a mano en tres sitios, cambiar la
 * altura significaba acordarse de los tres.
 */
-var COLUMNA_TOP = "top-[calc(3.5rem+env(safe-area-inset-top))]";
+var COLUMNA_TOP = "top-[calc(4.25rem+env(safe-area-inset-top))]";
 var COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
 /**
 * Dónde cae la píldora de categoría en móvil cuando hay botón de volver.
@@ -26040,8 +26573,16 @@ var COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
 * Es la altura de la columna más el alto del botón —unos 40 px— más aire.
 * Si cambia COLUMNA_TOP, este número se recalcula igual.
 */
-var PILDORA_TOP_CON_BOTON = "top-[calc(6.5rem+env(safe-area-inset-top))]";
+var PILDORA_TOP_CON_BOTON = "top-[calc(7.25rem+env(safe-area-inset-top))]";
 var PILDORA_TOP_SOLA = "top-[calc(0.75rem+env(safe-area-inset-top))]";
+/**
+* A partir de qué proporción de la pantalla la hoja inferior estorba.
+*
+* Por debajo de la mitad queda espacio de sobra para el mapa y para los
+* controles, y esconderlos ahí sería quitarle a la persona el filtro de
+* zonas justo cuando está comparando municipios, que es cuando lo usa.
+*/
+var HOJA_TAPA_DESDE = .5;
 /**
 * Los dos orígenes, con el color exacto con el que MapCanvas pinta sus
 * arcos mientras crecen. Si allá cambian, acá también.
@@ -26106,8 +26647,7 @@ function GuiaDelMapa({ raizRef, onCerrar }) {
 	* La escucha va sobre el contenedor del mapa y no sobre `document`, y
 	* esa diferencia es todo: la guía se monta cuando carga la página, no
 	* cuando el mapa aparece en pantalla, así que con `document` cualquier
-	* clic del relato la cerraba sin que nadie la hubiera visto. El del
-	* ícono del sidebar que lleva al mapa, entre otros.
+	* clic del relato la cerraba sin que nadie la hubiera visto.
 	*
 	* `pointerdown` y no `click`: el mapa reacciona al arrastre, y
 	* esperando al `click` un gesto de desplazamiento la dejaría abierta
@@ -26145,7 +26685,7 @@ function GuiaDelMapa({ raizRef, onCerrar }) {
 					type: "button",
 					onClick: onCerrar,
 					"aria-label": "Cerrar",
-					className: "absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
+					className: "absolute right-3 top-3 grid size-11 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
 						className: "size-5",
 						"aria-hidden": true
@@ -26213,6 +26753,27 @@ function useIsMobile(breakpointPx = 768) {
 	}, [breakpointPx]);
 	return isMobile;
 }
+/**
+* Alto de la ventana, en píxeles, o 0 mientras no se conozca.
+*
+* Va como estado y no se lee `window.innerHeight` en el render porque
+* esta página se dibuja también en el servidor, donde `window` no
+* existe. Leerlo directo tumba el render con "window is not defined".
+*/
+function useAltoPantalla() {
+	const [alto, setAlto] = (0, import_react.useState)(0);
+	(0, import_react.useEffect)(() => {
+		const medir = () => setAlto(window.innerHeight);
+		medir();
+		window.addEventListener("resize", medir);
+		window.visualViewport?.addEventListener("resize", medir);
+		return () => {
+			window.removeEventListener("resize", medir);
+			window.visualViewport?.removeEventListener("resize", medir);
+		};
+	}, []);
+	return alto;
+}
 function DashboardPage({ embedded = false }) {
 	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
 	const [linesDismissed, setLinesDismissed] = (0, import_react.useState)(false);
@@ -26230,6 +26791,26 @@ function DashboardPage({ embedded = false }) {
 	const [lens, setLens] = (0, import_react.useState)("acumulado");
 	const [territoryZone, setTerritoryZone] = (0, import_react.useState)("todas");
 	const [routesMode, setRoutesMode] = (0, import_react.useState)("visibles");
+	/**
+	* Cuánto ocupa la hoja inferior en celular, en píxeles. 0 si no hay
+	* ninguna abierta.
+	*
+	* Lo reporta HojaInferior en cada cuadro del arrastre, y lo consumen
+	* tres cosas: el mapa, para correr su centro hacia arriba y que el
+	* municipio tocado no quede detrás de la hoja; el timeline, para
+	* subirse encima; y los controles, para apartarse cuando ya no caben.
+	*/
+	const [altoHoja, setAltoHoja] = (0, import_react.useState)(0);
+	/**
+	* Si la hoja de filtros está abierta.
+	*
+	* El estado vive acá y no dentro de la barra porque la hoja se monta
+	* al nivel de los paneles, no dentro del bloque inferior. Ahí abajo
+	* heredaría el `pointer-events-none` del contenedor y se abriría sin
+	* responder a nada, además de quedar atrapada en su contexto de
+	* apilamiento.
+	*/
+	const [filtrosAbiertos, setFiltrosAbiertos] = (0, import_react.useState)(false);
 	/**
 	* Cada incremento le pide a MapCanvas que vuelva a encuadrar.
 	*
@@ -26251,6 +26832,7 @@ function DashboardPage({ embedded = false }) {
 	const raizRef = (0, import_react.useRef)(null);
 	const [visibleActivity, ,] = (0, import_react.useState)(null);
 	const isMobile = useIsMobile();
+	const altoPantalla = useAltoPantalla();
 	const { data: origenes } = useOrigenes();
 	const { data: destinos } = useDestinos();
 	const { data: flujosResponse } = useFlujos();
@@ -26347,18 +26929,35 @@ function DashboardPage({ embedded = false }) {
 	* Cuando ese nombre no calzaba, la función devolvía undefined, la
 	* comparación fallaba contra CUALQUIER zona, y ese municipio se
 	* quedaba sin línea en Norte, en Centro y en Sur, pero seguía pintado
-	* porque el polígono había usado el código. Eso era el "algunos quedan
-	* como si no hicieran parte".
+	* porque el polígono había usado el código.
 	*
 	* Y no era un caso raro: 18 de los 42 municipios del Valle llevan
 	* tilde o nombre compuesto —Riofrío, Tuluá, Calima - El Darién,
 	* Guadalajara de Buga— y todos dependían de que esa búsqueda por texto
 	* acertara.
-	*
-	* `normMunicipalityName` es el mismo normalizador que usa el mapa para
-	* resolver el clic sobre un área: hace case-fold, saca tildes y
-	* resuelve los alias conocidos.
 	*/
+	/**
+	* Las zonas que existen en los datos, no una lista escrita a mano: si
+	* el Excel reclasifica un municipio, el filtro se actualiza solo.
+	*
+	* Se calcula acá y no dentro de los controles porque ahora hay dos
+	* juegos de controles, el de escritorio y el de celular, y duplicar el
+	* cálculo es duplicar la regla.
+	*/
+	const zonasDisponibles = (0, import_react.useMemo)(() => [...new Set([...municipiosMapa.values()].map((m) => m.zona).filter((z) => typeof z === "string" && z.length > 0))].sort((a, b) => a.localeCompare(b, "es")), [municipiosMapa]);
+	/** Lo que se está mirando ahora mismo, con el lente y el día puestos. */
+	const resumenVisible = (0, import_react.useMemo)(() => {
+		const visibles = [...municipiosMapa.values()].filter((m) => territoryZone === "todas" || m.zona === territoryZone);
+		return {
+			entregas: visibles.reduce((sum, m) => sum + valorTemporal(m, lens, territoryDay), 0),
+			municipios: visibles.filter((m) => valorTemporal(m, lens, territoryDay) > 0).length
+		};
+	}, [
+		municipiosMapa,
+		territoryZone,
+		lens,
+		territoryDay
+	]);
 	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
 	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
 	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
@@ -26371,7 +26970,39 @@ function DashboardPage({ embedded = false }) {
 		if (!viewState.timelineInstant) return;
 		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
 	}, [viewState.timelineInstant, viewState.timelineDate]);
-	const hayPanelAbiertoEnMobile = isMobile && (viewState.destinoId || viewState.origenId);
+	const hayPanelAbierto = Boolean(viewState.destinoId || viewState.origenId);
+	const hayPanelAbiertoEnMobile = isMobile && hayPanelAbierto;
+	/**
+	* Cuando no hay panel, la hoja no ocupa nada.
+	*
+	* HojaInferior ya avisa al desmontarse, pero este efecto es la red de
+	* seguridad: si un panel se cierra por un camino que no desmonta la
+	* hoja, el mapa se quedaría descentrado y el timeline flotando a media
+	* pantalla, sin nada visible que explique por qué.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (!hayPanelAbiertoEnMobile) setAltoHoja(0);
+	}, [hayPanelAbiertoEnMobile]);
+	/**
+	* Abrir una ficha cierra los filtros.
+	*
+	* Las dos son hojas inferiores y se montarían una encima de la otra,
+	* con la de filtros tapando justo la ficha que se acaba de pedir. Se
+	* cierra la que la persona ya no está mirando.
+	*/
+	(0, import_react.useEffect)(() => {
+		if (hayPanelAbierto) setFiltrosAbiertos(false);
+	}, [hayPanelAbierto]);
+	/**
+	* Los controles solo se esconden cuando la hoja pasa de la mitad de la
+	* pantalla.
+	*
+	* Antes desaparecían apenas se abría una ficha. Eso le quitaba a la
+	* persona el filtro de zonas y la línea de tiempo justo en el momento
+	* en que estaba comparando municipios, que es cuando los usa. Con la
+	* hoja asomada hay sitio de sobra para los tres.
+	*/
+	const hojaTapaLosControles = hayPanelAbiertoEnMobile && altoPantalla > 0 && altoHoja > altoPantalla * HOJA_TAPA_DESDE;
 	/**
 	* Volver a donde estaba la persona antes de bajar al mapa.
 	*
@@ -26392,9 +27023,8 @@ function DashboardPage({ embedded = false }) {
 	* bajó con el scroll no ve el botón, porque no habría nada distinto a
 	* donde ya está.
 	*
-	* En móvil se oculta mientras hay un panel abierto, igual que los
-	* demás controles: el panel ya ocupa la pantalla y tiene su propio
-	* cierre.
+	* En móvil se oculta apenas hay una ficha abierta, y no solo cuando la
+	* hoja crece: queda en la esquina donde cae el pulgar al arrastrar.
 	*/
 	const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
 	/**
@@ -26435,7 +27065,7 @@ function DashboardPage({ embedded = false }) {
 				raizRef,
 				onCerrar: cerrarGuia
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcadorHUD, {
+			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcadorHUD, {
 				despachos: totalDespachosAsOf,
 				day: territoryDay,
 				lens,
@@ -26443,30 +27073,26 @@ function DashboardPage({ embedded = false }) {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: `pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2 md:left-4 ${COLUMNA_TOP} ${COLUMNA_TOP_MD}`,
-				children: [
-					puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-						type: "button",
-						onClick: volverAlRelato,
-						className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
-							className: "size-4 shrink-0",
-							"aria-hidden": true
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "min-w-0 truncate",
-							children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-						type: "button",
-						onClick: reiniciarVista,
-						className: "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
-							className: "size-4 shrink-0",
-							"aria-hidden": true
-						}), "Reiniciar vista"]
-					}),
-					!viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LeyendaOrigenes, {})
-				]
+				children: [puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: volverAlRelato,
+					className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
+						className: "size-4 shrink-0",
+						"aria-hidden": true
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "min-w-0 truncate",
+						children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
+					})]
+				}), !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+					type: "button",
+					onClick: reiniciarVista,
+					className: "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
+						className: "size-4 shrink-0",
+						"aria-hidden": true
+					}), "Reiniciar vista"]
+				}), !viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LeyendaOrigenes, {})] })]
 			}),
 			foco.categoria && resaltados && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: `pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${puedeVolver ? PILDORA_TOP_CON_BOTON : PILDORA_TOP_SOLA}`,
@@ -26487,7 +27113,7 @@ function DashboardPage({ embedded = false }) {
 					})]
 				})
 			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvisoEntrega, { frame: visibleActivity }),
+			(!isMobile || isoDate !== null) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvisoEntrega, { frame: visibleActivity }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
 				viewState,
 				seleccionNombre,
@@ -26496,19 +27122,35 @@ function DashboardPage({ embedded = false }) {
 					setViewState((prev) => viewTransitions.toAll(prev));
 				}
 			}),
-			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
+			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
 				municipios: municipiosMapa,
 				lens,
 				day: territoryDay,
+				iso: isoDate,
 				zone: territoryZone,
 				routesMode,
 				onLensChange: setLens,
 				onZoneChange: setTerritoryZone,
 				onRoutesModeChange: setRoutesMode
 			}),
+			isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaFiltros, {
+				abierta: filtrosAbiertos,
+				onCerrar: () => setFiltrosAbiertos(false),
+				zonasDisponibles,
+				lens,
+				day: territoryDay,
+				iso: isoDate,
+				zone: territoryZone,
+				routesMode,
+				onLensChange: setLens,
+				onZoneChange: setTerritoryZone,
+				onRoutesModeChange: setRoutesMode,
+				onReiniciar: reiniciarVista
+			}),
 			viewState.level === "DESTINO" && viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DestinoPanel, {
 				destinoId: viewState.destinoId,
 				isMobile,
+				onAlturaChange: setAltoHoja,
 				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
 			}),
 			viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrigenPanel, {
@@ -26517,60 +27159,79 @@ function DashboardPage({ embedded = false }) {
 				flujos: flujosFiltrados,
 				isMobile,
 				enFechaSeleccionada: isoDate !== null,
+				onAlturaChange: setAltoHoja,
 				onSelectDestino: (id) => {
 					setLinesDismissed(false);
 					setViewState((prev) => viewTransitions.toDestino(id, prev));
 				},
 				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
 			}),
-			!hayPanelAbiertoEnMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "pointer-events-none absolute inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex justify-center px-3",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
-					dates: timelineDates,
-					currentDate: viewState.timelineDate,
-					onActivate: (first) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.startTimeline(first, prev));
-					},
-					onSeek: (date) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.seekTimeline(date, prev));
-					},
-					onAdvance: (date) => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
-					},
-					onExit: () => {
-						setLinesDismissed(false);
-						setViewState((prev) => viewTransitions.exitTimeline(prev));
-					}
-				})
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "pointer-events-none absolute inset-x-0 z-10 flex flex-col items-stretch gap-2 px-3 md:items-center",
+				style: {
+					bottom: `calc(0.75rem + env(safe-area-inset-bottom) + ${isMobile ? altoHoja : 0}px)`,
+					transition: "bottom 220ms cubic-bezier(0.32, 0.72, 0, 1)"
+				},
+				children: [isMobile && !hojaTapaLosControles && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BarraMovil, {
+					entregas: resumenVisible.entregas,
+					municipios: resumenVisible.municipios,
+					lens,
+					day: territoryDay,
+					iso: isoDate,
+					zone: territoryZone,
+					routesMode,
+					filtrosAbiertos,
+					onAbrirFiltros: () => setFiltrosAbiertos(true),
+					onReiniciar: reiniciarVista
+				}), !hojaTapaLosControles && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "flex w-full justify-center [&>*]:w-full md:[&>*]:w-auto",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
+						dates: timelineDates,
+						currentDate: viewState.timelineDate,
+						onActivate: (first) => {
+							setLinesDismissed(false);
+							setViewState((prev) => viewTransitions.startTimeline(first, prev));
+						},
+						onSeek: (date) => {
+							setLinesDismissed(false);
+							setViewState((prev) => viewTransitions.seekTimeline(date, prev));
+						},
+						onAdvance: (date) => {
+							setLinesDismissed(false);
+							setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
+						},
+						onExit: () => {
+							setLinesDismissed(false);
+							setViewState((prev) => viewTransitions.exitTimeline(prev));
+						}
+					})
+				})]
 			})
 		]
 	});
 }
 var TODAS$1 = "todas";
-function TerritoryControls({ municipios, lens, day, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange }) {
+function TerritoryControls({ municipios, lens, day, iso, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange }) {
 	const zonasDisponibles = [...new Set([...municipios.values()].map((m) => m.zona).filter((z) => typeof z === "string" && z.length > 0))].sort((a, b) => a.localeCompare(b, "es"));
 	const visibleMunicipalities = [...municipios.values()].filter((m) => zone === "todas" || m.zona === zone);
 	const totalDespachos = visibleMunicipalities.reduce((sum, m) => sum + valorTemporal(m, lens, day), 0);
 	const conEntregas = visibleMunicipalities.filter((m) => valorTemporal(m, lens, day) > 0).length;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
-		className: "pointer-events-auto absolute inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-10 max-h-[45dvh] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:inset-x-auto md:left-4 md:max-h-[52dvh] md:w-[20rem]",
+		className: "pointer-events-auto absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 z-10 hidden max-h-[52dvh] w-[20rem] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:block",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "text-[15px] leading-tight text-foreground",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 						className: "font-semibold",
-						children: plural$1(totalDespachos, "despacho", "despachos")
+						children: plural$1(totalDespachos, "entrega", "entregas")
 					}),
+					" en",
 					" ",
-					"en ",
 					plural$1(conEntregas, "municipio", "municipios"),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
 						className: "text-muted-foreground",
-						children: [" · ", describeLens(lens, day)]
+						children: [" · ", describeLens(lens, day, iso)]
 					})
 				]
 			}),
@@ -26634,7 +27295,7 @@ function ToggleButton({ active, onClick, children, disabled = false, title }) {
 		disabled,
 		title,
 		"aria-pressed": active,
-		className: `rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
+		className: `min-h-11 rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
 		children
 	});
 }

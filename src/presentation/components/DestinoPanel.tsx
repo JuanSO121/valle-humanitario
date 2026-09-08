@@ -8,11 +8,32 @@
  * `enabled: expanded` ya vive en el hook, este componente solo controla
  * el booleano de UI.
  *
- * Reutiliza ContextualPanel del proyecto de criticidad sísmica tal cual:
- * es un chrome de panel completamente genérico (header con back/close,
- * scroll, transición de entrada, cierre en click-fuera respetando el
- * mapa) sin ningún concepto de sismos/sedes en su implementación —
- * reescribirlo hubiera sido duplicar código idéntico sin ninguna ganancia.
+ * DOS CHROMES, UN CONTENIDO
+ *
+ * En escritorio sigue siendo ContextualPanel, el panel lateral de
+ * siempre, sin ningún cambio. En celular el mismo contenido va dentro de
+ * una HojaInferior.
+ *
+ * El motivo es que un panel a pantalla completa no es la versión móvil
+ * de un panel lateral. En escritorio el panel ocupa un tercio y el mapa
+ * sigue ahí: se ve qué municipio se tocó, dónde queda, qué hay al lado.
+ * En celular ese mismo panel tapaba todo, y la única salida era cerrar.
+ * Comparar dos municipios exigía abrir, memorizar, cerrar y volver a
+ * abrir.
+ *
+ * El contenido no se duplica: se arma una vez y cambia el envoltorio.
+ *
+ * EL TOTAL SE MUEVE AL ENCABEZADO EN CELULAR
+ *
+ * En la hoja, el resumen del encabezado es lo ÚNICO que se lee sin
+ * arrastrar, así que ahí va la cifra que responde la pregunta que motivó
+ * el toque: cuántas unidades recibió. Y por eso mismo el bloque "Total
+ * recibido" no se repite en el cuerpo: mostrar el mismo número dos veces
+ * a diez píxeles de distancia gasta el primer golpe de vista, que en una
+ * hoja es lo más caro que hay.
+ *
+ * En escritorio ese bloque se queda donde estaba: ahí el encabezado solo
+ * lleva el nombre y el tipo, y el total necesita su sitio.
  *
  * SOBRE LA LISTA DE CATEGORÍAS
  *
@@ -30,16 +51,24 @@
  */
 import { useState } from "react";
 import { ContextualPanel } from "./ContextualPanel";
+import { HojaInferior } from "./HojaInferior";
 import { LogisticaDrawer } from "./LogisticaDrawer";
 import { useDestinoResumen } from "@/application/hooks/useDestinoResumen";
 
 interface Props {
   destinoId: string;
   isMobile: boolean;
+  /**
+   * Alto que ocupa la hoja en celular, en píxeles.
+   *
+   * Lo consume DashboardPage para correr el centro del mapa hacia arriba
+   * y subir el timeline y los controles. En escritorio no se llama nunca.
+   */
+  onAlturaChange?: ((px: number) => void) | undefined;
   onClose: () => void;
 }
 
-export function DestinoPanel({ destinoId, isMobile, onClose }: Props) {
+export function DestinoPanel({ destinoId, isMobile, onAlturaChange, onClose }: Props) {
   const { data, isLoading, isError } = useDestinoResumen(destinoId);
   const [logisticaExpanded, setLogisticaExpanded] = useState(false);
 
@@ -48,14 +77,11 @@ export function DestinoPanel({ destinoId, isMobile, onClose }: Props) {
   // destino nuevo antes de que la persona lo haya pedido explícitamente.
   const transitionKey = `destino-${destinoId}`;
 
-  return (
-    <ContextualPanel
-      isMobile={isMobile}
-      title={data?.destino.nombre ?? "Cargando destino…"}
-      subtitle={data ? tipoLabel(data.destino.tipo) : undefined}
-      onClose={onClose}
-      transitionKey={transitionKey}
-    >
+  const titulo = data?.destino.nombre ?? "Cargando destino…";
+  const tipo = data ? tipoLabel(data.destino.tipo) : undefined;
+
+  const contenido = (
+    <>
       {isLoading && <PanelSkeleton />}
 
       {isError && (
@@ -66,20 +92,26 @@ export function DestinoPanel({ destinoId, isMobile, onClose }: Props) {
 
       {data && (
         <div className="flex flex-col">
-          <section className="border-b border-border p-4">
-            <span className="label-caps text-xs">Total recibido</span>
-            <p className="font-display mt-1 text-3xl font-semibold tabular-nums">
-              {data.resumen.totalUnidades.toLocaleString("es-CO")}
-              <span className="ml-1.5 text-base font-normal text-muted-foreground">unidades</span>
-            </p>
-            {data.resumen.fechaCorte && (
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Corte al {data.resumen.fechaCorte}
+          {/* En celular esta cifra ya está en el encabezado de la hoja,
+              donde se lee sin arrastrar. Repetirla acá dejaría el primer
+              golpe de vista gastado en un número que la persona acaba de
+              leer. */}
+          {!isMobile && (
+            <section className="border-b border-border p-4">
+              <span className="label-caps text-xs">Total recibido</span>
+              <p className="font-display mt-1 text-3xl font-semibold tabular-nums">
+                {data.resumen.totalUnidades.toLocaleString("es-CO")}
+                <span className="ml-1.5 text-base font-normal text-muted-foreground">unidades</span>
               </p>
-            )}
-          </section>
+              {data.resumen.fechaCorte && (
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  Corte al {data.resumen.fechaCorte}
+                </p>
+              )}
+            </section>
+          )}
 
-          <section className="border-b border-border p-4">
+          <section className={`border-b border-border ${isMobile ? "pb-4" : "p-4"}`}>
             <span className="label-caps text-xs">Categorías entregadas</span>
 
             {/* Cada fila es su propia barra: el relleno crece de izquierda
@@ -104,7 +136,7 @@ export function DestinoPanel({ destinoId, isMobile, onClose }: Props) {
                       </span>
                       <span className="shrink-0 tabular-nums">
                         <b className="text-[15px] font-semibold text-foreground">
-                          {c.unidades.toLocaleString("es-CO")}
+                          {Math.round(c.unidades).toLocaleString("es-CO")}
                         </b>
                         {/* El porcentaje va detrás y en gris: es la
                             lectura secundaria, y con el punto medio del
@@ -132,6 +164,48 @@ export function DestinoPanel({ destinoId, isMobile, onClose }: Props) {
           />
         </div>
       )}
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <HojaInferior
+        abierta
+        onCerrar={onClose}
+        titulo={titulo}
+        onAlturaChange={onAlturaChange}
+        resumen={
+          data ? (
+            <>
+              <b className="font-semibold text-[#123E5C]">
+                {Math.round(data.resumen.totalUnidades).toLocaleString("es-CO")}
+              </b>{" "}
+              unidades
+              {/* El tipo va detrás de la cifra y no como subtítulo
+                  aparte: en el anclaje bajo hay una línea, y gastarla en
+                  "Municipio" cuando el nombre ya lo dice sería perder la
+                  única oportunidad de responder cuánto recibió. */}
+              {tipo ? ` · ${tipo}` : ""}
+            </>
+          ) : (
+            tipo
+          )
+        }
+      >
+        {contenido}
+      </HojaInferior>
+    );
+  }
+
+  return (
+    <ContextualPanel
+      isMobile={false}
+      title={titulo}
+      subtitle={tipo}
+      onClose={onClose}
+      transitionKey={transitionKey}
+    >
+      {contenido}
     </ContextualPanel>
   );
 }

@@ -8,6 +8,25 @@
  * array que ya se le pasa a MapCanvas para dibujar los arcos, así que no
  * hay una segunda fuente de verdad ni un fetch adicional.
  *
+ * DOS CHROMES, UN CONTENIDO
+ *
+ * En escritorio sigue siendo ContextualPanel, sin cambios. En celular el
+ * mismo contenido va dentro de una HojaInferior, que deja el mapa
+ * visible arriba.
+ *
+ * Acá el cambio pesa incluso más que en el panel de destino: la lista de
+ * este panel son municipios, y cada fila abre el suyo. Con el panel a
+ * pantalla completa, tocar una fila reemplazaba una pantalla llena por
+ * otra y se perdía por completo dónde estaba uno. Con la hoja, el mapa
+ * de atrás mueve su selección mientras la lista sigue ahí.
+ *
+ * LAS DOS CIFRAS SE MUEVEN AL ENCABEZADO EN CELULAR
+ *
+ * En la hoja, el resumen es lo único que se lee sin arrastrar. Ahí van
+ * los despachos y los destinos alcanzados, y por eso el bloque de dos
+ * columnas no se repite en el cuerpo: lo primero que aparece al
+ * arrastrar es la lista, que es a lo que se vino.
+ *
  * CADA FILA ABRE SU DESTINO
  *
  * Las cuarenta filas son destinos y todas tienen panel propio, así que
@@ -16,18 +35,18 @@
  *
  * La fila de Cali NO lleva ninguna glosa. Llegó a tener una que decía
  * "se quedó en la ciudad, sin salir a otro municipio", y era una
- * interpretación inventada: esos 59 son despachos que llegaron a Cali
- * como destino, igual que los 22 de Dagua. Que el origen esté en la
- * misma ciudad no dice nada sobre si la ayuda se entregó o se quedó
- * guardada, y el dato no distingue esas dos cosas.
+ * interpretación inventada: esos despachos llegaron a Cali como destino,
+ * igual que los de Dagua. Que el origen esté en la misma ciudad no dice
+ * nada sobre si la ayuda se entregó o se quedó guardada, y el dato no
+ * distingue esas dos cosas.
  *
  * SOBRE EL TOTAL
  *
  * Los despachos de este panel son los que el MAPA puede dibujar, o sea
  * los que fueron a un destino con coordenada. Desde Cali salieron además
- * 23 hacia destinos sin ubicación —entidades, casos especiales, veredas
- * sin especificar—, que no aparecen acá. La cifra es consistente con lo
- * que se ve en el mapa, no con el total de la operación.
+ * varios hacia destinos sin ubicación —entidades, casos especiales,
+ * veredas sin especificar—, que no aparecen acá. La cifra es consistente
+ * con lo que se ve en el mapa, no con el total de la operación.
  *
  * SOBRE LA COMPOSICIÓN
  *
@@ -36,13 +55,11 @@
  * y en los destinos chicos dibujaba doce píxeles de color en un panel de
  * casi cuatrocientos: la proporción no se leía y la lista era el doble de
  * larga.
- *
- * Los cuerpos subieron de 10 y 12 px a 13 y 15. Diez píxeles es más chico
- * que cualquier texto del resto de la página.
  * -----------------------------------------------------------------------
  */
 import { ChevronRight, Info } from "lucide-react";
 import { ContextualPanel } from "./ContextualPanel";
+import { HojaInferior } from "./HojaInferior";
 import type { Flujo } from "@/domain/entities";
 
 interface Props {
@@ -55,6 +72,13 @@ interface Props {
   enFechaSeleccionada?: boolean;
   /** Abre el panel de un destino. Lo maneja DashboardPage, igual que el clic en el mapa. */
   onSelectDestino?: ((id: string) => void) | undefined;
+  /**
+   * Alto que ocupa la hoja en celular, en píxeles.
+   *
+   * Lo consume DashboardPage para correr el centro del mapa hacia arriba
+   * y subir el timeline y los controles. En escritorio no se llama nunca.
+   */
+  onAlturaChange?: ((px: number) => void) | undefined;
   onClose: () => void;
 }
 
@@ -65,6 +89,7 @@ export function OrigenPanel({
   isMobile,
   enFechaSeleccionada = false,
   onSelectDestino,
+  onAlturaChange,
   onClose,
 }: Props) {
   const despachosTotal = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
@@ -78,19 +103,16 @@ export function OrigenPanel({
    */
   const destinosOrdenados = [...flujos].sort((a, b) => b.despachosCount - a.despachosCount);
 
-  return (
-    <ContextualPanel
-      isMobile={isMobile}
-      title={origenNombre}
-      subtitle="Punto de despacho"
-      onClose={onClose}
-      transitionKey={`origen-${origenId}`}
-    >
-      <div className="flex flex-col">
-        {/* `min-h-[2.4em]` en los rótulos: "Destinos alcanzados" ocupa dos
-            renglones y "Despachos" uno, así que sin reservar el mismo alto
-            las dos cifras quedan a distinta altura y la pareja se ve
-            desalineada. */}
+  const contenido = (
+    <div className="flex flex-col">
+      {/* En celular estas dos cifras ya están en el encabezado de la
+          hoja. Repetirlas acá haría que el primer arrastre revelara lo
+          que la persona acaba de leer, en vez de la lista. */}
+      {!isMobile && (
+        /* `min-h-[2.4em]` en los rótulos: "Destinos alcanzados" ocupa dos
+           renglones y "Despachos" uno, así que sin reservar el mismo alto
+           las dos cifras quedan a distinta altura y la pareja se ve
+           desalineada. */
         <section className="grid grid-cols-2 divide-x divide-border border-b border-border">
           <div className="p-4">
             <span className="label-caps block min-h-[2.4em] text-xs leading-tight">Despachos</span>
@@ -107,99 +129,142 @@ export function OrigenPanel({
             </p>
           </div>
         </section>
+      )}
 
-        {flujos.length === 0 ? (
-          <p className="p-4 text-[15px] text-muted-foreground">
-            {/* El texto anterior siempre terminaba en "en la fecha
-                seleccionada", porque su condición era `flujos.length === 0`
-                dentro de la rama donde eso ya es cierto. Ahora depende de
-                si el timeline está realmente en una fecha. */}
-            No hay despachos registrados desde este origen
-            {enFechaSeleccionada ? " en la fecha seleccionada" : ""}.
+      {flujos.length === 0 ? (
+        <p className={`text-[15px] text-muted-foreground ${isMobile ? "py-2" : "p-4"}`}>
+          {/* El texto anterior siempre terminaba en "en la fecha
+              seleccionada", porque su condición era `flujos.length === 0`
+              dentro de la rama donde eso ya es cierto. Ahora depende de
+              si el timeline está realmente en una fecha. */}
+          No hay despachos registrados desde este origen
+          {enFechaSeleccionada ? " en la fecha seleccionada" : ""}.
+        </p>
+      ) : (
+        <section className={`border-b border-border ${isMobile ? "pb-4" : "p-4"}`}>
+          <span className="label-caps text-xs">Despachos por destino</span>
+          <p className="mt-1 text-[15px] text-foreground">
+            Selecciona un municipio para ver qué recibió.
           </p>
-        ) : (
-          <section className="border-b border-border p-4">
-            <span className="label-caps text-xs">Despachos por destino</span>
-            <p className="mt-1 text-[15px] text-foreground">
-              Selecciona un municipio para ver qué recibió.
+
+          {/* La aclaración va en su propia caja y no como un párrafo
+              más. Son dos cosas distintas: arriba una acción, acá una
+              advertencia sobre cómo leer una columna. Puestas seguidas
+              en el mismo gris, las cinco líneas se leían como
+              instrucciones y empujaban la lista fuera de la pantalla.
+
+              El ícono y el fondo tenue la marcan como nota al margen,
+              que es lo que permite saltarla en la primera lectura y
+              encontrarla después, cuando el porcentaje genera la duda. */}
+          <div className="mt-2 flex gap-2 rounded-md bg-surface-raised/60 px-3 py-2">
+            <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <p className="text-[13px] leading-5 text-muted-foreground">
+              Cada despacho corresponde a una ruta. El porcentaje muestra la proporción de rutas
+              que llegó a cada municipio, no la cantidad de ayuda enviada. Un municipio puede
+              recibir más ayuda en menos rutas.
             </p>
+          </div>
 
-            {/* La aclaración va en su propia caja y no como un párrafo
-                más. Son dos cosas distintas: arriba una acción, acá una
-                advertencia sobre cómo leer una columna. Puestas seguidas
-                en el mismo gris, las cinco líneas se leían como
-                instrucciones y empujaban la lista fuera de la pantalla.
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {destinosOrdenados.map((f, i) => {
+              const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
 
-                El ícono y el fondo tenue la marcan como nota al margen,
-                que es lo que permite saltarla en la primera lectura y
-                encontrarla después, cuando el porcentaje genera la duda. */}
-            <div className="mt-2 flex gap-2 rounded-md bg-surface-raised/60 px-3 py-2">
-              <Info className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <p className="text-[13px] leading-5 text-muted-foreground">
-                Cada despacho corresponde a una ruta. El porcentaje muestra la proporción de rutas
-                que llegó a cada municipio, no la cantidad de ayuda enviada. Un municipio puede
-                recibir más ayuda en menos rutas.
-              </p>
-            </div>
+              return (
+                <li key={f.destino.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectDestino?.(f.destino.id)}
+                    disabled={!onSelectDestino}
+                    /* `min-h-11` en celular: estas filas son la
+                       navegación principal del panel y con el padding
+                       solo medían 36 px. Cuarenta objetivos de 36 px
+                       apilados es donde más se falla con el pulgar. */
+                    className="group relative block min-h-11 w-full overflow-hidden rounded-md bg-surface-raised/60 text-left transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default md:min-h-0"
+                  >
+                    {/* El relleno crece de izquierda a derecha por
+                        detrás del nombre. La escalera de retardos se
+                        corta a los doce primeros: con cuarenta filas,
+                        sesenta milisegundos cada una sumaban dos
+                        segundos y medio hasta que la última se movía. */}
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-0 left-0 origin-left bg-primary/25"
+                      style={{
+                        width: `${Math.max(2, porcentaje * 100)}%`,
+                        animation: "bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both",
+                        animationDelay: `${Math.min(i, 12) * 40}ms`,
+                      }}
+                    />
 
-            <ul className="mt-3 flex flex-col gap-1.5">
-              {destinosOrdenados.map((f, i) => {
-                const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
+                    <div className="relative flex h-full items-center justify-between gap-3 px-3 py-2">
+                      <span className="min-w-0 truncate text-[15px] text-foreground">
+                        {f.destino.nombre}
+                      </span>
 
-                return (
-                  <li key={f.destino.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectDestino?.(f.destino.id)}
-                      disabled={!onSelectDestino}
-                      className="group relative block w-full overflow-hidden rounded-md bg-surface-raised/60 text-left transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default"
-                    >
-                      {/* El relleno crece de izquierda a derecha por
-                          detrás del nombre. La escalera de retardos se
-                          corta a los doce primeros: con cuarenta filas,
-                          sesenta milisegundos cada una sumaban dos
-                          segundos y medio hasta que la última se movía. */}
-                      <span
-                        aria-hidden
-                        className="absolute inset-y-0 left-0 origin-left bg-primary/25"
-                        style={{
-                          width: `${Math.max(2, porcentaje * 100)}%`,
-                          animation: "bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both",
-                          animationDelay: `${Math.min(i, 12) * 40}ms`,
-                        }}
-                      />
-
-                      <div className="relative flex items-center justify-between gap-3 px-3 py-2">
-                        <span className="min-w-0 truncate text-[15px] text-foreground">
-                          {f.destino.nombre}
+                      <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
+                        <b className="text-[15px] font-semibold text-foreground">
+                          {f.despachosCount.toLocaleString("es-CO")}
+                        </b>
+                        {/* El porcentaje va detrás y en gris: con el
+                            punto medio del diseño anterior competía de
+                            igual a igual con la cifra de despachos. */}
+                        <span className="text-[13px] text-muted-foreground">
+                          {Math.round(porcentaje * 100)}%
                         </span>
+                        {onSelectDestino && (
+                          <ChevronRight
+                            aria-hidden
+                            className="size-4 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
+                          />
+                        )}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
 
-                        <span className="flex shrink-0 items-baseline gap-2 tabular-nums">
-                          <b className="text-[15px] font-semibold text-foreground">
-                            {f.despachosCount.toLocaleString("es-CO")}
-                          </b>
-                          {/* El porcentaje va detrás y en gris: con el
-                              punto medio del diseño anterior competía de
-                              igual a igual con la cifra de despachos. */}
-                          <span className="text-[13px] text-muted-foreground">
-                            {Math.round(porcentaje * 100)}%
-                          </span>
-                          {onSelectDestino && (
-                            <ChevronRight
-                              aria-hidden
-                              className="size-4 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
-                            />
-                          )}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-      </div>
+  if (isMobile) {
+    return (
+      <HojaInferior
+        abierta
+        onCerrar={onClose}
+        titulo={origenNombre}
+        onAlturaChange={onAlturaChange}
+        resumen={
+          flujos.length === 0 ? (
+            "Punto de despacho"
+          ) : (
+            <>
+              <b className="font-semibold text-[#123E5C]">
+                {despachosTotal.toLocaleString("es-CO")}
+              </b>{" "}
+              despachos hacia{" "}
+              <b className="font-semibold text-[#123E5C]">{flujos.length}</b>{" "}
+              {flujos.length === 1 ? "destino" : "destinos"}
+            </>
+          )
+        }
+      >
+        {contenido}
+      </HojaInferior>
+    );
+  }
+
+  return (
+    <ContextualPanel
+      isMobile={false}
+      title={origenNombre}
+      subtitle="Punto de despacho"
+      onClose={onClose}
+      transitionKey={`origen-${origenId}`}
+    >
+      {contenido}
     </ContextualPanel>
   );
 }

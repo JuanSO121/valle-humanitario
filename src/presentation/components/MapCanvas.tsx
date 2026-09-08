@@ -309,7 +309,7 @@ interface Props {
    * septiembre. Es opcional para no obligar a nadie a pasarla: sin ella,
    * la etiqueta dice "día 3" y no inventa un mes.
    */
-  fechaActual?: string | null;
+  fechaActual?: string | null | undefined;
   territoryZone: TerritoryZone | "todas";
   /** Entregas por municipio, indexadas por código DANE. Vienen de la API. */
   municipios: MunicipiosMapa;
@@ -331,6 +331,18 @@ interface Props {
    * sección, el mapa deja a la vista solo los municipios que la
    * recibieron. null significa sin resaltado.
    */
+  /**
+   * Píxeles que la hoja inferior ocupa en la parte baja del mapa.
+   *
+   * El mapa corre su centro hacia arriba en esa cantidad, así que el
+   * municipio seleccionado queda en la franja que SÍ se ve. Sin esto, la
+   * hoja se abre justo encima de lo que se acaba de tocar: el mapa está
+   * visible, pero mostrando la mitad que no interesa.
+   *
+   * Va en píxeles y no como fracción porque la hoja se arrastra: el
+   * valor cambia cuadro a cuadro mientras el dedo se mueve.
+   */
+  desplazamientoInferior?: number | undefined;
   resaltados?: ReadonlySet<string> | null | undefined;
   routesMode: TerritoryRoutesMode;
   /**
@@ -341,7 +353,7 @@ interface Props {
    * veces seguidas "volvé a centrar" funciona, cosa que con un booleano
    * no pasaría porque el segundo cambio no sería un cambio.
    */
-  vistaGeneralToken?: number;
+  vistaGeneralToken?: number | undefined;
   /**
    * Si el mapa puede dibujar y animar arcos.
    *
@@ -350,11 +362,11 @@ interface Props {
    * la cascada de entrada no se reproduzca detrás de la guía inicial,
    * que es lo mismo que no reproducirla.
    */
-  entradaHabilitada?: boolean;
+  entradaHabilitada?: boolean | undefined;
   onSelectDestino: (id: string) => void;
   onSelectOrigen: (id: string) => void;
   onReset: () => void;
-  onActivity?: (frame: ActivityFrame | null) => void;
+  onActivity?: ((frame: ActivityFrame | null) => void) | undefined;
 }
 
 const flujoKey = (f: Flujo) => `${f.origenId}::${f.destino.id}`;
@@ -431,6 +443,7 @@ export function MapCanvas({
   territoryZone,
   municipios,
   pesoPorEntrega,
+  desplazamientoInferior = 0,
   resaltados = null,
   routesMode,
   vistaGeneralToken = 0,
@@ -483,6 +496,36 @@ export function MapCanvas({
   pesoPorEntregaRef.current = pesoPorEntrega;
   const fechaActualRef = useRef(fechaActual);
   fechaActualRef.current = fechaActual;
+
+  /**
+   * Si el dispositivo tiene un cursor que puede "pasar por encima".
+   *
+   * Los globos de este mapa son de hover: se abren con `mouseenter` y se
+   * cierran con `mouseleave`. En una pantalla táctil el primero llega
+   * —el navegador sintetiza eventos de ratón a partir del toque— pero el
+   * segundo no llega nunca, porque el dedo no se va a ningún lado: se
+   * levanta. El globo quedaba abierto encima del mapa hasta que se
+   * tocara otro, acumulando ruido justo sobre lo que se estaba mirando.
+   *
+   * En celular tampoco hacen falta: el globo dice el nombre, la zona y
+   * las entregas, y eso es exactamente lo que el panel muestra al
+   * abrirse con el mismo toque. Eran dos respuestas a la misma pregunta,
+   * una encima de la otra.
+   *
+   * Se pregunta por `hover` y `pointer`, no por el ancho de la pantalla:
+   * una tableta con ratón sí debe tener globos, y un portátil táctil
+   * angosto también. El ancho no dice nada sobre cómo se apunta.
+   */
+  const puedeFlotarRef = useRef(true);
+  useEffect(() => {
+    const mql = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const actualizar = () => {
+      puedeFlotarRef.current = mql.matches;
+    };
+    actualizar();
+    mql.addEventListener("change", actualizar);
+    return () => mql.removeEventListener("change", actualizar);
+  }, []);
 
   const hoveredOrigenIdRef = useRef<string | null>(null);
   const hoveredDestinoIdRef = useRef<string | null>(null);
@@ -680,6 +723,7 @@ export function MapCanvas({
         });
 
         map.on("mousemove", "municipios-fill", (e: MapLayerMouseEvent) => {
+          if (!puedeFlotarRef.current) return;
           map.getCanvas().style.cursor = "pointer";
           const feature = e.features?.[0];
           const nextId = feature?.id != null ? String(feature.id) : null;
@@ -882,7 +926,37 @@ export function MapCanvas({
        * dos cosas distintas, y el mapa ya no necesita trucos de
        * desplazamiento.
        */
+      /**
+       * Cerrar cualquier globo abierto.
+       *
+       * Es la red de seguridad de la guarda de arriba. Un globo que
+       * sobrevive a la acción que lo abrió deja de ser información y pasa
+       * a ser un recorte opaco sobre el territorio, y encima tapando
+       * justo el municipio que se acaba de tocar.
+       */
+      const cerrarGlobos = () => {
+        destinoPopup.remove();
+        origenPopup.remove();
+        municipalityPopup.remove();
+        if (hoveredMunicipalityId != null) {
+          map.setFeatureState(
+            { source: "municipios", id: hoveredMunicipalityId },
+            { hovered: false },
+          );
+          hoveredMunicipalityId = null;
+        }
+      };
+
+      // Al tocar y al mover el mapa. Lo segundo también sirve en
+      // escritorio: un globo anclado a una coordenada que se fue de la
+      // pantalla se queda flotando en el borde sin nada debajo.
+      map.on("touchstart", cerrarGlobos);
+      map.on("movestart", cerrarGlobos);
+
       map.on("click", (e: MapLayerMouseEvent) => {
+        // El toque ya eligió: lo que sigue es el panel, no un globo.
+        cerrarGlobos();
+
         const hitbox: [PointLike, PointLike] = [
           [e.point.x - POINT_HIT_TOLERANCE_PX, e.point.y - POINT_HIT_TOLERANCE_PX],
           [e.point.x + POINT_HIT_TOLERANCE_PX, e.point.y + POINT_HIT_TOLERANCE_PX],
@@ -949,6 +1023,7 @@ export function MapCanvas({
       });
 
       map.on("mouseenter", "origenes-point", (e: MapLayerMouseEvent) => {
+        if (!puedeFlotarRef.current) return;
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
@@ -983,6 +1058,7 @@ export function MapCanvas({
       });
 
       map.on("mouseenter", "destinos-point", (e: MapLayerMouseEvent) => {
+        if (!puedeFlotarRef.current) return;
         map.getCanvas().style.cursor = "pointer";
         const f = e.features?.[0];
         if (!f) return;
@@ -1617,6 +1693,35 @@ export function MapCanvas({
       });
     });
   }, [vistaGeneralToken]);
+
+  // --- desplazamiento por la hoja inferior --------------------------------
+  useEffect(() => {
+    whenReady(() => {
+      const map = mapRef.current;
+      if (!map) return;
+
+      // Se deja un margen para que el punto seleccionado no quede pegado
+      // al canto de la hoja, y se limita al 60% del alto: con la hoja
+      // llena, un relleno mayor que el mapa deja la proyección sin área
+      // válida y MapLibre empieza a devolver coordenadas raras.
+      const alto = map.getContainer().clientHeight;
+      const abajo = Math.min(Math.max(0, desplazamientoInferior + 24), alto * 0.6);
+
+      // `easeTo` y no `setPadding`: el segundo salta, y el mapa daría un
+      // tirón cuando la hoja termina de subir. Con 200 ms el mapa
+      // acompaña el gesto, y como es más corto que la transición de la
+      // hoja llega primero en vez de verse arrastrado por ella.
+      //
+      // `prefers-reduced-motion` importa acá más que en otros lados:
+      // esto se dispara con cada cuadro del arrastre, y animar todos da
+      // un mapa que persigue al dedo con retraso.
+      const prefiereQuieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      map.easeTo({
+        padding: { top: 0, right: 0, bottom: abajo, left: 0 },
+        duration: prefiereQuieto ? 0 : 200,
+      });
+    });
+  }, [desplazamientoInferior]);
 
   // --- visibilidad de puntos y rutas --------------------------------------
   useEffect(() => {
