@@ -182,7 +182,7 @@ export function BalanceFinal() {
    * Las dos van juntas y a mano hasta que la API publique el dato; si se
    * separan, la próxima actualización cambia una y deja la otra quieta.
    */
-  const RECIBIDAS = { valor: "562 t", corte: "24 de agosto de 2026" };
+  const RECIBIDAS = { valor: "889 t", corte: "3 de septiembre de 2026" };
 
   const cifras = [
     { valor: RECIBIDAS.valor, label: "Ayudas recibidas", corte: RECIBIDAS.corte },

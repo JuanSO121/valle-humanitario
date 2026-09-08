@@ -3,7 +3,7 @@ import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { i as require_react, r as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
 import { S as ArrowLeft, _ as ChevronLeft, a as Package, b as Building2, c as Map$1, d as Info, f as House, g as ChevronRight, h as FileText, i as RotateCcw, l as MapPin, m as HandHeart, n as Warehouse, o as PackageCheck, p as HeartHandshake, r as Truck, s as Menu, t as X, u as List, v as ChevronDown, x as Boxes, y as CalendarDays } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-c20eMMLm.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-BWbsSLsP.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -29008,8 +29008,8 @@ function BalanceFinal() {
 	* separan, la próxima actualización cambia una y deja la otra quieta.
 	*/
 	const RECIBIDAS = {
-		valor: "562 t",
-		corte: "24 de agosto de 2026"
+		valor: "889 t",
+		corte: "3 de septiembre de 2026"
 	};
 	const cifras = [
 		{
