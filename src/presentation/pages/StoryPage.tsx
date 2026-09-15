@@ -78,7 +78,7 @@ import {
   Package,
   Truck,
 } from "lucide-react";
-import { DashboardPage } from "@/presentation/pages/DashboardPage";
+import { MapaDiferido } from "../components/MapaDiferido";
 import { OperacionProvider, useOperacion } from "@/presentation/state/OperacionContext";
 import { FocoProvider, useFoco } from "@/presentation/state/FocoContext";
 import { JornadaBars } from "../components/JornadaBars";
@@ -337,7 +337,7 @@ function Contenido() {
           <CanalesSection />
         </section>
         <section id="mapa-de-ayudas" className="relative h-dvh bg-[#123E5C]">
-          <DashboardPage embedded />
+          <MapaDiferido scrollRootId={SCROLL_ROOT_ID} />
         </section>
         <footer className="bg-[#0076BC] px-8 py-10 text-base leading-7 text-[#A8CFE2] sm:px-6 md:px-32">
           <div>

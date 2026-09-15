@@ -3,35 +3,38 @@
  * -----------------------------------------------------------------------
  * Única clase que conoce la URL del Web App de Apps Script y el contrato
  * `?route=...`. Nada fuera de este archivo debería construir esa URL a
- * mano, así, si el día de mañana el backend deja de ser Apps Script,
- * solo se reemplaza este archivo.
+ * mano.
  *
- * Cada método corresponde 1:1 a una ruta ya cerrada y probada. No hay
- * traducción de forma de datos acá, eso ya lo hace Transforms.gs; este
- * archivo tipa la respuesta contra domain/entities.ts, valida errores de
- * red/HTTP, y valida el SHAPE mínimo esperado de cada respuesta.
+ * CAMBIO: las nueve rutas del tablero viajan en UNA petición.
  *
- * La validación de shape existe porque Apps Script cachea respuestas ya
- * armadas (CacheLayer.gs, TTL 6h) y las implementaciones Web App no se
- * actualizan solas al editar el código fuente. Si el contrato cambia
- * (ej. route=flujos pasa de array plano a {flujos, excluidos}) y el
- * deploy o la caché quedan desincronizados con Transforms.gs, un objeto
- * con forma vieja pasaría como 200 OK válido y rompería río abajo con un
- * `undefined.forEach` sin contexto. Mejor fallar acá, con un mensaje que
- * apunta directo a la causa.
+ * Con la cola en MAX_EN_VUELO = 1, las nueve consultas del arranque
+ * salían en fila india, y cada una pagaba el arranque del Web App más la
+ * redirección a googleusercontent. Ese costo fijo, multiplicado por
+ * nueve, era la mayor parte de la espera.
  *
- * CAMBIO: todas las peticiones pasan por una cola.
+ * Ahora `getMeta()`, `getFlujos()`, etc. leen de `?route=bundle`. Las
+ * nueve llamadas simultáneas de los hooks comparten la misma promesa en
+ * vuelo, así que salen como una sola petición. Los hooks no cambian.
  *
- * Un Web App de Apps Script serializa las ejecuciones por usuario. El
- * tablero monta ocho consultas en el mismo instante y las que se pisan
- * reciben un 404 de la infraestructura de Google, sin llegar a ejecutar
- * el script. Con la cola viajan de a dos y ninguna se cae.
+ * RESPALDOS, en orden
  *
- * Va acá y no en cada hook porque este es el único `fetch` del archivo:
- * un solo punto cubre las once rutas.
+ *   · Si el Web App desplegado todavía no tiene `bundle` (responde "Ruta
+ *     no reconocida"), se usan las rutas individuales por el resto de la
+ *     sesión. Un deploy viejo sigue funcionando, solo más lento.
+ *   · Si el bundle llega pero una parte viene en null (el backend no
+ *     pudo armarla) o con forma inesperada, esa parte sola se pide por
+ *     su ruta.
+ *   · Si el bundle falla por red, el error sube tal cual y React Query
+ *     reintenta. Los reintentos de las nueve consultas vuelven a
+ *     compartir una sola petición.
+ *
+ * La validación de forma sigue existiendo por la misma razón de antes:
+ * un deploy o una caché desincronizados pueden servir un contrato viejo
+ * con HTTP 200, y es mejor fallar acá que en un `undefined.forEach`.
  * -----------------------------------------------------------------------
  */
 import { enCola } from "@/infrastructure/api/colaDePeticiones";
+import { guardarSnapshot } from "@/infrastructure/api/snapshotTablero";
 import type {
   Meta,
   Origen,
@@ -44,6 +47,8 @@ import type {
   DestinoResumenLista,
   DestinoResumen,
   DestinoLogistica,
+  BundleResponse,
+  ParteBundle,
 } from "@/domain/entities";
 
 export class ApiError extends Error {
@@ -56,66 +61,141 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Cuánto se reutiliza un bundle ya recibido.
+ *
+ * Existe para que las nueve consultas que React Query revalida juntas
+ * (al volver a la pestaña, por ejemplo) no disparen nueve peticiones si
+ * llegan con unos milisegundos de diferencia. Tiene que ser bastante
+ * menor que el staleTime de los hooks (5 min): si no, una revalidación
+ * devolvería el mismo dato viejo.
+ */
+const REUSO_BUNDLE_MS = 20 * 1000;
+
+// --- validación de forma ------------------------------------------------
+
+type Validador = (payload: unknown) => string | null;
+
+const esObjeto = (p: unknown): p is Record<string, unknown> =>
+  !!p && typeof p === "object" && !Array.isArray(p);
+
+const esArrayDe =
+  (que: string): Validador =>
+  (p) =>
+    Array.isArray(p) ? null : `se esperaba un array de ${que}`;
+
+let avisoPorFechaEmitido = false;
+
+const validarFlujos: Validador = (p) => {
+  if (!esObjeto(p)) return "se esperaba un objeto";
+  if (!Array.isArray(p["flujos"])) return 'falta el campo "flujos" (array)';
+  if (!Array.isArray(p["excluidos"])) return 'falta el campo "excluidos" (array)';
+
+  // "porFecha" se valida como advertencia no bloqueante: sin ese campo el
+  // mapa y los arcos siguen funcionando, y rechazar toda la respuesta
+  // tumbaría el mapa entero. Ver historial de este archivo.
+  const primerFlujo = p["flujos"][0];
+  if (
+    !avisoPorFechaEmitido &&
+    esObjeto(primerFlujo) &&
+    !Array.isArray(primerFlujo["porFecha"])
+  ) {
+    avisoPorFechaEmitido = true;
+    // eslint-disable-next-line no-console
+    console.warn(
+      'route=flujos: los flujos no traen "porFecha" (array). Probablemente la ' +
+        "implementación del Web App está desactualizada. El mapa y los arcos funcionan " +
+        "igual; las secciones por fecha y el timeline quedan sin datos hasta que se " +
+        're-implemente ("Nueva versión") y se corra precalentarAhora().',
+    );
+  }
+  return null;
+};
+
+const VALIDADORES: Record<ParteBundle, Validador> = {
+  meta: (p) => (esObjeto(p) && esObjeto(p["totales"]) ? null : 'falta el campo "totales"'),
+  origenes: esArrayDe("orígenes"),
+  municipios: esArrayDe("municipios"),
+  categorias: esArrayDe("categorías"),
+  flujos: validarFlujos,
+  destinos: esArrayDe("destinos"),
+  toneladas: (p) => {
+    if (!esObjeto(p)) return "se esperaba un objeto";
+    if (!Array.isArray(p["serie"])) return 'falta el campo "serie" (array)';
+    if (typeof p["total"] !== "number") return 'falta el campo "total" (número)';
+    return null;
+  },
+  ayuda: (p) => {
+    if (!esObjeto(p)) return "se esperaba un objeto";
+    if (!Array.isArray(p["categorias"])) return 'falta el campo "categorias" (array)';
+    if (!Array.isArray(p["poblaciones"])) return 'falta el campo "poblaciones" (array)';
+    if (!Array.isArray(p["canales"])) return 'falta el campo "canales" (array)';
+    return null;
+  },
+  necesidades: (p) => {
+    if (!esObjeto(p)) return "se esperaba un objeto";
+    if (!Array.isArray(p["secciones"])) return 'falta el campo "secciones" (array)';
+    return null;
+  },
+};
+
+/**
+ * Valida una parte del tablero. Exportada para que la copia guardada en
+ * el navegador pase por la misma regla antes de mostrarse.
+ */
+export function validarParte(clave: ParteBundle, valor: unknown): string | null {
+  return VALIDADORES[clave](valor);
+}
+
+const validarBundle: Validador = (p) =>
+  esObjeto(p) && "meta" in p ? null : "se esperaba un objeto con las partes del tablero";
+
+/** El backend responde así cuando el deploy no conoce la ruta. */
+const esRutaNoReconocida = (error: unknown) =>
+  error instanceof ApiError && error.status === 404 && /no reconocida/i.test(error.message);
+
+// --- repositorio --------------------------------------------------------
+
 export class AyudasApiRepository {
+  private bundleEnVuelo: Promise<BundleResponse> | null = null;
+  private bundleUltimo: BundleResponse | null = null;
+  private bundleObtenidoEn = 0;
+  private bundleNoDisponible = false;
+
   constructor(private readonly baseUrl: string) {}
 
   private async request<T>(
     route: string,
     params: Record<string, string> = {},
-    validateShape?: (payload: unknown) => string | null,
+    validateShape?: Validador,
   ): Promise<T> {
-    const url = new URL(this.baseUrl);
+    // La base puede ser relativa (/api/tablero, el proxy del mismo
+    // dominio) o absoluta (el /exec directo). `new URL` exige una base
+    // para las relativas; las consultas solo corren en el navegador, y el
+    // respaldo existe solo para que un render del servidor no explote.
+    const origen = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+    const url = new URL(this.baseUrl, origen);
     url.searchParams.set("route", route);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
 
-    // `no-store` a propósito. Apps Script responde /exec con un 302 a
-    // googleusercontent.com y esa respuesta sí se puede cachear en el
-    // navegador. El síntoma es corregir el Excel, invalidar la caché del
-    // backend, recargar y seguir viendo lo viejo. Quién decide cuánto
-    // dura el dato es React Query con su staleTime, no el HTTP cache.
-    //
-    // La cola limita cuántas de estas viajan a la vez. Sin ella, las ocho
-    // consultas del arranque se pisan entre sí en el Web App.
-    const response = await enCola(() => fetch(url.toString(), { cache: "no-store" }));
+    // `no-store`: quién decide cuánto dura el dato es React Query, no el
+    // HTTP cache del 302 a googleusercontent. La etiqueta hace que los
+    // avisos de la cola nombren la ruta.
+    const response = await enCola(
+      () => fetch(url.toString(), { cache: "no-store" }),
+      `route=${route}`,
+    );
 
     if (!response.ok) {
-      /**
-       * El nombre de la ruta se registra acá porque en la consola del
-       * navegador se pierde: /exec responde con un 302 a
-       * script.googleusercontent.com, y ese error aparece sin el
-       * `?route=`, así que "404 en googleusercontent" no dice cuál falló.
-       *
-       * UN 404 ACÁ NO PUEDE VENIR DE Code.gs. `jsonResponse_` usa
-       * ContentService, que siempre responde HTTP 200: hasta
-       * `errorResponse_(..., 404)` devuelve un 200 con el 404 adentro del
-       * JSON, y lo atrapa el chequeo de `payload.error` de más abajo. Un
-       * 404 de HTTP significa que la petición no llegó a ejecutarse, o
-       * que Apps Script sirvió su propia página de error.
-       *
-       * Las causas, en el orden en que conviene descartarlas:
-       *
-       *   1. CONCURRENCIA. Si las demás rutas responden bien y esta falla
-       *      de forma intermitente, es esto. Debería estar cubierto por
-       *      la cola; si vuelve a pasar, bajar MAX_EN_VUELO a 1.
-       *   2. No se republicó con Nueva versión. /exec sirve la versión
-       *      desplegada, no el código del editor. Si la ruta es nueva,
-       *      esta es la causa y falla SIEMPRE, no a veces.
-       *   3. El constructor lanzó una excepción y Apps Script devolvió su
-       *      página de error en vez del JSON. Se ve con probarRutas()
-       *      desde el editor, que corre cada ruta en su propio try.
-       *
-       * La prueba que separa 1 de 2 y 3: abrir la URL a mano en el
-       * navegador. Si ahí devuelve JSON, es concurrencia.
-       */
+      // Un 404 de HTTP no puede venir de Code.gs (ContentService siempre
+      // responde 200). Ver colaDePeticiones.ts para las causas.
       if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.error(
           `[API] route=${route} respondió HTTP ${response.status}. ` +
-            "Si las otras rutas cargaron bien, es concurrencia del Web App: " +
-            "bajar MAX_EN_VUELO en colaDePeticiones.ts. Si falla siempre, " +
-            "republicar con Nueva versión y correr probarRutas() desde el editor.",
+            "Si falla siempre, republicar con Nueva versión y correr probarRutas() desde el editor.",
         );
       }
       throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
@@ -123,28 +203,19 @@ export class AyudasApiRepository {
 
     const payload = await response.json();
 
-    // Code.gs responde `{ error: true, status, message }` con HTTP 200
-    // en varios casos (ContentService no permite fijar el status code de
-    // la respuesta), el chequeo real de error está en el payload, no
-    // solo en response.ok.
-    if (payload && typeof payload === "object" && "error" in payload && (payload as any).error) {
+    if (esObjeto(payload) && payload["error"]) {
       const p = payload as { message?: string; status?: number };
       throw new ApiError(p.message ?? `Error desconocido en route=${route}`, p.status ?? 500);
     }
 
-    // Chequeo de forma: detecta un contrato desactualizado (deploy viejo
-    // de Apps Script, o respuesta cacheada de una versión anterior de
-    // Transforms.gs) ANTES de que llegue a un componente de React que
-    // asuma la forma nueva sin validarla.
     if (validateShape) {
       const problem = validateShape(payload);
       if (problem) {
         throw new ApiError(
           `Respuesta con forma inesperada en route=${route}: ${problem}. ` +
-            `Es probable que la implementación (deployment) del Web App de Apps Script ` +
-            `esté desactualizada respecto al código fuente, o que la caché de CacheLayer.gs ` +
-            `tenga una respuesta vieja. Revisa "Implementar → Gestionar implementaciones" ` +
-            `y corré limpiarCache() si hace falta.`,
+            `Es probable que la implementación del Web App esté desactualizada respecto ` +
+            `al código fuente. Revisá "Implementar → Gestionar implementaciones" y ` +
+            `corré precalentarAhora() si hace falta.`,
           502,
         );
       }
@@ -153,147 +224,136 @@ export class AyudasApiRepository {
     return payload as T;
   }
 
+  /** Una sola petición compartida por todas las consultas que lleguen juntas. */
+  private obtenerBundle(): Promise<BundleResponse> {
+    if (this.bundleUltimo && Date.now() - this.bundleObtenidoEn < REUSO_BUNDLE_MS) {
+      return Promise.resolve(this.bundleUltimo);
+    }
+    if (this.bundleEnVuelo) return this.bundleEnVuelo;
+
+    this.bundleEnVuelo = this.request<BundleResponse>("bundle", {}, validarBundle)
+      .then((bundle) => {
+        this.bundleUltimo = bundle;
+        this.bundleObtenidoEn = Date.now();
+        guardarSnapshot(bundle);
+        return bundle;
+      })
+      .finally(() => {
+        this.bundleEnVuelo = null;
+      });
+
+    return this.bundleEnVuelo;
+  }
+
+  /**
+   * Una parte del tablero: del bundle si se puede, de su ruta si no.
+   */
+  private async parte<K extends ParteBundle>(
+    clave: K,
+    individual: () => Promise<NonNullable<BundleResponse[K]>>,
+  ): Promise<NonNullable<BundleResponse[K]>> {
+    if (!this.bundleNoDisponible) {
+      let bundle: BundleResponse;
+      try {
+        bundle = await this.obtenerBundle();
+      } catch (error) {
+        if (!esRutaNoReconocida(error)) throw error;
+        // Deploy anterior a la ruta: rutas individuales por el resto de
+        // la sesión.
+        this.bundleNoDisponible = true;
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "[API] El Web App desplegado no tiene route=bundle. Se usan las rutas " +
+              "individuales, en serie y más lentas. Republicar con Nueva versión.",
+          );
+        }
+        return individual();
+      }
+
+      const valor = bundle[clave];
+      if (valor !== null && valor !== undefined) {
+        const problema = validarParte(clave, valor);
+        if (!problema) return valor as NonNullable<BundleResponse[K]>;
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.warn(`[API] bundle.${clave} con forma inesperada (${problema}). Se pide sola.`);
+        }
+      }
+      // Parte ausente o inválida: se pide por su ruta, que trae su propio
+      // diagnóstico de error.
+    }
+    return individual();
+  }
+
   getMeta(): Promise<Meta> {
-    return this.request<Meta>("meta");
+    return this.parte("meta", () => this.request<Meta>("meta", {}, VALIDADORES.meta));
   }
 
   getOrigenes(): Promise<Origen[]> {
-    return this.request<Origen[]>("origenes", {}, (p) =>
-      Array.isArray(p) ? null : "se esperaba un array de orígenes",
+    return this.parte("origenes", () =>
+      this.request<Origen[]>("origenes", {}, VALIDADORES.origenes),
     );
   }
 
   getMunicipios(): Promise<Municipio[]> {
-    return this.request<Municipio[]>("municipios", {}, (p) =>
-      Array.isArray(p) ? null : "se esperaba un array de municipios",
+    return this.parte("municipios", () =>
+      this.request<Municipio[]>("municipios", {}, VALIDADORES.municipios),
     );
   }
 
   getCategorias(): Promise<Categoria[]> {
-    return this.request<Categoria[]>("categorias", {}, (p) =>
-      Array.isArray(p) ? null : "se esperaba un array de categorías",
+    return this.parte("categorias", () =>
+      this.request<Categoria[]>("categorias", {}, VALIDADORES.categorias),
     );
   }
 
   getFlujos(): Promise<FlujosResponse> {
-    return this.request<FlujosResponse>("flujos", {}, (p) => {
-      if (!p || typeof p !== "object") return "se esperaba un objeto";
-      const obj = p as Record<string, unknown>;
-      if (!Array.isArray(obj["flujos"])) return 'falta el campo "flujos" (array)';
-      if (!Array.isArray(obj["excluidos"])) return 'falta el campo "excluidos" (array)';
-
-      // "porFecha" SÍ es parte del contrato (Transforms.gs.buildFlujos_ ya
-      // lo arma), pero se valida como advertencia no bloqueante en vez de
-      // rechazar toda la respuesta con un 502. Motivo: ya pasó en
-      // producción que la implementación del Web App o la caché de 6h de
-      // CacheLayer.gs quedaron desincronizadas del código fuente y
-      // sirvieron flujos SIN porFecha. Con el chequeo estricto anterior,
-      // eso tumbaba la query de flujos COMPLETA (React Query queda en
-      // error, flujosResponse === undefined) y con ella el mapa base
-      // entero, incluidos los arcos y su animación, que no dependen en
-      // absoluto de porFecha.
-      //
-      // OJO: hoy porFecha pesa más que antes. Además del timeline,
-      // alimenta toda la derivación de la operación (jornadas, días con
-      // entrega, fecha de corte, cobertura por día). Sin ese campo el
-      // tablero sigue mostrando el mapa y los totales por municipio,
-      // pero las secciones de "Cuándo se entregó" y los KPI de días
-      // quedan vacíos. El console.warn es el rastro para diagnosticarlo.
-      const primerFlujo = obj["flujos"][0];
-      if (primerFlujo && !Array.isArray((primerFlujo as Record<string, unknown>)["porFecha"])) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          'route=flujos: los flujos no traen "porFecha" (array). Probablemente la ' +
-            "implementación del Web App de Apps Script está desactualizada respecto a " +
-            "Transforms.gs, o CacheLayer.gs sirvió una respuesta vieja (TTL 6h). El mapa " +
-            "y los arcos funcionan igual. Las secciones por fecha y el timeline quedan " +
-            'sin datos hasta que se re-implemente ("Nueva versión") y se corra limpiarCache().',
-        );
-      }
-
-      return null;
-    });
-  }
-
-  /**
-   * Serie diaria de toneladas, de la hoja TONELADAS.
-   *
-   * Ya está publicada y verificada: devuelve 561 toneladas repartidas en
-   * 16 días. Si falla, el tablero cae al estimado por entregas, pero hoy
-   * ese respaldo debería ser una red de seguridad y no el caso normal.
-   * Ver useToneladas y OperacionContext.
-   */
-  getToneladas(): Promise<ToneladasResponse> {
-    return this.request<ToneladasResponse>("toneladas", {}, (p) => {
-      if (!p || typeof p !== "object") return "se esperaba un objeto";
-      const obj = p as Record<string, unknown>;
-      if (!Array.isArray(obj["serie"])) return 'falta el campo "serie" (array)';
-      if (typeof obj["total"] !== "number") return 'falta el campo "total" (número)';
-      return null;
-    });
-  }
-
-  /**
-   * Composición de lo entregado, grupos atendidos y canales.
-   *
-   * OJO CON EL TOTAL. Esta ruta suma ENVIOS_CATEGORIA.unidades, y esa
-   * columna está rota: en 242 de 553 pares destino-categoría no coincide
-   * con la suma de DETALLE_PRODUCTO, y la diferencia es de órdenes de
-   * magnitud (Sevilla / Aseo personal dice 10 donde el detalle suma
-   * 9.764; parece haberse cargado el conteo de renglones en vez de las
-   * unidades). El total que devuelve, 96.360, es 2,7 veces menor que el
-   * real, 256.263, y de ahí salen todos los porcentajes por categoría.
-   *
-   * Mientras la fuente no pase a DETALLE_PRODUCTO, las cifras de esta
-   * ruta se publican sabiendo que están mal.
-   *
-   * El respaldo estático de ayudaData.ts, en cambio, SÍ era correcto:
-   * sus 256.650 unidades y sus diez productos más entregados coinciden
-   * con DETALLE_PRODUCTO. Se creyó desactualizado y no lo estaba.
-   */
-  getAyuda(): Promise<AyudaResponse> {
-    return this.request<AyudaResponse>("ayuda", {}, (p) => {
-      if (!p || typeof p !== "object") return "se esperaba un objeto";
-      const obj = p as Record<string, unknown>;
-      if (!Array.isArray(obj["categorias"])) return 'falta el campo "categorias" (array)';
-      if (!Array.isArray(obj["poblaciones"])) return 'falta el campo "poblaciones" (array)';
-      if (!Array.isArray(obj["canales"])) return 'falta el campo "canales" (array)';
-      return null;
-    });
-  }
-
-  /**
-   * Lo que falta hoy en el centro de acopio, de la hoja
-   * NECESIDADES_ACOPIO.
-   *
-   * Es la única ruta del tablero que caduca en horas: las demás cuentan
-   * lo que ya pasó. Si falla, la sección muestra las ilustraciones sin
-   * abrir ninguna lista, y eso es deliberado: no hay respaldo estático
-   * posible, porque una lista de necesidades sin fecha manda a la gente
-   * a donar lo que ya sobra.
-   *
-   * La validación de forma solo exige `secciones`. `fechaInventario`
-   * puede venir en null si ninguna fila vigente trae fecha legible, y en
-   * ese caso la sección se dibuja igual pero sin fechar: es peor no
-   * mostrar nada que mostrarlo sin fecha, porque la lista sigue siendo
-   * útil aunque no se sepa exactamente de cuándo es.
-   */
-  getNecesidades(): Promise<NecesidadesResponse> {
-    return this.request<NecesidadesResponse>("necesidades", {}, (p) => {
-      if (!p || typeof p !== "object") return "se esperaba un objeto";
-      const obj = p as Record<string, unknown>;
-      if (!Array.isArray(obj["secciones"])) return 'falta el campo "secciones" (array)';
-      return null;
-    });
-  }
-
-  getDestinos(): Promise<DestinoResumenLista[]> {
-    return this.request<DestinoResumenLista[]>("destinos", {}, (p) =>
-      Array.isArray(p) ? null : "se esperaba un array de destinos",
+    return this.parte("flujos", () =>
+      this.request<FlujosResponse>("flujos", {}, VALIDADORES.flujos),
     );
   }
 
-  /** Vista PRINCIPAL de un destino, solo ENVIOS_CATEGORIA. */
+  /**
+   * Serie diaria de toneladas, de la hoja TONELADAS. Si falla, el tablero
+   * cae al estimado por entregas (ver useToneladas y OperacionContext).
+   */
+  getToneladas(): Promise<ToneladasResponse> {
+    return this.parte("toneladas", () =>
+      this.request<ToneladasResponse>("toneladas", {}, VALIDADORES.toneladas),
+    );
+  }
+
+  /**
+   * Composición de lo entregado, grupos atendidos y canales. Las
+   * unidades salen de DETALLE_PRODUCTO (`fuente: "DETALLE_PRODUCTO"`);
+   * si llega "ENVIOS_CATEGORIA", el deploy es anterior al cambio de
+   * fuente y las cifras son las viejas.
+   */
+  getAyuda(): Promise<AyudaResponse> {
+    return this.parte("ayuda", () =>
+      this.request<AyudaResponse>("ayuda", {}, VALIDADORES.ayuda),
+    );
+  }
+
+  /**
+   * Lo que falta hoy en el centro de acopio. Es la única parte que NO se
+   * guarda en el navegador (ver usePrecargaDesdeSnapshot): una lista de
+   * necesidades vieja manda a la gente a donar lo que ya sobra.
+   */
+  getNecesidades(): Promise<NecesidadesResponse> {
+    return this.parte("necesidades", () =>
+      this.request<NecesidadesResponse>("necesidades", {}, VALIDADORES.necesidades),
+    );
+  }
+
+  getDestinos(): Promise<DestinoResumenLista[]> {
+    return this.parte("destinos", () =>
+      this.request<DestinoResumenLista[]>("destinos", {}, VALIDADORES.destinos),
+    );
+  }
+
+  /** Vista PRINCIPAL de un destino. Va sola: depende del clic. */
   getDestino(id: string): Promise<DestinoResumen> {
     return this.request<DestinoResumen>("destino", { id });
   }

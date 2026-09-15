@@ -2,23 +2,24 @@
  * useDestinoLogistica.ts
  * -----------------------------------------------------------------------
  * Vista SECUNDARIA de un destino (route=destino-logistica&id=), solo
- * DESPACHOS. A diferencia de useDestinoResumen, acepta un segundo
- * parámetro `expanded`: el panel de destino abre primero mostrando solo
- * categorías (useDestinoResumen), y este request recién se dispara si la
- * persona expande explícitamente el bloque de logística — igual que ya
- * decidimos en la sección de arquitectura ("SOLO se dispara al expandir
- * el nivel secundario, lazy, no junto con el resumen"). Evita un request
- * innecesario contra la cuota de ejecuciones de Apps Script para quien
- * nunca abre ese detalle.
+ * DESPACHOS. Se dispara recién cuando la persona expande el bloque de
+ * logística, no junto con el resumen.
+ *
+ * CAMBIO: staleTime y reintentos, igual que useDestinoResumen, para que
+ * expandir y contraer el bloque no repita la petición.
  * -----------------------------------------------------------------------
  */
 import { useQuery } from "@tanstack/react-query";
 import { ayudasApiRepository } from "@/infrastructure/api/container";
+import { CATALOG_STALE_TIME_MS, REINTENTO_ESCALONADO } from "./useCatalogQueries";
 
 export function useDestinoLogistica(destinoId: string | null, expanded: boolean) {
   return useQuery({
     queryKey: ["destino-logistica", destinoId],
     queryFn: () => ayudasApiRepository.getDestinoLogistica(destinoId!),
     enabled: destinoId !== null && expanded,
+    staleTime: CATALOG_STALE_TIME_MS,
+    retry: 3,
+    retryDelay: REINTENTO_ESCALONADO,
   });
 }

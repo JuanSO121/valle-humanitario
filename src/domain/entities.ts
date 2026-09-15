@@ -349,3 +349,24 @@ export interface NecesidadesResponse {
   fuente: "NECESIDADES_ACOPIO";
   disclaimer: string;
 }
+
+/**
+ * route=bundle. Todo el tablero en una sola petición.
+ *
+ * Cada parte es exactamente la respuesta de su ruta individual. Puede
+ * venir en null si el backend no pudo armarla; en ese caso el
+ * repositorio la pide sola por su ruta.
+ */
+export interface BundleResponse {
+  meta: Meta | null;
+  origenes: Origen[] | null;
+  municipios: Municipio[] | null;
+  categorias: Categoria[] | null;
+  flujos: FlujosResponse | null;
+  destinos: DestinoResumenLista[] | null;
+  toneladas: ToneladasResponse | null;
+  ayuda: AyudaResponse | null;
+  necesidades: NecesidadesResponse | null;
+}
+
+export type ParteBundle = keyof BundleResponse;

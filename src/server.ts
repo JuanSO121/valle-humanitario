@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { esRutaDelTablero, manejarTablero } from "./lib/proxyTablero";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -46,6 +47,29 @@ function isH3SwallowedErrorBody(body: string): boolean {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    /**
+     * Los datos del tablero se atienden ANTES de cargar TanStack Start.
+     *
+     * No pasan por el render ni por los middlewares, y su error se
+     * responde como JSON: la página de error HTML de abajo es para
+     * personas, y el repositorio del frontend no sabría leerla.
+     */
+    const url = new URL(request.url);
+    if (esRutaDelTablero(url)) {
+      try {
+        return await manejarTablero(request, env, ctx);
+      } catch (error) {
+        console.error("[tablero] Error inesperado:", error);
+        return new Response(
+          JSON.stringify({ error: true, status: 500, message: "Error interno del proxy." }),
+          {
+            status: 500,
+            headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+          },
+        );
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);

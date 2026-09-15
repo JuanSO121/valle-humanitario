@@ -1,28 +1,19 @@
 /**
  * routes/__root.tsx
  * -----------------------------------------------------------------------
- * Esta pieza faltaba y es la razón de que nada de lo generado antes
- * pudiera funcionar todavía: router.tsx crea el router con
- * `context: { queryClient }`, pero ningún componente montaba
- * QueryClientProvider con ese client — sin esto, cualquier hook de
- * useCatalogQueries/useDestinoResumen/etc. explota con "No QueryClient
- * set" apenas se renderiza.
+ * Documento HTML completo (TanStack Start con SSR) y QueryClientProvider
+ * para toda la app. router.tsx crea el router con `context: {
+ * queryClient }`; este componente es el que monta el proveedor con ese
+ * client. Sin él, cualquier hook de React Query falla con "No
+ * QueryClient set".
  *
- * Es TanStack Start (SSR real sobre un worker, no una SPA con Vite
- * plano — se ve en server-entry.ts/router.tsx/routeTree.gen.ts) así que
- * el root route también es el dueño del documento HTML completo
- * (<html>/<head>/<body>), no solo un layout — <Scripts /> y <HeadContent />
- * son los que hidratan el bundle del cliente y vuelcan las `head.meta` de
- * cada ruta (como las que ya definiste en routes/index.tsx) al <head>.
+ * <HeadContent /> vuelca las `head` de cada ruta al <head>, y
+ * <Scripts /> hidrata el bundle del cliente.
  * -----------------------------------------------------------------------
  */
 import type { QueryClient } from "@tanstack/react-query";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
-// Import del CSS global del repo (mismo archivo que ya usan otras
-// pantallas — el tema oscuro de este dashboard vive con scope propio en
-// `.theme-ayudas` dentro de ese archivo, no toca el `:root` institucional
-// que otras rutas siguen usando).
 import "@/styles.css";
 
 interface RouterContext {
@@ -36,21 +27,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
     ],
     /**
-     * Poppins se carga acá y NO con un @import dentro de marca.css.
+     * Poppins se carga acá y NO con un @import dentro de marca.css: al
+     * empaquetar, ese @import queda después de las reglas de Tailwind y
+     * lightningcss falla el build con "@import rules must precede all
+     * rules". Cargarla en la cabecera además evita el parpadeo de
+     * fuente en el primer render.
      *
-     * Al empaquetar, un @import de fuente dentro de una hoja de estilos
-     * queda después de las reglas de Tailwind, y CSS exige que todos los
-     * @import precedan a cualquier regla: lightningcss falla el build con
-     * "@import rules must precede all rules".
-     *
-     * Cargarla en la cabecera además la pide antes de que el navegador
-     * termine de leer el CSS, así que el texto no parpadea con la fuente
-     * por defecto durante el primer render.
-     *
-     * Los preconnect abren la conexión con los dos dominios de Google
-     * Fonts mientras todavía se está parseando el HTML. El de gstatic
-     * necesita crossOrigin porque de ahí salen los archivos de fuente,
-     * que se piden en modo anónimo.
+     * No hay preconexión a Apps Script: el navegador le pide los datos a
+     * /api/tablero en este mismo dominio (ver lib/proxyTablero.ts), así
+     * que no abre ninguna conexión con Google para eso.
      */
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -59,18 +44,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap",
       },
-      // El navegador lo pide siempre. Sin el archivo en public/, cada
-      // carga deja un 404 en consola que tapa los errores reales.
+      // Sin el archivo en public/, cada carga deja un 404 en consola que
+      // tapa los errores reales.
       { rel: "icon", href: "/favicon.ico" },
     ],
   }),
   component: RootComponent,
 
   /**
-   * Sin esto, TanStack Router muestra un `<p>Not Found</p>` suelto y
-   * avisa por consola en cada arranque. En un sitio público de una
-   * entidad territorial, una ruta equivocada tiene que devolver a la
-   * persona a algún lado, no dejarla en una página en blanco.
+   * Una ruta equivocada tiene que devolver a la persona a algún lado, no
+   * dejarla con el `<p>Not Found</p>` por defecto.
    */
   notFoundComponent: PaginaNoEncontrada,
 });
@@ -110,9 +93,8 @@ function RootComponent() {
         <head>
           <HeadContent />
         </head>
-        {/* bg-background acá, no en DashboardPage: evita un flash de fondo
-            blanco entre el HTML servido por SSR y el primer paint con
-            estilos cargados. */}
+        {/* bg-background acá evita un destello blanco entre el HTML del
+            servidor y el primer paint con estilos. */}
         <body className="bg-background text-foreground antialiased">
           <Outlet />
           <Scripts />

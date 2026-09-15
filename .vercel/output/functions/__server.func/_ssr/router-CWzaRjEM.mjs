@@ -1,9 +1,9 @@
 import { n as __exportAll } from "../_runtime.mjs";
-import { n as QueryClientProvider, r as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
+import { i as require_jsx_runtime, n as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-D3xz4Xtb.js
-var router_D3xz4Xtb_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/router-CWzaRjEM.js
+var router_CWzaRjEM_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
 	head: () => ({
@@ -12,21 +12,15 @@ var Route$1 = createRootRouteWithContext()({
 			content: "width=device-width, initial-scale=1"
 		}],
 		/**
-		* Poppins se carga acá y NO con un @import dentro de marca.css.
+		* Poppins se carga acá y NO con un @import dentro de marca.css: al
+		* empaquetar, ese @import queda después de las reglas de Tailwind y
+		* lightningcss falla el build con "@import rules must precede all
+		* rules". Cargarla en la cabecera además evita el parpadeo de
+		* fuente en el primer render.
 		*
-		* Al empaquetar, un @import de fuente dentro de una hoja de estilos
-		* queda después de las reglas de Tailwind, y CSS exige que todos los
-		* @import precedan a cualquier regla: lightningcss falla el build con
-		* "@import rules must precede all rules".
-		*
-		* Cargarla en la cabecera además la pide antes de que el navegador
-		* termine de leer el CSS, así que el texto no parpadea con la fuente
-		* por defecto durante el primer render.
-		*
-		* Los preconnect abren la conexión con los dos dominios de Google
-		* Fonts mientras todavía se está parseando el HTML. El de gstatic
-		* necesita crossOrigin porque de ahí salen los archivos de fuente,
-		* que se piden en modo anónimo.
+		* No hay preconexión a Apps Script: el navegador le pide los datos a
+		* /api/tablero en este mismo dominio (ver lib/proxyTablero.ts), así
+		* que no abre ninguna conexión con Google para eso.
 		*/
 		links: [
 			{
@@ -50,10 +44,8 @@ var Route$1 = createRootRouteWithContext()({
 	}),
 	component: RootComponent,
 	/**
-	* Sin esto, TanStack Router muestra un `<p>Not Found</p>` suelto y
-	* avisa por consola en cada arranque. En un sitio público de una
-	* entidad territorial, una ruta equivocada tiene que devolver a la
-	* persona a algún lado, no dejarla en una página en blanco.
+	* Una ruta equivocada tiene que devolver a la persona a algún lado, no
+	* dejarla con el `<p>Not Found</p>` por defecto.
 	*/
 	notFoundComponent: PaginaNoEncontrada
 });
@@ -108,7 +100,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-DJ5pF45G.mjs");
+var $$splitComponentImporter = () => import("./routes-XiAzcC1J.mjs").then((n) => n.t);
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -150,4 +142,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_D3xz4Xtb_exports as t };
+export { getRouter, router_CWzaRjEM_exports as t };
