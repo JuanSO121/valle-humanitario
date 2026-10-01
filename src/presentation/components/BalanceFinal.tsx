@@ -126,7 +126,7 @@ const ORIGEN_CARTAGO = "ORI-CARTAGO";
  * El valor y el corte van juntos en un objeto a propósito: separados, la
  * próxima actualización cambia uno y deja el otro quieto.
  */
-const RECIBIDAS = { valor: "889 t", corte: "3 de septiembre de 2026" };
+const RECIBIDAS = { valor: "907 t", corte: "30 de septiembre de 2026" };
 
 interface Ruta {
   id: string;
@@ -244,7 +244,8 @@ export function BalanceFinal() {
   const cifras = [
     { valor: RECIBIDAS.valor, label: "Ayudas recibidas", corte: RECIBIDAS.corte },
     {
-      valor: `${Math.round(op.totalToneladas).toLocaleString("es-CO")} t`,
+      // valor: `${Math.round(op.totalToneladas).toLocaleString("es-CO")} t`,
+      valor: 778 ,
       label: "Ayudas distribuidas",
       corte: op.fechaCorteLarga,
     },
@@ -343,7 +344,8 @@ export function BalanceFinal() {
                   Con corte al
                 </span>
                 <b className="mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg">
-                  {b.corte}
+                  {/* {b.corte} */}
+                  30 de Septiembre
                 </b>
               </div>
             ) : (

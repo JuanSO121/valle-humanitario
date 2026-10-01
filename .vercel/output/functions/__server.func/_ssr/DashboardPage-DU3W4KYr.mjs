@@ -2,9 +2,9 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { a as require_react, i as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { a as RotateCcw, i as SlidersHorizontal, p as Info, s as PackageCheck, t as X, v as ChevronRight, w as ArrowLeft } from "../_libs/lucide-react.mjs";
-import { a as fechaCorta, c as sameMunicipality, d as useDestinos, f as useFlujos, i as useOperacion, l as CATALOG_STALE_TIME_MS$1, m as ayudasApiRepository, n as useAyuda, o as TERRITORY_BLUE_RAMP, p as useOrigenes, r as useFoco, s as getTerritoryStat, u as REINTENTO_ESCALONADO$1 } from "./routes-XiAzcC1J.mjs";
+import { a as fechaCorta, c as sameMunicipality, d as useDestinos, f as useFlujos, i as useOperacion, l as CATALOG_STALE_TIME_MS$1, m as ayudasApiRepository, n as useAyuda, o as TERRITORY_BLUE_RAMP, p as useOrigenes, r as useFoco, s as getTerritoryStat, u as REINTENTO_ESCALONADO$1 } from "./routes-CZSsjxFP.mjs";
 import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/DashboardPage-fAk1e4ef.js
+//#region node_modules/.nitro/vite/services/ssr/assets/DashboardPage-DU3W4KYr.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
