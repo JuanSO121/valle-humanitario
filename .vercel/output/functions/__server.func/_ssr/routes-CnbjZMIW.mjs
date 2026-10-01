@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as Boxes, S as Building2, _ as FileText, b as ChevronDown, c as Menu, d as List, f as Landmark, g as HandHeart, h as HeartHandshake, l as Map$1, m as House, n as Warehouse, o as Package, r as Truck, t as X, u as MapPin, x as CalendarDays, y as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-BghnTQBL.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-CnbjZMIW.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -1462,7 +1462,7 @@ function useAyuda() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarDashboard = () => import("./DashboardPage-nspZGZMF.mjs");
+var cargarDashboard = () => import("./DashboardPage-DZS33erI.mjs");
 var DashboardPage = (0, import_react.lazy)(() => cargarDashboard().then((modulo) => ({ default: modulo.DashboardPage })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -3690,9 +3690,9 @@ function BalanceFinal() {
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							className: "block text-[15px] font-bold leading-tight text-white",
 							children: c.label
-						}), c.corte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+						}), c.corte && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 							className: "mt-1 block text-[13px] leading-tight text-[#A8CFE2]",
-							children: ["Con corte al ", c.corte]
+							children: "Con corte al 29 de Septiembre"
 						})]
 					})]
 				}, `cifra-movil-${c.label}`))

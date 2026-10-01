@@ -303,7 +303,8 @@ export function BalanceFinal() {
               </span>
               {c.corte && (
                 <span className="mt-1 block text-[13px] leading-tight text-[#A8CFE2]">
-                  Con corte al {c.corte}
+                  {/* Con corte al {c.corte} */}
+                  Con corte al 29 de Septiembre
                 </span>
               )}
             </span>
