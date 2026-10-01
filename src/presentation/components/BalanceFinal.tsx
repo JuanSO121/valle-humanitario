@@ -345,7 +345,7 @@ export function BalanceFinal() {
                 </span>
                 <b className="mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg">
                   {/* {b.corte} */}
-                  30 de Septiembre
+                  29 de Septiembre
                 </b>
               </div>
             ) : (
