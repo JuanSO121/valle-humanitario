@@ -126,7 +126,7 @@ const ORIGEN_CARTAGO = "ORI-CARTAGO";
  * El valor y el corte van juntos en un objeto a propósito: separados, la
  * próxima actualización cambia uno y deja el otro quieto.
  */
-const RECIBIDAS = { valor: "907 t", corte: "30 de septiembre de 2026" };
+const RECIBIDAS = { valor: "807 t", corte: "30 de septiembre de 2026" };
 
 interface Ruta {
   id: string;
