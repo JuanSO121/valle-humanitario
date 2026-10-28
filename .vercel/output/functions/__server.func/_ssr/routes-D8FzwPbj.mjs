@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as Boxes, S as Building2, _ as FileText, b as ChevronDown, c as Menu, d as List, f as Landmark, g as HandHeart, h as HeartHandshake, l as Map$1, m as House, n as Warehouse, o as Package, r as Truck, t as X, u as MapPin, x as CalendarDays, y as ChevronLeft } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-CnbjZMIW.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-D8FzwPbj.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -453,9 +453,7 @@ var usarProxy = {
 	"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 	"TSS_INLINE_CSS_ENABLED": "false",
 	"TSS_ROUTER_BASEPATH": "",
-	"TSS_SERVER_FN_BASE": "/_serverFn/",
-	"VITE_APPS_SCRIPT_DATASET_URL": "https://script.google.com/macros/s/AKfycbwhOldfRLhGJ5Cs__slx67sksp_SzShMwYP4dd_7F8xfiOPq_zpuhZqSQZeppbxi8U/exec",
-	"VITE_AYUDAS_API_URL": "https://script.google.com/macros/s/AKfycbwhOldfRLhGJ5Cs__slx67sksp_SzShMwYP4dd_7F8xfiOPq_zpuhZqSQZeppbxi8U/exec"
+	"TSS_SERVER_FN_BASE": "/_serverFn/"
 }["VITE_AYUDAS_PROXY"] !== "0";
 var urlDirecta = {
 	"BASE_URL": "/",
@@ -469,9 +467,7 @@ var urlDirecta = {
 	"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 	"TSS_INLINE_CSS_ENABLED": "false",
 	"TSS_ROUTER_BASEPATH": "",
-	"TSS_SERVER_FN_BASE": "/_serverFn/",
-	"VITE_APPS_SCRIPT_DATASET_URL": "https://script.google.com/macros/s/AKfycbwhOldfRLhGJ5Cs__slx67sksp_SzShMwYP4dd_7F8xfiOPq_zpuhZqSQZeppbxi8U/exec",
-	"VITE_AYUDAS_API_URL": "https://script.google.com/macros/s/AKfycbwhOldfRLhGJ5Cs__slx67sksp_SzShMwYP4dd_7F8xfiOPq_zpuhZqSQZeppbxi8U/exec"
+	"TSS_SERVER_FN_BASE": "/_serverFn/"
 }["VITE_AYUDAS_API_URL"];
 if (!usarProxy && !urlDirecta) throw new Error("VITE_AYUDAS_PROXY=0 exige VITE_AYUDAS_API_URL: configurá la URL /exec del Web App en tu .env.");
 var ayudasApiRepository = new AyudasApiRepository(usarProxy ? URL_PROXY : urlDirecta);
@@ -1462,7 +1458,7 @@ function useAyuda() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarDashboard = () => import("./DashboardPage-DZS33erI.mjs");
+var cargarDashboard = () => import("./DashboardPage-yADZ4U9l.mjs");
 var DashboardPage = (0, import_react.lazy)(() => cargarDashboard().then((modulo) => ({ default: modulo.DashboardPage })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -3643,7 +3639,7 @@ function BalanceFinal() {
 			corte: RECIBIDAS.corte
 		},
 		{
-			valor: 778,
+			valor: "778 t",
 			label: "Ayudas distribuidas",
 			corte: op.fechaCorteLarga
 		},
@@ -3824,7 +3820,7 @@ function BalanceFinal() {
 			}),
 			canalesVivos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]",
-				children: "El detalle por ruta no está disponible en este momento. Aparece apenas el servicio de datos responde; si persiste, recargue la página."
+				children: "Cargando..."
 			})
 		]
 	});
