@@ -3649,7 +3649,7 @@ function BalanceFinal() {
 		},
 		{
 			valor: totalRutas.toLocaleString("es-CO"),
-			label: "Entregas en total",
+			label: "Despachos a municipios",
 			corte: op.fechaCorteLarga
 		}
 	];

@@ -245,7 +245,7 @@ export function BalanceFinal() {
     { valor: RECIBIDAS.valor, label: "Ayudas recibidas", corte: RECIBIDAS.corte },
     {
       // valor: `${Math.round(op.totalToneladas).toLocaleString("es-CO")} t`,
-      valor: 778 ,
+      valor: 778 + " t",
       label: "Ayudas distribuidas",
       corte: op.fechaCorteLarga,
     },
@@ -254,7 +254,7 @@ export function BalanceFinal() {
       // municipios aporta una entrega por cada uno. La hoja DESPACHOS
       // tiene menos filas que este número y las dos cosas son correctas.
       valor: totalRutas.toLocaleString("es-CO"),
-      label: "Entregas en total",
+      label: "Despachos a municipios",
       corte: op.fechaCorteLarga,
     },
   ];
@@ -486,8 +486,7 @@ export function BalanceFinal() {
           catálogo donde había un fallo de red. */}
       {canalesVivos.length === 0 && (
         <p className="mt-4 max-w-3xl rounded-md border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-4 text-base leading-7 text-[#6B5200]">
-          El detalle por ruta no está disponible en este momento. Aparece apenas el servicio de
-          datos responde; si persiste, recargue la página.
+          Cargando...
         </p>
       )}
     </div>
