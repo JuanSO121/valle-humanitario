@@ -1,149 +1,179 @@
 /**
- * hallazgosData.ts, Nivel 8, "¿Qué nos están diciendo los datos?"
+ * data/hallazgosData.ts
  * -----------------------------------------------------------------------
- * Cada hallazgo sale de un cruce concreto de las fuentes; ninguno es una
- * impresión. `eje` clasifica de qué nivel viene la lectura y decide el
- * color del borde, así que no es decoración: dice dónde ir a verificarlo.
+ * Las lecturas de «Lo que muestran los datos», CALCULADAS de las rutas del
+ * backend. Ninguna cifra ni nombre está escrito acá: si mañana se carga
+ * otro corte, las lecturas cambian solas y siguen diciendo la verdad.
  *
- * Cifras alineadas con BD_Entregas_Operativa_v2.xlsx: 321 despachos
- * municipales, 531 toneladas departamentales, 39 de 41 municipios.
+ * La versión anterior tenía las frases y los números en el código, y se
+ * quedaban viejos apenas cambiaba un día de datos.
+ *
+ * LA REDACCIÓN
+ *
+ * Es la del tablero original: titulares cortos y afirmativos, una o dos
+ * frases, «entregas» y no «registros», y el porcentaje con letras («el 8 por
+ * ciento»). Sin términos de base de datos: quien lee es un ciudadano.
+ *
+ * Cada lectura se omite cuando no hay con qué calcularla (sin municipios,
+ * sin categorías…). Mejor siete lecturas ciertas que ocho con una
+ * inventada.
  * -----------------------------------------------------------------------
  */
+import type {
+  CategoriasResponse,
+  Municipio,
+  OtrasResponse,
+  ResumenResponse,
+} from "@/domain/entities";
+import { diaMes, toneladas } from "@/lib/formato";
 
-import type { Operacion } from "@/application/derivations/operacion";
-import type { AyudaResponse } from "@/domain/entities";
-export type EjeHallazgo = "movimiento" | "territorio" | "ayuda" | "evolucion";
+export type Eje = "volumen" | "territorio" | "categoria" | "calidad";
 
 export interface Hallazgo {
-  eje: EjeHallazgo;
+  eje: Eje;
+  /** La cifra grande: «294 t», «27 %», «42/42». */
+  cifra: string;
+  /** Lo que esa cifra es, en pocas palabras. */
   titulo: string;
+  /** Una frase de apoyo. */
   texto: string;
+  /** Qué parte del todo representa (0 a 1); dibuja la barrita. Sin ella, no hay barra. */
+  parte?: number;
 }
 
-export const EJE_COLOR: Record<EjeHallazgo, string> = {
-  movimiento: "#F0801E",
-  territorio: "#81C8EC",
-  ayuda: "#00A494",
-  evolucion: "#FFD103",
-};
-
-export const EJE_ETIQUETA: Record<EjeHallazgo, string> = {
-  movimiento: "Movimiento",
+export const EJE_ETIQUETA: Record<Eje, string> = {
+  volumen: "Movimiento",
   territorio: "Territorio",
-  ayuda: "Qué se mueve",
-  evolucion: "Evolución",
+  categoria: "Qué se mueve",
+  calidad: "Tenga en cuenta",
 };
 
-/**
- * Los hallazgos se arman con las cifras del momento. Antes eran texto
- * fijo y quedaban desfasados: decían 321 entregas cuando la página ya
- * mostraba 339, y nombraban como último día uno que la operación había
- * dejado atrás.
- *
- * Los que hablan de artículos y de grupos atendidos siguen con cifras
- * fijas porque salen de la base de ítems, que no está expuesta por la
- * API. Están marcados con una nota.
- */
-export function hallazgosDe(op: Operacion, ayuda?: AyudaResponse | undefined): Hallazgo[] {
-  const lista: Hallazgo[] = [];
+export const EJE_COLOR: Record<Eje, string> = {
+  volumen: "#22ABE2",
+  territorio: "#FFD400",
+  categoria: "#5CC46B",
+  calidad: "#F26049",
+};
 
-  const arranque = op.jornadas.slice(0, 2);
-  if (arranque.length === 2) {
-    const entregas = arranque.reduce((sum, j) => sum + j.entregas, 0);
-    // Municipios distintos alcanzados, no la suma de los dos días: casi
-    // todos los del primer día vuelven a recibir el segundo.
-    const municipios = arranque.reduce((sum, j) => sum + j.nuevos, 0);
-    const porcentaje = op.totalEntregas > 0 ? Math.round((entregas / op.totalEntregas) * 100) : 0;
-    lista.push({
-      eje: "movimiento",
-      titulo: "Las ayudas llegaron a casi todo el departamento en dos días",
-      texto: `En los dos primeros días las ayudas llegaron a ${municipios} municipios. En esas dos jornadas salió el ${porcentaje} por ciento de las entregas, ${entregas} de ${op.totalEntregas}. Después la operación volvió una y otra vez sobre los mismos municipios.`,
+const porcentaje = (parte: number, total: number): number =>
+  total > 0 ? Math.round((parte / total) * 100) : 0;
+
+/** «A, B y C». */
+function enumerar(nombres: string[]): string {
+  if (nombres.length <= 1) return nombres.join("");
+  return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
+}
+
+interface Fuentes {
+  resumen: ResumenResponse;
+  municipios: Municipio[];
+  categorias: CategoriasResponse | null;
+  otras: OtrasResponse | null;
+}
+
+export function hallazgosDe({ resumen, municipios, categorias, otras }: Fuentes): Hallazgo[] {
+  const out: Hallazgo[] = [];
+  const total = resumen.totales.toneladas;
+  if (total <= 0) return out;
+  const fraccion = (parte: number): number => Math.min(1, Math.max(0, parte / total));
+
+  const atendidos = municipios.filter((m) => m.atendido);
+  const ordenados = [...atendidos].sort((a, b) => b.toneladas - a.toneladas);
+
+  // 1. Cuánto se movió y en cuánto tiempo.
+  if (resumen.periodo.desde && resumen.periodo.hasta) {
+    out.push({
+      eje: "volumen",
+      cifra: toneladas(total),
+      titulo: `entregadas en ${resumen.periodo.diasConDespacho} días`,
+      texto: `Del ${diaMes(resumen.periodo.desde)} al ${diaMes(resumen.periodo.hasta)}.`,
     });
   }
 
-  const primero = op.municipios[0];
+  // 2. Dónde llegó más.
+  const primero = ordenados[0];
   if (primero) {
-    lista.push({
+    out.push({
       eje: "territorio",
-      titulo: `${primero.nombre} es el municipio que más veces recibió ayudas`,
-      texto: `${primero.nombre} registra ${primero.entregas} entregas, más que ningún otro municipio del Valle. Recibir más veces no significa recibir más cantidad: el volumen depende de lo que traía cada envío.`,
+      cifra: toneladas(primero.toneladas),
+      titulo: `en ${primero.nombre}, el municipio con más ayuda`,
+      texto: `El ${porcentaje(primero.toneladas, total)} por ciento de lo entregado.`,
+      parte: fraccion(primero.toneladas),
     });
   }
 
-  const cartago = op.entregasPorOrigen.find((o) => o.origenId === "ORI-CARTAGO");
-  if (cartago) {
-    lista.push({
-      eje: "movimiento",
-      titulo: "Las ayudas salen de dos centros de acopio",
-      texto: `Además del acopio de Cali, la bodega de Cartago envió ${cartago.entregas} entregas a ${cartago.municipios} municipios del norte. El norte del Valle se abastece por una ruta propia.`,
+  // 3. Qué tan concentrado está.
+  if (ordenados.length >= 5) {
+    const cinco = ordenados.slice(0, 5);
+    const suma = cinco.reduce((a, m) => a + m.toneladas, 0);
+    out.push({
+      eje: "territorio",
+      cifra: `${porcentaje(suma, total)} %`,
+      titulo: "se concentró en cinco municipios",
+      texto: `${enumerar(cinco.map((m) => m.nombre))}.`,
+      parte: fraccion(suma),
     });
   }
 
-  // Las dos categorías más grandes, con su peso real. Antes decía 53 por
-  // ciento fijo y quedaba viejo cada vez que cambiaba el Excel.
-  const dosPrimeras = (ayuda?.categorias ?? []).slice(0, 2);
-  if (dosPrimeras.length === 2 && ayuda) {
-    const suma = dosPrimeras.reduce((s, c) => s + c.unidades, 0);
-    const porcentaje =
-      ayuda.totalUnidades > 0 ? Math.round((suma / ayuda.totalUnidades) * 100) : 0;
-    lista.push({
-      eje: "ayuda",
-      titulo: `Más de la mitad de la ayuda es ${dosPrimeras[0]!.nombre.toLowerCase()} y ${dosPrimeras[1]!.nombre.toLowerCase()}`,
-      texto: `${dosPrimeras[0]!.nombre} y ${dosPrimeras[1]!.nombre} suman el ${porcentaje} por ciento de todo lo entregado.`,
-    });
-  } else {
-    lista.push({
-      eje: "ayuda",
-      titulo: "Más de la mitad de la ayuda es aseo y comida",
-      texto:
-        "El aseo personal y los alimentos suman la mayor parte de todo lo entregado. El artículo más repartido son los tapabocas.",
-    });
-  }
-
-  const grupos = ayuda?.poblaciones ?? [];
-  const primerGrupo = grupos[0];
-  if (primerGrupo && grupos.length > 2) {
-    lista.push({
-      eje: "ayuda",
-      titulo: `${primerGrupo.nombre} es el grupo que más aparece en las entregas`,
-      texto: `${primerGrupo.despachos} entregas declaran ayuda dirigida a ${primerGrupo.nombre.toLowerCase()}. Le siguen ${grupos[1]!.nombre.toLowerCase()} con ${grupos[1]!.despachos} y ${grupos[2]!.nombre.toLowerCase()} con ${grupos[2]!.despachos}.`,
-    });
-  }
-
-  const china = grupos.find((g) => g.nombre.toLowerCase().indexOf("china") !== -1);
-  if (china) {
-    lista.push({
-      eje: "movimiento",
-      titulo: "La donación de China se repartió junto con el resto",
-      texto: `${china.despachos} entregas corresponden a la donación de la República China. Se repartieron dentro de la operación municipal, en los mismos municipios que el resto de las ayudas.`,
-    });
-  }
-
-  const faltan = op.municipiosTotales - op.municipiosAtendidos;
-  lista.push({
+  // 4. Cobertura.
+  const { municipiosAtendidos: n, municipiosTotales: t } = resumen.totales;
+  out.push({
     eje: "territorio",
-    titulo:
-      faltan === 0
-        ? "Todos los municipios del Valle recibieron ayudas"
-        : "La cobertura llega a casi todo el departamento",
-    texto:
-      faltan === 0
-        ? `Los ${op.municipiosTotales} municipios del Valle registran al menos una entrega.`
-        : `${op.municipiosAtendidos} de los ${op.municipiosTotales} municipios del Valle registran al menos una entrega.`,
+    cifra: `${n}/${t}`,
+    titulo: "municipios recibieron ayuda",
+    texto: n === t ? "Ninguno se quedó sin entregas." : `En ${t - n} no hay entregas registradas.`,
+    ...(t > 0 ? { parte: n / t } : {}),
   });
 
-  if (op.picoEntregas && op.picoCobertura) {
-    const mismoDia = op.picoEntregas.dia === op.picoCobertura.dia;
-    lista.push({
-      eje: "evolucion",
-      titulo: mismoDia
-        ? "El día más intenso de toda la operación"
-        : "El día de más entregas y el de más municipios no fueron el mismo",
-      texto: mismoDia
-        ? `El ${Number(op.picoEntregas.dia)} de agosto salieron ${op.picoEntregas.entregas} entregas hacia ${op.picoEntregas.municipios} municipios.`
-        : `El ${Number(op.picoEntregas.dia)} de agosto salieron ${op.picoEntregas.entregas} entregas, la cifra más alta. El ${Number(op.picoCobertura.dia)} llegaron ayudas a ${op.picoCobertura.municipios} municipios, la mayor cobertura en un día.`,
+  // 5. Qué fue lo más entregado.
+  if (categorias && categorias.categorias.length > 0) {
+    const masPesada = [...categorias.categorias].sort((a, b) => b.toneladas - a.toneladas)[0];
+    if (masPesada && masPesada.toneladas > 0) {
+      out.push({
+        eje: "categoria",
+        cifra: `${porcentaje(masPesada.toneladas, total)} %`,
+        titulo: `fue ${masPesada.nombre}`,
+        texto: `${toneladas(masPesada.toneladas)}: la categoría con más ayuda.`,
+        parte: fraccion(masPesada.toneladas),
+      });
+    }
+  }
+
+  // 6. Lo que no fue a un municipio.
+  if (otras && otras.toneladas > 0) {
+    out.push({
+      eje: "volumen",
+      cifra: `${porcentaje(otras.toneladas, total)} %`,
+      titulo: "fue a fundaciones y otras entidades",
+      texto: `${toneladas(otras.toneladas)} a fundaciones, otros departamentos y entidades.`,
+      parte: fraccion(otras.toneladas),
     });
   }
 
-  return lista;
+  // 7. Lo que el propio Excel marca con dudas. Solo `porVerificar`: el peso
+  // sin soporte (`pesoSinSoporte`) es otra marca y no se suma acá.
+  const dudoso = resumen.calidad.porVerificar;
+  if (dudoso.registros > 0) {
+    out.push({
+      eje: "calidad",
+      cifra: `${porcentaje(dudoso.toneladas, total)} %`,
+      titulo: "aún se está confirmando",
+      texto: `${toneladas(dudoso.toneladas)} marcadas «por verificar» pueden cambiar.`,
+      parte: fraccion(dudoso.toneladas),
+    });
+  }
+
+  // 8. Ayuda enviada a puntos de distribución: puede estar contada dos veces.
+  const traslados = resumen.calidad.traslados;
+  if (traslados.registros > 0) {
+    out.push({
+      eje: "calidad",
+      cifra: toneladas(traslados.toneladas),
+      titulo: "se enviaron a puntos de distribución",
+      texto: "Se reparte después desde allí; puede estar contada también en los municipios.",
+      parte: fraccion(traslados.toneladas),
+    });
+  }
+
+  return out;
 }

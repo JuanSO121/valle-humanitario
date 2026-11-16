@@ -10,13 +10,33 @@ interface Props {
   transitionKey: string;
 }
 
-export function ContextualPanel({ isMobile, title, subtitle, onBack, onClose, children, transitionKey }: Props) {
+export function ContextualPanel({
+  isMobile,
+  title,
+  subtitle,
+  onBack,
+  onClose,
+  children,
+  transitionKey,
+}: Props) {
   return isMobile ? (
-    <MobileSheet title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} transitionKey={transitionKey}>
+    <MobileSheet
+      title={title}
+      subtitle={subtitle}
+      onBack={onBack}
+      onClose={onClose}
+      transitionKey={transitionKey}
+    >
       {children}
     </MobileSheet>
   ) : (
-    <DesktopCard title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} transitionKey={transitionKey}>
+    <DesktopCard
+      title={title}
+      subtitle={subtitle}
+      onBack={onBack}
+      onClose={onClose}
+      transitionKey={transitionKey}
+    >
       {children}
     </DesktopCard>
   );
@@ -72,7 +92,13 @@ function PanelHeader({
           className="tap-target mt-0.5 rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M15 18l-6-6 6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </button>
       )}
@@ -89,14 +115,26 @@ function PanelHeader({
         className="tap-target rounded-md p-1 text-muted-foreground hover:bg-surface-raised hover:text-foreground"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M6 6l12 12M18 6L6 18"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       </button>
     </div>
   );
 }
 
-function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey }: Omit<Props, "isMobile">) {
+function DesktopCard({
+  title,
+  subtitle,
+  onBack,
+  onClose,
+  children,
+  transitionKey,
+}: Omit<Props, "isMobile">) {
   const entered = useEnterTransition(transitionKey);
   const ref = useCloseOnOutsideClick<HTMLDivElement>(onClose);
   return (
@@ -104,7 +142,7 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
       ref={ref}
       className="pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-300"
       style={{
-        maxHeight: "calc(100% - 6rem)",
+        maxHeight: "calc(100% - 10.5rem)",
         opacity: entered ? 1 : 0,
         // Se agrega un leve scale además del translateX que ya había —
         // el translate solo se lee como "desliza"; el scale de 0.97→1
@@ -119,7 +157,14 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
   );
 }
 
-function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey }: Omit<Props, "isMobile">) {
+function MobileSheet({
+  title,
+  subtitle,
+  onBack,
+  onClose,
+  children,
+  transitionKey,
+}: Omit<Props, "isMobile">) {
   const [expanded, setExpanded] = useState(true);
   const entered = useEnterTransition(transitionKey);
   const ref = useCloseOnOutsideClick<HTMLDivElement>(onClose);
@@ -142,7 +187,7 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
         ref={ref}
         className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.35)] transition-all duration-300"
         style={{
-          height: expanded ? "70vh" : "auto",
+          height: expanded ? "min(58dvh, 34rem)" : "auto",
           transform: entered ? "translateY(0)" : "translateY(16px)",
           opacity: entered ? 1 : 0,
           transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
@@ -157,7 +202,11 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
           <span className="h-1 w-9 rounded-full bg-border" />
         </button>
         <PanelHeader title={title} subtitle={subtitle} onBack={onBack} onClose={onClose} />
-        <div className={`min-h-0 flex-1 ${expanded ? "overflow-y-auto" : "hidden"}`}>{children}</div>
+        <div
+          className={`min-h-0 flex-1 ${expanded ? "overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]" : "hidden"}`}
+        >
+          {children}
+        </div>
       </div>
     </>
   );

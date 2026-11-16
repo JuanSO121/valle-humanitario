@@ -5,16 +5,13 @@
  * `?route=...`. Nada fuera de este archivo debería construir esa URL a
  * mano.
  *
- * CAMBIO: las nueve rutas del tablero viajan en UNA petición.
+ * Las seis rutas del tablero viajan en UNA petición.
  *
- * Con la cola en MAX_EN_VUELO = 1, las nueve consultas del arranque
- * salían en fila india, y cada una pagaba el arranque del Web App más la
- * redirección a googleusercontent. Ese costo fijo, multiplicado por
- * nueve, era la mayor parte de la espera.
- *
- * Ahora `getMeta()`, `getFlujos()`, etc. leen de `?route=bundle`. Las
- * nueve llamadas simultáneas de los hooks comparten la misma promesa en
- * vuelo, así que salen como una sola petición. Los hooks no cambian.
+ * Cada petición a un Web App de Apps Script paga un costo fijo: el
+ * arranque más la redirección a googleusercontent. `getResumen()`,
+ * `getMunicipios()`, etc. leen de `?route=bundle`; las llamadas
+ * simultáneas de los hooks comparten la misma promesa en vuelo, así que
+ * salen como una sola petición.
  *
  * RESPALDOS, en orden
  *
@@ -25,7 +22,7 @@
  *     pudo armarla) o con forma inesperada, esa parte sola se pide por
  *     su ruta.
  *   · Si el bundle falla por red, el error sube tal cual y React Query
- *     reintenta. Los reintentos de las nueve consultas vuelven a
+ *     reintenta. Los reintentos de las consultas vuelven a
  *     compartir una sola petición.
  *
  * La validación de forma sigue existiendo por la misma razón de antes:
@@ -36,17 +33,12 @@
 import { enCola } from "@/infrastructure/api/colaDePeticiones";
 import { guardarSnapshot } from "@/infrastructure/api/snapshotTablero";
 import type {
-  Meta,
-  Origen,
-  Municipio,
-  Categoria,
-  FlujosResponse,
-  ToneladasResponse,
-  AyudaResponse,
-  NecesidadesResponse,
-  DestinoResumenLista,
-  DestinoResumen,
-  DestinoLogistica,
+  ResumenRespuesta,
+  MunicipiosRespuesta,
+  OtrasRespuesta,
+  CategoriasRespuesta,
+  FaltantesRespuesta,
+  ContratacionResponse,
   BundleResponse,
   ParteBundle,
 } from "@/domain/entities";
@@ -79,62 +71,83 @@ type Validador = (payload: unknown) => string | null;
 const esObjeto = (p: unknown): p is Record<string, unknown> =>
   !!p && typeof p === "object" && !Array.isArray(p);
 
-const esArrayDe =
-  (que: string): Validador =>
-  (p) =>
-    Array.isArray(p) ? null : `se esperaba un array de ${que}`;
+/**
+ * «No disponible» es una respuesta válida de las rutas que leen un libro:
+ * el libro puede no estar accesible y la sección simplemente no se
+ * dibuja. Cualquier otra forma exige `disponible: true` y lo que pida
+ * `validar`.
+ */
+const conDisponible =
+  (validar: (p: Record<string, unknown>) => string | null): Validador =>
+  (p) => {
+    if (!esObjeto(p)) return "se esperaba un objeto";
+    if (p["disponible"] === false) return null;
+    if (p["disponible"] !== true) return 'falta el campo "disponible"';
+    return validar(p);
+  };
 
-let avisoPorFechaEmitido = false;
-
-const validarFlujos: Validador = (p) => {
-  if (!esObjeto(p)) return "se esperaba un objeto";
-  if (!Array.isArray(p["flujos"])) return 'falta el campo "flujos" (array)';
-  if (!Array.isArray(p["excluidos"])) return 'falta el campo "excluidos" (array)';
-
-  // "porFecha" se valida como advertencia no bloqueante: sin ese campo el
-  // mapa y los arcos siguen funcionando, y rechazar toda la respuesta
-  // tumbaría el mapa entero. Ver historial de este archivo.
-  const primerFlujo = p["flujos"][0];
-  if (
-    !avisoPorFechaEmitido &&
-    esObjeto(primerFlujo) &&
-    !Array.isArray(primerFlujo["porFecha"])
-  ) {
-    avisoPorFechaEmitido = true;
-    // eslint-disable-next-line no-console
-    console.warn(
-      'route=flujos: los flujos no traen "porFecha" (array). Probablemente la ' +
-        "implementación del Web App está desactualizada. El mapa y los arcos funcionan " +
-        "igual; las secciones por fecha y el timeline quedan sin datos hasta que se " +
-        're-implemente ("Nueva versión") y se corra precalentarAhora().',
-    );
-  }
-  return null;
-};
+const exigirArray = (p: Record<string, unknown>, campo: string): string | null =>
+  Array.isArray(p[campo]) ? null : `falta el campo "${campo}" (array)`;
 
 const VALIDADORES: Record<ParteBundle, Validador> = {
-  meta: (p) => (esObjeto(p) && esObjeto(p["totales"]) ? null : 'falta el campo "totales"'),
-  origenes: esArrayDe("orígenes"),
-  municipios: esArrayDe("municipios"),
-  categorias: esArrayDe("categorías"),
-  flujos: validarFlujos,
-  destinos: esArrayDe("destinos"),
-  toneladas: (p) => {
-    if (!esObjeto(p)) return "se esperaba un objeto";
-    if (!Array.isArray(p["serie"])) return 'falta el campo "serie" (array)';
-    if (typeof p["total"] !== "number") return 'falta el campo "total" (número)';
+  resumen: conDisponible((p) => {
+    const totales = p["totales"];
+    if (!esObjeto(totales) || typeof totales["toneladas"] !== "number") {
+      return 'falta "totales.toneladas" (número)';
+    }
+    if (!esObjeto(p["calidad"])) return 'falta el campo "calidad"';
+    for (const campo of ["recibidas", "inventario"]) {
+      const v = p[campo];
+      if (v !== null && typeof v !== "number") return `"${campo}" debe ser número o null`;
+    }
     return null;
-  },
-  ayuda: (p) => {
-    if (!esObjeto(p)) return "se esperaba un objeto";
-    if (!Array.isArray(p["categorias"])) return 'falta el campo "categorias" (array)';
-    if (!Array.isArray(p["poblaciones"])) return 'falta el campo "poblaciones" (array)';
-    if (!Array.isArray(p["canales"])) return 'falta el campo "canales" (array)';
+  }),
+  municipios: conDisponible((p) => {
+    const lista = p["municipios"];
+    if (!Array.isArray(lista)) return 'falta el campo "municipios" (array)';
+    for (const m of lista) {
+      if (!esObjeto(m)) return "un municipio no es un objeto";
+      if (typeof m["codigoDane"] !== "string" || typeof m["nombre"] !== "string") {
+        return "un municipio sin codigoDane o nombre";
+      }
+      if (typeof m["toneladas"] !== "number") return `municipio ${m["nombre"]} sin toneladas`;
+      if (!Array.isArray(m["categorias"])) return `municipio ${m["nombre"]} sin categorías`;
+    }
     return null;
-  },
-  necesidades: (p) => {
+  }),
+  otras: conDisponible((p) => {
+    if (typeof p["toneladas"] !== "number") return 'falta "toneladas" (número)';
+    return exigirArray(p, "destinos");
+  }),
+  categorias: conDisponible((p) => {
+    const err = exigirArray(p, "categorias");
+    if (err) return err;
+    return esObjeto(p["fueraDeCategoria"]) ? null : 'falta el campo "fueraDeCategoria"';
+  }),
+  faltantes: conDisponible((p) => exigirArray(p, "categorias")),
+  contratacion: (p) => {
     if (!esObjeto(p)) return "se esperaba un objeto";
-    if (!Array.isArray(p["secciones"])) return 'falta el campo "secciones" (array)';
+    if (!Array.isArray(p["contratos"])) return 'falta el campo "contratos" (array)';
+    if (typeof p["valorTotalInformado"] !== "number") {
+      return 'falta el campo "valorTotalInformado" (número)';
+    }
+    // Se revisa cada contrato porque el componente pinta `objeto` y arma
+    // un href con `enlaceSecop`: un contrato mal formado no debe llegar
+    // hasta ahí. Un enlace que no sea http(s) se rechaza en vez de
+    // arreglarse, porque nunca debería salir del backend.
+    for (const c of p["contratos"]) {
+      if (!esObjeto(c)) return "un contrato no es un objeto";
+      if (typeof c["id"] !== "string" || !c["id"]) return "un contrato sin id";
+      if (typeof c["objeto"] !== "string" || !c["objeto"]) return `contrato ${c["id"]} sin objeto`;
+      const valor = c["valorInicial"];
+      if (valor !== null && (typeof valor !== "number" || !Number.isFinite(valor))) {
+        return `contrato ${c["id"]} con valorInicial que no es número ni null`;
+      }
+      const enlace = c["enlaceSecop"];
+      if (enlace !== null && (typeof enlace !== "string" || !/^https?:\/\//i.test(enlace))) {
+        return `contrato ${c["id"]} con enlaceSecop que no es una URL http(s)`;
+      }
+    }
     return null;
   },
 };
@@ -148,7 +161,7 @@ export function validarParte(clave: ParteBundle, valor: unknown): string | null 
 }
 
 const validarBundle: Validador = (p) =>
-  esObjeto(p) && "meta" in p ? null : "se esperaba un objeto con las partes del tablero";
+  esObjeto(p) && "resumen" in p ? null : "se esperaba un objeto con las partes del tablero";
 
 /** El backend responde así cuando el deploy no conoce la ruta. */
 const esRutaNoReconocida = (error: unknown) =>
@@ -168,13 +181,14 @@ export class AyudasApiRepository {
     route: string,
     params: Record<string, string> = {},
     validateShape?: Validador,
+    baseUrl: string = this.baseUrl,
   ): Promise<T> {
     // La base puede ser relativa (/api/tablero, el proxy del mismo
     // dominio) o absoluta (el /exec directo). `new URL` exige una base
     // para las relativas; las consultas solo corren en el navegador, y el
     // respaldo existe solo para que un render del servidor no explote.
     const origen = typeof window !== "undefined" ? window.location.origin : "http://localhost";
-    const url = new URL(this.baseUrl, origen);
+    const url = new URL(baseUrl, origen);
     url.searchParams.set("route", route);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
@@ -198,7 +212,10 @@ export class AyudasApiRepository {
             "Si falla siempre, republicar con Nueva versión y correr probarRutas() desde el editor.",
         );
       }
-      throw new ApiError(`Error de red en route=${route}: HTTP ${response.status}`, response.status);
+      throw new ApiError(
+        `Error de red en route=${route}: HTTP ${response.status}`,
+        response.status,
+      );
     }
 
     const payload = await response.json();
@@ -226,6 +243,15 @@ export class AyudasApiRepository {
 
   /** Una sola petición compartida por todas las consultas que lleguen juntas. */
   private obtenerBundle(): Promise<BundleResponse> {
+    // Solo en desarrollo: VITE_TABLERO_FIXTURE=1 sirve una copia de la
+    // respuesta (src/data/tablero.fixture.ts: despachos y contratos
+    // reales, y un ejemplo marcado para «qué hace falta») mientras el Web
+    // App desplegado no tiene las rutas. `import.meta.env.DEV` es una
+    // constante en el build, así que en producción esta rama y el JSON no
+    // se incluyen.
+    if (import.meta.env.DEV && import.meta.env["VITE_TABLERO_FIXTURE"] === "1") {
+      return import("@/data/tablero.fixture").then((m) => m.default as unknown as BundleResponse);
+    }
     if (this.bundleUltimo && Date.now() - this.bundleObtenidoEn < REUSO_BUNDLE_MS) {
       return Promise.resolve(this.bundleUltimo);
     }
@@ -286,80 +312,61 @@ export class AyudasApiRepository {
     return individual();
   }
 
-  getMeta(): Promise<Meta> {
-    return this.parte("meta", () => this.request<Meta>("meta", {}, VALIDADORES.meta));
-  }
-
-  getOrigenes(): Promise<Origen[]> {
-    return this.parte("origenes", () =>
-      this.request<Origen[]>("origenes", {}, VALIDADORES.origenes),
+  /** Totales, fecha de corte y calidad de los despachos del Excel oficial. */
+  getResumen(): Promise<ResumenRespuesta> {
+    return this.parte("resumen", () =>
+      this.request<ResumenRespuesta>("resumen", {}, VALIDADORES.resumen),
     );
   }
 
-  getMunicipios(): Promise<Municipio[]> {
+  /** Los 42 municipios, con sus toneladas aproximadas y categorías. */
+  getMunicipios(): Promise<MunicipiosRespuesta> {
     return this.parte("municipios", () =>
-      this.request<Municipio[]>("municipios", {}, VALIDADORES.municipios),
+      this.request<MunicipiosRespuesta>("municipios", {}, VALIDADORES.municipios),
     );
   }
 
-  getCategorias(): Promise<Categoria[]> {
+  /** Ayudas a fundaciones, otros departamentos y otras entidades. */
+  getOtras(): Promise<OtrasRespuesta> {
+    return this.parte("otras", () => this.request<OtrasRespuesta>("otras", {}, VALIDADORES.otras));
+  }
+
+  /** Las 7 categorías del tablero y lo que quedó fuera de ellas. */
+  getCategorias(): Promise<CategoriasRespuesta> {
     return this.parte("categorias", () =>
-      this.request<Categoria[]>("categorias", {}, VALIDADORES.categorias),
-    );
-  }
-
-  getFlujos(): Promise<FlujosResponse> {
-    return this.parte("flujos", () =>
-      this.request<FlujosResponse>("flujos", {}, VALIDADORES.flujos),
-    );
-  }
-
-  /**
-   * Serie diaria de toneladas, de la hoja TONELADAS. Si falla, el tablero
-   * cae al estimado por entregas (ver useToneladas y OperacionContext).
-   */
-  getToneladas(): Promise<ToneladasResponse> {
-    return this.parte("toneladas", () =>
-      this.request<ToneladasResponse>("toneladas", {}, VALIDADORES.toneladas),
-    );
-  }
-
-  /**
-   * Composición de lo entregado, grupos atendidos y canales. Las
-   * unidades salen de DETALLE_PRODUCTO (`fuente: "DETALLE_PRODUCTO"`);
-   * si llega "ENVIOS_CATEGORIA", el deploy es anterior al cambio de
-   * fuente y las cifras son las viejas.
-   */
-  getAyuda(): Promise<AyudaResponse> {
-    return this.parte("ayuda", () =>
-      this.request<AyudaResponse>("ayuda", {}, VALIDADORES.ayuda),
+      this.request<CategoriasRespuesta>("categorias", {}, VALIDADORES.categorias),
     );
   }
 
   /**
    * Lo que falta hoy en el centro de acopio. Es la única parte que NO se
    * guarda en el navegador (ver usePrecargaDesdeSnapshot): una lista de
-   * necesidades vieja manda a la gente a donar lo que ya sobra.
+   * faltantes vieja manda a la gente a donar lo que ya sobra.
    */
-  getNecesidades(): Promise<NecesidadesResponse> {
-    return this.parte("necesidades", () =>
-      this.request<NecesidadesResponse>("necesidades", {}, VALIDADORES.necesidades),
+  getFaltantes(): Promise<FaltantesRespuesta> {
+    return this.parte("faltantes", () =>
+      this.request<FaltantesRespuesta>("faltantes", {}, VALIDADORES.faltantes),
     );
   }
 
-  getDestinos(): Promise<DestinoResumenLista[]> {
-    return this.parte("destinos", () =>
-      this.request<DestinoResumenLista[]>("destinos", {}, VALIDADORES.destinos),
+  /** Contratos de la reconstrucción, de la hoja CONTRATACION. */
+  getContratacion(): Promise<ContratacionResponse> {
+    // Solo en desarrollo: permite probar la hoja con un Apps Script aparte
+    // (apps-script/prueba) mientras el Web App real no tiene la ruta. En
+    // producción esta variable no se lee, así que no puede desviar el tráfico.
+    const urlPrueba = import.meta.env.DEV
+      ? import.meta.env["VITE_CONTRATACION_URL_PRUEBA"]
+      : undefined;
+    if (typeof urlPrueba === "string" && urlPrueba) {
+      return this.request<ContratacionResponse>(
+        "contratacion",
+        {},
+        VALIDADORES.contratacion,
+        urlPrueba,
+      );
+    }
+    return this.parte("contratacion", () =>
+      this.request<ContratacionResponse>("contratacion", {}, VALIDADORES.contratacion),
     );
-  }
-
-  /** Vista PRINCIPAL de un destino. Va sola: depende del clic. */
-  getDestino(id: string): Promise<DestinoResumen> {
-    return this.request<DestinoResumen>("destino", { id });
-  }
-
-  /** Vista SECUNDARIA, solo DESPACHOS. Nunca sumar contra getDestino(). */
-  getDestinoLogistica(id: string): Promise<DestinoLogistica> {
-    return this.request<DestinoLogistica>("destino-logistica", { id });
   }
 }

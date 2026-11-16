@@ -32,7 +32,12 @@ export const Route = createFileRoute("/")({
           "Distribución de ayudas por municipio y categoría, actualizada al corte de datos vigente.",
       },
       { property: "og:type", content: "website" },
-      { name: "theme-color", content: "#0b0e14" },
+      { property: "og:locale", content: "es_CO" },
+      {
+        property: "og:site_name",
+        content: "Ruta de la Solidaridad · Gobernación del Valle del Cauca",
+      },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
 });

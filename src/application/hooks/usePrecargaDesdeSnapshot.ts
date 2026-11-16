@@ -14,9 +14,9 @@
  *
  * QUÉ SE SIEMBRA Y QUÉ NO
  *
- * Todo menos `necesidades`. Esa es la única parte que caduca en horas, y
- * una lista vieja manda a la gente a donar lo que ya sobra: esa sección
- * espera a la respuesta real.
+ * Todo menos `faltantes`. Esa es la única parte que caduca en horas, y una
+ * lista vieja manda a la gente a donar lo que ya sobra: esa sección espera
+ * a la respuesta real.
  *
  * Cada parte se valida con la misma regla que las respuestas del
  * backend, y se siembra con la fecha en que se guardó. React Query la ve
@@ -31,18 +31,15 @@ import { validarParte } from "@/infrastructure/api/AyudasApiRepository";
 import type { ParteBundle } from "@/domain/entities";
 
 /**
- * Las claves coinciden con las queryKey de useCatalogQueries, useAyuda y
- * useToneladas. Si una de esas cambia, cambia acá.
+ * Las claves coinciden con las queryKey de useTablero y useContratacion. Si
+ * una de esas cambia, cambia acá.
  */
 const PARTES_SEMBRABLES: readonly ParteBundle[] = [
-  "meta",
-  "origenes",
+  "resumen",
   "municipios",
+  "otras",
   "categorias",
-  "flujos",
-  "destinos",
-  "toneladas",
-  "ayuda",
+  "contratacion",
 ];
 
 export function usePrecargaDesdeSnapshot(): void {

@@ -53,9 +53,15 @@
  *
  * CONFIGURACIÓN
  *
- * La URL /exec sale de la variable de entorno AYUDAS_API_URL (en `env` o
- * en process.env) o, si no existe, de VITE_AYUDAS_API_URL, que Vite
+ * La URL /exec sale de la variable de entorno TABLERO_V2_API_URL (en `env` o
+ * en process.env) o, si no existe, de VITE_TABLERO_V2_API_URL, que Vite
  * incrusta al compilar.
+ *
+ * El nombre lleva «V2» A PROPÓSITO: esta versión del sitio lee un backend
+ * distinto (el libro oficial nuevo) del que usa la versión publicada
+ * (AYUDAS_API_URL). Con nombres distintos, las dos pueden vivir en el mismo
+ * proyecto de despliegue sin pisarse, y esta rama nunca llama por error al
+ * backend viejo, cuyo formato de respuesta no entiende.
  * -----------------------------------------------------------------------
  */
 
@@ -64,19 +70,13 @@ const RUTA_PUBLICA = "/api/tablero";
 /** Solo lo que existe en Code.gs. Cualquier otra cosa no llega a Google. */
 const RUTAS_PERMITIDAS = new Set([
   "bundle",
-  "meta",
-  "origenes",
+  "resumen",
   "municipios",
+  "otras",
   "categorias",
-  "flujos",
-  "destinos",
-  "toneladas",
-  "ayuda",
-  "necesidades",
-  "destino",
-  "destino-logistica",
+  "faltantes",
+  "contratacion",
 ]);
-const RUTAS_CON_ID = new Set(["destino", "destino-logistica"]);
 
 const FRESCO_MS = 60 * 1000;
 const VIGENCIA_MAXIMA_MS = 24 * 60 * 60 * 1000;
@@ -104,15 +104,15 @@ export function esRutaDelTablero(url: URL): boolean {
 
 function urlDelWebApp(env: unknown): string | null {
   if (env && typeof env === "object") {
-    const valor = (env as Record<string, unknown>)["AYUDAS_API_URL"];
+    const valor = (env as Record<string, unknown>)["TABLERO_V2_API_URL"];
     if (typeof valor === "string" && valor) return valor;
   }
   const proceso = (globalThis as { process?: { env?: Record<string, string | undefined> } })
     .process;
-  const desdeProceso = proceso?.env?.["AYUDAS_API_URL"];
+  const desdeProceso = proceso?.env?.["TABLERO_V2_API_URL"];
   if (desdeProceso) return desdeProceso;
 
-  const vite = import.meta.env["VITE_AYUDAS_API_URL"];
+  const vite = import.meta.env["VITE_TABLERO_V2_API_URL"];
   return typeof vite === "string" && vite ? vite : null;
 }
 
@@ -291,7 +291,7 @@ export async function manejarTablero(
 
   const base = urlDelWebApp(env);
   if (!base) {
-    console.error("[tablero] Falta AYUDAS_API_URL / VITE_AYUDAS_API_URL en el servidor.");
+    console.error("[tablero] Falta TABLERO_V2_API_URL / VITE_TABLERO_V2_API_URL en el servidor.");
     return responderError("El servidor no tiene configurada la URL del Web App.", 500, 500);
   }
 
@@ -302,13 +302,6 @@ export async function manejarTablero(
   }
 
   const params: Record<string, string> = { route };
-  if (RUTAS_CON_ID.has(route)) {
-    const id = (url.searchParams.get("id") ?? "").trim();
-    if (!id || id.length > 40 || !/^[\w-]+$/.test(id)) {
-      return responderError('Falta el parámetro "id" o no es válido.', 400);
-    }
-    params["id"] = id;
-  }
 
   // La clave se arma solo con los parámetros permitidos: un `?x=123`
   // agregado a mano no crea una entrada nueva en la memoria ni en el

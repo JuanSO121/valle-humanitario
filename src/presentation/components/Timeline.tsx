@@ -48,7 +48,7 @@
  * -----------------------------------------------------------------------
  */
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { fechaCorta } from "@/application/derivations/operacion";
+import { diaMes as fechaCorta } from "@/lib/formato";
 import { computeTimelineStepMs } from "./animationTiming";
 
 interface Props {

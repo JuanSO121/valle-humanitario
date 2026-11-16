@@ -42,7 +42,7 @@ import type { ReactNode } from "react";
 export type Tono = "cyan" | "azul" | "navy" | "crema" | "hueso" | "blanco";
 
 const FONDO: Record<Tono, string> = {
-  cyan: "bg-[#22ABE2]",
+  cyan: "bg-[#0B7DB1]",
   azul: "bg-[#0079C1]",
   navy: "bg-[#123E5C]",
   crema: "bg-[#FBF8C6]",
@@ -67,6 +67,8 @@ interface BandaProps {
   children: ReactNode;
   /** Para ajustar el relleno vertical en bandas de rótulo, que son bajas. */
   className?: string;
+  /** La primera banda de una sección: deja sitio al botón del menú en el celular. */
+  primera?: boolean;
 }
 
 /**
@@ -77,9 +79,13 @@ interface BandaProps {
  * dentro de la sección— la pieza deja de leerse como sistema y parece
  * una tarjeta suelta en medio de la página.
  */
-export function Banda({ tono = "hueso", className = "", children }: BandaProps) {
+export function Banda({ tono = "hueso", className = "", primera = false, children }: BandaProps) {
   return (
-    <div className={`${FONDO[tono]} px-4 py-12 sm:px-6 sm:py-14 md:px-10 ${className}`}>
+    // `primera`: en el celular el botón del menú flota arriba a la izquierda;
+    // la primera banda de una sección deja ese espacio para no taparse con él.
+    <div
+      className={`${FONDO[tono]} px-4 py-12 sm:px-6 sm:py-14 md:px-10 ${primera ? "max-md:pt-20" : ""} ${className}`}
+    >
       <div className="mx-auto max-w-6xl">{children}</div>
     </div>
   );
@@ -158,7 +164,7 @@ export function SectionIntro({ children, tono = "hueso" }: TextoProps) {
   return (
     <p
       className={`mt-5 max-w-2xl text-lg leading-8 ${
-        OSCURO[tono] ? "text-[#DDF0FA]" : "text-[#35708F]"
+        OSCURO[tono] ? "text-white" : "text-[#35708F]"
       }`}
     >
       {children}
@@ -239,5 +245,29 @@ export function Aviso({ children }: { children: ReactNode }) {
     <div className="rounded-lg border border-[#FFD400]/40 border-l-[3px] border-l-[#FFD400] bg-[#FFF8E5] p-5 text-base leading-7 text-[#6B5200]">
       {children}
     </div>
+  );
+}
+
+/**
+ * El lugar de una sección mientras llegan sus datos. Sin esto la sección
+ * no existe, y al llegar los datos empuja todo lo de abajo de golpe (salto
+ * de diseño). Solo se usa mientras carga: si los datos no están disponibles,
+ * la sección no se dibuja.
+ */
+export function Cargando({
+  id,
+  className,
+  texto,
+}: {
+  id: string;
+  className: string;
+  texto: string;
+}) {
+  return (
+    <section id={id} className={`vc-seccion ${className}`} aria-busy="true">
+      <p role="status" className="px-4 py-24 text-center text-lg font-semibold text-[#35708F]">
+        {texto}
+      </p>
+    </section>
   );
 }

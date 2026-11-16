@@ -1,14 +1,13 @@
 /**
  * MapaDiferido.tsx
  * -----------------------------------------------------------------------
- * Monta DashboardPage recién cuando la persona se acerca a la sección
+ * Monta el mapa recién cuando la persona se acerca a la sección
  * del mapa.
  *
  * POR QUÉ
  *
- * StoryPage importaba DashboardPage de forma directa, así que MapLibre GL
- * —de las librerías más pesadas de todo el sitio— y el motor de arcos
- * viajaban en el JavaScript inicial. El mapa es la ÚLTIMA sección del
+ * Sin esto, MapLibre GL —de las librerías más pesadas de todo el sitio—
+ * viajaría en el JavaScript inicial. El mapa es la ÚLTIMA sección del
  * relato: la portada, el balance y "¿Qué hace falta hoy?" esperaban a
  * que el teléfono descargara y compilara un mapa que todavía no se ve.
  *
@@ -24,21 +23,15 @@
  * ventana: en esta página la ventana no se desplaza, se desplaza el
  * <main>. Con la ventana como raíz, la sección nunca "entraría".
  *
- * Un enlace del relato que baja al mapa ("ver en el mapa") funciona
- * igual: el desplazamiento dispara el montaje, y el municipio elegido
- * vive en FocoContext, que DashboardPage lee al montarse.
- *
  * No hay desajuste de hidratación: el servidor y el primer render del
  * cliente dibujan los dos el marcador de carga.
  * -----------------------------------------------------------------------
  */
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
-const cargarDashboard = () => import("@/presentation/pages/DashboardPage");
+const cargarMapa = () => import("@/presentation/components/MapaToneladas");
 
-const DashboardPage = lazy(() =>
-  cargarDashboard().then((modulo) => ({ default: modulo.DashboardPage })),
-);
+const Mapa = lazy(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 const MARGEN_ANTICIPADO = "800px 0px";
@@ -64,7 +57,7 @@ export function MapaDiferido({ scrollRootId }: { scrollRootId: string }) {
   useEffect(() => {
     const ventana = window as VentanaConOcio;
     const precargar = () => {
-      void cargarDashboard();
+      void cargarMapa();
     };
 
     if (ventana.requestIdleCallback) {
@@ -103,7 +96,7 @@ export function MapaDiferido({ scrollRootId }: { scrollRootId: string }) {
     <div ref={ref} className="relative h-full w-full">
       {montar ? (
         <Suspense fallback={<CargandoMapa />}>
-          <DashboardPage embedded />
+          <Mapa />
         </Suspense>
       ) : (
         <CargandoMapa />

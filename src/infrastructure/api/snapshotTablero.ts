@@ -19,7 +19,7 @@ import type { BundleResponse } from "@/domain/entities";
  * Subir el sufijo cuando cambie la forma del contrato: las copias con la
  * clave anterior dejan de leerse.
  */
-const CLAVE = "ayudas:bundle:v1";
+const CLAVE = "ayudas:bundle:v2";
 
 /** Pasado esto, la copia no se muestra: mejor esperar que enseñar algo muy viejo. */
 const EDAD_MAXIMA_MS = 7 * 24 * 60 * 60 * 1000;

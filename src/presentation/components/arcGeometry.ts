@@ -70,7 +70,7 @@ function toGradientExpression(stops: GradientStop[]): unknown[] {
   const last = cleaned[cleaned.length - 1];
   if (last && last[0] < 1) cleaned.push([1, last[1]]);
 
-  var expr: unknown[] = ['interpolate', ['linear'], ['line-progress']];
+  const expr: unknown[] = ["interpolate", ["linear"], ["line-progress"]];
   cleaned.forEach((s) => {
     expr.push(s[0], s[1]);
   });
@@ -82,8 +82,8 @@ export function buildGrowthGradient(progress: number, solidColor: string): unkno
   return toGradientExpression([
     [0, solidColor],
     [p, solidColor],
-    [Math.min(1, p + 0.001), 'rgba(0,0,0,0)'],
-    [1, 'rgba(0,0,0,0)'],
+    [Math.min(1, p + 0.001), "rgba(0,0,0,0)"],
+    [1, "rgba(0,0,0,0)"],
   ]);
 }
 

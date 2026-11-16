@@ -149,7 +149,7 @@ export function SidebarNav({
         aria-label="Abrir menú"
         aria-expanded={abierto}
         ref={abrirRef}
-        className="fixed left-4 top-4 z-50 flex size-12 items-center justify-center rounded-full bg-white text-[#0079C1] shadow-lg ring-1 ring-[#0079C1]/15 transition hover:bg-[#EAF7FC] md:hidden"
+        className="vc-menu-movil fixed left-4 top-4 z-50 flex size-12 items-center justify-center rounded-full bg-white text-[#0079C1] shadow-lg ring-1 ring-[#0079C1]/15 transition hover:bg-[#EAF7FC] md:hidden"
       >
         <Menu className="size-6" aria-hidden />
       </button>
