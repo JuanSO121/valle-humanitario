@@ -2,15 +2,22 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { i as require_jsx_runtime, n as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-S-D_BeMk.js
-var router_S_D_BeMk_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-C8qS3FuW.js
+var router_C8qS3FuW_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$1 = createRootRouteWithContext()({
 	head: () => ({
-		meta: [{ charSet: "utf-8" }, {
-			name: "viewport",
-			content: "width=device-width, initial-scale=1"
-		}],
+		meta: [
+			{ charSet: "utf-8" },
+			{
+				name: "viewport",
+				content: "width=device-width, initial-scale=1, viewport-fit=cover"
+			},
+			{
+				name: "theme-color",
+				content: "#0076BC"
+			}
+		],
 		/**
 		* Poppins se carga acá y NO con un @import dentro de marca.css: al
 		* empaquetar, ese @import queda después de las reglas de Tailwind y
@@ -100,7 +107,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-D8FzwPbj.mjs").then((n) => n.t);
+var $$splitComponentImporter = () => import("./routes-DDi5vCPZ.mjs").then((n) => n.t);
 var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [
@@ -122,8 +129,16 @@ var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 			content: "website"
 		},
 		{
-			name: "theme-color",
-			content: "#0b0e14"
+			property: "og:locale",
+			content: "es_CO"
+		},
+		{
+			property: "og:site_name",
+			content: "Ruta de la Solidaridad · Gobernación del Valle del Cauca"
+		},
+		{
+			name: "twitter:card",
+			content: "summary"
 		}
 	] })
 }).update({
@@ -142,4 +157,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_S_D_BeMk_exports as t };
+export { getRouter, router_C8qS3FuW_exports as t };

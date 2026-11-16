@@ -146,28 +146,28 @@ function renderErrorPage() {
 *
 * CONFIGURACIÓN
 *
-* La URL /exec sale de la variable de entorno AYUDAS_API_URL (en `env` o
-* en process.env) o, si no existe, de VITE_AYUDAS_API_URL, que Vite
+* La URL /exec sale de la variable de entorno TABLERO_V2_API_URL (en `env` o
+* en process.env) o, si no existe, de VITE_TABLERO_V2_API_URL, que Vite
 * incrusta al compilar.
+*
+* El nombre lleva «V2» A PROPÓSITO: esta versión del sitio lee un backend
+* distinto (el libro oficial nuevo) del que usa la versión publicada
+* (AYUDAS_API_URL). Con nombres distintos, las dos pueden vivir en el mismo
+* proyecto de despliegue sin pisarse, y esta rama nunca llama por error al
+* backend viejo, cuyo formato de respuesta no entiende.
 * -----------------------------------------------------------------------
 */
 var RUTA_PUBLICA = "/api/tablero";
 /** Solo lo que existe en Code.gs. Cualquier otra cosa no llega a Google. */
 var RUTAS_PERMITIDAS = /* @__PURE__ */ new Set([
 	"bundle",
-	"meta",
-	"origenes",
+	"resumen",
 	"municipios",
+	"otras",
 	"categorias",
-	"flujos",
-	"destinos",
-	"toneladas",
-	"ayuda",
-	"necesidades",
-	"destino",
-	"destino-logistica"
+	"faltantes",
+	"contratacion"
 ]);
-var RUTAS_CON_ID = /* @__PURE__ */ new Set(["destino", "destino-logistica"]);
 var FRESCO_MS = 6e4;
 var VIGENCIA_MAXIMA_MS = 864e5;
 var TIEMPO_LIMITE_MS = 25e3;
@@ -181,10 +181,10 @@ function esRutaDelTablero(url) {
 }
 function urlDelWebApp(env) {
 	if (env && typeof env === "object") {
-		const valor = env["AYUDAS_API_URL"];
+		const valor = env["TABLERO_V2_API_URL"];
 		if (typeof valor === "string" && valor) return valor;
 	}
-	const desdeProceso = globalThis.process?.env?.["AYUDAS_API_URL"];
+	const desdeProceso = globalThis.process?.env?.["TABLERO_V2_API_URL"];
 	if (desdeProceso) return desdeProceso;
 	const vite = {
 		"BASE_URL": "/",
@@ -198,8 +198,10 @@ function urlDelWebApp(env) {
 		"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 		"TSS_INLINE_CSS_ENABLED": "false",
 		"TSS_ROUTER_BASEPATH": "",
-		"TSS_SERVER_FN_BASE": "/_serverFn/"
-	}["VITE_AYUDAS_API_URL"];
+		"TSS_SERVER_FN_BASE": "/_serverFn/",
+		"VITE_TABLERO_FIXTURE": "0",
+		"VITE_TABLERO_V2_API_URL": "https://script.google.com/macros/s/AKfycbyGWIpjsiLmnDC6GPMusHJnAVi6F_ndtb_lnF_doLFti3ic2xYU72DyFqk5Yk7TsFS0/exec"
+	}["VITE_TABLERO_V2_API_URL"];
 	return typeof vite === "string" && vite ? vite : null;
 }
 /**
@@ -335,18 +337,13 @@ async function manejarTablero(request, env, ctx) {
 	});
 	const base = urlDelWebApp(env);
 	if (!base) {
-		console.error("[tablero] Falta AYUDAS_API_URL / VITE_AYUDAS_API_URL en el servidor.");
+		console.error("[tablero] Falta TABLERO_V2_API_URL / VITE_TABLERO_V2_API_URL en el servidor.");
 		return responderError("El servidor no tiene configurada la URL del Web App.", 500, 500);
 	}
 	const url = new URL(request.url);
 	const route = url.searchParams.get("route") ?? "";
 	if (!RUTAS_PERMITIDAS.has(route)) return responderError(`Ruta "${route}" no reconocida.`, 404);
 	const params = { route };
-	if (RUTAS_CON_ID.has(route)) {
-		const id = (url.searchParams.get("id") ?? "").trim();
-		if (!id || id.length > 40 || !/^[\w-]+$/.test(id)) return responderError("Falta el parámetro \"id\" o no es válido.", 400);
-		params["id"] = id;
-	}
 	const clave = `${url.origin}${RUTA_PUBLICA}?${new URLSearchParams(params).toString()}`;
 	const ahora = Date.now();
 	const esperarTarea = buscarWaitUntil(request, ctx);
@@ -376,7 +373,7 @@ async function manejarTablero(request, env, ctx) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-594HQbVY.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-DSxc3Kve.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

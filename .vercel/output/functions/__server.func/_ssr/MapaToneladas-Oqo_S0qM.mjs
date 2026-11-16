@@ -1,129 +1,11 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
-import { a as require_react, i as require_jsx_runtime, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-import { a as RotateCcw, i as SlidersHorizontal, p as Info, s as PackageCheck, t as X, v as ChevronRight, w as ArrowLeft } from "../_libs/lucide-react.mjs";
-import { a as fechaCorta, c as sameMunicipality, d as useDestinos, f as useFlujos, i as useOperacion, l as CATALOG_STALE_TIME_MS$1, m as ayudasApiRepository, n as useAyuda, o as TERRITORY_BLUE_RAMP, p as useOrigenes, r as useFoco, s as getTerritoryStat, u as REINTENTO_ESCALONADO$1 } from "./routes-D8FzwPbj.mjs";
-import { h as ClientOnly } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/DashboardPage-yADZ4U9l.js
+import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
+import { b as CircleQuestionMark, o as RotateCcw, t as X } from "../_libs/lucide-react.mjs";
+import { a as entero, c as useResumen, i as diaMes, n as colorDeGrupo, o as toneladas, r as sameMunicipality, s as useMunicipios } from "./routes-DDi5vCPZ.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-Oqo_S0qM.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
-/**
-* useFlujosPorLente.ts
-* -----------------------------------------------------------------------
-* El equivalente de territoryTime pero para los ARCOS. Los polígonos y
-* las líneas tienen que responder a la misma pregunta temporal: si el
-* mapa dice "acumulado al 14", los arcos no pueden mostrar el total.
-*
-* Reemplaza a useFlujosAsOf, que solo cubría el caso acumulado. Ese hook
-* queda sin uso; se puede borrar cuando nadie más lo importe.
-*
-* Devuelve Flujo[] con `despachosCount` recalculado y `porFecha` intacto
-* — el motor de arcos solo lee despachosCount, y conservar porFecha
-* permite que quien reciba estos flujos (ej. OrigenPanel) siga viendo el
-* detalle por fecha si lo necesita.
-* -----------------------------------------------------------------------
-*/
-function useFlujosPorLente(flujos, lens, isoDate) {
-	return (0, import_react.useMemo)(() => {
-		if (!flujos) return [];
-		if (isoDate === null) return flujos;
-		if (lens === "jornada") return flujos.flatMap((f) => {
-			const delDia = (f.porFecha ?? []).find((p) => p.fecha === isoDate);
-			if (!delDia || delDia.despachosCount <= 0) return [];
-			return [{
-				...f,
-				despachosCount: delDia.despachosCount
-			}];
-		});
-		return flujos.flatMap((f) => {
-			const total = (f.porFecha ?? []).reduce((sum, p) => p.fecha <= isoDate ? sum + p.despachosCount : sum, 0);
-			if (total <= 0) return [];
-			return [{
-				...f,
-				despachosCount: total
-			}];
-		});
-	}, [
-		flujos,
-		lens,
-		isoDate
-	]);
-}
-var INITIAL_VIEW_STATE = {
-	level: "ALL",
-	destinoId: null,
-	origenId: null,
-	timelineDate: null,
-	timelineInstant: false
-};
-var viewTransitions = {
-	/** Click en un destino — muestra sus flujos entrantes (de dónde vino lo que llegó ahí). */
-	toDestino(destinoId, prev) {
-		return {
-			...prev,
-			level: "DESTINO",
-			destinoId,
-			origenId: null
-		};
-	},
-	/** Click en un origen — muestra sus flujos salientes (a dónde se distribuyó desde ahí). */
-	toOrigen(origenId, prev) {
-		return {
-			...prev,
-			level: "ORIGEN",
-			origenId,
-			destinoId: null
-		};
-	},
-	/** Click en vacío / reset — sin selección, sin arcos (ver MapCanvas: flujos=[] no dibuja nada). */
-	toAll(prev) {
-		return {
-			...prev,
-			level: "ALL",
-			destinoId: null,
-			origenId: null
-		};
-	},
-	/** Arrancar o reanudar la reproducción — primer frame, se trata como salto instantáneo a esa fecha. */
-	startTimeline(fromDate, prev) {
-		return {
-			...prev,
-			timelineDate: fromDate,
-			timelineInstant: true
-		};
-	},
-	/** Avance automático (play) — nunca instantáneo, MapCanvas debe animar la entrada de arcos nuevos. */
-	advanceTimeline(toDate, prev) {
-		return {
-			...prev,
-			timelineDate: toDate,
-			timelineInstant: false
-		};
-	},
-	/** Arrastrar el handle o tocar un tick — siempre instantáneo (ver conversación: nunca se anima un seek). */
-	seekTimeline(toDate, prev) {
-		return {
-			...prev,
-			timelineDate: toDate,
-			timelineInstant: true
-		};
-	},
-	/** Salir del modo timeline y volver al estado estático (todos los flujos completos, sin fecha). */
-	exitTimeline(prev) {
-		return {
-			...prev,
-			timelineDate: null,
-			timelineInstant: false
-		};
-	},
-	/** Llamar después de que MapCanvas ya consumió un frame instantáneo, para que el siguiente avance sí anime. */
-	clearInstantFlag(prev) {
-		return prev.timelineInstant ? {
-			...prev,
-			timelineInstant: false
-		} : prev;
-	}
-};
 /**
 * MapLibre GL JS
 * @license 3-Clause BSD. Full text of license: https://github.com/maplibre/maplibre-gl-js/blob/v6.3.0/LICENSE.txt
@@ -312,19 +194,39 @@ function g() {
 	var e = new h(9);
 	return h != Float32Array && (e[1] = 0, e[2] = 0, e[3] = 0, e[5] = 0, e[6] = 0, e[7] = 0), e[0] = 1, e[4] = 1, e[8] = 1, e;
 }
+function _(e) {
+	var t = e[0], n = e[1], r = e[2], i = e[3], a = e[4], o = e[5], s = e[6], c = e[7], l = e[8];
+	return t * (l * a - o * c) + n * (-l * i + o * s) + r * (c * i - a * s);
+}
 function v(e, t) {
 	var n = Math.sin(t), r = Math.cos(t);
 	return e[0] = r, e[1] = n, e[2] = 0, e[3] = -n, e[4] = r, e[5] = 0, e[6] = 0, e[7] = 0, e[8] = 1, e;
 }
+function y(e, t) {
+	var n = t[0], r = t[1], i = t[2], a = t[3], o = n + n, s = r + r, c = i + i, l = n * o, u = r * o, d = r * s, f = i * o, p = i * s, m = i * c, h = a * o, g = a * s, _ = a * c;
+	return e[0] = 1 - d - m, e[3] = u - _, e[6] = f + g, e[1] = u + _, e[4] = 1 - l - m, e[7] = p - h, e[2] = f - g, e[5] = p + h, e[8] = 1 - l - d, e;
+}
 function b() {
 	var e = new h(16);
 	return h != Float32Array && (e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[11] = 0, e[12] = 0, e[13] = 0, e[14] = 0), e[0] = 1, e[5] = 1, e[10] = 1, e[15] = 1, e;
+}
+function x(e) {
+	var t = new h(16);
+	return t[0] = e[0], t[1] = e[1], t[2] = e[2], t[3] = e[3], t[4] = e[4], t[5] = e[5], t[6] = e[6], t[7] = e[7], t[8] = e[8], t[9] = e[9], t[10] = e[10], t[11] = e[11], t[12] = e[12], t[13] = e[13], t[14] = e[14], t[15] = e[15], t;
 }
 function S(e, t) {
 	return e[0] = t[0], e[1] = t[1], e[2] = t[2], e[3] = t[3], e[4] = t[4], e[5] = t[5], e[6] = t[6], e[7] = t[7], e[8] = t[8], e[9] = t[9], e[10] = t[10], e[11] = t[11], e[12] = t[12], e[13] = t[13], e[14] = t[14], e[15] = t[15], e;
 }
 function C(e) {
 	return e[0] = 1, e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = 1, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 1, e[11] = 0, e[12] = 0, e[13] = 0, e[14] = 0, e[15] = 1, e;
+}
+function w(e, t) {
+	var n = t[0], r = t[1], i = t[2], a = t[3], o = t[4], s = t[5], c = t[6], l = t[7], u = t[8], d = t[9], f = t[10], p = t[11], m = t[12], h = t[13], g = t[14], _ = t[15], v = n * s - r * o, y = n * c - i * o, b = n * l - a * o, x = r * c - i * s, S = r * l - a * s, C = i * l - a * c, w = u * h - d * m, T = u * g - f * m, E = u * _ - p * m, D = d * g - f * h, O = d * _ - p * h, k = f * _ - p * g, A = v * k - y * O + b * D + x * E - S * T + C * w;
+	return A ? (A = 1 / A, e[0] = (s * k - c * O + l * D) * A, e[1] = (i * O - r * k - a * D) * A, e[2] = (h * C - g * S + _ * x) * A, e[3] = (f * S - d * C - p * x) * A, e[4] = (c * E - o * k - l * T) * A, e[5] = (n * k - i * E + a * T) * A, e[6] = (g * b - m * C - _ * y) * A, e[7] = (u * C - f * b + p * y) * A, e[8] = (o * O - s * E + l * w) * A, e[9] = (r * E - n * O - a * w) * A, e[10] = (m * S - h * b + _ * v) * A, e[11] = (d * b - u * S - p * v) * A, e[12] = (s * T - o * D - c * w) * A, e[13] = (n * D - r * T + i * w) * A, e[14] = (h * y - m * x - g * v) * A, e[15] = (u * x - d * y + f * v) * A, e) : null;
+}
+function T(e, t, n) {
+	var r = t[0], i = t[1], a = t[2], o = t[3], s = t[4], c = t[5], l = t[6], u = t[7], d = t[8], f = t[9], p = t[10], m = t[11], h = t[12], g = t[13], _ = t[14], v = t[15], y = n[0], b = n[1], x = n[2], S = n[3];
+	return e[0] = y * r + b * s + x * d + S * h, e[1] = y * i + b * c + x * f + S * g, e[2] = y * a + b * l + x * p + S * _, e[3] = y * o + b * u + x * m + S * v, y = n[4], b = n[5], x = n[6], S = n[7], e[4] = y * r + b * s + x * d + S * h, e[5] = y * i + b * c + x * f + S * g, e[6] = y * a + b * l + x * p + S * _, e[7] = y * o + b * u + x * m + S * v, y = n[8], b = n[9], x = n[10], S = n[11], e[8] = y * r + b * s + x * d + S * h, e[9] = y * i + b * c + x * f + S * g, e[10] = y * a + b * l + x * p + S * _, e[11] = y * o + b * u + x * m + S * v, y = n[12], b = n[13], x = n[14], S = n[15], e[12] = y * r + b * s + x * d + S * h, e[13] = y * i + b * c + x * f + S * g, e[14] = y * a + b * l + x * p + S * _, e[15] = y * o + b * u + x * m + S * v, e;
 }
 function E(e, t, n) {
 	var r = n[0], i = n[1], a = n[2], o, s, c, l, u, d, f, p, m, h, g, _;
@@ -346,6 +248,18 @@ function A(e, t, n) {
 	var r = Math.sin(n), i = Math.cos(n), a = t[0], o = t[1], s = t[2], c = t[3], l = t[4], u = t[5], d = t[6], f = t[7];
 	return t !== e && (e[8] = t[8], e[9] = t[9], e[10] = t[10], e[11] = t[11], e[12] = t[12], e[13] = t[13], e[14] = t[14], e[15] = t[15]), e[0] = a * i + l * r, e[1] = o * i + u * r, e[2] = s * i + d * r, e[3] = c * i + f * r, e[4] = l * i - a * r, e[5] = u * i - o * r, e[6] = d * i - s * r, e[7] = f * i - c * r, e;
 }
+function ee(e, t) {
+	return e[0] = t[0], e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = t[1], e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = t[2], e[11] = 0, e[12] = 0, e[13] = 0, e[14] = 0, e[15] = 1, e;
+}
+function te(e, t, n, r, i) {
+	var a = 1 / Math.tan(t / 2);
+	if (e[0] = a / n, e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = a, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[11] = -1, e[12] = 0, e[13] = 0, e[15] = 0, i != null && i !== 1 / 0) {
+		var o = 1 / (r - i);
+		e[10] = (i + r) * o, e[14] = 2 * i * r * o;
+	} else e[10] = -1, e[14] = -2 * r;
+	return e;
+}
+var ne = te;
 function re(e, t, n, r, i, a, o) {
 	var s = 1 / (t - n), c = 1 / (r - i), l = 1 / (a - o);
 	return e[0] = -2 * s, e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = -2 * c, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 2 * l, e[11] = 0, e[12] = (t + n) * s, e[13] = (i + r) * c, e[14] = (o + a) * l, e[15] = 1, e;
@@ -362,6 +276,10 @@ function se() {
 	var e = new h(3);
 	return h != Float32Array && (e[0] = 0, e[1] = 0, e[2] = 0), e;
 }
+function ce(e) {
+	var t = new h(3);
+	return t[0] = e[0], t[1] = e[1], t[2] = e[2], t;
+}
 function le(e) {
 	var t = e[0], n = e[1], r = e[2];
 	return Math.sqrt(t * t + n * n + r * r);
@@ -369,6 +287,18 @@ function le(e) {
 function ue(e, t, n) {
 	var r = new h(3);
 	return r[0] = e, r[1] = t, r[2] = n, r;
+}
+function de(e, t, n) {
+	return e[0] = t[0] + n[0], e[1] = t[1] + n[1], e[2] = t[2] + n[2], e;
+}
+function fe(e, t, n) {
+	return e[0] = t[0] - n[0], e[1] = t[1] - n[1], e[2] = t[2] - n[2], e;
+}
+function pe(e, t, n) {
+	return e[0] = t[0] * n, e[1] = t[1] * n, e[2] = t[2] * n, e;
+}
+function me(e, t, n, r) {
+	return e[0] = t[0] + n[0] * r, e[1] = t[1] + n[1] * r, e[2] = t[2] + n[2] * r, e;
 }
 function he(e, t) {
 	return e[0] = -t[0], e[1] = -t[1], e[2] = -t[2], e;
@@ -392,6 +322,26 @@ function be(e, t, n) {
 	var r = t[0], i = t[1], a = t[2];
 	return e[0] = r * n[0] + i * n[3] + a * n[6], e[1] = r * n[1] + i * n[4] + a * n[7], e[2] = r * n[2] + i * n[5] + a * n[8], e;
 }
+function xe(e, t, n) {
+	var r = n[0], i = n[1], a = n[2], o = n[3], s = t[0], c = t[1], l = t[2], u = i * l - a * c, d = a * s - r * l, f = r * c - i * s;
+	return u += u, d += d, f += f, e[0] = s + o * u + i * f - a * d, e[1] = c + o * d + a * u - r * f, e[2] = l + o * f + r * d - i * u, e;
+}
+function Se(e, t, n, r) {
+	var i = [], a = [];
+	return i[0] = t[0] - n[0], i[1] = t[1] - n[1], i[2] = t[2] - n[2], a[0] = i[0], a[1] = i[1] * Math.cos(r) - i[2] * Math.sin(r), a[2] = i[1] * Math.sin(r) + i[2] * Math.cos(r), e[0] = a[0] + n[0], e[1] = a[1] + n[1], e[2] = a[2] + n[2], e;
+}
+function Ce(e, t, n, r) {
+	var i = [], a = [];
+	return i[0] = t[0] - n[0], i[1] = t[1] - n[1], i[2] = t[2] - n[2], a[0] = i[2] * Math.sin(r) + i[0] * Math.cos(r), a[1] = i[1], a[2] = i[2] * Math.cos(r) - i[0] * Math.sin(r), e[0] = a[0] + n[0], e[1] = a[1] + n[1], e[2] = a[2] + n[2], e;
+}
+function we(e, t, n, r) {
+	var i = [], a = [];
+	return i[0] = t[0] - n[0], i[1] = t[1] - n[1], i[2] = t[2] - n[2], a[0] = i[0] * Math.cos(r) - i[1] * Math.sin(r), a[1] = i[0] * Math.sin(r) + i[1] * Math.cos(r), a[2] = i[2], e[0] = a[0] + n[0], e[1] = a[1] + n[1], e[2] = a[2] + n[2], e;
+}
+function Te(e) {
+	return e[0] = 0, e[1] = 0, e[2] = 0, e;
+}
+var Ee = fe;
 var De = le;
 (function() {
 	var e = se();
@@ -405,6 +355,12 @@ function Oe() {
 	var e = new h(4);
 	return h != Float32Array && (e[0] = 0, e[1] = 0, e[2] = 0, e[3] = 0), e;
 }
+function ke(e, t, n) {
+	return e[0] = t[0] * n[0], e[1] = t[1] * n[1], e[2] = t[2] * n[2], e[3] = t[3] * n[3], e;
+}
+function Ae(e, t, n) {
+	return e[0] = t[0] * n, e[1] = t[1] * n, e[2] = t[2] * n, e[3] = t[3] * n, e;
+}
 function je(e, t) {
 	var n = t[0], r = t[1], i = t[2], a = t[3], o = n * n + r * r + i * i + a * a;
 	return o > 0 && (o = 1 / Math.sqrt(o)), e[0] = n * o, e[1] = r * o, e[2] = i * o, e[3] = a * o, e;
@@ -413,6 +369,7 @@ function Me(e, t, n) {
 	var r = t[0], i = t[1], a = t[2], o = t[3];
 	return e[0] = n[0] * r + n[4] * i + n[8] * a + n[12] * o, e[1] = n[1] * r + n[5] * i + n[9] * a + n[13] * o, e[2] = n[2] * r + n[6] * i + n[10] * a + n[14] * o, e[3] = n[3] * r + n[7] * i + n[11] * a + n[15] * o, e;
 }
+var Ne = ke;
 (function() {
 	var e = Oe();
 	return function(t, n, r, i, a, o) {
@@ -442,6 +399,33 @@ function Le(e, t) {
 		t[4] > t[0] && (i = 1), t[8] > t[i * 3 + i] && (i = 2);
 		var a = (i + 1) % 3, o = (i + 2) % 3;
 		r = Math.sqrt(t[i * 3 + i] - t[a * 3 + a] - t[o * 3 + o] + 1), e[i] = .5 * r, r = .5 / r, e[3] = (t[a * 3 + o] - t[o * 3 + a]) * r, e[a] = (t[a * 3 + i] + t[i * 3 + a]) * r, e[o] = (t[o * 3 + i] + t[i * 3 + o]) * r;
+	}
+	return e;
+}
+function Re(e, t, n, r) {
+	var i = arguments.length > 4 && arguments[4] !== void 0 ? arguments[4] : `zyx`, a = Math.PI / 360;
+	t *= a, r *= a, n *= a;
+	var o = Math.sin(t), s = Math.cos(t), c = Math.sin(n), l = Math.cos(n), u = Math.sin(r), d = Math.cos(r);
+	switch (i) {
+		case `xyz`:
+			e[0] = o * l * d + s * c * u, e[1] = s * c * d - o * l * u, e[2] = s * l * u + o * c * d, e[3] = s * l * d - o * c * u;
+			break;
+		case `xzy`:
+			e[0] = o * l * d - s * c * u, e[1] = s * c * d - o * l * u, e[2] = s * l * u + o * c * d, e[3] = s * l * d + o * c * u;
+			break;
+		case `yxz`:
+			e[0] = o * l * d + s * c * u, e[1] = s * c * d - o * l * u, e[2] = s * l * u - o * c * d, e[3] = s * l * d + o * c * u;
+			break;
+		case `yzx`:
+			e[0] = o * l * d + s * c * u, e[1] = s * c * d + o * l * u, e[2] = s * l * u - o * c * d, e[3] = s * l * d - o * c * u;
+			break;
+		case `zxy`:
+			e[0] = o * l * d - s * c * u, e[1] = s * c * d + o * l * u, e[2] = s * l * u + o * c * d, e[3] = s * l * d - o * c * u;
+			break;
+		case `zyx`:
+			e[0] = o * l * d - s * c * u, e[1] = s * c * d + o * l * u, e[2] = s * l * u - o * c * d, e[3] = s * l * d + o * c * u;
+			break;
+		default: throw Error(`Unknown angle order ` + i);
 	}
 	return e;
 }
@@ -530,6 +514,23 @@ function nt(e, t, n) {
 function it(e) {
 	return e instanceof Error ? e : Error(typeof e == `string` ? e : String(e));
 }
+function at() {
+	return /* @__PURE__ */ new Float64Array(4);
+}
+function ot() {
+	return /* @__PURE__ */ new Float64Array(3);
+}
+function st() {
+	return /* @__PURE__ */ new Float64Array(16);
+}
+function ct() {
+	let e = /* @__PURE__ */ new Float64Array(16);
+	return C(e), e;
+}
+function lt() {
+	let e = /* @__PURE__ */ new Float32Array(16);
+	return C(e), e;
+}
 function ut(e, t, n, r, i = !1) {
 	if (!n[0] && !n[1]) return [0, 0];
 	let a = i ? r === `map` ? -e.bearingInRadians : 0 : r === `viewport` ? e.bearingInRadians : 0;
@@ -538,6 +539,86 @@ function ut(e, t, n, r, i = !1) {
 		n = [n[0] * t - n[1] * e, n[0] * e + n[1] * t];
 	}
 	return [i ? n[0] : nt(t, n[0], e.zoom), i ? n[1] : nt(t, n[1], e.zoom)];
+}
+function dt(e, t) {
+	return e[0] * t[0] + e[1] * t[1] + e[2] * t[2] + e[3];
+}
+function ft(e, t, n) {
+	let r = _([
+		e[0],
+		e[1],
+		e[2],
+		t[0],
+		t[1],
+		t[2],
+		n[0],
+		n[1],
+		n[2]
+	]);
+	if (r === 0) return null;
+	let i = ve([], [
+		t[0],
+		t[1],
+		t[2]
+	], [
+		n[0],
+		n[1],
+		n[2]
+	]), a = ve([], [
+		n[0],
+		n[1],
+		n[2]
+	], [
+		e[0],
+		e[1],
+		e[2]
+	]), o = ve([], [
+		e[0],
+		e[1],
+		e[2]
+	], [
+		t[0],
+		t[1],
+		t[2]
+	]), s = pe([], i, -e[3]);
+	return de(s, s, pe([], a, -t[3])), de(s, s, pe([], o, -n[3])), pe(s, s, 1 / r), s;
+}
+function pt(e, t, n) {
+	let r = e[0] * n[0] + e[1] * n[1] + e[2] * n[2], i = t[0] * n[0] + t[1] * n[1] + t[2] * n[2];
+	return i === 0 ? null : (-r - n[3]) / i;
+}
+function mt(e, t, n, r) {
+	let i = Math.sqrt(e * e + t * t), a = Math.sqrt(n * n + r * r);
+	e /= i, t /= i, n /= a, r /= a;
+	let o = e * n + t * r, s = Math.acos(o);
+	return -t * n + e * r > 0 ? s : -s;
+}
+function ht(e, t) {
+	let n = _t(e, 360), r = _t(t, 360), i = r - n, a = r > n ? i - 360 : i + 360;
+	return Math.abs(i) < Math.abs(a) ? i : a;
+}
+function gt(e, t) {
+	let n = _t(e, Math.PI * 2), r = _t(t, Math.PI * 2);
+	return Math.min(Math.abs(n - r), Math.abs(n - r + Math.PI * 2), Math.abs(n - r - Math.PI * 2));
+}
+function _t(e, t) {
+	return (e % t + t) % t;
+}
+function vt(e, t, n, r, i) {
+	return yt(r, i, Tt((e - t) / (n - t), 0, 1));
+}
+function yt(e, t, n) {
+	return e * (1 - n) + t * n;
+}
+function bt(e) {
+	let t = 1 / 0, n = 1 / 0, r = -1 / 0, i = -1 / 0;
+	for (let a of e) t = Math.min(t, a.x), n = Math.min(n, a.y), r = Math.max(r, a.x), i = Math.max(i, a.y);
+	return [
+		t,
+		n,
+		r,
+		i
+	];
 }
 function xt(e) {
 	if (!e.length) return /* @__PURE__ */ new Set();
@@ -554,10 +635,16 @@ function xt(e) {
 	for (let e of o) (e.x === n || e.x === r || e.y === i || e.y === a) && s.add(e.id);
 	return s;
 }
+function St(e) {
+	if (e <= 0) return 0;
+	if (e >= 1) return 1;
+	let t = e * e, n = t * e;
+	return 4 * (e < .5 ? n : 3 * (e - t) + n - .75);
+}
 function Ct(e, t, n, r) {
 	return u(e, t, n, r);
 }
-Ct(.25, .1, .25, 1);
+var wt = Ct(.25, .1, .25, 1);
 function Tt(e, t, n) {
 	return Math.min(n, Math.max(t, e));
 }
@@ -584,12 +671,25 @@ function jt(e) {
 function Mt(e) {
 	return e <= 1 ? 1 : 2 ** Math.ceil(Math.log(e) / Math.LN2);
 }
+function Nt(e) {
+	return 2 ** e;
+}
 function Pt(e) {
 	return Math.log(e) / Math.LN2;
+}
+function Ft(e, t, n) {
+	if (t <= 0) return e;
+	let r = 1 / t;
+	return n === void 0 || Math.abs(n) < 1e-10 ? Math.round(e * r) / r : (n > 0 ? Math.ceil(e * r - 1e-9) : Math.floor(e * r + 1e-10)) / r;
 }
 function It(e, t, n) {
 	let r = {};
 	for (let i in e) r[i] = t.call(n || this, e[i], i, e);
+	return r;
+}
+function Lt(e, t, n) {
+	let r = {};
+	for (let i in e) t.call(n || this, e[i], i, e) && (r[i] = e[i]);
 	return r;
 }
 function Rt(e, t) {
@@ -605,6 +705,9 @@ function Rt(e, t) {
 	}
 	return e === t;
 }
+function zt(e) {
+	return Array.isArray(e) ? e.map(zt) : typeof e == `object` && e ? It(e, zt) : e;
+}
 var Bt = {};
 function Vt(e) {
 	Bt[e] || (typeof console < `u` && console.warn(e), Bt[e] = !0);
@@ -617,6 +720,13 @@ function Ut(e, t, n, r) {
 	if (c === 0) return null;
 	let u = e.y - n.y, d = e.x - n.x, f = (s * u - o * d) / c;
 	return new l(e.x + f * a, e.y + f * i);
+}
+function Wt([e, t, n]) {
+	return t += 90, t *= Math.PI / 180, n *= Math.PI / 180, [
+		e * Math.cos(t) * Math.sin(n),
+		e * Math.sin(t) * Math.sin(n),
+		e * Math.cos(n)
+	];
 }
 function Gt(e) {
 	return typeof WorkerGlobalScope < `u` && e !== void 0 && e instanceof WorkerGlobalScope;
@@ -699,6 +809,62 @@ function on(e, t, n, r) {
 }
 function sn(e) {
 	return e * Math.PI / 180;
+}
+function cn(e) {
+	return e / Math.PI * 180;
+}
+function ln(e, t) {
+	return e.roll == t.roll && e.pitch == t.pitch && e.bearing == t.bearing;
+}
+function un(e) {
+	let t = /* @__PURE__ */ new Float64Array(9);
+	y(t, e);
+	let n = cn(-Math.asin(Tt(t[2], -1, 1))), r, i;
+	return Math.hypot(t[5], t[8]) < .001 ? (r = 0, i = -cn(Math.atan2(t[3], t[4]))) : (r = cn(t[5] === 0 && t[8] === 0 ? 0 : Math.atan2(t[5], t[8])), i = cn(t[1] === 0 && t[0] === 0 ? 0 : Math.atan2(t[1], t[0]))), {
+		roll: r,
+		pitch: n + 90,
+		bearing: i
+	};
+}
+function dn(e, t, n) {
+	let r = He(t.x - n.x, t.y - n.y), i = He(e.x - n.x, e.y - n.y), a = r[0] * i[1] - r[1] * i[0];
+	return cn(Math.atan2(a, Xe(r, i)));
+}
+function fn(e, t, n) {
+	let r = /* @__PURE__ */ new Float64Array(4);
+	return Re(r, e, t - 90, n), r;
+}
+var pn = 85.051129;
+var mn = {
+	touchstart: !0,
+	touchmove: !0,
+	touchmoveWindow: !0,
+	touchend: !0,
+	touchcancel: !0
+};
+var hn = {
+	dblclick: !0,
+	click: !0,
+	mouseover: !0,
+	mouseout: !0,
+	mousedown: !0,
+	mousemove: !0,
+	mousemoveWindow: !0,
+	mouseup: !0,
+	mouseupWindow: !0,
+	contextmenu: !0,
+	wheel: !0
+};
+function gn(e, t) {
+	return mn[t] && `touches` in e;
+}
+function _n(e, t) {
+	if (!hn[t]) return !1;
+	let n = e, r = (n?.target)?.ownerDocument?.defaultView || window;
+	return n instanceof r.MouseEvent || n instanceof r.WheelEvent;
+}
+function vn(e) {
+	return mn[e] || hn[e];
 }
 var yn = `AbortError`;
 var bn = class extends Error {
@@ -3540,6 +3706,226 @@ var M = {
 		}
 	}
 };
+var Un = [
+	`type`,
+	`source`,
+	`source-layer`,
+	`minzoom`,
+	`maxzoom`,
+	`filter`,
+	`layout`
+];
+function Wn(e, t) {
+	let n = {};
+	for (let t in e) t !== `ref` && (n[t] = e[t]);
+	return Un.forEach((e) => {
+		e in t && (n[e] = t[e]);
+	}), n;
+}
+function Gn(e) {
+	e = e.slice();
+	let t = Object.create(null);
+	for (let n = 0; n < e.length; n++) t[e[n].id] = e[n];
+	for (let n = 0; n < e.length; n++) `ref` in e[n] && (e[n] = Wn(e[n], t[e[n].ref]));
+	return e;
+}
+function N(e, t) {
+	if (Array.isArray(e)) {
+		if (!Array.isArray(t) || e.length !== t.length) return !1;
+		for (let n = 0; n < e.length; n++) if (!N(e[n], t[n])) return !1;
+		return !0;
+	}
+	if (typeof e == `object` && e && t !== null) {
+		if (typeof t != `object` || Object.keys(e).length !== Object.keys(t).length) return !1;
+		for (let n in e) if (!N(e[n], t[n])) return !1;
+		return !0;
+	}
+	return e === t;
+}
+function Kn(e, t) {
+	e.push(t);
+}
+function qn(e, t, n) {
+	Kn(n, {
+		command: `addSource`,
+		args: [e, t[e]]
+	});
+}
+function Jn(e, t, n) {
+	Kn(t, {
+		command: `removeSource`,
+		args: [e]
+	}), n[e] = !0;
+}
+function Yn(e, t, n, r) {
+	Jn(e, n, r), qn(e, t, n);
+}
+function Xn(e, t, n) {
+	let r;
+	for (r in e[n]) if (Object.prototype.hasOwnProperty.call(e[n], r) && r !== `data` && !N(e[n][r], t[n][r])) return !1;
+	for (r in t[n]) if (Object.prototype.hasOwnProperty.call(t[n], r) && r !== `data` && !N(e[n][r], t[n][r])) return !1;
+	return !0;
+}
+function Zn(e, t, n, r) {
+	e ||= {}, t ||= {};
+	let i;
+	for (i in e) Object.prototype.hasOwnProperty.call(e, i) && (Object.prototype.hasOwnProperty.call(t, i) || Jn(i, n, r));
+	for (i in t) Object.prototype.hasOwnProperty.call(t, i) && (Object.prototype.hasOwnProperty.call(e, i) ? N(e[i], t[i]) || (e[i].type === `geojson` && t[i].type === `geojson` && Xn(e, t, i) ? Kn(n, {
+		command: `setGeoJSONSourceData`,
+		args: [i, t[i].data]
+	}) : Yn(i, t, n, r)) : qn(i, t, n));
+}
+function Qn(e, t, n, r, i, a) {
+	e ||= {}, t ||= {};
+	for (let o in e) Object.prototype.hasOwnProperty.call(e, o) && (N(e[o], t[o]) || n.push({
+		command: a,
+		args: [
+			r,
+			o,
+			t[o],
+			i
+		]
+	}));
+	for (let o in t) !Object.prototype.hasOwnProperty.call(t, o) || Object.prototype.hasOwnProperty.call(e, o) || N(e[o], t[o]) || n.push({
+		command: a,
+		args: [
+			r,
+			o,
+			t[o],
+			i
+		]
+	});
+}
+function $n(e) {
+	return e.id;
+}
+function er(e, t) {
+	return e[t.id] = t, e;
+}
+function tr(e, t, n) {
+	e ||= [], t ||= [];
+	let r = e.map($n), i = t.map($n), a = e.reduce(er, {}), o = t.reduce(er, {}), s = r.slice(), c = Object.create(null), l, u, d, f, p;
+	for (let e = 0, t = 0; e < r.length; e++) l = r[e], Object.prototype.hasOwnProperty.call(o, l) ? t++ : (Kn(n, {
+		command: `removeLayer`,
+		args: [l]
+	}), s.splice(s.indexOf(l, t), 1));
+	for (let e = 0, t = 0; e < i.length; e++) l = i[i.length - 1 - e], s[s.length - 1 - e] !== l && (Object.prototype.hasOwnProperty.call(a, l) ? (Kn(n, {
+		command: `removeLayer`,
+		args: [l]
+	}), s.splice(s.lastIndexOf(l, s.length - t), 1)) : t++, f = s[s.length - e], Kn(n, {
+		command: `addLayer`,
+		args: [o[l], f]
+	}), s.splice(s.length - e, 0, l), c[l] = !0);
+	for (let e = 0; e < i.length; e++) if (l = i[e], u = a[l], d = o[l], !(c[l] || N(u, d))) {
+		if (!N(u.source, d.source) || !N(u[`source-layer`], d[`source-layer`]) || !N(u.type, d.type)) {
+			Kn(n, {
+				command: `removeLayer`,
+				args: [l]
+			}), f = s[s.lastIndexOf(l) + 1], Kn(n, {
+				command: `addLayer`,
+				args: [d, f]
+			});
+			continue;
+		}
+		for (p in Qn(u.layout, d.layout, n, l, null, `setLayoutProperty`), Qn(u.paint, d.paint, n, l, null, `setPaintProperty`), N(u.filter, d.filter) || Kn(n, {
+			command: `setFilter`,
+			args: [l, d.filter]
+		}), (!N(u.minzoom, d.minzoom) || !N(u.maxzoom, d.maxzoom)) && Kn(n, {
+			command: `setLayerZoomRange`,
+			args: [
+				l,
+				d.minzoom,
+				d.maxzoom
+			]
+		}), u) Object.prototype.hasOwnProperty.call(u, p) && p !== `layout` && p !== `paint` && p !== `filter` && p !== `metadata` && p !== `minzoom` && p !== `maxzoom` && (p.indexOf(`paint.`) === 0 ? Qn(u[p], d[p], n, l, p.slice(6), `setPaintProperty`) : N(u[p], d[p]) || Kn(n, {
+			command: `setLayerProperty`,
+			args: [
+				l,
+				p,
+				d[p]
+			]
+		}));
+		for (p in d) !Object.prototype.hasOwnProperty.call(d, p) || Object.prototype.hasOwnProperty.call(u, p) || p !== `layout` && p !== `paint` && p !== `filter` && p !== `metadata` && p !== `minzoom` && p !== `maxzoom` && (p.indexOf(`paint.`) === 0 ? Qn(u[p], d[p], n, l, p.slice(6), `setPaintProperty`) : N(u[p], d[p]) || Kn(n, {
+			command: `setLayerProperty`,
+			args: [
+				l,
+				p,
+				d[p]
+			]
+		}));
+	}
+}
+function nr(e, t) {
+	if (!e) return [{
+		command: `setStyle`,
+		args: [t]
+	}];
+	let n = [];
+	try {
+		if (!N(e.version, t.version)) return [{
+			command: `setStyle`,
+			args: [t]
+		}];
+		N(e.center, t.center) || n.push({
+			command: `setCenter`,
+			args: [t.center]
+		}), N(e.state, t.state) || n.push({
+			command: `setGlobalState`,
+			args: [t.state]
+		}), N(e.centerAltitude, t.centerAltitude) || n.push({
+			command: `setCenterAltitude`,
+			args: [t.centerAltitude]
+		}), N(e.zoom, t.zoom) || n.push({
+			command: `setZoom`,
+			args: [t.zoom]
+		}), N(e.bearing, t.bearing) || n.push({
+			command: `setBearing`,
+			args: [t.bearing]
+		}), N(e.pitch, t.pitch) || n.push({
+			command: `setPitch`,
+			args: [t.pitch]
+		}), N(e.roll, t.roll) || n.push({
+			command: `setRoll`,
+			args: [t.roll]
+		}), N(e.sprite, t.sprite) || n.push({
+			command: `setSprite`,
+			args: [t.sprite]
+		}), N(e.glyphs, t.glyphs) || n.push({
+			command: `setGlyphs`,
+			args: [t.glyphs]
+		}), N(e.transition, t.transition) || n.push({
+			command: `setTransition`,
+			args: [t.transition]
+		}), N(e.light, t.light) || n.push({
+			command: `setLight`,
+			args: [t.light]
+		}), N(e.terrain, t.terrain) || n.push({
+			command: `setTerrain`,
+			args: [t.terrain]
+		}), N(e.sky, t.sky) || n.push({
+			command: `setSky`,
+			args: [t.sky]
+		}), N(e.projection, t.projection) || n.push({
+			command: `setProjection`,
+			args: [t.projection]
+		});
+		let r = {}, i = [];
+		Zn(e.sources, t.sources, i, r);
+		let a = [];
+		e.layers && e.layers.forEach((e) => {
+			`source` in e && r[e.source] ? n.push({
+				command: `removeLayer`,
+				args: [e.id]
+			}) : a.push(e);
+		}), n = n.concat(i), tr(a, t.layers, n);
+	} catch (e) {
+		console.warn(`Unable to compute style diff:`, e), n = [{
+			command: `setStyle`,
+			args: [t]
+		}];
+	}
+	return n;
+}
 var P = class {
 	constructor(e, t, n, r, i = `error`) {
 		this.message = (e ? `${e}: ` : ``) + n, r && (this.identifier = r), this.severity = i, t != null && t.__line__ && (this.line = t.__line__);
@@ -3636,13 +4022,13 @@ var Cr = .96422;
 var wr = .82521;
 var Tr = 4 / 29;
 var Er = 6 / 29;
-var Dr = 3 * Er * Er;
+var Dr$1 = 3 * Er * Er;
 var Or$1 = Math.PI / 180;
 var kr$1 = 180 / Math.PI;
 function Ar$1(e) {
 	return e %= 360, e < 0 && (e += 360), e;
 }
-function jr([e, t, n, r]) {
+function jr$1([e, t, n, r]) {
 	e = Mr$1(e), t = Mr$1(t), n = Mr$1(n);
 	let i, a, o = Nr$1((.2225045 * e + .7168786 * t + .0606169 * n) / 1);
 	e === t && t === n ? i = a = o : (i = Nr$1((.4360747 * e + .3850649 * t + .1430804 * n) / Cr), a = Nr$1((.0139322 * e + .0971045 * t + .7141733 * n) / wr));
@@ -3658,7 +4044,7 @@ function Mr$1(e) {
 	return e <= .04045 ? e / 12.92 : ((e + .055) / 1.055) ** 2.4;
 }
 function Nr$1(e) {
-	return e > .008856451679035631 ? e ** (1 / 3) : e / Dr + Tr;
+	return e > .008856451679035631 ? e ** (1 / 3) : e / Dr$1 + Tr;
 }
 function Pr$1([e, t, n, r]) {
 	let i = (e + 16) / 116, a = isNaN(t) ? i : i + t / 500, o = isNaN(n) ? i : i - n / 200;
@@ -3673,10 +4059,10 @@ function Fr$1(e) {
 	return e = e <= .00304 ? 12.92 * e : 1.055 * e ** (1 / 2.4) - .055, e < 0 ? 0 : e > 1 ? 1 : e;
 }
 function Ir$1(e) {
-	return e > Er ? e * e * e : Dr * (e - Tr);
+	return e > Er ? e * e * e : Dr$1 * (e - Tr);
 }
 function Lr(e) {
-	let [t, n, r, i] = jr(e), a = Math.sqrt(n * n + r * r);
+	let [t, n, r, i] = jr$1(e), a = Math.sqrt(n * n + r * r);
 	return [
 		Math.round(a * 1e4) ? Ar$1(Math.atan2(r, n) * kr$1) : NaN,
 		a,
@@ -3708,7 +4094,7 @@ function zr([e, t, n, r]) {
 var Br$1 = Object.hasOwn || function(e, t) {
 	return Object.prototype.hasOwnProperty.call(e, t);
 };
-function Vr(e, t) {
+function Vr$1(e, t) {
 	return Br$1(e, t) ? e[t] : void 0;
 }
 function Hr$1(e) {
@@ -3718,7 +4104,7 @@ function Hr$1(e) {
 		0,
 		0
 	];
-	let t = Vr(qr, e);
+	let t = Vr$1(qr$1, e);
 	if (t) {
 		let [e, n, r] = t;
 		return [
@@ -3731,10 +4117,10 @@ function Hr$1(e) {
 	if (e.startsWith(`#`) && /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(e)) {
 		let t = e.length < 6 ? 1 : 2, n = 1;
 		return [
-			Ur(e.slice(n, n += t)),
-			Ur(e.slice(n, n += t)),
-			Ur(e.slice(n, n += t)),
-			Ur(e.slice(n, n + t) || `ff`)
+			Ur$1(e.slice(n, n += t)),
+			Ur$1(e.slice(n, n += t)),
+			Ur$1(e.slice(n, n += t)),
+			Ur$1(e.slice(n, n + t) || `ff`)
 		];
 	}
 	if (e.startsWith(`rgb`)) {
@@ -3753,12 +4139,12 @@ function Hr$1(e) {
 				].join(``), t = e === `%%%` ? 100 : e === `` ? 255 : 0;
 				if (t) {
 					let e = [
-						Gr(+n / t, 0, 1),
-						Gr(+a / t, 0, 1),
-						Gr(+c / t, 0, 1),
-						d ? Wr(+d, f) : 1
+						Gr$1(+n / t, 0, 1),
+						Gr$1(+a / t, 0, 1),
+						Gr$1(+c / t, 0, 1),
+						d ? Wr$1(+d, f) : 1
 					];
-					if (Kr(e)) return e;
+					if (Kr$1(e)) return e;
 				}
 			}
 			return;
@@ -3774,27 +4160,27 @@ function Hr$1(e) {
 		if (u === `  ` || u === `  /` || u === `,,` || u === `,,,`) {
 			let e = [
 				+t,
-				Gr(+i, 0, 100),
-				Gr(+o, 0, 100),
-				c ? Wr(+c, l) : 1
+				Gr$1(+i, 0, 100),
+				Gr$1(+o, 0, 100),
+				c ? Wr$1(+c, l) : 1
 			];
-			if (Kr(e)) return zr(e);
+			if (Kr$1(e)) return zr(e);
 		}
 	}
 }
-function Ur(e) {
+function Ur$1(e) {
 	return parseInt(e.padEnd(2, e), 16) / 255;
 }
-function Wr(e, t) {
-	return Gr(t ? e / 100 : e, 0, 1);
+function Wr$1(e, t) {
+	return Gr$1(t ? e / 100 : e, 0, 1);
 }
-function Gr(e, t, n) {
+function Gr$1(e, t, n) {
 	return Math.min(Math.max(t, e), n);
 }
-function Kr(e) {
+function Kr$1(e) {
 	return !e.some(Number.isNaN);
 }
-var qr = {
+var qr$1 = {
 	aliceblue: [
 		240,
 		248,
@@ -4536,13 +4922,13 @@ var qr = {
 		50
 	]
 };
-function Jr(e, t, n) {
+function Jr$1(e, t, n) {
 	return e + n * (t - e);
 }
-function Yr(e, t, n) {
-	return e.map((e, r) => Jr(e, t[r], n));
+function Yr$1(e, t, n) {
+	return e.map((e, r) => Jr$1(e, t[r], n));
 }
-function Xr(e) {
+function Xr$1(e) {
 	return e === `rgb` || e === `hcl` || e === `lab`;
 }
 var B = class e {
@@ -4585,7 +4971,7 @@ var B = class e {
 		return this.overwriteGetter(`hcl`, Lr(this.rgb));
 	}
 	get lab() {
-		return this.overwriteGetter(`lab`, jr(this.rgb));
+		return this.overwriteGetter(`lab`, jr$1(this.rgb));
 	}
 	overwriteGetter(e, t) {
 		return Object.defineProperty(this, e, { value: t }), t;
@@ -4601,7 +4987,7 @@ var B = class e {
 	static interpolate(t, n, r, i = `rgb`) {
 		switch (i) {
 			case `rgb`: {
-				let [i, a, o, s] = Yr(t.rgb, n.rgb, r);
+				let [i, a, o, s] = Yr$1(t.rgb, n.rgb, r);
 				return new e(i, a, o, s, !1);
 			}
 			case `hcl`: {
@@ -4612,20 +4998,20 @@ var B = class e {
 				} else isNaN(i) ? isNaN(c) ? f = NaN : (f = c, (o === 1 || o === 0) && (p = l)) : (f = i, (u === 1 || u === 0) && (p = a));
 				let [m, h, g, _] = Rr([
 					f,
-					p ?? Jr(a, l, r),
-					Jr(o, u, r),
-					Jr(s, d, r)
+					p ?? Jr$1(a, l, r),
+					Jr$1(o, u, r),
+					Jr$1(s, d, r)
 				]);
 				return new e(m, h, g, _, !1);
 			}
 			case `lab`: {
-				let [i, a, o, s] = Pr$1(Yr(t.lab, n.lab, r));
+				let [i, a, o, s] = Pr$1(Yr$1(t.lab, n.lab, r));
 				return new e(i, a, o, s, !1);
 			}
 		}
 	}
 };
-var Zr = class {
+var Zr$1 = class {
 	constructor(e, t, n) {
 		this.sensitivity = e ? t ? `variant` : `case` : t ? `accent` : `base`, this.locale = n, this.collator = new Intl.Collator(this.locale ? this.locale : [], {
 			sensitivity: this.sensitivity,
@@ -4639,22 +5025,22 @@ var Zr = class {
 		return new Intl.Collator(this.locale ? this.locale : []).resolvedOptions().locale;
 	}
 };
-var Qr = [
+var Qr$1 = [
 	`bottom`,
 	`center`,
 	`top`
 ];
-var $r = class {
+var $r$1 = class {
 	constructor(e, t, n, r, i, a) {
 		this.text = e, this.image = t, this.scale = n, this.fontStack = r, this.textColor = i, this.verticalAlign = a;
 	}
 };
-var ei = class e {
+var ei$1 = class e {
 	constructor(e) {
 		this.sections = e;
 	}
 	static fromString(t) {
-		return new e([new $r(t, null, null, null, null, null)]);
+		return new e([new $r$1(t, null, null, null, null, null)]);
 	}
 	isEmpty() {
 		return this.sections.length === 0 || !this.sections.some((e) => e.text.length !== 0 || e.image && e.image.name.length !== 0);
@@ -4666,7 +5052,7 @@ var ei = class e {
 		return this.sections.length === 0 ? `` : this.sections.map((e) => e.text).join(``);
 	}
 };
-var ti = class e {
+var ti$1 = class e {
 	constructor(e) {
 		this.values = e.slice();
 	}
@@ -4711,10 +5097,10 @@ var ti = class e {
 		return JSON.stringify(this.values);
 	}
 	static interpolate(t, n, r) {
-		return new e(Yr(t.values, n.values, r));
+		return new e(Yr$1(t.values, n.values, r));
 	}
 };
-var ni = class e {
+var ni$1 = class e {
 	constructor(e) {
 		this.values = e.slice();
 	}
@@ -4730,10 +5116,10 @@ var ni = class e {
 		return JSON.stringify(this.values);
 	}
 	static interpolate(t, n, r) {
-		return new e(Yr(t.values, n.values, r));
+		return new e(Yr$1(t.values, n.values, r));
 	}
 };
-var ri = class e {
+var ri$1 = class e {
 	constructor(e) {
 		this.values = e.slice();
 	}
@@ -4807,7 +5193,7 @@ var ai$1 = class e {
 			if (a[e] !== o[e]) throw new V(`Cannot interpolate values containing mismatched anchors. from[${e}]: ${a[e]}, to[${e}]: ${o[e]}`, i);
 			s.push(a[e]);
 			let [t, n] = a[e + 1], [c, l] = o[e + 1];
-			s.push([Jr(t, c, r), Jr(n, l, r)]);
+			s.push([Jr$1(t, c, r), Jr$1(n, l, r)]);
 		}
 		return new e(s);
 	}
@@ -4865,7 +5251,7 @@ function ci$1(e, t, n, r) {
 	]).join(`, `)}]: 'r', 'g', and 'b' must be between 0 and 255.`;
 }
 function li$1(e) {
-	if (e === null || typeof e == `string` || typeof e == `boolean` || typeof e == `number` || e instanceof si$1 || e instanceof B || e instanceof Zr || e instanceof ei || e instanceof ti || e instanceof ni || e instanceof ri || e instanceof ai$1 || e instanceof oi$1) return !0;
+	if (e === null || typeof e == `string` || typeof e == `boolean` || typeof e == `number` || e instanceof si$1 || e instanceof B || e instanceof Zr$1 || e instanceof ei$1 || e instanceof ti$1 || e instanceof ni$1 || e instanceof ri$1 || e instanceof ai$1 || e instanceof oi$1) return !0;
 	if (Array.isArray(e)) {
 		for (let t of e) if (!li$1(t)) return !1;
 		return !0;
@@ -4883,11 +5269,11 @@ function ui$1(e) {
 	if (typeof e == `number`) return F;
 	if (e instanceof B) return or;
 	if (e instanceof si$1) return sr;
-	if (e instanceof Zr) return ur;
-	if (e instanceof ei) return dr;
-	if (e instanceof ti) return fr;
-	if (e instanceof ni) return mr;
-	if (e instanceof ri) return pr;
+	if (e instanceof Zr$1) return ur;
+	if (e instanceof ei$1) return dr;
+	if (e instanceof ti$1) return fr;
+	if (e instanceof ni$1) return mr;
+	if (e instanceof ri$1) return pr;
 	if (e instanceof ai$1) return gr;
 	if (e instanceof oi$1) return hr;
 	if (Array.isArray(e)) {
@@ -4907,9 +5293,9 @@ function ui$1(e) {
 }
 function di$1(e) {
 	let t = typeof e;
-	return e === null ? `` : t === `string` || t === `number` || t === `boolean` ? String(e) : e instanceof B || e instanceof si$1 || e instanceof ei || e instanceof ti || e instanceof ni || e instanceof ri || e instanceof ai$1 || e instanceof oi$1 ? e.toString() : JSON.stringify(e);
+	return e === null ? `` : t === `string` || t === `number` || t === `boolean` ? String(e) : e instanceof B || e instanceof si$1 || e instanceof ei$1 || e instanceof ti$1 || e instanceof ni$1 || e instanceof ri$1 || e instanceof ai$1 || e instanceof oi$1 ? e.toString() : JSON.stringify(e);
 }
-var fi = class e {
+var fi$1 = class e {
 	constructor(e, t) {
 		this.type = e, this.value = t;
 	}
@@ -4927,13 +5313,13 @@ var fi = class e {
 		return !0;
 	}
 };
-var pi = {
+var pi$1 = {
 	string: I,
 	number: F,
 	boolean: L,
 	object: cr
 };
-var mi = class e {
+var mi$1 = class e {
 	constructor(e, t, n) {
 		this.type = e, this.args = t, this.key = n;
 	}
@@ -4944,8 +5330,8 @@ var mi = class e {
 			let e;
 			if (t.length > 2) {
 				let i = t[1];
-				if (typeof i != `string` || !(i in pi) || i === `object`) return n.error(`The item type argument of "array" must be one of string, number, boolean`, 1);
-				e = pi[i], r++;
+				if (typeof i != `string` || !(i in pi$1) || i === `object`) return n.error(`The item type argument of "array" must be one of string, number, boolean`, 1);
+				e = pi$1[i], r++;
 			} else e = R;
 			let a;
 			if (t.length > 3) {
@@ -4954,8 +5340,8 @@ var mi = class e {
 			}
 			i = _r(e, a);
 		} else {
-			if (!pi[a]) throw Error(`Types doesn't contain name = ${a}`);
-			i = pi[a];
+			if (!pi$1[a]) throw Error(`Types doesn't contain name = ${a}`);
+			i = pi$1[a];
 		}
 		let o = [];
 		for (; r < t.length; r++) {
@@ -4980,22 +5366,22 @@ var mi = class e {
 		return this.args.every((e) => e.outputDefined());
 	}
 };
-var hi = {
+var hi$1 = {
 	"to-boolean": L,
 	"to-color": or,
 	"to-number": F,
 	"to-string": I
 };
-var gi = class e {
+var gi$1 = class e {
 	constructor(e, t, n) {
 		this.type = e, this.args = t, this.key = n;
 	}
 	static parse(t, n) {
 		if (t.length < 2) return n.error(`Expected at least one argument.`);
 		let r = t[0];
-		if (!hi[r]) throw Error(`Can't parse ${r} as it is not part of the known types`);
+		if (!hi$1[r]) throw Error(`Can't parse ${r} as it is not part of the known types`);
 		if ((r === `to-boolean` || r === `to-string`) && t.length !== 2) return n.error(`Expected one argument.`);
-		let i = hi[r], a = [];
+		let i = hi$1[r], a = [];
 		for (let e = 1; e < t.length; e++) {
 			let r = n.parse(t[e], e, R);
 			if (!r) return null;
@@ -5021,7 +5407,7 @@ var gi = class e {
 				let t;
 				for (let n of this.args) {
 					t = n.evaluate(e);
-					let r = ti.parse(t);
+					let r = ti$1.parse(t);
 					if (r) return r;
 				}
 				throw new V(`Could not parse padding from value '${typeof t == `string` ? t : JSON.stringify(t)}'`, this.key);
@@ -5030,7 +5416,7 @@ var gi = class e {
 				let t;
 				for (let n of this.args) {
 					t = n.evaluate(e);
-					let r = ni.parse(t);
+					let r = ni$1.parse(t);
 					if (r) return r;
 				}
 				throw new V(`Could not parse numberArray from value '${typeof t == `string` ? t : JSON.stringify(t)}'`, this.key);
@@ -5039,7 +5425,7 @@ var gi = class e {
 				let t;
 				for (let n of this.args) {
 					t = n.evaluate(e);
-					let r = ri.parse(t);
+					let r = ri$1.parse(t);
 					if (r) return r;
 				}
 				throw new V(`Could not parse colorArray from value '${typeof t == `string` ? t : JSON.stringify(t)}'`, this.key);
@@ -5062,7 +5448,7 @@ var gi = class e {
 				}
 				throw new V(`Could not convert ${JSON.stringify(t)} to number.`, this.key);
 			}
-			case `formatted`: return ei.fromString(di$1(this.args[0].evaluate(e)));
+			case `formatted`: return ei$1.fromString(di$1(this.args[0].evaluate(e)));
 			case `resolvedImage`: return oi$1.fromString(di$1(this.args[0].evaluate(e)));
 			case `projectionDefinition`: {
 				let t = this.args[0].evaluate(e);
@@ -5079,13 +5465,13 @@ var gi = class e {
 		return this.args.every((e) => e.outputDefined());
 	}
 };
-var _i = [
+var _i$1 = [
 	`Unknown`,
 	`Point`,
 	`LineString`,
 	`Polygon`
 ];
-var vi = class {
+var vi$1 = class {
 	constructor() {
 		this.globals = null, this.feature = null, this.featureState = null, this.formattedSection = null, this._parseColorCache = /* @__PURE__ */ new Map(), this.availableImages = null, this.canonical = null;
 	}
@@ -5093,7 +5479,7 @@ var vi = class {
 		return this.feature && `id` in this.feature ? this.feature.id : null;
 	}
 	geometryType() {
-		return this.feature ? typeof this.feature.type == `number` ? _i[this.feature.type] : this.feature.type : null;
+		return this.feature ? typeof this.feature.type == `number` ? _i$1[this.feature.type] : this.feature.type : null;
 	}
 	geometry() {
 		return this.feature && `geometry` in this.feature ? this.feature.geometry : null;
@@ -5120,7 +5506,7 @@ var yi$1 = class e {
 		(e === null || typeof e == `string` || typeof e == `boolean` || typeof e == `number`) && (e = [`literal`, e]);
 		let n = this.key;
 		function r(e, t, r) {
-			return r === `assert` ? new mi(t, [e], n) : r === `coerce` ? new gi(t, [e], n) : e;
+			return r === `assert` ? new mi$1(t, [e], n) : r === `coerce` ? new gi$1(t, [e], n) : e;
 		}
 		if (Array.isArray(e)) {
 			if (e.length === 0) return this.error(`Expected an array with at least one element. If you wanted a literal array, use ["literal", []].`);
@@ -5152,10 +5538,10 @@ var yi$1 = class e {
 					].includes(i.kind) || e.kind === `variableAnchorOffsetCollection` && [`value`, `array`].includes(i.kind)) n = r(n, e, t.typeAnnotation || `coerce`);
 					else if (this.checkSubtype(e, i)) return null;
 				}
-				if (!(n instanceof fi) && n.type.kind !== `resolvedImage` && this._isConstant(n)) {
-					let e = new vi();
+				if (!(n instanceof fi$1) && n.type.kind !== `resolvedImage` && this._isConstant(n)) {
+					let e = new vi$1();
 					try {
-						n = new fi(n.type, n.evaluate(e));
+						n = new fi$1(n.type, n.evaluate(e));
 					} catch (e) {
 						return this.error(e.message), null;
 					}
@@ -5567,22 +5953,22 @@ var ji = class e {
 		let o = Oi$1(n, i, this.key), s = n[o], c = n[o + 1], l = e.interpolationFactor(this.interpolation, i, s, c), u = r[o].evaluate(t), d = r[o + 1].evaluate(t);
 		switch (this.operator) {
 			case `interpolate`: switch (this.type.kind) {
-				case `number`: return Jr(u, d, l);
+				case `number`: return Jr$1(u, d, l);
 				case `color`: return B.interpolate(u, d, l);
-				case `padding`: return ti.interpolate(u, d, l);
-				case `colorArray`: return ri.interpolate(u, d, l);
-				case `numberArray`: return ni.interpolate(u, d, l);
+				case `padding`: return ti$1.interpolate(u, d, l);
+				case `colorArray`: return ri$1.interpolate(u, d, l);
+				case `numberArray`: return ni$1.interpolate(u, d, l);
 				case `variableAnchorOffsetCollection`: return ai$1.interpolate(u, d, l, this.key);
-				case `array`: return Yr(u, d, l);
+				case `array`: return Yr$1(u, d, l);
 				case `projectionDefinition`: return si$1.interpolate(u, d, l);
 			}
 			case `interpolate-hcl`: switch (this.type.kind) {
 				case `color`: return B.interpolate(u, d, l, `hcl`);
-				case `colorArray`: return ri.interpolate(u, d, l, `hcl`);
+				case `colorArray`: return ri$1.interpolate(u, d, l, `hcl`);
 			}
 			case `interpolate-lab`: switch (this.type.kind) {
 				case `color`: return B.interpolate(u, d, l, `lab`);
-				case `colorArray`: return ri.interpolate(u, d, l, `lab`);
+				case `colorArray`: return ri$1.interpolate(u, d, l, `lab`);
 			}
 		}
 	}
@@ -5600,12 +5986,12 @@ function Mi$1(e, t, n, r) {
 }
 var Ni$1 = {
 	color: B.interpolate,
-	number: Jr,
-	padding: ti.interpolate,
-	numberArray: ni.interpolate,
-	colorArray: ri.interpolate,
+	number: Jr$1,
+	padding: ti$1.interpolate,
+	numberArray: ni$1.interpolate,
+	colorArray: ri$1.interpolate,
 	variableAnchorOffsetCollection: ai$1.interpolate,
-	array: Yr
+	array: Yr$1
 };
 var Pi$1 = class e {
 	constructor(e, t) {
@@ -5636,34 +6022,34 @@ var Pi$1 = class e {
 		return this.args.every((e) => e.outputDefined());
 	}
 };
-function Fi(e, t) {
+function Fi$1(e, t) {
 	return e === `==` || e === `!=` ? t.kind === `boolean` || t.kind === `string` || t.kind === `number` || t.kind === `null` || t.kind === `value` : t.kind === `string` || t.kind === `number` || t.kind === `value`;
 }
-function Ii(e, t, n) {
+function Ii$1(e, t, n) {
 	return t === n;
 }
-function Li(e, t, n) {
+function Li$1(e, t, n) {
 	return t !== n;
 }
-function Ri(e, t, n) {
+function Ri$1(e, t, n) {
 	return t < n;
 }
-function zi(e, t, n) {
+function zi$1(e, t, n) {
 	return t > n;
 }
-function Bi(e, t, n) {
+function Bi$1(e, t, n) {
 	return t <= n;
 }
-function Vi(e, t, n) {
+function Vi$1(e, t, n) {
 	return t >= n;
 }
-function Hi(e, t, n, r) {
+function Hi$1(e, t, n, r) {
 	return r.compare(t, n) === 0;
 }
-function Ui(e, t, n, r) {
-	return !Hi(e, t, n, r);
+function Ui$1(e, t, n, r) {
+	return !Hi$1(e, t, n, r);
 }
-function Wi(e, t, n, r) {
+function Wi$1(e, t, n, r) {
 	return r.compare(t, n) < 0;
 }
 function Gi$1(e, t, n, r) {
@@ -5685,12 +6071,12 @@ function Ji$1(e, t, n) {
 			if (e.length !== 3 && e.length !== 4) return t.error(`Expected two or three arguments.`);
 			let n = e[0], a = t.parse(e[1], 1, R);
 			if (!a) return null;
-			if (!Fi(n, a.type)) return t.concat(1).error(`"${n}" comparisons are not supported for type '${z(a.type)}'.`);
+			if (!Fi$1(n, a.type)) return t.concat(1).error(`"${n}" comparisons are not supported for type '${z(a.type)}'.`);
 			let o = t.parse(e[2], 2, R);
 			if (!o) return null;
-			if (!Fi(n, o.type)) return t.concat(2).error(`"${n}" comparisons are not supported for type '${z(o.type)}'.`);
+			if (!Fi$1(n, o.type)) return t.concat(2).error(`"${n}" comparisons are not supported for type '${z(o.type)}'.`);
 			if (a.type.kind !== o.type.kind && a.type.kind !== `value` && o.type.kind !== `value`) return t.error(`Cannot compare types '${z(a.type)}' and '${z(o.type)}'.`);
-			r && (a.type.kind === `value` && o.type.kind !== `value` ? a = new mi(o.type, [a], t.key) : a.type.kind !== `value` && o.type.kind === `value` && (o = new mi(a.type, [o], t.key)));
+			r && (a.type.kind === `value` && o.type.kind !== `value` ? a = new mi$1(o.type, [a], t.key) : a.type.kind !== `value` && o.type.kind === `value` && (o = new mi$1(a.type, [o], t.key)));
 			let s = null;
 			if (e.length === 4) {
 				if (a.type.kind !== `string` && o.type.kind !== `string` && a.type.kind !== `value` && o.type.kind !== `value`) return t.error(`Cannot use collator to compare non-string types.`);
@@ -5718,12 +6104,12 @@ function Ji$1(e, t, n) {
 		}
 	};
 }
-var Yi$1 = Ji$1(`==`, Ii, Hi);
-var Xi$1 = Ji$1(`!=`, Li, Ui);
-var Zi$1 = Ji$1(`<`, Ri, Wi);
-var Qi$1 = Ji$1(`>`, zi, Gi$1);
-var $i$1 = Ji$1(`<=`, Bi, Ki$1);
-var ea$1 = Ji$1(`>=`, Vi, qi$1);
+var Yi$1 = Ji$1(`==`, Ii$1, Hi$1);
+var Xi$1 = Ji$1(`!=`, Li$1, Ui$1);
+var Zi$1 = Ji$1(`<`, Ri$1, Wi$1);
+var Qi$1 = Ji$1(`>`, zi$1, Gi$1);
+var $i$1 = Ji$1(`<=`, Bi$1, Ki$1);
+var ea$1 = Ji$1(`>=`, Vi$1, qi$1);
 var ta$1 = class e {
 	constructor(e, t, n) {
 		this.type = ur, this.locale = n, this.caseSensitive = e, this.diacriticSensitive = t;
@@ -5740,7 +6126,7 @@ var ta$1 = class e {
 		return r.locale && (o = n.parse(r.locale, 1, I), !o) ? null : new e(i, a, o);
 	}
 	evaluate(e) {
-		return new Zr(this.caseSensitive.evaluate(e), this.diacriticSensitive.evaluate(e), this.locale ? this.locale.evaluate(e) : null);
+		return new Zr$1(this.caseSensitive.evaluate(e), this.diacriticSensitive.evaluate(e), this.locale ? this.locale.evaluate(e) : null);
 	}
 	eachChild(e) {
 		e(this.caseSensitive), e(this.diacriticSensitive), this.locale && e(this.locale);
@@ -5808,7 +6194,7 @@ var ra$1 = class e {
 				if (r[`text-color`] && (o = n.parse(r[`text-color`], 1, or), !o)) return null;
 				let s = null;
 				if (r[`vertical-align`]) {
-					if (typeof r[`vertical-align`] == `string` && !Qr.includes(r[`vertical-align`])) return n.error(`'vertical-align' must be one of: 'bottom', 'center', 'top' but found '${r[`vertical-align`]}' instead.`);
+					if (typeof r[`vertical-align`] == `string` && !Qr$1.includes(r[`vertical-align`])) return n.error(`'vertical-align' must be one of: 'bottom', 'center', 'top' but found '${r[`vertical-align`]}' instead.`);
 					if (s = n.parse(r[`vertical-align`], 1, I), !s) return null;
 				}
 				let c = i[i.length - 1];
@@ -5830,9 +6216,9 @@ var ra$1 = class e {
 		return new e(i);
 	}
 	evaluate(e) {
-		return new ei(this.sections.map((t) => {
+		return new ei$1(this.sections.map((t) => {
 			let n = t.content.evaluate(e);
-			return ui$1(n) === hr ? new $r(``, n, null, null, null, t.verticalAlign ? t.verticalAlign.evaluate(e) : null) : new $r(di$1(n), null, t.scale ? t.scale.evaluate(e) : null, t.font ? t.font.evaluate(e).join(`,`) : null, t.textColor ? t.textColor.evaluate(e) : null, t.verticalAlign ? t.verticalAlign.evaluate(e) : null);
+			return ui$1(n) === hr ? new $r$1(``, n, null, null, null, t.verticalAlign ? t.verticalAlign.evaluate(e) : null) : new $r$1(di$1(n), null, t.scale ? t.scale.evaluate(e) : null, t.font ? t.font.evaluate(e).join(`,`) : null, t.textColor ? t.textColor.evaluate(e) : null, t.verticalAlign ? t.verticalAlign.evaluate(e) : null);
 		}));
 	}
 	eachChild(e) {
@@ -6307,7 +6693,7 @@ function ro$1(e, t) {
 	for (let n of e) for (let e of n) if (ya$1(e, t, !0)) return !0;
 	return !1;
 }
-function io(e, t, n, r = 1 / 0) {
+function io$1(e, t, n, r = 1 / 0) {
 	let i = Ja$1(e), a = Ja$1(t);
 	if (r !== 1 / 0 && Xa$1(i, a, n) >= r) return r;
 	if (ma$1(i, a)) {
@@ -6324,7 +6710,7 @@ function io(e, t, n, r = 1 / 0) {
 	}
 	return o;
 }
-function ao(e, t, n, r, i, a) {
+function ao$1(e, t, n, r, i, a) {
 	if (!a) return;
 	let o = Xa$1(qa$1(r, a), i, n);
 	o < t && e.push([
@@ -6333,7 +6719,7 @@ function ao(e, t, n, r, i, a) {
 		[0, 0]
 	]);
 }
-function oo(e, t, n, r, i, a, o) {
+function oo$1(e, t, n, r, i, a, o) {
 	if (!a || !o) return;
 	let s = Xa$1(qa$1(r, a), qa$1(i, o), n);
 	s < t && e.push([
@@ -6366,12 +6752,12 @@ function so$1(e, t, n, r, i = 1 / 0) {
 			}
 		} else {
 			let n = Ka$1(c, t);
-			ao(o, a, r, e, s, n[0]), ao(o, a, r, e, s, n[1]);
+			ao$1(o, a, r, e, s, n[0]), ao$1(o, a, r, e, s, n[1]);
 		}
 	}
 	return a;
 }
-function co(e, t, n, r, i, a = 1 / 0) {
+function co$1(e, t, n, r, i, a = 1 / 0) {
 	let o = Math.min(a, i.distance(e[0], n[0]));
 	if (o === 0) return o;
 	let s = new Pa$1([[
@@ -6396,22 +6782,22 @@ function co(e, t, n, r, i, a = 1 / 0) {
 			} else a = eo$1(e, c, n, l, i), o = Math.min(o, a);
 		} else {
 			let a = Ka$1(c, t), u = Ka$1(l, r);
-			oo(s, o, i, e, n, a[0], u[0]), oo(s, o, i, e, n, a[0], u[1]), oo(s, o, i, e, n, a[1], u[0]), oo(s, o, i, e, n, a[1], u[1]);
+			oo$1(s, o, i, e, n, a[0], u[0]), oo$1(s, o, i, e, n, a[0], u[1]), oo$1(s, o, i, e, n, a[1], u[0]), oo$1(s, o, i, e, n, a[1], u[1]);
 		}
 	}
 	return o;
 }
-function lo(e, t) {
+function lo$1(e, t) {
 	let n = e.geometry(), r = n.flat().map((t) => ca$1([t.x, t.y], e.canonical));
 	if (n.length === 0) return NaN;
 	let i = new Ha$1(r[0][1]), a = 1 / 0;
 	for (let e of t) {
 		switch (e.type) {
 			case `Point`:
-				a = Math.min(a, co(r, !1, [e.coordinates], !1, i, a));
+				a = Math.min(a, co$1(r, !1, [e.coordinates], !1, i, a));
 				break;
 			case `LineString`:
-				a = Math.min(a, co(r, !1, e.coordinates, !0, i, a));
+				a = Math.min(a, co$1(r, !1, e.coordinates, !0, i, a));
 				break;
 			case `Polygon`: a = Math.min(a, so$1(r, !1, e.coordinates, i, a));
 		}
@@ -6426,10 +6812,10 @@ function uo$1(e, t) {
 	for (let e of t) {
 		switch (e.type) {
 			case `Point`:
-				a = Math.min(a, co(r, !0, [e.coordinates], !1, i, a));
+				a = Math.min(a, co$1(r, !0, [e.coordinates], !1, i, a));
 				break;
 			case `LineString`:
-				a = Math.min(a, co(r, !0, e.coordinates, !0, i, a));
+				a = Math.min(a, co$1(r, !0, e.coordinates, !0, i, a));
 				break;
 			case `Polygon`: a = Math.min(a, so$1(r, !0, e.coordinates, i, a));
 		}
@@ -6449,7 +6835,7 @@ function fo$1(e, t) {
 			case `LineString`:
 				a = Math.min(a, so$1(e.coordinates, !0, t, i, a));
 				break;
-			case `Polygon`: a = Math.min(a, io(t, e.coordinates, i, a));
+			case `Polygon`: a = Math.min(a, io$1(t, e.coordinates, i, a));
 		}
 		if (a === 0) return a;
 	}
@@ -6483,7 +6869,7 @@ var mo$1 = class e {
 	}
 	evaluate(e) {
 		if (e.geometry() != null && e.canonicalID() != null) {
-			if (e.geometryType() === `Point`) return lo(e, this.geometries);
+			if (e.geometryType() === `Point`) return lo$1(e, this.geometries);
 			if (e.geometryType() === `LineString`) return uo$1(e, this.geometries);
 			if (e.geometryType() === `Polygon`) return fo$1(e, this.geometries);
 		}
@@ -6505,7 +6891,7 @@ var ho$1 = class e {
 	}
 	evaluate(e) {
 		let t = e.globals?.globalState;
-		return !t || Object.keys(t).length === 0 ? null : Vr(t, this.key) ?? null;
+		return !t || Object.keys(t).length === 0 ? null : Vr$1(t, this.key) ?? null;
 	}
 	eachChild() {}
 	outputDefined() {
@@ -6519,9 +6905,9 @@ var go$1 = {
 	"<": Zi$1,
 	">=": ea$1,
 	"<=": $i$1,
-	array: mi,
+	array: mi$1,
 	at: Si$1,
-	boolean: mi,
+	boolean: mi$1,
 	case: Ei$1,
 	coalesce: Pi$1,
 	collator: ta$1,
@@ -6534,18 +6920,18 @@ var go$1 = {
 	"interpolate-lab": ji,
 	length: aa$1,
 	let: bi$1,
-	literal: fi,
+	literal: fi$1,
 	match: Ti$1,
-	number: mi,
+	number: mi$1,
 	"number-format": na$1,
-	object: mi,
+	object: mi$1,
 	slice: Di$1,
 	step: ki$1,
-	string: mi,
-	"to-boolean": gi,
-	"to-color": gi,
-	"to-number": gi,
-	"to-string": gi,
+	string: mi$1,
+	"to-boolean": gi$1,
+	"to-color": gi$1,
+	"to-number": gi$1,
+	"to-string": gi$1,
 	var: xi$1,
 	within: Na$1,
 	distance: mo$1,
@@ -7041,9 +7427,9 @@ function Co$1(e) {
 function wo$1(e) {
 	if (e instanceof xi$1) return wo$1(e.boundExpression);
 	if (e instanceof _o$1 && e.name === `error` || e instanceof ta$1 || e instanceof Na$1 || e instanceof mo$1 || e instanceof ho$1) return !1;
-	let t = e instanceof gi || e instanceof mi, n = !0;
+	let t = e instanceof gi$1 || e instanceof mi$1, n = !0;
 	return e.eachChild((e) => {
-		n &&= t ? wo$1(e) : e instanceof fi;
+		n &&= t ? wo$1(e) : e instanceof fi$1;
 	}), n ? To$1(e) && Do$1(e, [
 		`zoom`,
 		`heatmap-density`,
@@ -7095,41 +7481,41 @@ function jo$1(e) {
 function Mo$1(e) {
 	return !!e.expression && e.expression.interpolated;
 }
-function No(e, ...t) {
+function No$1(e, ...t) {
 	for (let n of t) for (let t in n) e[t] = n[t];
 	return e;
 }
 function H(e) {
 	return e instanceof Number ? `number` : e instanceof String ? `string` : e instanceof Boolean ? `boolean` : Array.isArray(e) ? `array` : e === null ? `null` : typeof e;
 }
-function Po(e) {
+function Po$1(e) {
 	return typeof e == `object` && !!e && !Array.isArray(e) && ui$1(e) === cr;
 }
-function Fo(e) {
+function Fo$1(e) {
 	return e;
 }
-function Io(e) {
+function Io$1(e) {
 	switch (e.type) {
 		case `color`: return B.parse;
-		case `padding`: return ti.parse;
-		case `numberArray`: return ni.parse;
-		case `colorArray`: return ri.parse;
+		case `padding`: return ti$1.parse;
+		case `numberArray`: return ni$1.parse;
+		case `colorArray`: return ri$1.parse;
 		default: return null;
 	}
 }
-function Lo(e) {
+function Lo$1(e) {
 	switch (e) {
-		case `exponential`: return Ho;
-		case `interval`: return Vo;
-		case `categorical`: return Bo;
-		case `identity`: return Uo;
+		case `exponential`: return Ho$1;
+		case `interval`: return Vo$1;
+		case `categorical`: return Bo$1;
+		case `identity`: return Uo$1;
 		default: throw Error(`Unknown function type "${e}"`);
 	}
 }
-function Ro(e, t) {
-	let n = e.stops && typeof e.stops[0][0] == `object`, r = n || e.property !== void 0, i = n || !r, a = e.type || (Mo$1(t) ? `exponential` : `interval`), o = Io(t);
-	if (o && (e = No({}, e), e.stops && (e.stops = e.stops.map((e) => [e[0], o(e[1])])), e.default ? e.default = o(e.default) : e.default = o(t.default)), e.colorSpace && !Xr(e.colorSpace)) throw Error(`Unknown color space: "${e.colorSpace}"`);
-	let s = Lo(a), c, l;
+function Ro$1(e, t) {
+	let n = e.stops && typeof e.stops[0][0] == `object`, r = n || e.property !== void 0, i = n || !r, a = e.type || (Mo$1(t) ? `exponential` : `interval`), o = Io$1(t);
+	if (o && (e = No$1({}, e), e.stops && (e.stops = e.stops.map((e) => [e[0], o(e[1])])), e.default ? e.default = o(e.default) : e.default = o(t.default)), e.colorSpace && !Xr$1(e.colorSpace)) throw Error(`Unknown color space: "${e.colorSpace}"`);
+	let s = Lo$1(a), c, l;
 	if (a === `categorical`) {
 		c = Object.create(null);
 		for (let t of e.stops) c[t[0]] = t[1];
@@ -7148,7 +7534,7 @@ function Ro(e, t) {
 			}, r.push(a)), n[a].stops.push([i[0].value, i[1]]);
 		}
 		let i = [];
-		for (let e of r) i.push([n[e].zoom, Ro(n[e], t)]);
+		for (let e of r) i.push([n[e].zoom, Ro$1(n[e], t)]);
 		let a = { name: `linear` };
 		return {
 			kind: `composite`,
@@ -7156,7 +7542,7 @@ function Ro(e, t) {
 			interpolationFactor: ji.interpolationFactor.bind(void 0, a),
 			zoomStops: i.map((e) => e[0]),
 			evaluate({ zoom: n }, r) {
-				return Ho({
+				return Ho$1({
 					stops: i,
 					base: e.base
 				}, t, n).evaluate(n, r);
@@ -7180,69 +7566,69 @@ function Ro(e, t) {
 		kind: `source`,
 		evaluate(n, r) {
 			let i = r && r.properties ? r.properties[e.property] : void 0;
-			return i === void 0 ? zo(e.default, t.default) : s(e, t, i, c, l);
+			return i === void 0 ? zo$1(e.default, t.default) : s(e, t, i, c, l);
 		}
 	};
 }
-function zo(e, t, n) {
+function zo$1(e, t, n) {
 	if (e !== void 0) return e;
 	if (t !== void 0) return t;
 	if (n !== void 0) return n;
 }
-function Bo(e, t, n, r, i) {
-	return zo(typeof n === i ? r[n] : void 0, e.default, t.default);
+function Bo$1(e, t, n, r, i) {
+	return zo$1(typeof n === i ? r[n] : void 0, e.default, t.default);
 }
-function Vo(e, t, n) {
-	if (H(n) !== `number`) return zo(e.default, t.default);
+function Vo$1(e, t, n) {
+	if (H(n) !== `number`) return zo$1(e.default, t.default);
 	let r = e.stops.length;
 	if (r === 1 || n <= e.stops[0][0]) return e.stops[0][1];
 	if (n >= e.stops[r - 1][0]) return e.stops[r - 1][1];
 	let i = Oi$1(e.stops.map((e) => e[0]), n, ``);
 	return e.stops[i][1];
 }
-function Ho(e, t, n) {
+function Ho$1(e, t, n) {
 	let r = e.base === void 0 ? 1 : e.base;
-	if (H(n) !== `number`) return zo(e.default, t.default);
+	if (H(n) !== `number`) return zo$1(e.default, t.default);
 	let i = e.stops.length;
 	if (i === 1 || n <= e.stops[0][0]) return e.stops[0][1];
 	if (n >= e.stops[i - 1][0]) return e.stops[i - 1][1];
-	let a = Oi$1(e.stops.map((e) => e[0]), n, ``), o = Wo(n, r, e.stops[a][0], e.stops[a + 1][0]), s = e.stops[a][1], c = e.stops[a + 1][1], l = Ni$1[t.type] || Fo;
+	let a = Oi$1(e.stops.map((e) => e[0]), n, ``), o = Wo$1(n, r, e.stops[a][0], e.stops[a + 1][0]), s = e.stops[a][1], c = e.stops[a + 1][1], l = Ni$1[t.type] || Fo$1;
 	return typeof s.evaluate == `function` ? { evaluate(...t) {
 		let n = s.evaluate.apply(void 0, t), r = c.evaluate.apply(void 0, t);
 		if (n !== void 0 && r !== void 0) return l(n, r, o, e.colorSpace);
 	} } : l(s, c, o, e.colorSpace);
 }
-function Uo(e, t, n) {
+function Uo$1(e, t, n) {
 	switch (t.type) {
 		case `color`:
 			n = B.parse(n);
 			break;
 		case `formatted`:
-			n = ei.fromString(n.toString());
+			n = ei$1.fromString(n.toString());
 			break;
 		case `resolvedImage`:
 			n = oi$1.fromString(n.toString());
 			break;
 		case `padding`:
-			n = ti.parse(n);
+			n = ti$1.parse(n);
 			break;
 		case `colorArray`:
-			n = ri.parse(n);
+			n = ri$1.parse(n);
 			break;
 		case `numberArray`:
-			n = ni.parse(n);
+			n = ni$1.parse(n);
 			break;
 		default: H(n) !== t.type && (t.type !== `enum` || !t.values[n]) && (n = void 0);
 	}
-	return zo(n, e.default, t.default);
+	return zo$1(n, e.default, t.default);
 }
-function Wo(e, t, n, r) {
+function Wo$1(e, t, n, r) {
 	let i = r - n, a = e - n;
 	return i === 0 ? 0 : t === 1 ? a / i : (t ** +a - 1) / (t ** +i - 1);
 }
-var Go = class {
+var Go$1 = class {
 	constructor(e, t, n, r) {
-		this.expression = e, this._warningHistory = {}, this._evaluator = new vi(), this._defaultValue = n ? as$1(n) : null, this._enumValues = n && n.type === `enum` ? n.values : null, this._globalState = r, this._rootKey = t;
+		this.expression = e, this._warningHistory = {}, this._evaluator = new vi$1(), this._defaultValue = n ? as$1(n) : null, this._enumValues = n && n.type === `enum` ? n.values : null, this._globalState = r, this._rootKey = t;
 	}
 	evaluateWithoutErrorHandling(e, t, n, r, i, a) {
 		return this._globalState && (e = os$1(e, this._globalState)), this._evaluator.globals = e, this._evaluator.feature = t, this._evaluator.featureState = n, this._evaluator.canonical = r, this._evaluator.availableImages = i || null, this._evaluator.formattedSection = a, this.expression.evaluate(this._evaluator);
@@ -7256,25 +7642,25 @@ var Go = class {
 			return e;
 		} catch (e) {
 			let t = e instanceof V ? e.path : ``, n = `${t}|${e.message}`;
-			return this._warningHistory[n] || (this._warningHistory[n] = !0, typeof console < `u` && console.warn(Ko(this._rootKey, t, e.message, this._defaultValue))), this._defaultValue;
+			return this._warningHistory[n] || (this._warningHistory[n] = !0, typeof console < `u` && console.warn(Ko$1(this._rootKey, t, e.message, this._defaultValue))), this._defaultValue;
 		}
 	}
 };
-function Ko(e, t, n, r) {
+function Ko$1(e, t, n, r) {
 	return `${e}${t}: ${n}${r == null ? `` : ` Falling back to ${String(r)}.`}`;
 }
-function qo(e) {
+function qo$1(e) {
 	if (!e) throw Error(`rootKey must identify the location of the expression in the style JSON, e.g. "layers[3].paint.line-width".`);
 }
-function Jo(e) {
+function Jo$1(e) {
 	return Array.isArray(e) && e.length > 0 && typeof e[0] == `string` && e[0] in go$1;
 }
-function Yo(e, t, n, r) {
-	qo(t);
+function Yo$1(e, t, n, r) {
+	qo$1(t);
 	let i = new yi$1(go$1, wo$1, [], n ? is$1(n) : void 0), a = i.parse(e, void 0, void 0, void 0, n && n.type === `string` ? { typeAnnotation: `coerce` } : void 0);
-	return a ? Oo$1(new Go(a, t, n, r)) : ko$1(i.errors);
+	return a ? Oo$1(new Go$1(a, t, n, r)) : ko$1(i.errors);
 }
-var Xo = class {
+var Xo$1 = class {
 	constructor(e, t, n) {
 		this.kind = e, this._styleExpression = t, this.isStateDependent = e !== `constant` && !Eo$1(t.expression), this.globalStateRefs = rs$1(t.expression), this._globalState = n;
 	}
@@ -7285,7 +7671,7 @@ var Xo = class {
 		return this._globalState && (e = os$1(e, this._globalState)), this._styleExpression.evaluate(e, t, n, r, i, a);
 	}
 };
-var Zo = class {
+var Zo$1 = class {
 	constructor(e, t, n, r, i) {
 		this.kind = e, this.zoomStops = n, this._styleExpression = t, this.isStateDependent = e !== `camera` && !Eo$1(t.expression), this.globalStateRefs = rs$1(t.expression), this.interpolationType = r, this._globalState = i;
 	}
@@ -7299,8 +7685,11 @@ var Zo = class {
 		return this.interpolationType ? ji.interpolationFactor(this.interpolationType, e, t, n) : 0;
 	}
 };
+function Qo$1(e) {
+	return e._styleExpression !== void 0;
+}
 function $o$1(e, t, n, r) {
-	let i = Yo(e, t, n, r);
+	let i = Yo$1(e, t, n, r);
 	if (i.result === `error`) return i;
 	let a = i.value.expression, o = To$1(a);
 	if (!o && !Ao$1(n)) return ko$1([new rr(``, `data expressions not supported`)]);
@@ -7310,14 +7699,14 @@ function $o$1(e, t, n, r) {
 	if (!c && !s) return ko$1([new rr(``, `"zoom" expression may only be used as input to a top-level "step" or "interpolate" expression.`)]);
 	if (c instanceof rr) return ko$1([c]);
 	if (c instanceof ji && !Mo$1(n)) return ko$1([new rr(``, `"interpolate" expressions cannot be used with this property`)]);
-	if (!c) return Oo$1(o ? new Xo(`constant`, i.value, r) : new Xo(`source`, i.value, r));
+	if (!c) return Oo$1(o ? new Xo$1(`constant`, i.value, r) : new Xo$1(`source`, i.value, r));
 	let l = c instanceof ji ? c.interpolation : void 0;
-	return Oo$1(o ? new Zo(`camera`, i.value, c.labels, l, r) : new Zo(`composite`, i.value, c.labels, l, r));
+	return Oo$1(o ? new Zo$1(`camera`, i.value, c.labels, l, r) : new Zo$1(`composite`, i.value, c.labels, l, r));
 }
 var es$1 = class e {
 	constructor(e, t, n) {
-		this.isStateDependent = !1, this.globalStateRefs = /* @__PURE__ */ new Set(), this._globalState = null, qo(t), this._parameters = e, this._specification = n, this._rootKey = t, this._defaultValue = as$1(n), this._warningHistory = {};
-		let r = Ro(this._parameters, this._specification);
+		this.isStateDependent = !1, this.globalStateRefs = /* @__PURE__ */ new Set(), this._globalState = null, qo$1(t), this._parameters = e, this._specification = n, this._rootKey = t, this._defaultValue = as$1(n), this._warningHistory = {};
+		let r = Ro$1(this._parameters, this._specification);
 		this.kind = r.kind, this.interpolationFactor = r.interpolationFactor, this.zoomStops = r.zoomStops, this.interpolationType = r.interpolationType, this._innerEvaluate = r.evaluate;
 	}
 	evaluate(e, t) {
@@ -7325,7 +7714,7 @@ var es$1 = class e {
 			return this._innerEvaluate(e, t);
 		} catch (e) {
 			let t = e instanceof Error ? e.message : String(e), n = `|${t}`;
-			return this._warningHistory[n] || (this._warningHistory[n] = !0, typeof console < `u` && console.warn(Ko(this._rootKey, ``, t, this._defaultValue))), this._defaultValue;
+			return this._warningHistory[n] || (this._warningHistory[n] = !0, typeof console < `u` && console.warn(Ko$1(this._rootKey, ``, t, this._defaultValue))), this._defaultValue;
 		}
 	}
 	static deserialize(t) {
@@ -7339,6 +7728,23 @@ var es$1 = class e {
 		};
 	}
 };
+function ts$1(e, t, n, r) {
+	if (Po$1(e)) return new es$1(e, t, n);
+	if (Jo$1(e)) {
+		let i = $o$1(e, t, n, r);
+		if (i.result === `error`) throw Error(i.value.map((e) => `${e.key}: ${e.message}`).join(`, `));
+		return i.value;
+	}
+	{
+		let t = e;
+		return n.type === `color` && typeof e == `string` ? t = B.parse(e) : n.type === `padding` && (typeof e == `number` || Array.isArray(e)) ? t = ti$1.parse(e) : n.type === `numberArray` && (typeof e == `number` || Array.isArray(e)) ? t = ni$1.parse(e) : n.type === `colorArray` && (typeof e == `string` || Array.isArray(e)) ? t = ri$1.parse(e) : n.type === `variableAnchorOffsetCollection` && Array.isArray(e) ? t = ai$1.parse(e) : n.type === `projectionDefinition` && typeof e == `string` && (t = si$1.parse(e)), {
+			globalStateRefs: /* @__PURE__ */ new Set(),
+			_globalState: null,
+			kind: `constant`,
+			evaluate: () => t
+		};
+	}
+}
 function ns$1(e) {
 	let t = null;
 	if (e instanceof bi$1) t = ns$1(e.result);
@@ -7373,12 +7779,12 @@ function is$1(e) {
 	return e.type === `array` ? _r(t[e.value] || R, e.length) : t[e.type];
 }
 function as$1(e) {
-	if (e.type === `color` && Po(e.default)) return new B(0, 0, 0, 0);
+	if (e.type === `color` && Po$1(e.default)) return new B(0, 0, 0, 0);
 	switch (e.type) {
 		case `color`: return B.parse(e.default) || null;
-		case `padding`: return ti.parse(e.default) || null;
-		case `numberArray`: return ni.parse(e.default) || null;
-		case `colorArray`: return ri.parse(e.default) || null;
+		case `padding`: return ti$1.parse(e.default) || null;
+		case `numberArray`: return ni$1.parse(e.default) || null;
+		case `colorArray`: return ri$1.parse(e.default) || null;
 		case `variableAnchorOffsetCollection`: return ai$1.parse(e.default) || null;
 		case `projectionDefinition`: return si$1.parse(e.default) || null;
 		default: return e.default === void 0 ? null : e.default;
@@ -7520,7 +7926,7 @@ function _s$1(e, t, n) {
 		getGlobalStateRefs: () => /* @__PURE__ */ new Set()
 	};
 	ls$1(e) ? hs$1(e, t) : e = bs$1(e);
-	let r = Yo(e, t, gs$1, n);
+	let r = Yo$1(e, t, gs$1, n);
 	if (r.result === `error`) throw Error(r.value.map((e) => `${e.key}: ${e.message}`).join(`, `));
 	return {
 		filter: (e, t, n) => r.value.evaluate(e, t, {}, n),
@@ -7540,7 +7946,7 @@ function ys$1(e) {
 function bs$1(e) {
 	if (!e) return !0;
 	let t = e[0];
-	return e.length <= 1 ? t !== `any` : t === `==` ? xs$1(e[1], e[2], `==`) : t === `!=` ? Ts(xs$1(e[1], e[2], `==`)) : t === `<` || t === `>` || t === `<=` || t === `>=` ? xs$1(e[1], e[2], t) : t === `any` ? Ss$1(e.slice(1)) : t === `all` ? [`all`].concat(e.slice(1).map(bs$1)) : t === `none` ? [`all`].concat(e.slice(1).map(bs$1).map(Ts)) : t === `in` ? Cs$1(e[1], e.slice(2)) : t === `!in` ? Ts(Cs$1(e[1], e.slice(2))) : t === `has` ? ws(e[1]) : t !== `!has` || Ts(ws(e[1]));
+	return e.length <= 1 ? t !== `any` : t === `==` ? xs$1(e[1], e[2], `==`) : t === `!=` ? Ts$1(xs$1(e[1], e[2], `==`)) : t === `<` || t === `>` || t === `<=` || t === `>=` ? xs$1(e[1], e[2], t) : t === `any` ? Ss$1(e.slice(1)) : t === `all` ? [`all`].concat(e.slice(1).map(bs$1)) : t === `none` ? [`all`].concat(e.slice(1).map(bs$1).map(Ts$1)) : t === `in` ? Cs$1(e[1], e.slice(2)) : t === `!in` ? Ts$1(Cs$1(e[1], e.slice(2))) : t === `has` ? ws$1(e[1]) : t !== `!has` || Ts$1(ws$1(e[1]));
 }
 function xs$1(e, t, n) {
 	switch (e) {
@@ -7572,17 +7978,17 @@ function Cs$1(e, t) {
 		];
 	}
 }
-function ws(e) {
+function ws$1(e) {
 	switch (e) {
 		case `$type`: return !0;
 		case `$id`: return [`filter-has-id`];
 		default: return [`filter-has`, e];
 	}
 }
-function Ts(e) {
+function Ts$1(e) {
 	return [`!`, e];
 }
-function ks() {
+function ks$1() {
 	let e = {}, t = M.$version;
 	for (let n in M.$root) {
 		let r = M.$root[n];
@@ -7593,29 +7999,29 @@ function ks() {
 	}
 	return e;
 }
-function As(e) {
+function As$1(e) {
 	let t = e.key, n = e.value;
 	return n ? [new P(t, n, `constants have been deprecated as of v8`)] : [];
 }
 function U$1(e) {
 	return e instanceof Number || e instanceof String || e instanceof Boolean ? e.valueOf() : e;
 }
-function js(e) {
-	if (Array.isArray(e)) return e.map(js);
+function js$1(e) {
+	if (Array.isArray(e)) return e.map(js$1);
 	if (e instanceof Object && !(e instanceof Number || e instanceof String || e instanceof Boolean)) {
 		let t = {};
-		for (let n in e) t[n] = js(e[n]);
+		for (let n in e) t[n] = js$1(e[n]);
 		return t;
 	}
 	return U$1(e);
 }
-function Ms(e) {
+function Ms$1(e) {
 	let t = e.key, n = e.value, r = e.valueSpec || {}, i = e.objectElementValidators || {}, a = e.style, o = e.styleSpec, s = e.validateSpec, c = [], l = H(n);
 	if (l !== `object`) return [new P(t, n, `object expected, ${l} found`)];
 	for (let e in n) {
-		let l = e.split(`.`)[0], u = Vr(r, l) || r[`*`], d;
-		if (Vr(i, l)) d = i[l];
-		else if (Vr(r, l)) {
+		let l = e.split(`.`)[0], u = Vr$1(r, l) || r[`*`], d;
+		if (Vr$1(i, l)) d = i[l];
+		else if (Vr$1(r, l)) {
 			if (n[e] === void 0) continue;
 			d = s;
 		} else if (i[`*`]) d = i[`*`];
@@ -7638,7 +8044,7 @@ function Ms(e) {
 	for (let e in r) i[e] || r[e].required && r[e].default === void 0 && n[e] === void 0 && c.push(new P(t, n, `missing required property "${e}"`));
 	return c;
 }
-function Ns(e) {
+function Ns$1(e) {
 	let t = e.value, n = e.valueSpec, r = e.validateSpec, i = e.style, a = e.styleSpec, o = e.key, s = e.arrayElementValidator || r;
 	if (H(t) !== `array`) return [new P(o, t, `array expected, ${H(t)} found`)];
 	if (n.length && t.length !== n.length) return [new P(o, t, `array length ${n.length} expected, length ${t.length} found`)];
@@ -7660,12 +8066,12 @@ function Ns(e) {
 	}));
 	return l;
 }
-function Ps(e) {
+function Ps$1(e) {
 	let t = e.key, n = e.value, r = e.valueSpec, i = H(n);
 	return i === `number` && n !== n && (i = `NaN`), i === `number` ? `minimum` in r && n < r.minimum ? [new P(t, n, `${n} is less than the minimum value ${r.minimum}`)] : `maximum` in r && n > r.maximum ? [new P(t, n, `${n} is greater than the maximum value ${r.maximum}`)] : [] : [new P(t, n, `number expected, ${i} found`)];
 }
-function Fs(e) {
-	let t = e.valueSpec, n = U$1(e.value.type), r, i = {}, a, o, s = n !== `categorical` && e.value.property === void 0, c = !s, l = H(e.value.stops) === `array` && H(e.value.stops[0]) === `array` && H(e.value.stops[0][0]) === `object`, u = Ms({
+function Fs$1(e) {
+	let t = e.valueSpec, n = U$1(e.value.type), r, i = {}, a, o, s = n !== `categorical` && e.value.property === void 0, c = !s, l = H(e.value.stops) === `array` && H(e.value.stops[0]) === `array` && H(e.value.stops[0][0]) === `object`, u = Ms$1({
 		key: e.key,
 		value: e.value,
 		valueSpec: e.styleSpec.function,
@@ -7681,7 +8087,7 @@ function Fs(e) {
 	function d(e) {
 		if (n === `identity`) return [new P(e.key, e.value, `identity function may not have a "stops" property`)];
 		let t = [], r = e.value;
-		return t = t.concat(Ns({
+		return t = t.concat(Ns$1({
 			key: e.key,
 			value: r,
 			valueSpec: e.valueSpec,
@@ -7700,7 +8106,7 @@ function Fs(e) {
 			if (r[0].zoom === void 0) return [new P(s, r, `object stop key must have zoom`)];
 			if (r[0].value === void 0) return [new P(s, r, `object stop key must have value`)];
 			if (o && o > U$1(r[0].zoom)) return [new P(s, r[0].zoom, `stop zoom values must appear in ascending order`)];
-			U$1(r[0].zoom) !== o && (o = U$1(r[0].zoom), a = void 0, i = {}), n = n.concat(Ms({
+			U$1(r[0].zoom) !== o && (o = U$1(r[0].zoom), a = void 0, i = {}), n = n.concat(Ms$1({
 				key: `${s}[0]`,
 				value: r[0],
 				valueSpec: { zoom: {} },
@@ -7708,7 +8114,7 @@ function Fs(e) {
 				style: e.style,
 				styleSpec: e.styleSpec,
 				objectElementValidators: {
-					zoom: Ps,
+					zoom: Ps$1,
 					value: p
 				}
 			}));
@@ -7720,7 +8126,7 @@ function Fs(e) {
 			style: e.style,
 			styleSpec: e.styleSpec
 		}, r));
-		return Jo(js(r[1])) ? n.concat([new P(`${s}[1]`, r[1], `expressions are not allowed in function stops.`)]) : n.concat(e.validateSpec({
+		return Jo$1(js$1(r[1])) ? n.concat([new P(`${s}[1]`, r[1], `expressions are not allowed in function stops.`)]) : n.concat(e.validateSpec({
 			key: `${s}[1]`,
 			value: r[1],
 			valueSpec: t,
@@ -7751,8 +8157,8 @@ function Fs(e) {
 		});
 	}
 }
-function Is(e) {
-	let t = (e.expressionContext === `property` ? $o$1 : Yo)(js(e.value), e.key, e.valueSpec);
+function Is$1(e) {
+	let t = (e.expressionContext === `property` ? $o$1 : Yo$1)(js$1(e.value), e.key, e.valueSpec);
 	if (t.result === `error`) return t.value.map((t) => new P(`${e.key}${t.key}`, e.value, t.message));
 	let n = t.value.expression || t.value._styleExpression.expression;
 	if (e.expressionContext === `property` && e.propertyKey === `text-font` && !n.outputDefined()) return [new P(e.key, e.value, `Invalid data expression for "${e.propertyKey}". Output values must be contained as literals within the expression.`)];
@@ -7764,30 +8170,30 @@ function Is(e) {
 	}
 	return [];
 }
-function Ls(e) {
+function Ls$1(e) {
 	let t = e.value, n = e.key, r = H(t);
 	return r === `boolean` ? [] : [new P(n, t, `boolean expected, ${r} found`)];
 }
-function Rs(e) {
+function Rs$1(e) {
 	let t = e.key, n = e.value, r = H(n);
 	return r === `string` ? B.parse(String(n)) ? [] : [new P(t, n, `color expected, "${n}" found`)] : [new P(t, n, `color expected, ${r} found`)];
 }
-function zs(e) {
+function zs$1(e) {
 	let t = e.key, n = e.value, r = e.valueSpec, i = [];
 	return Array.isArray(r.values) ? r.values.indexOf(U$1(n)) === -1 && i.push(new P(t, n, `expected one of [${r.values.join(`, `)}], ${JSON.stringify(n)} found`)) : Object.keys(r.values).indexOf(U$1(n)) === -1 && i.push(new P(t, n, `expected one of [${Object.keys(r.values).join(`, `)}], ${JSON.stringify(n)} found`)), i;
 }
-function Bs(e, t) {
+function Bs$1(e, t) {
 	let n = e;
 	for (let e of t) n = n[e];
 	return n;
 }
-function Vs(e, t) {
+function Vs$1(e, t) {
 	let n = ms$1(t);
-	return n ? [new P(`${e.key}${n.path.map((e) => `[${e}]`).join(``)}`, Bs(e.value, n.path), fs$1(n.legacyFilter), null, `warning`)] : [];
+	return n ? [new P(`${e.key}${n.path.map((e) => `[${e}]`).join(``)}`, Bs$1(e.value, n.path), fs$1(n.legacyFilter), null, `warning`)] : [];
 }
-function Hs(e) {
-	let t = js(e.value);
-	return ls$1(t) ? [...Vs(e, t), ...Is(No({}, e, {
+function Hs$1(e) {
+	let t = js$1(e.value);
+	return ls$1(t) ? [...Vs$1(e, t), ...Is$1(No$1({}, e, {
 		expressionContext: `filter`,
 		valueSpec: { value: `boolean` }
 	}))] : Us$1(e);
@@ -7797,7 +8203,7 @@ function Us$1(e) {
 	if (H(t) !== `array`) return [new P(n, t, `array expected, ${H(t)} found`)];
 	let r = e.styleSpec, i, a = [];
 	if (t.length < 1) return [new P(n, t, `filter array must have at least 1 element`)];
-	switch (a = a.concat(zs({
+	switch (a = a.concat(zs$1({
 		key: `${n}[0]`,
 		value: t[0],
 		valueSpec: r.filter_operator,
@@ -7813,7 +8219,7 @@ function Us$1(e) {
 		case `in`:
 		case `!in`:
 			t.length >= 2 && (i = H(t[1]), i !== `string` && a.push(new P(`${n}[1]`, t[1], `string expected, ${i} found`)));
-			for (let o = 2; o < t.length; o++) i = H(t[o]), U$1(t[1]) === `$type` ? a = a.concat(zs({
+			for (let o = 2; o < t.length; o++) i = H(t[o]), U$1(t[1]) === `$type` ? a = a.concat(zs$1({
 				key: `${n}[${o}]`,
 				value: t[o],
 				valueSpec: r.geometry_type,
@@ -7836,7 +8242,7 @@ function Us$1(e) {
 	}
 	return a;
 }
-function Ws(e, t) {
+function Ws$1(e, t) {
 	let n = e.key, r = e.validateSpec, i = e.style, a = e.styleSpec, o = e.value, s = e.objectKey, c = a[`${t}_${e.layerType}`];
 	if (!c) return [];
 	let l = s.match(/^(.*)-transition$/);
@@ -7852,7 +8258,7 @@ function Ws(e, t) {
 	let d;
 	if (H(o) === `string` && Ao$1(u) && !u.tokens && (d = /^{([^}]+)}$/.exec(o))) return [new P(n, o, `"${s}" does not support interpolation syntax\nUse an identity property function instead: \`{ "type": "identity", "property": ${JSON.stringify(d[1])} }\`.`)];
 	let f = [];
-	return e.layerType === `symbol` && s === `text-font` && Po(js(o)) && U$1(o.type) === `identity` && f.push(new P(n, o, `"text-font" does not support identity functions`)), f.concat(r({
+	return e.layerType === `symbol` && s === `text-font` && Po$1(js$1(o)) && U$1(o.type) === `identity` && f.push(new P(n, o, `"text-font" does not support identity functions`)), f.concat(r({
 		key: e.key,
 		value: o,
 		valueSpec: u,
@@ -7863,13 +8269,13 @@ function Ws(e, t) {
 		propertyKey: s
 	}));
 }
-function Gs(e) {
-	return Ws(e, `paint`);
+function Gs$1(e) {
+	return Ws$1(e, `paint`);
 }
 function Ks$1(e) {
-	return Ws(e, `layout`);
+	return Ws$1(e, `layout`);
 }
-function qs(e) {
+function qs$1(e) {
 	let t = [], n = e.value, r = e.key, i = e.style, a = e.styleSpec;
 	if (H(n) !== `object`) return [new P(r, n, `object expected, ${H(n)} found`)];
 	!n.type && !n.ref && t.push(new P(r, n, `either "type" or "ref" is required`));
@@ -7902,7 +8308,7 @@ function qs(e) {
 			e ? a === `vector` && o === `raster` ? t.push(new P(r, n.source, `layer "${n.id}" requires a raster source`)) : a !== `raster-dem` && o === `hillshade` || a !== `raster-dem` && o === `color-relief` ? t.push(new P(r, n.source, `layer "${n.id}" requires a raster-dem source`)) : a === `raster` && o !== `raster` ? t.push(new P(r, n.source, `layer "${n.id}" requires a vector source`)) : a === `vector` && !n[`source-layer`] ? t.push(new P(r, n, `layer "${n.id}" must specify a "source-layer"`)) : a === `raster-dem` && o !== `hillshade` && o !== `color-relief` ? t.push(new P(r, n.source, `raster-dem source can only be used with layer type 'hillshade' or 'color-relief'.`)) : o === `line` && n.paint && n.paint[`line-gradient`] && (a !== `geojson` || !e.lineMetrics) && t.push(new P(r, n, `layer "${n.id}" specifies a line-gradient, which requires a GeoJSON source with \`lineMetrics\` enabled.`)) : t.push(new P(r, n.source, `source "${n.source}" not found`));
 		}
 	}
-	return o === `raster` && n.paint?.resampling && n.paint?.[`raster-resampling`] && t.push(new P(r, n.paint, `layer "${n.id}" redundantly specifies "resampling" and "raster-resampling" paint properties, but only one is allowed. It is advised to use "resampling".`)), t = t.concat(Ms({
+	return o === `raster` && n.paint?.resampling && n.paint?.[`raster-resampling`] && t.push(new P(r, n.paint, `layer "${n.id}" redundantly specifies "resampling" and "raster-resampling" paint properties, but only one is allowed. It is advised to use "resampling".`)), t = t.concat(Ms$1({
 		key: r,
 		value: n,
 		valueSpec: a.layer,
@@ -7925,9 +8331,9 @@ function qs(e) {
 					objectKey: `type`
 				});
 			},
-			filter: Hs,
+			filter: Hs$1,
 			layout(e) {
-				return Ms({
+				return Ms$1({
 					layer: n,
 					key: e.key,
 					value: e.value,
@@ -7935,12 +8341,12 @@ function qs(e) {
 					styleSpec: e.styleSpec,
 					validateSpec: e.validateSpec,
 					objectElementValidators: { "*"(e) {
-						return Ks$1(No({ layerType: o }, e));
+						return Ks$1(No$1({ layerType: o }, e));
 					} }
 				});
 			},
 			paint(e) {
-				return Ms({
+				return Ms$1({
 					layer: n,
 					key: e.key,
 					value: e.value,
@@ -7948,18 +8354,18 @@ function qs(e) {
 					styleSpec: e.styleSpec,
 					validateSpec: e.validateSpec,
 					objectElementValidators: { "*"(e) {
-						return Gs(No({ layerType: o }, e));
+						return Gs$1(No$1({ layerType: o }, e));
 					} }
 				});
 			}
 		}
 	})), t;
 }
-function Js(e) {
+function Js$1(e) {
 	let t = e.value, n = e.key, r = H(t);
 	return r === `string` ? [] : [new P(n, t, `string expected, ${r} found`)];
 }
-function Ys(e) {
+function Ys$1(e) {
 	let t = e.sourceName ?? ``, n = e.value, r = e.styleSpec, i = r.source_raster_dem, a = e.style, o = [], s = H(n);
 	if (n === void 0) return o;
 	if (s !== `object`) return o.push(new P(`source_raster_dem`, n, `object expected, ${s} found`)), o;
@@ -7979,23 +8385,23 @@ function Ys(e) {
 	})) : o.push(new P(s, n[s], `unknown property "${s}"`));
 	return o;
 }
-var Xs = { promoteId: Qs };
-function Zs(e) {
+var Xs$1 = { promoteId: Qs$1 };
+function Zs$1(e) {
 	let t = e.value, n = e.key, r = e.styleSpec, i = e.style, a = e.validateSpec;
 	if (!t.type) return [new P(n, t, `"type" is required`)];
 	let o = U$1(t.type), s;
 	switch (o) {
 		case `vector`:
-		case `raster`: return s = Ms({
+		case `raster`: return s = Ms$1({
 			key: n,
 			value: t,
 			valueSpec: r[`source_${o.replace(`-`, `_`)}`],
 			style: e.style,
 			styleSpec: r,
-			objectElementValidators: Xs,
+			objectElementValidators: Xs$1,
 			validateSpec: a
 		}), s;
-		case `raster-dem`: return s = Ys({
+		case `raster-dem`: return s = Ys$1({
 			sourceName: n,
 			value: t,
 			style: e.style,
@@ -8003,26 +8409,26 @@ function Zs(e) {
 			validateSpec: a
 		}), s;
 		case `geojson`:
-			if (s = Ms({
+			if (s = Ms$1({
 				key: n,
 				value: t,
 				valueSpec: r.source_geojson,
 				style: i,
 				styleSpec: r,
 				validateSpec: a,
-				objectElementValidators: Xs
+				objectElementValidators: Xs$1
 			}), t.cluster) for (let e in t.clusterProperties) {
 				let [r, i] = t.clusterProperties[e], o = typeof r == `string` ? [
 					r,
 					[`accumulated`],
 					[`get`, e]
 				] : r;
-				s.push(...Is({
+				s.push(...Is$1({
 					key: `${n}.${e}.map`,
 					value: i,
 					validateSpec: a,
 					expressionContext: `cluster-map`
-				})), s.push(...Is({
+				})), s.push(...Is$1({
 					key: `${n}.${e}.reduce`,
 					value: o,
 					validateSpec: a,
@@ -8030,7 +8436,7 @@ function Zs(e) {
 				}));
 			}
 			return s;
-		case `video`: return Ms({
+		case `video`: return Ms$1({
 			key: n,
 			value: t,
 			valueSpec: r.source_video,
@@ -8038,7 +8444,7 @@ function Zs(e) {
 			validateSpec: a,
 			styleSpec: r
 		});
-		case `image`: return Ms({
+		case `image`: return Ms$1({
 			key: n,
 			value: t,
 			valueSpec: r.source_image,
@@ -8047,7 +8453,7 @@ function Zs(e) {
 			styleSpec: r
 		});
 		case `canvas`: return [new P(n, null, `Please use runtime APIs to add canvas sources, rather than including them in stylesheets.`, `source.canvas`)];
-		default: return zs({
+		default: return zs$1({
 			key: `${n}.type`,
 			value: t.type,
 			valueSpec: { values: [
@@ -8064,21 +8470,21 @@ function Zs(e) {
 		});
 	}
 }
-function Qs({ key: e, value: t }) {
-	if (H(t) === `string`) return Js({
+function Qs$1({ key: e, value: t }) {
+	if (H(t) === `string`) return Js$1({
 		key: e,
 		value: t
 	});
 	{
 		let n = [];
-		for (let r in t) n.push(...Js({
+		for (let r in t) n.push(...Js$1({
 			key: `${e}.${r}`,
 			value: t[r]
 		}));
 		return n;
 	}
 }
-function $s(e) {
+function $s$1(e) {
 	let t = e.value, n = e.styleSpec, r = n.light, i = e.style, a = [], o = H(t);
 	if (t === void 0) return a;
 	if (o !== `object`) return a = a.concat([new P(`light`, t, `object expected, ${o} found`)]), a;
@@ -8102,7 +8508,7 @@ function $s(e) {
 	}
 	return a;
 }
-function ec(e) {
+function ec$1(e) {
 	let t = e.value, n = e.styleSpec, r = n.sky, i = e.style, a = H(t);
 	if (t === void 0) return [];
 	if (a !== `object`) return [new P(`sky`, t, `object expected, ${a} found`)];
@@ -8130,13 +8536,13 @@ function tc$1(e) {
 	})) : a.concat([new P(o, t[o], `unknown property "${o}"`)]);
 	return a;
 }
-function nc(e) {
-	return Js(e).length === 0 ? [] : Is(e);
+function nc$1(e) {
+	return Js$1(e).length === 0 ? [] : Is$1(e);
 }
-function rc(e) {
-	return Js(e).length === 0 ? [] : Is(e);
+function rc$1(e) {
+	return Js$1(e).length === 0 ? [] : Is$1(e);
 }
-function ic(e) {
+function ic$1(e) {
 	let t = e.key, n = e.value;
 	if (H(n) === `array`) {
 		if (n.length < 1 || n.length > 4) return [new P(t, n, `padding requires 1 to 4 values; ${n.length} values found`)];
@@ -8149,13 +8555,13 @@ function ic(e) {
 		}));
 		return i;
 	}
-	return Ps({
+	return Ps$1({
 		key: t,
 		value: n,
 		valueSpec: {}
 	});
 }
-function ac(e) {
+function ac$1(e) {
 	let t = e.key, n = e.value;
 	if (H(n) === `array`) {
 		let r = { type: `number` };
@@ -8169,39 +8575,39 @@ function ac(e) {
 		}));
 		return i;
 	}
-	return Ps({
+	return Ps$1({
 		key: t,
 		value: n,
 		valueSpec: {}
 	});
 }
-function oc(e) {
+function oc$1(e) {
 	let t = e.key, n = e.value;
 	if (H(n) === `array`) {
 		if (n.length < 1) return [new P(t, n, `array length at least 1 expected, length 0 found`)];
 		let e = [];
-		for (let r = 0; r < n.length; r++) e = e.concat(Rs({
+		for (let r = 0; r < n.length; r++) e = e.concat(Rs$1({
 			key: `${t}[${r}]`,
 			value: n[r],
 			valueSpec: {}
 		}));
 		return e;
 	}
-	return Rs({
+	return Rs$1({
 		key: t,
 		value: n,
 		valueSpec: {}
 	});
 }
-function sc(e) {
+function sc$1(e) {
 	let t = e.key, n = e.value, r = H(n), i = e.styleSpec;
 	if (r !== `array` || n.length < 1 || n.length % 2 != 0) return [new P(t, n, `variableAnchorOffsetCollection requires a non-empty array of even length`)];
 	let a = [];
-	for (let r = 0; r < n.length; r += 2) a = a.concat(zs({
+	for (let r = 0; r < n.length; r += 2) a = a.concat(zs$1({
 		key: `${t}[${r}]`,
 		value: n[r],
 		valueSpec: i.layout_symbol[`text-anchor`]
-	})), a = a.concat(Ns({
+	})), a = a.concat(Ns$1({
 		key: `${t}[${r + 1}]`,
 		value: n[r + 1],
 		valueSpec: {
@@ -8214,11 +8620,11 @@ function sc(e) {
 	}));
 	return a;
 }
-function cc(e) {
+function cc$1(e) {
 	let t = [], n = e.value, r = e.key;
 	if (Array.isArray(n)) {
 		let i = [], a = [];
-		for (let o in n) n[o].id && i.includes(n[o].id) && t.push(new P(r, n, `all the sprites' ids must be unique, but ${n[o].id} is duplicated`)), i.push(n[o].id), n[o].url && a.includes(n[o].url) && t.push(new P(r, n, `all the sprites' URLs must be unique, but ${n[o].url} is duplicated`)), a.push(n[o].url), t = t.concat(Ms({
+		for (let o in n) n[o].id && i.includes(n[o].id) && t.push(new P(r, n, `all the sprites' ids must be unique, but ${n[o].id} is duplicated`)), i.push(n[o].id), n[o].url && a.includes(n[o].url) && t.push(new P(r, n, `all the sprites' URLs must be unique, but ${n[o].url} is duplicated`)), a.push(n[o].url), t = t.concat(Ms$1({
 			key: `${r}[${o}]`,
 			value: n[o],
 			valueSpec: {
@@ -8235,12 +8641,12 @@ function cc(e) {
 		}));
 		return t;
 	}
-	return Js({
+	return Js$1({
 		key: r,
 		value: n
 	});
 }
-function lc(e) {
+function lc$1(e) {
 	let t = e.value, n = e.styleSpec, r = n.projection, i = e.style, a = H(t);
 	if (t === void 0) return [];
 	if (a !== `object`) return [new P(`projection`, t, `object expected, ${a} found`)];
@@ -8254,35 +8660,35 @@ function lc(e) {
 	})) : o.concat([new P(a, t[a], `unknown property "${a}"`)]);
 	return o;
 }
-function uc(e) {
+function uc$1(e) {
 	let t = e.key, n = e.value;
 	n = n instanceof String ? n.valueOf() : n;
 	let r = H(n);
-	return r === `array` && !fc(n) && !dc(n) ? [new P(t, n, `projection expected, invalid array ${JSON.stringify(n)} found`)] : [`array`, `string`].includes(r) ? [] : [new P(t, n, `projection expected, invalid type "${r}" found`)];
+	return r === `array` && !fc$1(n) && !dc$1(n) ? [new P(t, n, `projection expected, invalid array ${JSON.stringify(n)} found`)] : [`array`, `string`].includes(r) ? [] : [new P(t, n, `projection expected, invalid type "${r}" found`)];
 }
-function dc(e) {
+function dc$1(e) {
 	return !![
 		`interpolate`,
 		`step`,
 		`literal`
 	].includes(e[0]);
 }
-function fc(e) {
+function fc$1(e) {
 	return Array.isArray(e) && e.length === 3 && typeof e[0] == `string` && typeof e[1] == `string` && typeof e[2] == `number`;
 }
-function pc(e) {
+function pc$1(e) {
 	return !!e && e.constructor === Object;
 }
-function mc(e) {
-	return pc(e.value) ? [] : [new P(e.key, e.value, `object expected, ${H(e.value)} found`)];
+function mc$1(e) {
+	return pc$1(e.value) ? [] : [new P(e.key, e.value, `object expected, ${H(e.value)} found`)];
 }
-function hc(e) {
+function hc$1(e) {
 	let t = e.key, n = e.value, r = e.validateSpec, i = e.styleSpec, a = e.style;
-	if (!pc(n)) return [new P(t, n, `object expected, ${H(n)} found`)];
+	if (!pc$1(n)) return [new P(t, n, `object expected, ${H(n)} found`)];
 	let o = [];
 	for (let e in n) {
 		let s = n[e], c = H(s);
-		if (c === `string`) o.push(...Js({
+		if (c === `string`) o.push(...Js$1({
 			key: `${t}.${e}`,
 			value: s
 		}));
@@ -8297,7 +8703,7 @@ function hc(e) {
 					value: `string`
 				}
 			};
-			for (let [c, l] of s.entries()) o.push(...Ms({
+			for (let [c, l] of s.entries()) o.push(...Ms$1({
 				key: `${t}.${e}[${c}]`,
 				value: l,
 				valueSpec: n,
@@ -8309,83 +8715,145 @@ function hc(e) {
 	}
 	return o;
 }
-var gc = {
+var gc$1 = {
 	"*"() {
 		return [];
 	},
-	array: Ns,
-	boolean: Ls,
-	number: Ps,
-	color: Rs,
-	constants: As,
-	enum: zs,
-	filter: Hs,
-	function: Fs,
-	layer: qs,
-	object: Ms,
-	source: Zs,
-	light: $s,
-	sky: ec,
+	array: Ns$1,
+	boolean: Ls$1,
+	number: Ps$1,
+	color: Rs$1,
+	constants: As$1,
+	enum: zs$1,
+	filter: Hs$1,
+	function: Fs$1,
+	layer: qs$1,
+	object: Ms$1,
+	source: Zs$1,
+	light: $s$1,
+	sky: ec$1,
 	terrain: tc$1,
-	projection: lc,
-	projectionDefinition: uc,
-	string: Js,
-	formatted: nc,
-	resolvedImage: rc,
-	padding: ic,
-	numberArray: ac,
-	colorArray: oc,
-	variableAnchorOffsetCollection: sc,
-	sprite: cc,
-	state: mc,
-	fontFaces: hc
+	projection: lc$1,
+	projectionDefinition: uc$1,
+	string: Js$1,
+	formatted: nc$1,
+	resolvedImage: rc$1,
+	padding: ic$1,
+	numberArray: ac$1,
+	colorArray: oc$1,
+	variableAnchorOffsetCollection: sc$1,
+	sprite: cc$1,
+	state: mc$1,
+	fontFaces: hc$1
 };
-function _c(e) {
+function _c$1(e) {
 	let t = e.value, n = e.valueSpec, r = e.styleSpec;
-	return e.validateSpec = _c, n.expression && Po(U$1(t)) ? Fs(e) : n.expression && Jo(js(t)) ? Is(e) : n.type && gc[n.type] ? gc[n.type](e) : Ms(No({}, e, { valueSpec: n.type ? r[n.type] : n }));
+	return e.validateSpec = _c$1, n.expression && Po$1(U$1(t)) ? Fs$1(e) : n.expression && Jo$1(js$1(t)) ? Is$1(e) : n.type && gc$1[n.type] ? gc$1[n.type](e) : Ms$1(No$1({}, e, { valueSpec: n.type ? r[n.type] : n }));
 }
-function vc(e) {
-	let t = e.value, n = e.key, r = Js(e);
+function vc$1(e) {
+	let t = e.value, n = e.key, r = Js$1(e);
 	return r.length ? r : (t.indexOf(`{fontstack}`) === -1 && r.push(new P(n, t, `"glyphs" url must include a "{fontstack}" token`)), t.indexOf(`{range}`) === -1 && r.push(new P(n, t, `"glyphs" url must include a "{range}" token`)), r);
 }
-function yc(e, t = M) {
+function yc$1(e, t = M) {
 	let n = [];
-	return n = n.concat(_c({
+	return n = n.concat(_c$1({
 		key: ``,
 		value: e,
 		valueSpec: t.$root,
 		styleSpec: t,
 		style: e,
-		validateSpec: _c,
+		validateSpec: _c$1,
 		objectElementValidators: {
-			glyphs: vc,
+			glyphs: vc$1,
 			"*"() {
 				return [];
 			}
 		}
-	})), e.constants && (n = n.concat(As({
+	})), e.constants && (n = n.concat(As$1({
 		key: `constants`,
 		value: e.constants,
 		style: e,
 		styleSpec: t,
-		validateSpec: _c
-	}))), xc(n);
+		validateSpec: _c$1
+	}))), xc$1(n);
 }
-yc.source = Sc$1(bc(Zs)), yc.sprite = Sc$1(bc(cc)), yc.glyphs = Sc$1(bc(vc)), yc.light = Sc$1(bc($s)), yc.sky = Sc$1(bc(ec)), yc.terrain = Sc$1(bc(tc$1)), yc.state = Sc$1(bc(mc)), yc.layer = Sc$1(bc(qs)), yc.filter = Sc$1(bc(Hs)), yc.paintProperty = Sc$1(bc(Gs)), yc.layoutProperty = Sc$1(bc(Ks$1));
-function bc(e) {
+yc$1.source = Sc$1(bc$1(Zs$1)), yc$1.sprite = Sc$1(bc$1(cc$1)), yc$1.glyphs = Sc$1(bc$1(vc$1)), yc$1.light = Sc$1(bc$1($s$1)), yc$1.sky = Sc$1(bc$1(ec$1)), yc$1.terrain = Sc$1(bc$1(tc$1)), yc$1.state = Sc$1(bc$1(mc$1)), yc$1.layer = Sc$1(bc$1(qs$1)), yc$1.filter = Sc$1(bc$1(Hs$1)), yc$1.paintProperty = Sc$1(bc$1(Gs$1)), yc$1.layoutProperty = Sc$1(bc$1(Ks$1));
+function bc$1(e) {
 	return function(t) {
-		return e(Object.assign({}, t, { validateSpec: _c }));
+		return e(Object.assign({}, t, { validateSpec: _c$1 }));
 	};
 }
-function xc(e) {
+function xc$1(e) {
 	return [].concat(e).sort((e, t) => e.line - t.line);
 }
 function Sc$1(e) {
 	return function(...t) {
-		return xc(e.apply(this, t));
+		return xc$1(e.apply(this, t));
 	};
 }
-new Set(Object.keys(M).filter((e) => e.startsWith(`source_`)).map((e) => e.slice(7).replaceAll(`_`, `-`)));
+var Cc$1 = {
+	type: `enum`,
+	"property-type": `data-constant`,
+	expression: {
+		interpolated: !1,
+		parameters: [`global-state`]
+	},
+	values: {
+		visible: {},
+		none: {}
+	},
+	transition: !1,
+	default: `visible`
+};
+var wc$1 = class {
+	constructor(e, t, n) {
+		this._rootKey = t, this._globalState = n, this.setValue(e);
+	}
+	evaluate() {
+		return this._literalValue ?? this._compiledValue.evaluate({});
+	}
+	setValue(e) {
+		if (e == null || e === `visible` || e === `none`) {
+			this._literalValue = e === `none` ? `none` : `visible`, this._compiledValue = void 0, this._globalStateRefs = /* @__PURE__ */ new Set();
+			return;
+		}
+		let t = Yo$1(e, this._rootKey, Cc$1, this._globalState);
+		if (t.result === `error`) throw this._literalValue = `visible`, this._compiledValue = void 0, Error(t.value.map((e) => `${e.key}: ${e.message}`).join(`, `));
+		this._literalValue = void 0, this._compiledValue = t.value, this._globalStateRefs = rs$1(t.value.expression);
+	}
+	getGlobalStateRefs() {
+		return this._globalStateRefs;
+	}
+};
+function Tc$1(e, t, n) {
+	return new wc$1(e, t, n);
+}
+var Ec$1 = yc$1;
+var Dc$1 = new Set(Object.keys(M).filter((e) => e.startsWith(`source_`)).map((e) => e.slice(7).replaceAll(`_`, `-`)));
+function Oc$1(e) {
+	return Object.entries(e.sources ?? {}).filter(([, e]) => !Dc$1.has(e.type)).map(([e]) => `sources.${e}`);
+}
+function kc$1(e, t) {
+	let n = Oc$1(t);
+	return Ac$1(e, Ec$1(t).filter(({ message: e }) => !n.some((t) => e.startsWith(`${t}:`) || e.startsWith(`${t}.`))));
+}
+function Ac$1(e, t) {
+	let n = !1;
+	for (let r of t) {
+		if (r.severity === `warning`) {
+			Vt(r.message);
+			continue;
+		}
+		e.fire(new Vn(Error(r.message))), n = !0;
+	}
+	return n;
+}
+function jc$1(e, t, n, r) {
+	return r?.validate !== !1 && Ac$1(e, t({
+		styleSpec: M,
+		...n
+	}));
+}
 var Mc$1 = class e {
 	constructor(e, t, n) {
 		let r = this.cells = [];
@@ -8481,7 +8949,7 @@ function W$1(e, t, n = {}) {
 		shallow: n.shallow || []
 	};
 }
-W$1(`Object`, Object), W$1(`Set`, Set), W$1(`TransferableGridIndex`, Mc$1), W$1(`Color`, B), W$1(`Error`, Error), W$1(`AJAXError`, On), W$1(`ResolvedImage`, oi$1), W$1(`StylePropertyFunction`, es$1), W$1(`StyleExpression`, Go, { omit: [`_evaluator`] }), W$1(`ZoomDependentExpression`, Zo), W$1(`ZoomConstantExpression`, Xo), W$1(`CompoundExpression`, _o$1, { omit: [`_evaluate`] });
+W$1(`Object`, Object), W$1(`Set`, Set), W$1(`TransferableGridIndex`, Mc$1), W$1(`Color`, B), W$1(`Error`, Error), W$1(`AJAXError`, On), W$1(`ResolvedImage`, oi$1), W$1(`StylePropertyFunction`, es$1), W$1(`StyleExpression`, Go$1, { omit: [`_evaluator`] }), W$1(`ZoomDependentExpression`, Zo$1), W$1(`ZoomConstantExpression`, Xo$1), W$1(`CompoundExpression`, _o$1, { omit: [`_evaluate`] });
 for (let e in go$1) go$1[e]._classRegistryKey || W$1(`Expression_${e}`, go$1[e]);
 function Pc$1(e) {
 	return e && typeof ArrayBuffer < `u` && (e instanceof ArrayBuffer || e.constructor?.name === `ArrayBuffer`);
@@ -8634,7 +9102,7 @@ var al$1 = new class {
 		}), Error(`RTL Text Plugin failed to import scripts from ${n}`);
 	}
 }();
-var G = class {
+var G$1 = class {
 	constructor(e, t) {
 		this.isSupportedScript = ol$1, this.zoom = e, t ? (this.now = t.now || 0, this.fadeDuration = t.fadeDuration || 0, this.zoomHistory = t.zoomHistory || new Bc$1(), this.transition = t.transition || {}) : (this.now = 0, this.fadeDuration = 0, this.zoomHistory = new Bc$1(), this.transition = {});
 	}
@@ -8657,6 +9125,137 @@ var G = class {
 function ol$1(e) {
 	return il$1(e, al$1.getRTLTextPluginStatus() === `loaded`);
 }
+var sl$1 = `-transition`;
+var cl$1 = class {
+	constructor(e, t, n, r) {
+		this.property = e, this.value = t, this.expression = ts$1(t === void 0 ? e.specification.default : t, n, e.specification, r);
+	}
+	isDataDriven() {
+		return this.expression.kind === `source` || this.expression.kind === `composite`;
+	}
+	getGlobalStateRefs() {
+		return this.expression.globalStateRefs || /* @__PURE__ */ new Set();
+	}
+	possiblyEvaluate(e, t, n) {
+		return this.property.possiblyEvaluate(this, e, t, n);
+	}
+};
+var ll$1 = class {
+	constructor(e, t, n) {
+		this.property = e, this.value = new cl$1(e, void 0, t, n);
+	}
+	transitioned(e, t) {
+		return new dl$1(this.property, this.value, t, Dt({}, e.transition, this.transition), e.now);
+	}
+	untransitioned() {
+		return new dl$1(this.property, this.value, null, {}, 0);
+	}
+};
+var ul$1 = class {
+	constructor(e, t, n) {
+		this._properties = e, this._values = Object.create(e.defaultTransitionablePropertyValues), this._globalState = n, this._rootKey = t;
+	}
+	_propertyRootKey(e) {
+		return `${this._rootKey}.${String(e)}`;
+	}
+	hasProperty(e) {
+		return e in this._properties.defaultTransitionablePropertyValues;
+	}
+	getValue(e) {
+		return zt(this._values[e].value.value);
+	}
+	setValue(e, t) {
+		Object.hasOwn(this._values, e) || (this._values[e] = new ll$1(this._values[e].property, this._propertyRootKey(e), this._globalState)), this._values[e].value = new cl$1(this._values[e].property, t === null ? void 0 : zt(t), this._propertyRootKey(e), this._globalState);
+	}
+	getTransition(e) {
+		return zt(this._values[e].transition);
+	}
+	setTransition(e, t) {
+		Object.hasOwn(this._values, e) || (this._values[e] = new ll$1(this._values[e].property, this._propertyRootKey(e), this._globalState)), this._values[e].transition = zt(t) || void 0;
+	}
+	serialize() {
+		let e = {};
+		for (let t of Object.keys(this._values)) {
+			let n = this.getValue(t);
+			n !== void 0 && (e[t] = n);
+			let r = this.getTransition(t);
+			r !== void 0 && (e[`${t}${sl$1}`] = r);
+		}
+		return e;
+	}
+	transitioned(e, t) {
+		let n = new fl$1(this._properties);
+		for (let r of Object.keys(this._values)) n._values[r] = this._values[r].transitioned(e, t._values[r]);
+		return n;
+	}
+	untransitioned() {
+		let e = new fl$1(this._properties);
+		for (let t of Object.keys(this._values)) e._values[t] = this._values[t].untransitioned();
+		return e;
+	}
+};
+var dl$1 = class {
+	constructor(e, t, n, r, i) {
+		this.property = e, this.value = t, this.begin = i + r.delay || 0, this.end = this.begin + r.duration || 0, e.specification.transition && (r.delay || r.duration) && (this.prior = n);
+	}
+	possiblyEvaluate(e, t, n) {
+		let r = e.now || 0, i = this.value.possiblyEvaluate(e, t, n), a = this.prior;
+		if (!a) return i;
+		if (r > this.end || this.value.isDataDriven()) return this.prior = null, i;
+		if (r < this.begin) return a.possiblyEvaluate(e, t, n);
+		{
+			let o = (r - this.begin) / (this.end - this.begin);
+			return this.property.interpolate(a.possiblyEvaluate(e, t, n), i, St(o));
+		}
+	}
+};
+var fl$1 = class {
+	constructor(e) {
+		this._properties = e, this._values = Object.create(e.defaultTransitioningPropertyValues);
+	}
+	possiblyEvaluate(e, t, n) {
+		let r = new hl$1(this._properties);
+		for (let i of Object.keys(this._values)) r._values[i] = this._values[i].possiblyEvaluate(e, t, n);
+		return r;
+	}
+	hasTransition() {
+		for (let e of Object.keys(this._values)) if (this._values[e].prior) return !0;
+		return !1;
+	}
+};
+var pl$1 = class {
+	constructor(e, t, n) {
+		this._properties = e, this._values = Object.create(e.defaultPropertyValues), this._globalState = n, this._rootKey = t;
+	}
+	_propertyRootKey(e) {
+		return `${this._rootKey}.${String(e)}`;
+	}
+	hasValue(e) {
+		return this._values[e].value !== void 0;
+	}
+	hasProperty(e) {
+		return e in this._properties.defaultPropertyValues;
+	}
+	getValue(e) {
+		return zt(this._values[e].value);
+	}
+	setValue(e, t) {
+		this._values[e] = new cl$1(this._values[e].property, t === null ? void 0 : zt(t), this._propertyRootKey(e), this._globalState);
+	}
+	serialize() {
+		let e = {};
+		for (let t of Object.keys(this._values)) {
+			let n = this.getValue(t);
+			n !== void 0 && (e[t] = n);
+		}
+		return e;
+	}
+	possiblyEvaluate(e, t, n) {
+		let r = new hl$1(this._properties);
+		for (let i of Object.keys(this._values)) r._values[i] = this._values[i].possiblyEvaluate(e, t, n);
+		return r;
+	}
+};
 var ml$1 = class {
 	constructor(e, t, n) {
 		this.property = e, this.value = t, this.parameters = n;
@@ -8785,7 +9384,7 @@ var yl$1 = class {
 				let i = e.expression.evaluate(t, null, {}, n, r);
 				return this._calculate(i, i, i, t);
 			}
-			return this._calculate(e.expression.evaluate(new G(Math.floor(t.zoom - 1), t)), e.expression.evaluate(new G(Math.floor(t.zoom), t)), e.expression.evaluate(new G(Math.floor(t.zoom + 1), t)), t);
+			return this._calculate(e.expression.evaluate(new G$1(Math.floor(t.zoom - 1), t)), e.expression.evaluate(new G$1(Math.floor(t.zoom), t)), e.expression.evaluate(new G$1(Math.floor(t.zoom + 1), t)), t);
 		}
 	}
 	_calculate(e, t, n, r) {
@@ -8812,8 +9411,184 @@ var bl$1 = class {
 		return !1;
 	}
 };
+var xl$1 = class {
+	constructor(e) {
+		this.properties = e, this.defaultPropertyValues = {}, this.defaultTransitionablePropertyValues = {}, this.defaultTransitioningPropertyValues = {}, this.defaultPossiblyEvaluatedValues = {}, this.overridableProperties = [];
+		for (let t in e) {
+			let n = e[t];
+			n.specification.overridable && this.overridableProperties.push(t);
+			let r = this.defaultPropertyValues[t] = new cl$1(n, void 0, n.name, void 0), i = this.defaultTransitionablePropertyValues[t] = new ll$1(n, n.name, void 0);
+			this.defaultTransitioningPropertyValues[t] = i.untransitioned(), this.defaultPossiblyEvaluatedValues[t] = r.possiblyEvaluate({});
+		}
+	}
+};
 W$1(`DataDrivenProperty`, q$1), W$1(`DataConstantProperty`, K$1), W$1(`CrossFadedDataDrivenProperty`, vl$1), W$1(`CrossFadedProperty`, yl$1), W$1(`ColorRampProperty`, bl$1);
+var Sl$1 = ` is a PAINT property not a LAYOUT property. Use get/setPaintProperty instead?`;
+var Cl$1 = ` is a LAYOUT property not a PAINT property. Use get/setLayoutProperty instead?`;
+var wl$1 = class extends Hn {
+	constructor(e, t, n) {
+		if (super(), this.id = e.id, this.type = e.type, this._globalState = n, this._featureFilter = {
+			filter: () => !0,
+			needGeometry: !1,
+			getGlobalStateRefs: () => /* @__PURE__ */ new Set()
+		}, this._visibilityExpression = Tc$1(this.visibility, `layers[${this.id}].layout.visibility`, n), e.type !== `custom` && (this.metadata = e.metadata, this.minzoom = e.minzoom, this.maxzoom = e.maxzoom, e.type !== `background` && (this.source = e.source, this.sourceLayer = e[`source-layer`], this.filter = e.filter, this._featureFilter = _s$1(e.filter, `layers[${this.id}].filter`, n)), t.layout && (this._unevaluatedLayout = new pl$1(t.layout, `layers[${this.id}].layout`, n)), t.paint)) {
+			this._transitionablePaint = new ul$1(t.paint, `layers[${this.id}].paint`, n);
+			for (let t in e.paint) this.setPaintProperty(t, e.paint[t], { validate: !1 });
+			for (let t in e.layout) this.setLayoutProperty(t, e.layout[t], { validate: !1 });
+			this._transitioningPaint = this._transitionablePaint.untransitioned(), this.paint = new hl$1(t.paint);
+		}
+	}
+	setFilter(e) {
+		this.filter = e, this._featureFilter = _s$1(e, `layers[${this.id}].filter`, this._globalState);
+	}
+	getCrossfadeParameters() {
+		return this._crossfadeParameters;
+	}
+	getLayoutProperty(e) {
+		if (e === `visibility`) return this.visibility;
+		if (this._transitionablePaint?.hasProperty(e)) throw Error(e + Sl$1);
+		if (!this._unevaluatedLayout) throw Error(`Cannot get layout property "${e}" on layer type "${this.type}" which has no layout properties.`);
+		return this._unevaluatedLayout.getValue(e);
+	}
+	getLayoutAffectingGlobalStateRefs() {
+		let e = /* @__PURE__ */ new Set();
+		for (let t of this._visibilityExpression.getGlobalStateRefs()) e.add(t);
+		if (this._unevaluatedLayout) for (let t in this._unevaluatedLayout._values) {
+			let n = this._unevaluatedLayout._values[t];
+			for (let t of n.getGlobalStateRefs()) e.add(t);
+		}
+		for (let t of this._featureFilter.getGlobalStateRefs()) e.add(t);
+		return e;
+	}
+	getPaintAffectingGlobalStateRefs() {
+		let e = new globalThis.Map();
+		if (this._transitionablePaint) for (let t in this._transitionablePaint._values) {
+			let n = this._transitionablePaint._values[t].value;
+			for (let r of n.getGlobalStateRefs()) {
+				let i = e.get(r) ?? [];
+				i.push({
+					name: t,
+					value: n.value
+				}), e.set(r, i);
+			}
+		}
+		return e;
+	}
+	getVisibilityAffectingGlobalStateRefs() {
+		return this._visibilityExpression.getGlobalStateRefs();
+	}
+	setLayoutProperty(e, t, n = {}) {
+		if (e === `visibility`) {
+			this.visibility = t, this._visibilityExpression.setValue(t), this.recalculateVisibility();
+			return;
+		}
+		if (this._transitionablePaint?.hasProperty(e)) {
+			this.fire(new Vn(Error(e + Sl$1)));
+			return;
+		}
+		t != null && this._validate(Ec$1.layoutProperty, `layers.${this.id}.layout.${e}`, e, t, n) || this._unevaluatedLayout.setValue(e, t);
+	}
+	getPaintProperty(e) {
+		if (e.endsWith(`-transition`)) {
+			let t = e.slice(0, -11);
+			if (t === `visibility` || this._unevaluatedLayout?.hasProperty(t)) throw Error(e + Cl$1);
+			return this._transitionablePaint.getTransition(t);
+		}
+		if (e === `visibility` || this._unevaluatedLayout?.hasProperty(e)) throw Error(e + Cl$1);
+		return this._transitionablePaint.getValue(e);
+	}
+	setPaintProperty(e, t, n = {}) {
+		if (e === `visibility` || this._unevaluatedLayout?.hasProperty(e)) return this.fire(new Vn(Error(e + Cl$1))), !1;
+		if (t != null && this._validate(Ec$1.paintProperty, `layers.${this.id}.paint.${e}`, e, t, n)) return !1;
+		if (e.endsWith(`-transition`)) return this._transitionablePaint.setTransition(e.slice(0, -11), t || void 0), !1;
+		{
+			let n = this._transitionablePaint._values[e], r = n.property.specification[`property-type`] === `cross-faded-data-driven`, i = n.value.isDataDriven(), a = n.value;
+			this._transitionablePaint.setValue(e, t), this._handleSpecialPaintPropertyUpdate(e);
+			let o = this._transitionablePaint._values[e].value;
+			return o.isDataDriven() || i || r || this._handleOverridablePaintPropertyUpdate(e, a, o);
+		}
+	}
+	_handleSpecialPaintPropertyUpdate(e) {}
+	_handleOverridablePaintPropertyUpdate(e, t, n) {
+		return !1;
+	}
+	isHidden(e = this.minzoom, t = !1) {
+		return this.minzoom && e < (t ? Math.floor(this.minzoom) : this.minzoom) || this.maxzoom && e >= this.maxzoom ? !0 : this._evaluatedVisibility === `none`;
+	}
+	updateTransitions(e) {
+		this._transitioningPaint = this._transitionablePaint.transitioned(e, this._transitioningPaint);
+	}
+	hasTransition() {
+		return this._transitioningPaint.hasTransition();
+	}
+	recalculateVisibility() {
+		this._evaluatedVisibility = this._visibilityExpression.evaluate();
+	}
+	recalculate(e, t) {
+		e.getCrossfadeParameters && (this._crossfadeParameters = e.getCrossfadeParameters()), this._unevaluatedLayout && (this.layout = this._unevaluatedLayout.possiblyEvaluate(e, void 0, t)), this.paint = this._transitioningPaint.possiblyEvaluate(e, void 0, t);
+	}
+	serialize() {
+		let e = {
+			id: this.id,
+			type: this.type,
+			source: this.source,
+			"source-layer": this.sourceLayer,
+			metadata: this.metadata,
+			minzoom: this.minzoom,
+			maxzoom: this.maxzoom,
+			filter: this.filter,
+			layout: this._unevaluatedLayout?.serialize(),
+			paint: this._transitionablePaint?.serialize()
+		};
+		return this.visibility && (e.layout ||= {}, e.layout.visibility = this.visibility), Lt(e, (e, t) => e !== void 0 && !(t === `layout` && !Object.keys(e).length) && !(t === `paint` && !Object.keys(e).length));
+	}
+	_validate(e, t, n, r, i = {}) {
+		return jc$1(this, e, {
+			key: t,
+			layerType: this.type,
+			objectKey: n,
+			value: r
+		}, i);
+	}
+	is3D() {
+		return !1;
+	}
+	isTileClipped() {
+		return !1;
+	}
+	hasOffscreenPass() {
+		return !1;
+	}
+	resize() {}
+	isStateDependent() {
+		for (let e in this.paint._values) {
+			let t = this.paint.get(e);
+			if (!(!(t instanceof ml$1) || !Ao$1(t.property.specification)) && (t.value.kind === `source` || t.value.kind === `composite`) && t.value.isStateDependent) return !0;
+		}
+		return !1;
+	}
+};
+var Tl$1;
+var El$1 = () => Tl$1 ||= new xl$1({
+	"raster-opacity": new K$1(M.paint_raster[`raster-opacity`], `raster-opacity`),
+	"raster-hue-rotate": new K$1(M.paint_raster[`raster-hue-rotate`], `raster-hue-rotate`),
+	"raster-brightness-min": new K$1(M.paint_raster[`raster-brightness-min`], `raster-brightness-min`),
+	"raster-brightness-max": new K$1(M.paint_raster[`raster-brightness-max`], `raster-brightness-max`),
+	"raster-saturation": new K$1(M.paint_raster[`raster-saturation`], `raster-saturation`),
+	"raster-contrast": new K$1(M.paint_raster[`raster-contrast`], `raster-contrast`),
+	resampling: new K$1(M.paint_raster.resampling, `resampling`),
+	"raster-resampling": new K$1(M.paint_raster[`raster-resampling`], `raster-resampling`),
+	"raster-fade-duration": new K$1(M.paint_raster[`raster-fade-duration`], `raster-fade-duration`)
+});
+var Dl$1 = { get paint() {
+	return El$1();
+} };
 var Ol$1 = (e) => e.type === `raster`;
+var kl$1 = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Dl$1, t);
+	}
+};
 var Al$1 = {
 	Int8: Int8Array,
 	Uint8: Uint8Array,
@@ -9482,6 +10257,7 @@ var gu$1 = class extends tu$1 {
 };
 W$1(`FeatureIndexArray`, gu$1);
 var _u$1 = class extends Fl$1 {};
+var vu$1 = class extends Il$1 {};
 var yu$1 = class extends Ll$1 {};
 var bu$1 = class extends Fl$1 {};
 var xu$1 = class extends Fl$1 {};
@@ -9828,11 +10604,11 @@ var ud$1 = class {
 		})), this.paintVertexArray = new r();
 	}
 	populatePaintArray(e, t, n) {
-		let r = this.paintVertexArray.length, i = this.expression.evaluate(new G(0, n), t, {}, n.canonical, [], n.formattedSection);
+		let r = this.paintVertexArray.length, i = this.expression.evaluate(new G$1(0, n), t, {}, n.canonical, [], n.formattedSection);
 		this.paintVertexArray.resize(e), this._setPaintValue(r, e, i);
 	}
 	updatePaintArray(e, t, n, r, i) {
-		let a = this.expression.evaluate(new G(0, i), n, r);
+		let a = this.expression.evaluate(new G$1(0, i), n, r);
 		this._setPaintValue(e, t, a);
 	}
 	_setPaintValue(e, t, n) {
@@ -9861,11 +10637,11 @@ var dd$1 = class {
 		})), this.paintVertexArray = new a();
 	}
 	populatePaintArray(e, t, n) {
-		let r = this.expression.evaluate(new G(this.zoom, n), t, {}, n.canonical, [], n.formattedSection), i = this.expression.evaluate(new G(this.zoom + 1, n), t, {}, n.canonical, [], n.formattedSection), a = this.paintVertexArray.length;
+		let r = this.expression.evaluate(new G$1(this.zoom, n), t, {}, n.canonical, [], n.formattedSection), i = this.expression.evaluate(new G$1(this.zoom + 1, n), t, {}, n.canonical, [], n.formattedSection), a = this.paintVertexArray.length;
 		this.paintVertexArray.resize(e), this._setPaintValue(a, e, r, i);
 	}
 	updatePaintArray(e, t, n, r, i) {
-		let a = this.expression.evaluate(new G(this.zoom, i), n, r), o = this.expression.evaluate(new G(this.zoom + 1, i), n, r);
+		let a = this.expression.evaluate(new G$1(this.zoom, i), n, r), o = this.expression.evaluate(new G$1(this.zoom + 1, i), n, r);
 		this._setPaintValue(e, t, a, o);
 	}
 	_setPaintValue(e, t, n, r) {
@@ -10203,7 +10979,7 @@ var Ed$1 = class {
 			let e = r;
 			a = e.layout.get(`circle-sort-key`), o = !a.isConstant(), s ||= e.paint.get(`circle-pitch-alignment`) === `map`;
 		}
-		let c = s ? t.subdivisionGranularity.circle : 1, l = new G(this.zoom), u = this.layers[0]._featureFilter.needGeometry;
+		let c = s ? t.subdivisionGranularity.circle : 1, l = new G$1(this.zoom), u = this.layers[0]._featureFilter.needGeometry;
 		for (let { feature: t, id: r, index: s, sourceLayerIndex: c } of e) {
 			let e = Cd$1(t, u);
 			if (!this.layers[0]._featureFilter.filter(l, e, n)) continue;
@@ -10297,6 +11073,75 @@ var Ed$1 = class {
 	}
 };
 W$1(`CircleBucket`, Ed$1, { omit: [`layers`] });
+function Dd$1(e, t) {
+	for (let n of e) if (Ld$1(t, n)) return !0;
+	for (let n of t) if (Ld$1(e, n)) return !0;
+	return Md$1(e, t);
+}
+function Od$1(e, t, n) {
+	return Ld$1(e, t) ? !0 : Pd$1(t, e, n);
+}
+function kd$1(e, t) {
+	if (e.length === 1) return Id$1(t, e[0]);
+	for (let n of t) for (let t of n) if (Ld$1(e, t)) return !0;
+	for (let n of e) if (Id$1(t, n)) return !0;
+	for (let n of t) if (Md$1(e, n)) return !0;
+	return !1;
+}
+function Ad$1(e, t, n) {
+	for (let r of t) {
+		if (e.length >= 3) {
+			for (let t of r) if (Ld$1(e, t)) return !0;
+		}
+		if (jd$1(e, r, n)) return !0;
+	}
+	return !1;
+}
+function jd$1(e, t, n) {
+	if (e.length > 1) {
+		if (Md$1(e, t)) return !0;
+		for (let r of t) if (Pd$1(r, e, n)) return !0;
+	}
+	for (let r of e) if (Pd$1(r, t, n)) return !0;
+	return !1;
+}
+function Md$1(e, t) {
+	if (e.length === 0 || t.length === 0) return !1;
+	for (let n = 0; n < e.length - 1; n++) {
+		let r = e[n], i = e[n + 1];
+		for (let e = 0; e < t.length - 1; e++) {
+			let n = t[e], a = t[e + 1];
+			if (Nd$1(r, i, n, a)) return !0;
+		}
+	}
+	return !1;
+}
+function Nd$1(e, t, n, r) {
+	return Ht(e, n, r) !== Ht(t, n, r) && Ht(e, t, n) !== Ht(e, t, r);
+}
+function Pd$1(e, t, n) {
+	let r = n * n;
+	if (t.length === 1) return e.distSqr(t[0]) < r;
+	for (let n = 1; n < t.length; n++) {
+		let i = t[n - 1], a = t[n];
+		if (Fd$1(e, i, a) < r) return !0;
+	}
+	return !1;
+}
+function Fd$1(e, t, n) {
+	let r = t.distSqr(n);
+	if (r === 0) return e.distSqr(t);
+	let i = ((e.x - t.x) * (n.x - t.x) + (e.y - t.y) * (n.y - t.y)) / r;
+	return i < 0 ? e.distSqr(t) : i > 1 ? e.distSqr(n) : e.distSqr(n.sub(t)._mult(i)._add(t));
+}
+function Id$1(e, t) {
+	let n = !1, r, i, a;
+	for (let o of e) {
+		r = o;
+		for (let e = 0, o = r.length - 1; e < r.length; o = e++) i = r[e], a = r[o], i.y > t.y != a.y > t.y && t.x < (a.x - i.x) * (t.y - i.y) / (a.y - i.y) + i.x && (n = !n);
+	}
+	return n;
+}
 function Ld$1(e, t) {
 	let n = !1;
 	for (let r = 0, i = e.length - 1; r < e.length; i = r++) {
@@ -10328,9 +11173,134 @@ function zd$1(e, t, n) {
 	let a = Ht(e, t, n[0]);
 	return a !== Ht(e, t, n[1]) || a !== Ht(e, t, n[2]) || a !== Ht(e, t, n[3]);
 }
-var rf = (e) => e.type === `circle`;
-var of = class extends Ed$1 {};
-W$1(`HeatmapBucket`, of, { omit: [`layers`] });
+function Bd$1(e, t, n) {
+	let r = t.paint.get(e).value;
+	return r.kind === `constant` ? r.value : n.programConfigurations.get(t.id).getMaxValue(e);
+}
+function Vd$1(e) {
+	return Math.sqrt(e[0] * e[0] + e[1] * e[1]);
+}
+function Hd$1(e, t, n, r, i) {
+	if (!t[0] && !t[1]) return e;
+	let a = l.convert(t)._mult(i);
+	n === `viewport` && a._rotate(-r);
+	let o = [];
+	for (let t of e) o.push(t.sub(a));
+	return o;
+}
+function Ud$1(e) {
+	let t = [];
+	for (let n = 0; n < e.length; n++) {
+		let r = e[n], i = t.at(-1);
+		(n === 0 || i && !r.equals(i)) && t.push(r);
+	}
+	return t;
+}
+function Wd$1(e, t) {
+	let n = [];
+	for (let r of e) {
+		let e = Ud$1(r), i = [];
+		for (let n = 0; n < e.length; n++) {
+			let r = e[n], a = e[n - 1], o = e[n + 1], s = n === 0 ? new l(0, 0) : r.sub(a)._unit()._perp(), c = n === e.length - 1 ? new l(0, 0) : o.sub(r)._unit()._perp(), u = s._add(c)._unit(), d = u.x * c.x + u.y * c.y;
+			d !== 0 && u._mult(1 / d), i.push(u._mult(t)._add(r));
+		}
+		n.push(i);
+	}
+	return n;
+}
+function Gd$1({ queryGeometry: e, size: t }, n) {
+	return Od$1(e, n, t);
+}
+function Kd$1({ queryGeometry: e, size: t, transform: n, unwrappedTileID: r, getElevation: i }, a) {
+	return Od$1(e, a, t * (n.projectTileCoordinates(a.x, a.y, r, i).signedDistanceFromCamera / n.cameraToCenterDistance));
+}
+function qd$1({ queryGeometry: e, size: t, transform: n, unwrappedTileID: r, getElevation: i }, a) {
+	let o = n.projectTileCoordinates(a.x, a.y, r, i).signedDistanceFromCamera, s = t * (n.cameraToCenterDistance / o);
+	return Od$1(e, Xd$1(a, n, r, i), s);
+}
+function Jd$1({ queryGeometry: e, size: t, transform: n, unwrappedTileID: r, getElevation: i }, a) {
+	return Od$1(e, Xd$1(a, n, r, i), t);
+}
+function Yd$1({ queryGeometry: e, size: t, transform: n, unwrappedTileID: r, getElevation: i, pitchAlignment: a = `map`, pitchScale: o = `map` }, s) {
+	let c = a === `map` ? o === `map` ? Gd$1 : Kd$1 : o === `map` ? qd$1 : Jd$1, l = {
+		queryGeometry: e,
+		size: t,
+		transform: n,
+		unwrappedTileID: r,
+		getElevation: i
+	};
+	for (let e of s) for (let t of e) if (c(l, t)) return !0;
+	return !1;
+}
+function Xd$1(e, t, n, r) {
+	let i = t.projectTileCoordinates(e.x, e.y, n, r).point;
+	return new l((i.x * .5 + .5) * t.width, (-i.y * .5 + .5) * t.height);
+}
+function Zd$1(e, t, n, r) {
+	return e.map((e) => Xd$1(e, t, n, r));
+}
+var Qd$1;
+var $d$1 = () => Qd$1 ||= new xl$1({ "circle-sort-key": new q$1(M.layout_circle[`circle-sort-key`], `circle-sort-key`) });
+var ef$1;
+var tf$1 = () => ef$1 ||= new xl$1({
+	"circle-radius": new q$1(M.paint_circle[`circle-radius`], `circle-radius`),
+	"circle-color": new q$1(M.paint_circle[`circle-color`], `circle-color`),
+	"circle-blur": new q$1(M.paint_circle[`circle-blur`], `circle-blur`),
+	"circle-opacity": new q$1(M.paint_circle[`circle-opacity`], `circle-opacity`),
+	"circle-translate": new K$1(M.paint_circle[`circle-translate`], `circle-translate`),
+	"circle-translate-anchor": new K$1(M.paint_circle[`circle-translate-anchor`], `circle-translate-anchor`),
+	"circle-pitch-scale": new K$1(M.paint_circle[`circle-pitch-scale`], `circle-pitch-scale`),
+	"circle-pitch-alignment": new K$1(M.paint_circle[`circle-pitch-alignment`], `circle-pitch-alignment`),
+	"circle-stroke-width": new q$1(M.paint_circle[`circle-stroke-width`], `circle-stroke-width`),
+	"circle-stroke-color": new q$1(M.paint_circle[`circle-stroke-color`], `circle-stroke-color`),
+	"circle-stroke-opacity": new q$1(M.paint_circle[`circle-stroke-opacity`], `circle-stroke-opacity`)
+});
+var nf$1 = {
+	get paint() {
+		return tf$1();
+	},
+	get layout() {
+		return $d$1();
+	}
+};
+var rf$1 = (e) => e.type === `circle`;
+var af$1 = class extends wl$1 {
+	constructor(e, t) {
+		super(e, nf$1, t);
+	}
+	createBucket(e) {
+		return new Ed$1(e);
+	}
+	queryRadius(e) {
+		let t = e;
+		return Bd$1(`circle-radius`, this, t) + Bd$1(`circle-stroke-width`, this, t) + Vd$1(this.paint.get(`circle-translate`));
+	}
+	queryIntersectsFeature({ queryGeometry: e, feature: t, featureState: n, geometry: r, transform: i, pixelsToTileUnits: a, unwrappedTileID: o, getElevation: s }) {
+		let c = Hd$1(e, this.paint.get(`circle-translate`), this.paint.get(`circle-translate-anchor`), -i.bearingInRadians, a), l = this.paint.get(`circle-radius`).evaluate(t, n) + this.paint.get(`circle-stroke-width`).evaluate(t, n), u = this.paint.get(`circle-pitch-scale`), d = this.paint.get(`circle-pitch-alignment`), f, p;
+		return d === `map` ? (f = c, p = l * a) : (f = Zd$1(c, i, o, s), p = l), Yd$1({
+			queryGeometry: f,
+			size: p,
+			transform: i,
+			unwrappedTileID: o,
+			getElevation: s,
+			pitchAlignment: d,
+			pitchScale: u
+		}, r);
+	}
+};
+var of$1 = class extends Ed$1 {};
+W$1(`HeatmapBucket`, of$1, { omit: [`layers`] });
+var sf$1;
+var cf$1 = () => sf$1 ||= new xl$1({
+	"heatmap-radius": new q$1(M.paint_heatmap[`heatmap-radius`], `heatmap-radius`),
+	"heatmap-weight": new q$1(M.paint_heatmap[`heatmap-weight`], `heatmap-weight`),
+	"heatmap-intensity": new K$1(M.paint_heatmap[`heatmap-intensity`], `heatmap-intensity`),
+	"heatmap-color": new bl$1(M.paint_heatmap[`heatmap-color`], `heatmap-color`),
+	"heatmap-opacity": new K$1(M.paint_heatmap[`heatmap-opacity`], `heatmap-opacity`)
+});
+var lf$1 = { get paint() {
+	return cf$1();
+} };
 function uf$1(e, { width: t, height: n }, r, i) {
 	if (!i) i = new Uint8Array(t * n * r);
 	else if (i instanceof Uint8ClampedArray) i = new Uint8Array(i.buffer);
@@ -10366,7 +11336,7 @@ function ff$1(e, t, n, r, i, a) {
 	}
 	return t;
 }
-var pf = class e {
+var pf$1 = class e {
 	constructor(e, t) {
 		uf$1(this, e, 1, t);
 	}
@@ -10383,7 +11353,7 @@ var pf = class e {
 		ff$1(e, t, n, r, i, 1);
 	}
 };
-var mf = class e {
+var mf$1 = class e {
 	constructor(e, t) {
 		uf$1(this, e, 4, t);
 	}
@@ -10407,7 +11377,7 @@ var mf = class e {
 		this.data[r + 0] = Math.round(n.r * 255 / n.a), this.data[r + 1] = Math.round(n.g * 255 / n.a), this.data[r + 2] = Math.round(n.b * 255 / n.a), this.data[r + 3] = Math.round(n.a * 255);
 	}
 };
-function hf(e) {
+function hf$1(e) {
 	let t = new Uint8Array(e.length);
 	for (let n = 0; n < e.length; n += 4) {
 		let r = e[n + 3];
@@ -10415,9 +11385,9 @@ function hf(e) {
 	}
 	return t;
 }
-W$1(`AlphaImage`, pf), W$1(`RGBAImage`, mf);
-function gf(e) {
-	let t = {}, n = e.resolution || 256, r = e.clips ? e.clips.length : 1, i = e.image || new mf({
+W$1(`AlphaImage`, pf$1), W$1(`RGBAImage`, mf$1);
+function gf$1(e) {
+	let t = {}, n = e.resolution || 256, r = e.clips ? e.clips.length : 1, i = e.image || new mf$1({
 		width: n,
 		height: r
 	});
@@ -10437,13 +11407,96 @@ function gf(e) {
 	}
 	return i;
 }
-var _f = `big-fb`;
-var vf = (e) => e.type === `heatmap`;
-var Cf = (e) => e.type === `hillshade`;
-function Of(e) {
+var _f$1 = `big-fb`;
+var vf$1 = (e) => e.type === `heatmap`;
+var yf$1 = class extends wl$1 {
+	createBucket(e) {
+		return new of$1(e);
+	}
+	constructor(e, t) {
+		super(e, lf$1, t), this.heatmapFbos = /* @__PURE__ */ new Map(), this._updateColorRamp();
+	}
+	_handleSpecialPaintPropertyUpdate(e) {
+		e === `heatmap-color` && this._updateColorRamp();
+	}
+	_updateColorRamp() {
+		let e = this._transitionablePaint._values[`heatmap-color`].value.expression;
+		this.colorRamp = gf$1({
+			expression: e,
+			evaluationKey: `heatmapDensity`,
+			image: this.colorRamp
+		}), this.colorRampTexture = null;
+	}
+	resize() {
+		this.heatmapFbos.has(`big-fb`) && this.heatmapFbos.delete(_f$1);
+	}
+	queryRadius(e) {
+		return Bd$1(`heatmap-radius`, this, e);
+	}
+	queryIntersectsFeature({ queryGeometry: e, feature: t, featureState: n, geometry: r, transform: i, pixelsToTileUnits: a, unwrappedTileID: o, getElevation: s }) {
+		return Yd$1({
+			queryGeometry: e,
+			size: this.paint.get(`heatmap-radius`).evaluate(t, n) * a,
+			transform: i,
+			unwrappedTileID: o,
+			getElevation: s
+		}, r);
+	}
+	hasOffscreenPass() {
+		return this.paint.get(`heatmap-opacity`) !== 0 && !this.isHidden();
+	}
+};
+var bf$1;
+var xf$1 = () => bf$1 ||= new xl$1({
+	"hillshade-illumination-direction": new K$1(M.paint_hillshade[`hillshade-illumination-direction`], `hillshade-illumination-direction`),
+	"hillshade-illumination-altitude": new K$1(M.paint_hillshade[`hillshade-illumination-altitude`], `hillshade-illumination-altitude`),
+	"hillshade-illumination-anchor": new K$1(M.paint_hillshade[`hillshade-illumination-anchor`], `hillshade-illumination-anchor`),
+	"hillshade-exaggeration": new K$1(M.paint_hillshade[`hillshade-exaggeration`], `hillshade-exaggeration`),
+	"hillshade-shadow-color": new K$1(M.paint_hillshade[`hillshade-shadow-color`], `hillshade-shadow-color`),
+	"hillshade-highlight-color": new K$1(M.paint_hillshade[`hillshade-highlight-color`], `hillshade-highlight-color`),
+	"hillshade-accent-color": new K$1(M.paint_hillshade[`hillshade-accent-color`], `hillshade-accent-color`),
+	"hillshade-method": new K$1(M.paint_hillshade[`hillshade-method`], `hillshade-method`),
+	resampling: new K$1(M.paint_hillshade.resampling, `resampling`)
+});
+var Sf$1 = { get paint() {
+	return xf$1();
+} };
+var Cf$1 = (e) => e.type === `hillshade`;
+var wf$1 = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Sf$1, t), this.recalculate({
+			zoom: 0,
+			zoomHistory: {}
+		}, void 0);
+	}
+	getIlluminationProperties() {
+		let e = this.paint.get(`hillshade-illumination-direction`).values, t = this.paint.get(`hillshade-illumination-altitude`).values, n = this.paint.get(`hillshade-highlight-color`).values, r = this.paint.get(`hillshade-shadow-color`).values, i = Math.max(e.length, t.length, n.length, r.length);
+		e = e.concat(Array(i - e.length).fill(e.at(-1))), t = t.concat(Array(i - t.length).fill(t.at(-1))), n = n.concat(Array(i - n.length).fill(n.at(-1))), r = r.concat(Array(i - r.length).fill(r.at(-1)));
+		let a = t.map(sn);
+		return {
+			directionRadians: e.map(sn),
+			altitudeRadians: a,
+			shadowColor: r,
+			highlightColor: n
+		};
+	}
+	hasOffscreenPass() {
+		return this.paint.get(`hillshade-exaggeration`) !== 0 && !this.isHidden();
+	}
+};
+var Tf$1;
+var Ef$1 = () => Tf$1 ||= new xl$1({
+	"color-relief-opacity": new K$1(M[`paint_color-relief`][`color-relief-opacity`], `color-relief-opacity`),
+	"color-relief-color": new bl$1(M[`paint_color-relief`][`color-relief-color`], `color-relief-color`),
+	resampling: new K$1(M[`paint_color-relief`].resampling, `resampling`)
+});
+var Df$1 = { get paint() {
+	return Ef$1();
+} };
+function Of$1(e) {
 	return `data` in e;
 }
-var kf = class {
+var kf$1 = class {
 	constructor(e, t, n, r) {
 		this.context = e, this.format = n, this.texture = e.gl.createTexture(), this._ownedHandle = this.texture, this.update(t, r);
 	}
@@ -10454,18 +11507,18 @@ var kf = class {
 		if (a) {
 			if (this.size = [r, i], this.format === s.RGBA && r > 0 && i > 0) {
 				let t = this.useMipmap ? Math.floor(Math.log2(Math.max(r, i))) + 1 : 1;
-				if (s.texStorage2D(s.TEXTURE_2D, t, s.RGBA8, r, i), Of(e)) {
+				if (s.texStorage2D(s.TEXTURE_2D, t, s.RGBA8, r, i), Of$1(e)) {
 					o.pixelStoreUnpackPremultiplyAlpha.set(!1);
 					let { data: t } = e;
-					c && t && (t = hf(t)), t && s.texSubImage2D(s.TEXTURE_2D, 0, 0, 0, r, i, s.RGBA, s.UNSIGNED_BYTE, t);
+					c && t && (t = hf$1(t)), t && s.texSubImage2D(s.TEXTURE_2D, 0, 0, 0, r, i, s.RGBA, s.UNSIGNED_BYTE, t);
 				} else o.pixelStoreUnpackPremultiplyAlpha.set(c), s.texSubImage2D(s.TEXTURE_2D, 0, 0, 0, s.RGBA, s.UNSIGNED_BYTE, e);
-			} else Of(e) ? (o.pixelStoreUnpackPremultiplyAlpha.set(!1), this._uploadRawData(e, c, r, i, s)) : (o.pixelStoreUnpackPremultiplyAlpha.set(c), this._uploadDomImage(e, s));
+			} else Of$1(e) ? (o.pixelStoreUnpackPremultiplyAlpha.set(!1), this._uploadRawData(e, c, r, i, s)) : (o.pixelStoreUnpackPremultiplyAlpha.set(c), this._uploadDomImage(e, s));
 		} else {
 			let { x: t, y: a } = n || {
 				x: 0,
 				y: 0
 			};
-			Of(e) ? (o.pixelStoreUnpackPremultiplyAlpha.set(!1), this._updateRawData(e, c, t, a, r, i, s)) : (o.pixelStoreUnpackPremultiplyAlpha.set(c), this._updateDomImage(e, t, a, s));
+			Of$1(e) ? (o.pixelStoreUnpackPremultiplyAlpha.set(!1), this._updateRawData(e, c, t, a, r, i, s)) : (o.pixelStoreUnpackPremultiplyAlpha.set(c), this._updateDomImage(e, t, a, s));
 		}
 		this.useMipmap && s.generateMipmap(s.TEXTURE_2D), o.pixelStoreUnpackFlipY.setDefault(), o.pixelStoreUnpack.setDefault(), o.pixelStoreUnpackPremultiplyAlpha.setDefault();
 	}
@@ -10474,14 +11527,14 @@ var kf = class {
 	}
 	_uploadRawData(e, t, n, r, i) {
 		let { data: a } = e;
-		t && a && (a = hf(a)), i.texImage2D(i.TEXTURE_2D, 0, this.format, n, r, 0, this.format, i.UNSIGNED_BYTE, a);
+		t && a && (a = hf$1(a)), i.texImage2D(i.TEXTURE_2D, 0, this.format, n, r, 0, this.format, i.UNSIGNED_BYTE, a);
 	}
 	_updateDomImage(e, t, n, r) {
 		r.texSubImage2D(r.TEXTURE_2D, 0, t, n, r.RGBA, r.UNSIGNED_BYTE, e);
 	}
 	_updateRawData(e, t, n, r, i, a, o) {
 		let { data: s } = e;
-		t && s && (s = hf(s)), o.texSubImage2D(o.TEXTURE_2D, 0, n, r, i, a, o.RGBA, o.UNSIGNED_BYTE, s);
+		t && s && (s = hf$1(s)), o.texSubImage2D(o.TEXTURE_2D, 0, n, r, i, a, o.RGBA, o.UNSIGNED_BYTE, s);
 	}
 	bind(e, t, n) {
 		let { context: r } = this, { gl: i } = r;
@@ -10492,7 +11545,7 @@ var kf = class {
 		e.deleteTexture(this.texture), this.texture = null, this._ownedHandle = null;
 	}
 };
-var Af = class e {
+var Af$1 = class e {
 	static {
 		this.byteViewCache = /* @__PURE__ */ new WeakMap();
 	}
@@ -10552,10 +11605,10 @@ var Af = class e {
 		return e * this.redFactor + t * this.greenFactor + n * this.blueFactor - this.baseShift;
 	}
 	pack(e) {
-		return jf(e, this.getUnpackVector());
+		return jf$1(e, this.getUnpackVector());
 	}
 	getPixels() {
-		return new mf({
+		return new mf$1({
 			width: this.stride,
 			height: this.stride
 		}, this._getByteView());
@@ -10586,7 +11639,7 @@ var Af = class e {
 		return this.unpack(e[t], e[t + 1], e[t + 2]);
 	}
 };
-function jf(e, t) {
+function jf$1(e, t) {
 	let n = t[0], r = t[1], i = t[2], a = t[3], o = Math.min(n, r, i), s = Math.round((e + a) / o);
 	return {
 		r: Math.floor(s * o / n) % 256,
@@ -10594,16 +11647,64 @@ function jf(e, t) {
 		b: Math.floor(s * o / i) % 256
 	};
 }
-W$1(`DEMData`, Af);
-var Mf = (e) => e.type === `color-relief`;
-var Pf = Ml$1([{
+W$1(`DEMData`, Af$1);
+var Mf$1 = (e) => e.type === `color-relief`;
+var Nf$1 = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Df$1, t);
+	}
+	_createColorRamp(e) {
+		let t = {
+			elevationStops: [],
+			colorStops: []
+		}, n = this._transitionablePaint._values[`color-relief-color`].value.expression;
+		if (n instanceof Xo$1 && n._styleExpression.expression instanceof ji) {
+			this.colorRampExpression = n;
+			let e = n._styleExpression.expression;
+			t.elevationStops = e.labels, t.colorStops = [];
+			for (let n of t.elevationStops) t.colorStops.push(e.evaluate({ globals: { elevation: n } }));
+		}
+		if (t.elevationStops.length < 1 && (t.elevationStops = [0], t.colorStops = [B.transparent]), t.elevationStops.length < 2 && (t.elevationStops.push(t.elevationStops[0] + 1), t.colorStops.push(t.colorStops[0])), t.elevationStops.length <= e) return t;
+		let r = {
+			elevationStops: [],
+			colorStops: []
+		}, i = (t.elevationStops.length - 1) / (e - 1);
+		for (let e = 0; e < t.elevationStops.length - .5; e += i) r.elevationStops.push(t.elevationStops[Math.round(e)]), r.colorStops.push(t.colorStops[Math.round(e)]);
+		return Vt(`Too many colors in specification of ${this.id} color-relief layer, may not render properly. Max possible colors: ${e}, provided: ${t.elevationStops.length}`), r;
+	}
+	_colorRampChanged() {
+		return this.colorRampExpression != this._transitionablePaint._values[`color-relief-color`].value.expression;
+	}
+	getColorRampTextures(e, t, n) {
+		if (this.colorRampTextures && !this._colorRampChanged()) return this.colorRampTextures;
+		let r = this._createColorRamp(t), i = new mf$1({
+			width: r.colorStops.length,
+			height: 1
+		}), a = new mf$1({
+			width: r.colorStops.length,
+			height: 1
+		});
+		for (let e = 0; e < r.elevationStops.length; e++) {
+			let t = jf$1(r.elevationStops[e], n);
+			a.setPixel(0, e, new B(t.r / 255, t.g / 255, t.b / 255, 1)), i.setPixel(0, e, r.colorStops[e]);
+		}
+		return this.colorRampTextures = {
+			elevationTexture: new kf$1(e, a, e.gl.RGBA),
+			colorTexture: new kf$1(e, i, e.gl.RGBA)
+		}, this.colorRampTextures;
+	}
+	hasOffscreenPass() {
+		return !this.isHidden() && !!this.colorRampTextures;
+	}
+};
+var Pf$1 = Ml$1([{
 	name: `a_pos`,
 	components: 2,
 	type: `Int16`
 }], 4);
-var Ff = Pf.members;
-Pf.size, Pf.alignment;
-function If(e, t, n) {
+var Ff$1 = Pf$1.members;
+Pf$1.size, Pf$1.alignment;
+function If$1(e, t, n) {
 	let r = n.patternDependencies, i = !1;
 	for (let n of t) {
 		let t = n.paint.get(`${e}-pattern`);
@@ -10613,7 +11714,7 @@ function If(e, t, n) {
 	}
 	return i;
 }
-function Lf(e, t, n, r, i) {
+function Lf$1(e, t, n, r, i) {
 	let { zoom: a } = r, o = i.patternDependencies;
 	for (let r of t) {
 		let t = r.paint.get(`${e}-pattern`).value;
@@ -10628,15 +11729,15 @@ function Lf(e, t, n, r, i) {
 	}
 	return n;
 }
-var Rf = /* @__PURE__ */ new Set();
-var zf = !1;
-function Bf(e, t, n = 2) {
+var Rf$1 = /* @__PURE__ */ new Set();
+var zf$1 = !1;
+function Bf$1(e, t, n = 2) {
 	let r = t && t.length, i = r ? t[0] * n : e.length;
-	Rf.size && Rf.clear();
-	let a = Vf(e, 0, i, n, !0), o = [];
+	Rf$1.size && Rf$1.clear();
+	let a = Vf$1(e, 0, i, n, !0), o = [];
 	if (!a || a.next === a.prev) return o;
 	let s = 0, c = 0, l = 0;
-	if (r && (a = Yf(e, t, a, n)), e.length > 80 * n) {
+	if (r && (a = Yf$1(e, t, a, n)), e.length > 80 * n) {
 		s = e[0], c = e[1];
 		let t = s, r = c;
 		for (let a = n; a < i; a += n) {
@@ -10645,81 +11746,81 @@ function Bf(e, t, n = 2) {
 		}
 		l = Math.max(t - s, r - c), l = l === 0 ? 0 : 32767 / l;
 	}
-	return Uf(a, o, s, c, l), o;
+	return Uf$1(a, o, s, c, l), o;
 }
-function Vf(e, t, n, r, i) {
+function Vf$1(e, t, n, r, i) {
 	let a = null;
 	if (i === Mp(e, t, n, r) > 0) for (let i = t; i < n; i += r) a = kp(i / r | 0, e[i], e[i + 1], a);
 	else for (let i = n - r; i >= t; i -= r) a = kp(i / r | 0, e[i], e[i + 1], a);
-	return a && Sp(a, a.next) && (Ap(a), a = a.next), a;
+	return a && Sp$1(a, a.next) && (Ap(a), a = a.next), a;
 }
-function Hf(e, t = e) {
+function Hf$1(e, t = e) {
 	let n = t === e, r = e, i;
 	do
-		i = !1, r !== r.next && (Rf.size === 0 || !Rf.has(r)) && (Sp(r, r.next) || xp(r.prev, r, r.next) === 0) ? ((n || r === t) && (t = r.prev), zf = !0, Ap(r), r = r.prev, i = !0) : (n || r !== t) && (r = r.next, i = !n);
+		i = !1, r !== r.next && (Rf$1.size === 0 || !Rf$1.has(r)) && (Sp$1(r, r.next) || xp$1(r.prev, r, r.next) === 0) ? ((n || r === t) && (t = r.prev), zf$1 = !0, Ap(r), r = r.prev, i = !0) : (n || r !== t) && (r = r.next, i = !n);
 	while (i || r !== t);
 	return t;
 }
-function Uf(e, t, n, r, i) {
-	i && mp(e, n, r, i);
+function Uf$1(e, t, n, r, i) {
+	i && mp$1(e, n, r, i);
 	let a = e, o = !1;
 	for (; e.prev !== e.next;) {
 		let s = e.prev, c = e.next;
-		if (xp(s, e, c) < 0 && (i ? Gf(e, n, r, i) : Wf(e))) {
+		if (xp$1(s, e, c) < 0 && (i ? Gf$1(e, n, r, i) : Wf$1(e))) {
 			t.push(s.i, e.i, c.i), Ap(e), e = c, a = c;
 			continue;
 		}
 		if (e = c, e === a) {
-			if (zf = !1, e = Hf(e), zf) {
+			if (zf$1 = !1, e = Hf$1(e), zf$1) {
 				a = e;
 				continue;
 			}
 			if (!o) {
-				e = Kf(e, t), a = e, o = !0;
+				e = Kf$1(e, t), a = e, o = !0;
 				continue;
 			}
-			qf(e, t, n, r, i);
+			qf$1(e, t, n, r, i);
 			break;
 		}
 	}
 }
-function Wf(e) {
+function Wf$1(e) {
 	let t = e.prev, n = e, r = e.next, i = t.x, a = n.x, o = r.x, s = t.y, c = n.y, l = r.y, u = Math.min(i, a, o), d = Math.min(s, c, l), f = Math.max(i, a, o), p = Math.max(s, c, l), m = r.next;
 	for (; m !== t;) {
-		if (m.x >= u && m.x <= f && m.y >= d && m.y <= p && (i !== m.x || s !== m.y) && yp(i, s, a, c, o, l, m.x, m.y) && xp(m.prev, m, m.next) >= 0) return !1;
+		if (m.x >= u && m.x <= f && m.y >= d && m.y <= p && (i !== m.x || s !== m.y) && yp$1(i, s, a, c, o, l, m.x, m.y) && xp$1(m.prev, m, m.next) >= 0) return !1;
 		m = m.next;
 	}
 	return !0;
 }
-function Gf(e, t, n, r) {
-	let i = e.prev, a = e, o = e.next, s = i.x, c = a.x, l = o.x, u = i.y, d = a.y, f = o.y, p = Math.min(s, c, l), m = Math.min(u, d, f), h = Math.max(s, c, l), g = Math.max(u, d, f), _ = _p(p, m, t, n, r), v = _p(h, g, t, n, r), y = e.prevZ;
+function Gf$1(e, t, n, r) {
+	let i = e.prev, a = e, o = e.next, s = i.x, c = a.x, l = o.x, u = i.y, d = a.y, f = o.y, p = Math.min(s, c, l), m = Math.min(u, d, f), h = Math.max(s, c, l), g = Math.max(u, d, f), _ = _p$1(p, m, t, n, r), v = _p$1(h, g, t, n, r), y = e.prevZ;
 	for (; y && y.z >= _;) {
-		if (y.x >= p && y.x <= h && y.y >= m && y.y <= g && y !== o && (s !== y.x || u !== y.y) && yp(s, u, c, d, l, f, y.x, y.y) && xp(y.prev, y, y.next) >= 0) return !1;
+		if (y.x >= p && y.x <= h && y.y >= m && y.y <= g && y !== o && (s !== y.x || u !== y.y) && yp$1(s, u, c, d, l, f, y.x, y.y) && xp$1(y.prev, y, y.next) >= 0) return !1;
 		y = y.prevZ;
 	}
 	let b = e.nextZ;
 	for (; b && b.z <= v;) {
-		if (b.x >= p && b.x <= h && b.y >= m && b.y <= g && b !== o && (s !== b.x || u !== b.y) && yp(s, u, c, d, l, f, b.x, b.y) && xp(b.prev, b, b.next) >= 0) return !1;
+		if (b.x >= p && b.x <= h && b.y >= m && b.y <= g && b !== o && (s !== b.x || u !== b.y) && yp$1(s, u, c, d, l, f, b.x, b.y) && xp$1(b.prev, b, b.next) >= 0) return !1;
 		b = b.nextZ;
 	}
 	return !0;
 }
-function Kf(e, t) {
+function Kf$1(e, t) {
 	let n = e, r = !1;
 	do {
 		let i = n.prev, a = n.next.next;
-		Cp(i, n, n.next, a, !1) && Ep(i, a) && Ep(a, i) && (t.push(i.i, n.i, a.i), Ap(n), Ap(n.next), n = e = a, r = !0), n = n.next;
+		Cp$1(i, n, n.next, a, !1) && Ep(i, a) && Ep(a, i) && (t.push(i.i, n.i, a.i), Ap(n), Ap(n.next), n = e = a, r = !0), n = n.next;
 	} while (n !== e);
-	return r ? Hf(n) : n;
+	return r ? Hf$1(n) : n;
 }
-function qf(e, t, n, r, i) {
+function qf$1(e, t, n, r, i) {
 	let a = e;
 	do {
 		let e = a.next.next;
 		for (; e !== a.prev;) {
 			if (a.i !== e.i && bp$1(a, e)) {
 				let o = Op(a, e);
-				a = Hf(a, a.next), o = Hf(o, o.next), Uf(a, t, n, r, i), Uf(o, t, n, r, i);
+				a = Hf$1(a, a.next), o = Hf$1(o, o.next), Uf$1(a, t, n, r, i), Uf$1(o, t, n, r, i);
 				return;
 			}
 			e = e.next;
@@ -10727,73 +11828,73 @@ function qf(e, t, n, r, i) {
 		a = a.next;
 	} while (a !== e);
 }
-var Jf = !1;
-function Yf(e, t, n, r) {
+var Jf$1 = !1;
+function Yf$1(e, t, n, r) {
 	let i = [];
 	for (let n = 0, a = t.length; n < a; n++) {
-		let o = Vf(e, t[n] * r, n < a - 1 ? t[n + 1] * r : e.length, r, !1);
-		o === o.next && Rf.add(o), i.push(vp(o));
+		let o = Vf$1(e, t[n] * r, n < a - 1 ? t[n + 1] * r : e.length, r, !1);
+		o === o.next && Rf$1.add(o), i.push(vp$1(o));
 	}
-	i.sort(Xf), np(e.length / r, t.length), rp(n, n), Jf = !0;
-	for (let e = 0; e < i.length; e++) n = Zf(i[e], n);
-	return Jf = !1, Hf(n);
+	i.sort(Xf$1), np$1(e.length / r, t.length), rp$1(n, n), Jf$1 = !0;
+	for (let e = 0; e < i.length; e++) n = Zf$1(i[e], n);
+	return Jf$1 = !1, Hf$1(n);
 }
-function Xf(e, t) {
+function Xf$1(e, t) {
 	return e.x - t.x || e.y - t.y || (e.next.y - e.y) / (e.next.x - e.x) - (t.next.y - t.y) / (t.next.x - t.x);
 }
-function Zf(e, t) {
-	let n = sp(e, t);
+function Zf$1(e, t) {
+	let n = sp$1(e, t);
 	if (!n) return t;
 	let r = Op(n, e), i = r.next;
-	return rp(n, i.next), Hf(r, r.next), Hf(n, n.next);
+	return rp$1(n, i.next), Hf$1(r, r.next), Hf$1(n, n.next);
 }
-var Qf = /* @__PURE__ */ new Float64Array();
-var $f = 0;
-var ep = [];
-var tp = [];
-function np(e, t) {
+var Qf$1 = /* @__PURE__ */ new Float64Array();
+var $f$1 = 0;
+var ep$1 = [];
+var tp$1 = [];
+function np$1(e, t) {
 	let n = Math.ceil((e + 2 * t) / 16) + t + 2;
-	Qf.length < n * 4 && (Qf = new Float64Array(n * 4)), $f = 0;
+	Qf$1.length < n * 4 && (Qf$1 = new Float64Array(n * 4)), $f$1 = 0;
 }
-function rp(e, t) {
+function rp$1(e, t) {
 	let n = e;
 	do {
-		let e = $f++;
-		ep[e] = n;
+		let e = $f$1++;
+		ep$1[e] = n;
 		let r = 1 / 0, i = 1 / 0, a = -1 / 0, o = -1 / 0, s = 0;
 		do {
 			let t = n.next;
 			n.z = e, n.x < r && (r = n.x), n.x > a && (a = n.x), n.y < i && (i = n.y), n.y > o && (o = n.y), t.x < r && (r = t.x), t.x > a && (a = t.x), t.y < i && (i = t.y), t.y > o && (o = t.y), n = t;
 		} while (++s < 16 && n !== t);
-		tp[e] = n;
+		tp$1[e] = n;
 		let c = e * 4;
-		Qf[c] = r, Qf[c + 1] = i, Qf[c + 2] = a, Qf[c + 3] = o;
+		Qf$1[c] = r, Qf$1[c + 1] = i, Qf$1[c + 2] = a, Qf$1[c + 3] = o;
 	} while (n !== t);
 }
-function ip(e, t) {
+function ip$1(e, t) {
 	let n = e.z * 4;
-	t.x < Qf[n] && (Qf[n] = t.x), t.y < Qf[n + 1] && (Qf[n + 1] = t.y), t.x > Qf[n + 2] && (Qf[n + 2] = t.x), t.y > Qf[n + 3] && (Qf[n + 3] = t.y);
+	t.x < Qf$1[n] && (Qf$1[n] = t.x), t.y < Qf$1[n + 1] && (Qf$1[n + 1] = t.y), t.x > Qf$1[n + 2] && (Qf$1[n + 2] = t.x), t.y > Qf$1[n + 3] && (Qf$1[n + 3] = t.y);
 }
-function ap(e) {
-	let t = tp[e];
+function ap$1(e) {
+	let t = tp$1[e];
 	for (; t.prev.next !== t;) t = t.next;
-	return tp[e] = t, t;
+	return tp$1[e] = t, t;
 }
-function op(e) {
-	let t = ep[e];
+function op$1(e) {
+	let t = ep$1[e];
 	for (; t.prev.next !== t;) t = t.next;
-	return ep[e] = t, t;
+	return ep$1[e] = t, t;
 }
-function sp(e, t) {
+function sp$1(e, t) {
 	let n = t, r = e.x, i = e.y, a = -1 / 0, o;
-	if (Sp(e, n)) return n;
-	for (let t = 0, s = 0; t < $f; t++, s += 4) {
-		if (i < Qf[s + 1] || i > Qf[s + 3] || Qf[s] > r || Qf[s + 2] <= a) continue;
-		let c = ap(t);
-		n = op(t);
+	if (Sp$1(e, n)) return n;
+	for (let t = 0, s = 0; t < $f$1; t++, s += 4) {
+		if (i < Qf$1[s + 1] || i > Qf$1[s + 3] || Qf$1[s] > r || Qf$1[s + 2] <= a) continue;
+		let c = ap$1(t);
+		n = op$1(t);
 		do {
 			if (n.prev.next === n) {
-				if (Sp(e, n.next)) return n.next;
+				if (Sp$1(e, n.next)) return n.next;
 				if (i <= n.y && i >= n.next.y && n.next.y !== n.y) {
 					let e = n.x + (i - n.y) * (n.next.x - n.x) / (n.next.y - n.y);
 					if (e <= r && e > a && (a = e, o = n.x < n.next.x ? n : n.next, e === r)) return o;
@@ -10804,34 +11905,34 @@ function sp(e, t) {
 	}
 	if (!o) return null;
 	let s = o.x, c = o.y, l = Math.min(i, c), u = Math.max(i, c), d = 1 / 0;
-	for (let t = 0, f = 0; t < $f; t++, f += 4) {
-		if (Qf[f + 2] < s || Qf[f] > r || Qf[f + 3] < l || Qf[f + 1] > u) continue;
-		let p = ap(t);
-		n = op(t);
+	for (let t = 0, f = 0; t < $f$1; t++, f += 4) {
+		if (Qf$1[f + 2] < s || Qf$1[f] > r || Qf$1[f + 3] < l || Qf$1[f + 1] > u) continue;
+		let p = ap$1(t);
+		n = op$1(t);
 		do {
-			if (n.prev.next === n && r >= n.x && n.x >= s && r !== n.x && yp(i < c ? r : a, i, s, c, i < c ? a : r, i, n.x, n.y)) {
+			if (n.prev.next === n && r >= n.x && n.x >= s && r !== n.x && yp$1(i < c ? r : a, i, s, c, i < c ? a : r, i, n.x, n.y)) {
 				let t = Math.abs(i - n.y) / (r - n.x);
-				(Ep(n, e) || n.y === i && n.next.y === i && n.next.x > r) && (t < d || t === d && (n.x > o.x || n.x === o.x && cp(o, n))) && (o = n, d = t);
+				(Ep(n, e) || n.y === i && n.next.y === i && n.next.x > r) && (t < d || t === d && (n.x > o.x || n.x === o.x && cp$1(o, n))) && (o = n, d = t);
 			}
 			n = n.next;
 		} while (n !== p);
 	}
 	return o;
 }
-function cp(e, t) {
-	return xp(e.prev, e, t.prev) < 0 && xp(t.next, e, e.next) < 0;
+function cp$1(e, t) {
+	return xp$1(e.prev, e, t.prev) < 0 && xp$1(t.next, e, e.next) < 0;
 }
 var lp$1 = [];
-var up = [];
-var dp = /* @__PURE__ */ new Uint32Array();
-var fp = /* @__PURE__ */ new Uint32Array();
+var up$1 = [];
+var dp$1 = /* @__PURE__ */ new Uint32Array();
+var fp$1 = /* @__PURE__ */ new Uint32Array();
 var pp$1 = /* @__PURE__ */ new Uint32Array(256);
-function mp(e, t, n, r) {
+function mp$1(e, t, n, r) {
 	let i = e, a = 0;
 	do
-		i.z = _p(i.x, i.y, t, n, r), lp$1[a++] = i, i = i.next;
+		i.z = _p$1(i.x, i.y, t, n, r), lp$1[a++] = i, i = i.next;
 	while (i !== e);
-	hp(a);
+	hp$1(a);
 	let o = null;
 	for (let e = 0; e < a; e++) {
 		let t = lp$1[e];
@@ -10839,7 +11940,7 @@ function mp(e, t, n, r) {
 	}
 	o.nextZ = null;
 }
-function hp(e) {
+function hp$1(e) {
 	if (e <= 32) {
 		for (let t = 1; t < e; t++) {
 			let e = lp$1[t], n = e.z, r = t - 1;
@@ -10848,11 +11949,11 @@ function hp(e) {
 		}
 		return;
 	}
-	dp.length < e && (dp = new Uint32Array(e), fp = new Uint32Array(e), up = Array(e));
-	for (let t = 0; t < e; t++) dp[t] = lp$1[t].z;
-	gp(e, lp$1, dp, up, fp, 0), gp(e, up, fp, lp$1, dp, 8), gp(e, lp$1, dp, up, fp, 16), gp(e, up, fp, lp$1, dp, 24);
+	dp$1.length < e && (dp$1 = new Uint32Array(e), fp$1 = new Uint32Array(e), up$1 = Array(e));
+	for (let t = 0; t < e; t++) dp$1[t] = lp$1[t].z;
+	gp$1(e, lp$1, dp$1, up$1, fp$1, 0), gp$1(e, up$1, fp$1, lp$1, dp$1, 8), gp$1(e, lp$1, dp$1, up$1, fp$1, 16), gp$1(e, up$1, fp$1, lp$1, dp$1, 24);
 }
-function gp(e, t, n, r, i, a) {
+function gp$1(e, t, n, r, i, a) {
 	pp$1.fill(0);
 	for (let t = 0; t < e; t++) pp$1[n[t] >>> a & 255]++;
 	let o = 0;
@@ -10865,34 +11966,34 @@ function gp(e, t, n, r, i, a) {
 		r[s] = t[o], i[s] = e;
 	}
 }
-function _p(e, t, n, r, i) {
+function _p$1(e, t, n, r, i) {
 	return e = (e - n) * i | 0, t = (t - r) * i | 0, e = (e | e << 8) & 16711935, e = (e | e << 4) & 252645135, e = (e | e << 2) & 858993459, e = (e | e << 1) & 1431655765, t = (t | t << 8) & 16711935, t = (t | t << 4) & 252645135, t = (t | t << 2) & 858993459, t = (t | t << 1) & 1431655765, e | t << 1;
 }
-function vp(e) {
+function vp$1(e) {
 	let t = e, n = e;
 	do
 		(t.x < n.x || t.x === n.x && t.y < n.y) && (n = t), t = t.next;
 	while (t !== e);
 	return n;
 }
-function yp(e, t, n, r, i, a, o, s) {
+function yp$1(e, t, n, r, i, a, o, s) {
 	return (i - o) * (t - s) >= (e - o) * (a - s) && (e - o) * (r - s) >= (n - o) * (t - s) && (n - o) * (a - s) >= (i - o) * (r - s);
 }
 function bp$1(e, t) {
-	let n = Sp(e, t) && xp(e.prev, e, e.next) > 0 && xp(t.prev, t, t.next) > 0;
-	return e.next.i !== t.i && (n || Ep(e, t) && Ep(t, e) && (xp(e.prev, e, t.prev) !== 0 || xp(e, t.prev, t) !== 0)) && !Tp(e, t) && (n || Dp(e, t));
+	let n = Sp$1(e, t) && xp$1(e.prev, e, e.next) > 0 && xp$1(t.prev, t, t.next) > 0;
+	return e.next.i !== t.i && (n || Ep(e, t) && Ep(t, e) && (xp$1(e.prev, e, t.prev) !== 0 || xp$1(e, t.prev, t) !== 0)) && !Tp(e, t) && (n || Dp(e, t));
 }
-function xp(e, t, n) {
+function xp$1(e, t, n) {
 	return (t.y - e.y) * (n.x - t.x) - (t.x - e.x) * (n.y - t.y);
 }
-function Sp(e, t) {
+function Sp$1(e, t) {
 	return e.x === t.x && e.y === t.y;
 }
-function Cp(e, t, n, r, i = !0) {
-	let a = xp(e, t, n), o = xp(e, t, r), s = xp(n, r, e), c = xp(n, r, t);
-	return (a > 0 && o < 0 || a < 0 && o > 0) && (s > 0 && c < 0 || s < 0 && c > 0) ? !0 : i ? !!(a === 0 && wp(e, n, t) || o === 0 && wp(e, r, t) || s === 0 && wp(n, e, r) || c === 0 && wp(n, t, r)) : !1;
+function Cp$1(e, t, n, r, i = !0) {
+	let a = xp$1(e, t, n), o = xp$1(e, t, r), s = xp$1(n, r, e), c = xp$1(n, r, t);
+	return (a > 0 && o < 0 || a < 0 && o > 0) && (s > 0 && c < 0 || s < 0 && c > 0) ? !0 : i ? !!(a === 0 && wp$1(e, n, t) || o === 0 && wp$1(e, r, t) || s === 0 && wp$1(n, e, r) || c === 0 && wp$1(n, t, r)) : !1;
 }
-function wp(e, t, n) {
+function wp$1(e, t, n) {
 	return t.x <= Math.max(e.x, n.x) && t.x >= Math.min(e.x, n.x) && t.y <= Math.max(e.y, n.y) && t.y >= Math.min(e.y, n.y);
 }
 function Tp(e, t) {
@@ -10903,13 +12004,13 @@ function Tp(e, t) {
 			o = s;
 			continue;
 		}
-		if (o.i !== e.i && s.i !== e.i && o.i !== t.i && s.i !== t.i && Cp(o, s, e, t)) return !0;
+		if (o.i !== e.i && s.i !== e.i && o.i !== t.i && s.i !== t.i && Cp$1(o, s, e, t)) return !0;
 		o = s;
 	} while (o !== e);
 	return !1;
 }
 function Ep(e, t) {
-	return xp(e.prev, e, e.next) < 0 ? xp(e, t, e.next) >= 0 && xp(e, e.prev, t) >= 0 : xp(e, t, e.prev) < 0 || xp(e, e.next, t) < 0;
+	return xp$1(e.prev, e, e.next) < 0 ? xp$1(e, t, e.next) >= 0 && xp$1(e, e.prev, t) >= 0 : xp$1(e, t, e.prev) < 0 || xp$1(e, e.next, t) < 0;
 }
 function Dp(e, t) {
 	let n = e, r = !1, i = (e.x + t.x) / 2, a = (e.y + t.y) / 2;
@@ -10928,7 +12029,7 @@ function kp(e, t, n, r) {
 	return r ? (i.next = r.next, i.prev = r, r.next.prev = i, r.next = i) : (i.prev = i, i.next = i), i;
 }
 function Ap(e) {
-	e.next.prev = e.prev, e.prev.next = e.next, e.prevZ && (e.prevZ.nextZ = e.nextZ), e.nextZ && (e.nextZ.prevZ = e.prevZ), Jf && ip(e.prev, e.next);
+	e.next.prev = e.prev, e.prev.next = e.next, e.prevZ && (e.prevZ.nextZ = e.nextZ), e.nextZ && (e.nextZ.prevZ = e.prevZ), Jf$1 && ip$1(e.prev, e.next);
 }
 function jp(e, t, n) {
 	return {
@@ -10972,6 +12073,8 @@ var Pp = class e {
 	}
 };
 W$1(`SubdivisionGranularityExpression`, Np), W$1(`SubdivisionGranularitySetting`, Pp);
+var Fp = -32768;
+var Ip = 32767;
 var Lp = class {
 	constructor(e, t) {
 		this._vertexBuffer = [], this._vertexDictionary = /* @__PURE__ */ new Map(), this._used = !1, this._granularity = e, this._granularityCellSize = j / e, this._canonical = t;
@@ -11108,7 +12211,7 @@ var Lp = class {
 		this._initializeVertices(n);
 		let i;
 		try {
-			let e = Bf(n, r), t = this._convertIndices(n, e);
+			let e = Bf$1(n, r), t = this._convertIndices(n, e);
 			i = this._subdivideTrianglesScanline(t);
 		} catch (e) {
 			console.error(e);
@@ -11274,8 +12377,8 @@ var qp = class {
 		this.zoom = e.zoom, this.overscaling = e.overscaling, this.layers = e.layers, this.layerIds = this.layers.map((e) => e.id), this.index = e.index, this.hasDependencies = !1, this.patternFeatures = [], this.layoutVertexArray = new xu$1(), this.indexArray = new Pu$1(), this.indexArray2 = new Fu$1(), this.programConfigurations = new gd$1(e.layers, e.zoom), this.segments = new zu$1(), this.segments2 = new zu$1(), this.stateDependentLayerIds = this.layers.filter((e) => e.isStateDependent()).map((e) => e.id);
 	}
 	populate(e, t, n) {
-		this.hasDependencies = If(`fill`, this.layers, t);
-		let r = this.layers[0].layout.get(`fill-sort-key`), i = !r.isConstant(), a = [], o = new G(this.zoom), s = this.layers[0]._featureFilter.needGeometry;
+		this.hasDependencies = If$1(`fill`, this.layers, t);
+		let r = this.layers[0].layout.get(`fill-sort-key`), i = !r.isConstant(), a = [], o = new G$1(this.zoom), s = this.layers[0]._featureFilter.needGeometry;
 		for (let { feature: c, id: l, index: u, sourceLayerIndex: d } of e) {
 			let e = Cd$1(c, s);
 			if (!this.layers[0]._featureFilter.filter(o, e, n)) continue;
@@ -11295,7 +12398,7 @@ var qp = class {
 		for (let r of a) {
 			let { geometry: i, index: a, sourceLayerIndex: o } = r;
 			if (this.hasDependencies) {
-				let e = Lf(`fill`, this.layers, r, { zoom: this.zoom }, t);
+				let e = Lf$1(`fill`, this.layers, r, { zoom: this.zoom }, t);
 				this.patternFeatures.push(e);
 			} else this.addFeature(r, i, a, n, {}, t.subdivisionGranularity);
 			let s = e[a].feature;
@@ -11315,7 +12418,7 @@ var qp = class {
 		return !this.uploaded || this.programConfigurations.needsUpload;
 	}
 	upload(e) {
-		this.uploaded || (this.layoutVertexBuffer = e.createVertexBuffer(this.layoutVertexArray, Ff), this.indexBuffer = e.createIndexBuffer(this.indexArray), this.indexBuffer2 = e.createIndexBuffer(this.indexArray2)), this.programConfigurations.upload(e), this.uploaded = !0;
+		this.uploaded || (this.layoutVertexBuffer = e.createVertexBuffer(this.layoutVertexArray, Ff$1), this.indexBuffer = e.createIndexBuffer(this.indexArray), this.indexBuffer2 = e.createIndexBuffer(this.indexArray2)), this.programConfigurations.upload(e), this.uploaded = !0;
 	}
 	destroy() {
 		this.layoutVertexBuffer && (this.layoutVertexBuffer.destroy(), this.indexBuffer.destroy(), this.indexBuffer2.destroy(), this.programConfigurations.destroy(), this.segments.destroy(), this.segments2.destroy());
@@ -11334,7 +12437,50 @@ var qp = class {
 	}
 };
 W$1(`FillBucket`, qp, { omit: [`layers`, `patternFeatures`] });
+var Jp;
+var Yp = () => Jp ||= new xl$1({ "fill-sort-key": new q$1(M.layout_fill[`fill-sort-key`], `fill-sort-key`) });
+var Xp;
+var Zp$1 = () => Xp ||= new xl$1({
+	"fill-antialias": new K$1(M.paint_fill[`fill-antialias`], `fill-antialias`),
+	"fill-opacity": new q$1(M.paint_fill[`fill-opacity`], `fill-opacity`),
+	"fill-layer-opacity": new K$1(M.paint_fill[`fill-layer-opacity`], `fill-layer-opacity`),
+	"fill-color": new q$1(M.paint_fill[`fill-color`], `fill-color`),
+	"fill-outline-color": new q$1(M.paint_fill[`fill-outline-color`], `fill-outline-color`),
+	"fill-translate": new K$1(M.paint_fill[`fill-translate`], `fill-translate`),
+	"fill-translate-anchor": new K$1(M.paint_fill[`fill-translate-anchor`], `fill-translate-anchor`),
+	"fill-pattern": new vl$1(M.paint_fill[`fill-pattern`], `fill-pattern`)
+});
+var Qp = {
+	get paint() {
+		return Zp$1();
+	},
+	get layout() {
+		return Yp();
+	}
+};
 var $p = (e) => e.type === `fill`;
+var em = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Qp, t);
+	}
+	recalculate(e, t) {
+		super.recalculate(e, t);
+		let n = this.paint._values[`fill-outline-color`];
+		n.value.kind === `constant` && n.value.value === void 0 && (this.paint._values[`fill-outline-color`] = this.paint._values[`fill-color`]);
+	}
+	createBucket(e) {
+		return new qp(e);
+	}
+	queryRadius() {
+		return Vd$1(this.paint.get(`fill-translate`));
+	}
+	queryIntersectsFeature({ queryGeometry: e, geometry: t, transform: n, pixelsToTileUnits: r }) {
+		return kd$1(Hd$1(e, this.paint.get(`fill-translate`), this.paint.get(`fill-translate-anchor`), -n.bearingInRadians, r), t);
+	}
+	isTileClipped() {
+		return !0;
+	}
+};
 var tm = Ml$1([{
 	name: `a_pos`,
 	components: 2,
@@ -11586,8 +12732,39 @@ function Cm(e, t, n) {
 function wm(e, t, n) {
 	return Cm(e, t, n).toLngLat();
 }
+function Tm(e, t) {
+	let n = Tt(t.lat, -85.051129, pn);
+	return new l(mm(t.lng) * e, hm(n) * e);
+}
+function Em(e, t) {
+	return new xm(t.x / e, t.y / e).toLngLat();
+}
 function Dm(e) {
 	return e.cameraToCenterDistance * Math.min(Math.tan(sn(90 - e.pitch)) * .85, Math.tan(sn(Sm - e.pitch)));
+}
+function Om(e, t) {
+	let n = e.canonical, r = t / Nt(n.z), i = n.x + 2 ** n.z * e.wrap, a = /* @__PURE__ */ new Float64Array(16);
+	return C(a), E(a, a, [
+		i * r,
+		n.y * r,
+		0
+	]), D(a, a, [
+		r / j,
+		r / j,
+		1
+	]), a;
+}
+function km(e, t, n, r, i) {
+	let a = xm.fromLngLat(e, t), o = i * gm(1, e.lat), { x: s, y: c, z: l } = Am(n, r), u = o * -s, d = o * -c, f = o * -l;
+	return new xm(a.x + u, a.y + d, a.z + f);
+}
+function Am(e, t) {
+	let n = sn(e), r = sn(t), i = Math.cos(-n), a = Math.sin(n);
+	return {
+		x: a * Math.sin(r),
+		y: -a * Math.cos(r),
+		z: i
+	};
 }
 function jm(e, t, n) {
 	if (t <= 0 || !e || e.length === 0) return e;
@@ -11638,8 +12815,8 @@ var Lm = class {
 		this.zoom = e.zoom, this.overscaling = e.overscaling, this.layers = e.layers, this.layerIds = this.layers.map((e) => e.id), this.index = e.index, this.hasDependencies = !1, this.layoutVertexArray = new Su$1(), this.centroidVertexArray = new _u$1(), this.indexArray = new Pu$1(), this.programConfigurations = new gd$1(e.layers, e.zoom), this.segments = new zu$1(), this.stateDependentLayerIds = this.layers.filter((e) => e.isStateDependent()).map((e) => e.id);
 	}
 	populate(e, t, n) {
-		this.features = [], this.hasDependencies = If(`fill-extrusion`, this.layers, t);
-		let r = new G(this.zoom), i = this.layers[0], a = i.layout.get(`fill-extrusion-rounded-corner-distance`), o = i._featureFilter.needGeometry;
+		this.features = [], this.hasDependencies = If$1(`fill-extrusion`, this.layers, t);
+		let r = new G$1(this.zoom), i = this.layers[0], a = i.layout.get(`fill-extrusion-rounded-corner-distance`), o = i._featureFilter.needGeometry;
 		for (let { feature: s, id: c, index: l, sourceLayerIndex: u } of e) {
 			let e = Cd$1(s, o);
 			if (!i._featureFilter.filter(r, e, n)) continue;
@@ -11652,7 +12829,7 @@ var Lm = class {
 				type: s.type,
 				patterns: {}
 			};
-			this.hasDependencies ? this.features.push(Lf(`fill-extrusion`, this.layers, f, { zoom: this.zoom }, t)) : this.addFeature(f, f.geometry, l, n, {}, t.subdivisionGranularity), t.featureIndex.insert(s, f.geometry, l, u, this.index, !0);
+			this.hasDependencies ? this.features.push(Lf$1(`fill-extrusion`, this.layers, f, { zoom: this.zoom }, t)) : this.addFeature(f, f.geometry, l, n, {}, t.subdivisionGranularity), t.featureIndex.insert(s, f.geometry, l, u, this.index, !0);
 		}
 	}
 	addFeatures(e, t, n) {
@@ -11734,7 +12911,110 @@ function zm(e, t) {
 function Bm(e) {
 	return e.every((e) => e.x < 0) || e.every((e) => e.x > 8192) || e.every((e) => e.y < 0) || e.every((e) => e.y > 8192);
 }
+var Vm;
+var Hm = () => Vm ||= new xl$1({ "fill-extrusion-rounded-corner-distance": new K$1(M[`layout_fill-extrusion`][`fill-extrusion-rounded-corner-distance`], `fill-extrusion-rounded-corner-distance`) });
+var Um;
+var Wm = () => Um ||= new xl$1({
+	"fill-extrusion-opacity": new K$1(M[`paint_fill-extrusion`][`fill-extrusion-opacity`], `fill-extrusion-opacity`),
+	"fill-extrusion-color": new q$1(M[`paint_fill-extrusion`][`fill-extrusion-color`], `fill-extrusion-color`),
+	"fill-extrusion-translate": new K$1(M[`paint_fill-extrusion`][`fill-extrusion-translate`], `fill-extrusion-translate`),
+	"fill-extrusion-translate-anchor": new K$1(M[`paint_fill-extrusion`][`fill-extrusion-translate-anchor`], `fill-extrusion-translate-anchor`),
+	"fill-extrusion-pattern": new vl$1(M[`paint_fill-extrusion`][`fill-extrusion-pattern`], `fill-extrusion-pattern`),
+	"fill-extrusion-height": new q$1(M[`paint_fill-extrusion`][`fill-extrusion-height`], `fill-extrusion-height`),
+	"fill-extrusion-base": new q$1(M[`paint_fill-extrusion`][`fill-extrusion-base`], `fill-extrusion-base`),
+	"fill-extrusion-vertical-gradient": new K$1(M[`paint_fill-extrusion`][`fill-extrusion-vertical-gradient`], `fill-extrusion-vertical-gradient`)
+});
+var Gm = {
+	get paint() {
+		return Wm();
+	},
+	get layout() {
+		return Hm();
+	}
+};
 var Km = (e) => e.type === `fill-extrusion`;
+var qm = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Gm, t);
+	}
+	createBucket(e) {
+		return new Lm(e);
+	}
+	queryRadius() {
+		return Vd$1(this.paint.get(`fill-extrusion-translate`));
+	}
+	is3D() {
+		return !0;
+	}
+	queryIntersectsFeature({ queryGeometry: e, feature: t, featureState: n, geometry: r, transform: i, pixelsToTileUnits: a, pixelPosMatrix: o }) {
+		let s = Hd$1(e, this.paint.get(`fill-extrusion-translate`), this.paint.get(`fill-extrusion-translate-anchor`), -i.bearingInRadians, a), c = this.paint.get(`fill-extrusion-height`).evaluate(t, n), l = this.paint.get(`fill-extrusion-base`).evaluate(t, n), u = Qm(s, o, 0), d = Zm(r, l, c, o), f = d[0], p = d[1];
+		return Xm(f, p, u);
+	}
+};
+function Jm(e, t) {
+	return e.x * t.x + e.y * t.y;
+}
+function Ym(e, t) {
+	if (e.length === 1) {
+		let n = 0, r = t[n++], i;
+		for (; !i || r.equals(i);) if (i = t[n++], !i) return 1 / 0;
+		for (; n < t.length; n++) {
+			let a = t[n], o = e[0], s = i.sub(r), c = a.sub(r), l = o.sub(r), u = Jm(s, s), d = Jm(s, c), f = Jm(c, c), p = Jm(l, s), m = Jm(l, c), h = u * f - d * d, g = (f * p - d * m) / h, _ = (u * m - d * p) / h, v = 1 - g - _, y = r.z * v + i.z * g + a.z * _;
+			if (isFinite(y)) return y;
+		}
+		return 1 / 0;
+	}
+	{
+		let e = 1 / 0;
+		for (let n of t) e = Math.min(e, n.z);
+		return e;
+	}
+}
+function Xm(e, t, n) {
+	let r = 1 / 0;
+	kd$1(n, t) && (r = Ym(n, t[0]));
+	for (let i = 0; i < t.length; i++) {
+		let a = t[i], o = e[i];
+		for (let e = 0; e < a.length - 1; e++) {
+			let t = a[e], i = a[e + 1], s = o[e], c = [
+				t,
+				i,
+				o[e + 1],
+				s,
+				t
+			];
+			Dd$1(n, c) && (r = Math.min(r, Ym(n, c)));
+		}
+	}
+	return r !== 1 / 0 && r;
+}
+function Zm(e, t, n, r) {
+	let i = [], a = [], o = r[8] * t, s = r[9] * t, c = r[10] * t, u = r[11] * t, d = r[8] * n, f = r[9] * n, p = r[10] * n, m = r[11] * n;
+	for (let t of e) {
+		let e = [], n = [];
+		for (let i of t) {
+			let t = i.x, a = i.y, h = r[0] * t + r[4] * a + r[12], g = r[1] * t + r[5] * a + r[13], _ = r[2] * t + r[6] * a + r[14], v = r[3] * t + r[7] * a + r[15], y = h + o, b = g + s, x = _ + c, S = v + u, C = h + d, w = g + f, T = _ + p, E = v + m, D = new l(y / S, b / S);
+			D.z = x / S, e.push(D);
+			let O = new l(C / E, w / E);
+			O.z = T / E, n.push(O);
+		}
+		i.push(e), a.push(n);
+	}
+	return [i, a];
+}
+function Qm(e, t, n) {
+	let r = [];
+	for (let i of e) {
+		let e = [
+			i.x,
+			i.y,
+			n,
+			1
+		];
+		Me(e, e, t), r.push(new l(e[0] / e[3], e[1] / e[3]));
+	}
+	return r;
+}
 var ig = `geojsonvt_clip_start`;
 var ag = `geojsonvt_clip_end`;
 var Sg = Ml$1([{
@@ -11769,8 +13049,8 @@ var kg = class {
 		this.layoutVertexArray = new Cu$1(), this.layoutVertexArray2 = new wu$1(), this.indexArray = new Pu$1(), this.programConfigurations = new gd$1(e.layers, e.zoom), this.segments = new zu$1(), this.maxLineLength = 0, this.stateDependentLayerIds = this.layers.filter((e) => e.isStateDependent()).map((e) => e.id);
 	}
 	populate(e, t, n) {
-		this.hasDependencies = If(`line`, this.layers, t) || this.hasLineDasharray(this.layers);
-		let r = this.layers[0].layout.get(`line-sort-key`), i = !r.isConstant(), a = [], o = new G(this.zoom), s = this.layers[0]._featureFilter.needGeometry;
+		this.hasDependencies = If$1(`line`, this.layers, t) || this.hasLineDasharray(this.layers);
+		let r = this.layers[0].layout.get(`line-sort-key`), i = !r.isConstant(), a = [], o = new G$1(this.zoom), s = this.layers[0]._featureFilter.needGeometry;
 		for (let { feature: t, id: c, index: l, sourceLayerIndex: u } of e) {
 			let e = Cd$1(t, s);
 			if (!this.layers[0]._featureFilter.filter(o, e, n)) continue;
@@ -11790,7 +13070,7 @@ var kg = class {
 		i && a.sort((e, t) => e.sortKey - t.sortKey);
 		for (let r of a) {
 			let { geometry: i, index: a, sourceLayerIndex: o } = r;
-			this.hasDependencies ? (If(`line`, this.layers, t) ? Lf(`line`, this.layers, r, { zoom: this.zoom }, t) : this.hasLineDasharray(this.layers) && this.addLineDashDependencies(this.layers, r, this.zoom, t), this.patternFeatures.push(r)) : this.addFeature(r, i, a, n, {}, {}, t.subdivisionGranularity);
+			this.hasDependencies ? (If$1(`line`, this.layers, t) ? Lf$1(`line`, this.layers, r, { zoom: this.zoom }, t) : this.hasLineDasharray(this.layers) && this.addLineDashDependencies(this.layers, r, this.zoom, t), this.patternFeatures.push(r)) : this.addFeature(r, i, a, n, {}, {}, t.subdivisionGranularity);
 			let s = e[a].feature;
 			t.featureIndex.insert(s, i, a, o, this.index);
 		}
@@ -11948,7 +13228,86 @@ var kg = class {
 	}
 };
 W$1(`LineBucket`, kg, { omit: [`layers`, `patternFeatures`] });
+var Ag;
+var jg = () => Ag ||= new xl$1({
+	"line-cap": new q$1(M.layout_line[`line-cap`], `line-cap`),
+	"line-join": new q$1(M.layout_line[`line-join`], `line-join`),
+	"line-miter-limit": new q$1(M.layout_line[`line-miter-limit`], `line-miter-limit`),
+	"line-round-limit": new q$1(M.layout_line[`line-round-limit`], `line-round-limit`),
+	"line-sort-key": new q$1(M.layout_line[`line-sort-key`], `line-sort-key`)
+});
+var Mg;
+var Ng = () => Mg ||= new xl$1({
+	"line-opacity": new q$1(M.paint_line[`line-opacity`], `line-opacity`),
+	"line-layer-opacity": new K$1(M.paint_line[`line-layer-opacity`], `line-layer-opacity`),
+	"line-color": new q$1(M.paint_line[`line-color`], `line-color`),
+	"line-translate": new K$1(M.paint_line[`line-translate`], `line-translate`),
+	"line-translate-anchor": new K$1(M.paint_line[`line-translate-anchor`], `line-translate-anchor`),
+	"line-width": new q$1(M.paint_line[`line-width`], `line-width`),
+	"line-gap-width": new q$1(M.paint_line[`line-gap-width`], `line-gap-width`),
+	"line-offset": new q$1(M.paint_line[`line-offset`], `line-offset`),
+	"line-blur": new q$1(M.paint_line[`line-blur`], `line-blur`),
+	"line-dasharray": new vl$1(M.paint_line[`line-dasharray`], `line-dasharray`),
+	"line-pattern": new vl$1(M.paint_line[`line-pattern`], `line-pattern`),
+	"line-gradient": new bl$1(M.paint_line[`line-gradient`], `line-gradient`)
+});
+var Pg = {
+	get paint() {
+		return Ng();
+	},
+	get layout() {
+		return jg();
+	}
+};
+var Fg = class extends q$1 {
+	possiblyEvaluate(e, t) {
+		return t = new G$1(Math.floor(t.zoom), {
+			now: t.now,
+			fadeDuration: t.fadeDuration,
+			zoomHistory: t.zoomHistory,
+			transition: t.transition
+		}), super.possiblyEvaluate(e, t);
+	}
+	evaluate(e, t, n, r) {
+		return t = Dt({}, t, { zoom: Math.floor(t.zoom) }), super.evaluate(e, t, n, r);
+	}
+};
+var Ig;
 var Lg = (e) => e.type === `line`;
+var Rg = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Pg, t), this.gradientVersion = 0, Ig || (Ig = new Fg(Pg.paint.properties[`line-width`].specification, `line-floorwidth`), Ig.useIntegerZoom = !0);
+	}
+	_handleSpecialPaintPropertyUpdate(e) {
+		if (e === `line-gradient`) {
+			let e = this.gradientExpression();
+			this.stepInterpolant = Qo$1(e) ? e._styleExpression.expression instanceof ki$1 : !1, this.gradientVersion = (this.gradientVersion + 1) % (2 ** 53 - 1);
+		}
+	}
+	gradientExpression() {
+		return this._transitionablePaint._values[`line-gradient`].value.expression;
+	}
+	recalculate(e, t) {
+		super.recalculate(e, t), this.paint._values[`line-floorwidth`] = Ig.possiblyEvaluate(this._transitioningPaint._values[`line-width`].value, e);
+	}
+	createBucket(e) {
+		return new kg(e);
+	}
+	queryRadius(e) {
+		let t = e, n = zg(Bd$1(`line-width`, this, t), Bd$1(`line-gap-width`, this, t)), r = Bd$1(`line-offset`, this, t);
+		return n / 2 + Math.abs(r) + Vd$1(this.paint.get(`line-translate`));
+	}
+	queryIntersectsFeature({ queryGeometry: e, feature: t, featureState: n, geometry: r, transform: i, pixelsToTileUnits: a }) {
+		let o = Hd$1(e, this.paint.get(`line-translate`), this.paint.get(`line-translate-anchor`), -i.bearingInRadians, a), s = a / 2 * zg(this.paint.get(`line-width`).evaluate(t, n), this.paint.get(`line-gap-width`).evaluate(t, n)), c = this.paint.get(`line-offset`).evaluate(t, n);
+		return c && (r = Wd$1(r, c * a)), Ad$1(o, r, s);
+	}
+	isTileClipped() {
+		return !0;
+	}
+};
+function zg(e, t) {
+	return t > 0 ? t + 2 * e : e;
+}
 var Bg = Ml$1([
 	{
 		name: `a_pos_offset`,
@@ -12548,7 +13907,7 @@ function D_(e, t, n) {
 		let { id: e, bitmap: r, width: i, height: a, left: o, top: s, advance: c } = n.readMessage(O_, {});
 		t.push({
 			id: e,
-			bitmap: new pf({
+			bitmap: new pf$1({
 				width: i + 6,
 				height: a + 6
 			}, r),
@@ -12570,6 +13929,10 @@ function k_(e) {
 }
 function A_(e) {
 	return typeof e?.renderWithWebGL == `function`;
+}
+function j_(e) {
+	let { userImage: t } = e;
+	return !t?.render || !t.render() ? !1 : (A_(t.data) || e.data.replace(new Uint8Array(t.data.buffer)), !0);
 }
 function M_(e) {
 	let t = 0, n = 0;
@@ -12625,7 +13988,7 @@ var P_ = class {
 		this.haveRenderCallbacks = [];
 		let i = [];
 		this.addImages(e, n, i), this.addImages(t, r, i);
-		let { w: a, h: o } = M_(i), s = new mf({
+		let { w: a, h: o } = M_(i), s = new mf$1({
 			width: a || 1,
 			height: o || 1
 		});
@@ -12633,7 +13996,7 @@ var P_ = class {
 			let r = e[t];
 			if (r.isWebGLImage) continue;
 			let i = n[t].paddedRect;
-			mf.copy(r.data, s, {
+			mf$1.copy(r.data, s, {
 				x: 0,
 				y: 0
 			}, {
@@ -12643,13 +14006,13 @@ var P_ = class {
 		}
 		for (let e in t) {
 			let n = t[e], i = r[e].paddedRect, a = i.x + 1, o = i.y + 1, c = n.data.width, l = n.data.height;
-			mf.copy(n.data, s, {
+			mf$1.copy(n.data, s, {
 				x: 0,
 				y: 0
 			}, {
 				x: a,
 				y: o
-			}, n.data), mf.copy(n.data, s, {
+			}, n.data), mf$1.copy(n.data, s, {
 				x: 0,
 				y: l - 1
 			}, {
@@ -12658,7 +14021,7 @@ var P_ = class {
 			}, {
 				width: c,
 				height: 1
-			}), mf.copy(n.data, s, {
+			}), mf$1.copy(n.data, s, {
 				x: 0,
 				y: 0
 			}, {
@@ -12667,7 +14030,7 @@ var P_ = class {
 			}, {
 				width: c,
 				height: 1
-			}), mf.copy(n.data, s, {
+			}), mf$1.copy(n.data, s, {
 				x: c - 1,
 				y: 0
 			}, {
@@ -12676,7 +14039,7 @@ var P_ = class {
 			}, {
 				width: 1,
 				height: l
-			}), mf.copy(n.data, s, {
+			}), mf$1.copy(n.data, s, {
 				x: 0,
 				y: 0
 			}, {
@@ -12762,7 +14125,7 @@ function $_(e, t) {
 	let { expression: n } = t;
 	if (n.kind === `constant`) return {
 		kind: `constant`,
-		layoutSize: n.evaluate(new G(e + 1))
+		layoutSize: n.evaluate(new G$1(e + 1))
 	};
 	if (n.kind === `source`) return { kind: `source` };
 	{
@@ -12782,8 +14145,8 @@ function $_(e, t) {
 			kind: `camera`,
 			minZoom: o,
 			maxZoom: s,
-			minSize: n.evaluate(new G(o)),
-			maxSize: n.evaluate(new G(s)),
+			minSize: n.evaluate(new G$1(o)),
+			maxSize: n.evaluate(new G$1(s)),
 			interpolationType: r
 		};
 	}
@@ -12871,16 +14234,16 @@ var lv = class {
 		}
 	}
 	populate(e, t, n) {
-		let r = this.layers[0], i = r.layout, a = i.get(`text-font`), o = i.get(`text-field`), s = i.get(`icon-image`), c = (o.value.kind !== `constant` || o.value.value instanceof ei && !o.value.value.isEmpty() || o.value.value.toString().length > 0) && (a.value.kind !== `constant` || a.value.value.length > 0), l = s.value.kind !== `constant` || !!s.value.value || Object.keys(s.parameters).length > 0, u = i.get(`symbol-sort-key`);
+		let r = this.layers[0], i = r.layout, a = i.get(`text-font`), o = i.get(`text-field`), s = i.get(`icon-image`), c = (o.value.kind !== `constant` || o.value.value instanceof ei$1 && !o.value.value.isEmpty() || o.value.value.toString().length > 0) && (a.value.kind !== `constant` || a.value.value.length > 0), l = s.value.kind !== `constant` || !!s.value.value || Object.keys(s.parameters).length > 0, u = i.get(`symbol-sort-key`);
 		if (this.features = [], !c && !l) return;
-		let d = t.iconDependencies, f = t.glyphDependencies, p = t.availableImages, m = new G(this.zoom);
+		let d = t.iconDependencies, f = t.glyphDependencies, p = t.availableImages, m = new G$1(this.zoom);
 		for (let { feature: t, id: o, index: s, sourceLayerIndex: h } of e) {
 			let e = r._featureFilter.needGeometry, g = Cd$1(t, e);
 			if (!r._featureFilter.filter(m, g, n)) continue;
 			e || (g.geometry = Sd$1(t));
 			let _;
 			if (c) {
-				let e = r.getValueAndResolveTokens(`text-field`, g, n, p), t = ei.factory(e);
+				let e = r.getValueAndResolveTokens(`text-field`, g, n, p), t = ei$1.factory(e);
 				this.hasRTLText ||= ov(t), (!this.hasRTLText || al$1.getRTLTextPluginStatus() === `unavailable` || this.hasRTLText && al$1.isParsed()) && (_ = Kg(t, r, g));
 			}
 			let v;
@@ -13111,6 +14474,85 @@ W$1(`SymbolBucket`, lv, { omit: [
 	`features`,
 	`compareText`
 ] }), lv.MAX_GLYPHS = 65535, lv.addDynamicAttributes = av;
+function uv(e, t) {
+	return t.replace(/{([^{}]+)}/g, (t, n) => e && n in e ? String(e[n]) : ``);
+}
+var dv;
+var fv = () => dv ||= new xl$1({
+	"symbol-placement": new K$1(M.layout_symbol[`symbol-placement`], `symbol-placement`),
+	"symbol-spacing": new K$1(M.layout_symbol[`symbol-spacing`], `symbol-spacing`),
+	"symbol-avoid-edges": new K$1(M.layout_symbol[`symbol-avoid-edges`], `symbol-avoid-edges`),
+	"symbol-sort-key": new q$1(M.layout_symbol[`symbol-sort-key`], `symbol-sort-key`),
+	"symbol-z-order": new K$1(M.layout_symbol[`symbol-z-order`], `symbol-z-order`),
+	"icon-allow-overlap": new K$1(M.layout_symbol[`icon-allow-overlap`], `icon-allow-overlap`),
+	"icon-overlap": new K$1(M.layout_symbol[`icon-overlap`], `icon-overlap`),
+	"icon-ignore-placement": new K$1(M.layout_symbol[`icon-ignore-placement`], `icon-ignore-placement`),
+	"icon-optional": new K$1(M.layout_symbol[`icon-optional`], `icon-optional`),
+	"icon-rotation-alignment": new K$1(M.layout_symbol[`icon-rotation-alignment`], `icon-rotation-alignment`),
+	"icon-size": new q$1(M.layout_symbol[`icon-size`], `icon-size`),
+	"icon-text-fit": new K$1(M.layout_symbol[`icon-text-fit`], `icon-text-fit`),
+	"icon-text-fit-padding": new K$1(M.layout_symbol[`icon-text-fit-padding`], `icon-text-fit-padding`),
+	"icon-image": new q$1(M.layout_symbol[`icon-image`], `icon-image`),
+	"icon-rotate": new q$1(M.layout_symbol[`icon-rotate`], `icon-rotate`),
+	"icon-padding": new q$1(M.layout_symbol[`icon-padding`], `icon-padding`),
+	"icon-keep-upright": new K$1(M.layout_symbol[`icon-keep-upright`], `icon-keep-upright`),
+	"icon-offset": new q$1(M.layout_symbol[`icon-offset`], `icon-offset`),
+	"icon-anchor": new q$1(M.layout_symbol[`icon-anchor`], `icon-anchor`),
+	"icon-pitch-alignment": new K$1(M.layout_symbol[`icon-pitch-alignment`], `icon-pitch-alignment`),
+	"text-pitch-alignment": new K$1(M.layout_symbol[`text-pitch-alignment`], `text-pitch-alignment`),
+	"text-rotation-alignment": new K$1(M.layout_symbol[`text-rotation-alignment`], `text-rotation-alignment`),
+	"text-field": new q$1(M.layout_symbol[`text-field`], `text-field`),
+	"text-font": new q$1(M.layout_symbol[`text-font`], `text-font`),
+	"text-size": new q$1(M.layout_symbol[`text-size`], `text-size`),
+	"text-max-width": new q$1(M.layout_symbol[`text-max-width`], `text-max-width`),
+	"text-line-height": new K$1(M.layout_symbol[`text-line-height`], `text-line-height`),
+	"text-letter-spacing": new q$1(M.layout_symbol[`text-letter-spacing`], `text-letter-spacing`),
+	"text-justify": new q$1(M.layout_symbol[`text-justify`], `text-justify`),
+	"text-radial-offset": new q$1(M.layout_symbol[`text-radial-offset`], `text-radial-offset`),
+	"text-variable-anchor": new K$1(M.layout_symbol[`text-variable-anchor`], `text-variable-anchor`),
+	"text-variable-anchor-offset": new q$1(M.layout_symbol[`text-variable-anchor-offset`], `text-variable-anchor-offset`),
+	"text-anchor": new q$1(M.layout_symbol[`text-anchor`], `text-anchor`),
+	"text-max-angle": new K$1(M.layout_symbol[`text-max-angle`], `text-max-angle`),
+	"text-writing-mode": new K$1(M.layout_symbol[`text-writing-mode`], `text-writing-mode`),
+	"text-rotate": new q$1(M.layout_symbol[`text-rotate`], `text-rotate`),
+	"text-padding": new K$1(M.layout_symbol[`text-padding`], `text-padding`),
+	"text-keep-upright": new K$1(M.layout_symbol[`text-keep-upright`], `text-keep-upright`),
+	"text-transform": new q$1(M.layout_symbol[`text-transform`], `text-transform`),
+	"text-offset": new q$1(M.layout_symbol[`text-offset`], `text-offset`),
+	"text-allow-overlap": new K$1(M.layout_symbol[`text-allow-overlap`], `text-allow-overlap`),
+	"text-overlap": new K$1(M.layout_symbol[`text-overlap`], `text-overlap`),
+	"text-ignore-placement": new K$1(M.layout_symbol[`text-ignore-placement`], `text-ignore-placement`),
+	"text-optional": new K$1(M.layout_symbol[`text-optional`], `text-optional`)
+});
+var pv;
+var mv = () => pv ||= new xl$1({
+	"icon-opacity": new q$1(M.paint_symbol[`icon-opacity`], `icon-opacity`),
+	"icon-color": new q$1(M.paint_symbol[`icon-color`], `icon-color`),
+	"icon-halo-color": new q$1(M.paint_symbol[`icon-halo-color`], `icon-halo-color`),
+	"icon-halo-width": new q$1(M.paint_symbol[`icon-halo-width`], `icon-halo-width`),
+	"icon-halo-blur": new q$1(M.paint_symbol[`icon-halo-blur`], `icon-halo-blur`),
+	"icon-translate": new K$1(M.paint_symbol[`icon-translate`], `icon-translate`),
+	"icon-translate-anchor": new K$1(M.paint_symbol[`icon-translate-anchor`], `icon-translate-anchor`),
+	"text-opacity": new q$1(M.paint_symbol[`text-opacity`], `text-opacity`),
+	"text-color": new q$1(M.paint_symbol[`text-color`], `text-color`, {
+		runtimeType: or,
+		getOverride: (e) => e.textColor,
+		hasOverride: (e) => !!e.textColor
+	}),
+	"text-halo-color": new q$1(M.paint_symbol[`text-halo-color`], `text-halo-color`),
+	"text-halo-width": new q$1(M.paint_symbol[`text-halo-width`], `text-halo-width`),
+	"text-halo-blur": new q$1(M.paint_symbol[`text-halo-blur`], `text-halo-blur`),
+	"text-translate": new K$1(M.paint_symbol[`text-translate`], `text-translate`),
+	"text-translate-anchor": new K$1(M.paint_symbol[`text-translate-anchor`], `text-translate-anchor`)
+});
+var hv = {
+	get paint() {
+		return mv();
+	},
+	get layout() {
+		return fv();
+	}
+};
 var gv = class {
 	constructor(e) {
 		if (e.property.overrides === void 0) throw Error(`overrides must be provided to instantiate FormatSectionOverride class`);
@@ -13138,8 +14580,124 @@ var gv = class {
 };
 W$1(`FormatSectionOverride`, gv, { omit: [`defaultValue`] });
 var _v = (e) => e.type === `symbol`;
+var vv = class e extends wl$1 {
+	constructor(e, t) {
+		super(e, hv, t);
+	}
+	recalculate(e, t) {
+		if (super.recalculate(e, t), this.layout.get(`icon-rotation-alignment`) === `auto` && (this.layout.get(`symbol-placement`) === `point` ? this.layout._values[`icon-rotation-alignment`] = `viewport` : this.layout._values[`icon-rotation-alignment`] = `map`), this.layout.get(`text-rotation-alignment`) === `auto` && (this.layout.get(`symbol-placement`) === `point` ? this.layout._values[`text-rotation-alignment`] = `viewport` : this.layout._values[`text-rotation-alignment`] = `map`), this.layout.get(`text-pitch-alignment`) === `auto` && (this.layout._values[`text-pitch-alignment`] = this.layout.get(`text-rotation-alignment`) === `map` ? `map` : `viewport`), this.layout.get(`icon-pitch-alignment`) === `auto` && (this.layout._values[`icon-pitch-alignment`] = this.layout.get(`icon-rotation-alignment`)), this.layout.get(`symbol-placement`) === `point`) {
+			let e = this.layout.get(`text-writing-mode`);
+			if (e) {
+				let t = [];
+				for (let n of e) t.includes(n) || t.push(n);
+				this.layout._values[`text-writing-mode`] = t;
+			} else this.layout._values[`text-writing-mode`] = [`horizontal`];
+		}
+		this._setPaintOverrides();
+	}
+	getValueAndResolveTokens(e, t, n, r) {
+		let i = this.layout.get(e).evaluate(t, {}, n, r), a = this._unevaluatedLayout._values[e];
+		return !a.isDataDriven() && !Jo$1(a.value) && i ? uv(t.properties, i) : i;
+	}
+	createBucket(e) {
+		return new lv(e);
+	}
+	queryRadius() {
+		return 0;
+	}
+	queryIntersectsFeature() {
+		throw Error(`Should take a different path in FeatureIndex`);
+	}
+	_setPaintOverrides() {
+		for (let t of hv.paint.overridableProperties) {
+			if (!e.hasPaintOverride(this.layout, t)) continue;
+			let n = this.paint.get(t), r = new Go$1(new gv(n), `layers[${this.id}].paint.${n.property.name}`, n.property.specification), i = null;
+			i = n.value.kind === `constant` || n.value.kind === `source` ? new Xo$1(`source`, r) : new Zo$1(`composite`, r, n.value.zoomStops), this.paint._values[t] = new ml$1(n.property, i, n.parameters);
+		}
+	}
+	_handleOverridablePaintPropertyUpdate(t, n, r) {
+		return !this.layout || n.isDataDriven() || r.isDataDriven() ? !1 : e.hasPaintOverride(this.layout, t);
+	}
+	static hasPaintOverride(e, t) {
+		let n = e.get(`text-field`), r = hv.paint.properties[t], i = !1, a = (e) => {
+			for (let t of e) if (r.overrides?.hasOverride(t)) {
+				i = !0;
+				return;
+			}
+		};
+		if (n.value.kind === `constant` && n.value.value instanceof ei$1) a(n.value.value.sections);
+		else if (n.value.kind === `source` || n.value.kind === `composite`) {
+			let e = (t) => {
+				if (!i) {
+					if (t instanceof fi$1 && ui$1(t.value) === dr) {
+						let e = t.value;
+						a(e.sections);
+					} else t instanceof ra$1 ? a(t.sections) : t.eachChild(e);
+				}
+			}, t = n.value;
+			t._styleExpression && e(t._styleExpression.expression);
+		}
+		return i;
+	}
+};
+var bv;
+var xv = () => bv ||= new xl$1({
+	"background-color": new K$1(M.paint_background[`background-color`], `background-color`),
+	"background-pattern": new yl$1(M.paint_background[`background-pattern`], `background-pattern`),
+	"background-opacity": new K$1(M.paint_background[`background-opacity`], `background-opacity`)
+});
+var Sv = { get paint() {
+	return xv();
+} };
 var Cv = (e) => e.type === `background`;
+var wv = class extends wl$1 {
+	constructor(e, t) {
+		super(e, Sv, t);
+	}
+};
+function Tv(e) {
+	let t = [], n = e.id;
+	return n === void 0 && t.push(new P(`layers.${n}`, null, `missing required property "id"`)), e.render === void 0 && t.push(new P(`layers.${n}`, null, `missing required method "render"`)), e.renderingMode && e.renderingMode !== `2d` && e.renderingMode !== `3d` && t.push(new P(`layers.${n}`, null, `property "renderingMode" must be either "2d" or "3d"`)), t;
+}
 var Ev = (e) => e.type === `custom`;
+var Dv = class extends wl$1 {
+	constructor(e, t) {
+		super(e, {}, t), this.onAdd = (e) => {
+			this.implementation.onAdd && this.implementation.onAdd(e, e.painter.context.gl);
+		}, this.onRemove = (e) => {
+			this.implementation.onRemove && this.implementation.onRemove(e, e.painter.context.gl);
+		}, this.implementation = e;
+	}
+	is3D() {
+		return this.implementation.renderingMode === `3d`;
+	}
+	hasOffscreenPass() {
+		return this.implementation.prerender !== void 0;
+	}
+	recalculate() {}
+	updateTransitions() {}
+	hasTransition() {
+		return !1;
+	}
+	serialize() {
+		throw Error(`Custom layers cannot be serialized`);
+	}
+};
+function Ov(e, t) {
+	if (e.type === `custom`) return new Dv(e, t);
+	switch (e.type) {
+		case `background`: return new wv(e, t);
+		case `circle`: return new af$1(e, t);
+		case `color-relief`: return new Nf$1(e, t);
+		case `fill`: return new em(e, t);
+		case `fill-extrusion`: return new qm(e, t);
+		case `heatmap`: return new yf$1(e, t);
+		case `hillshade`: return new wf$1(e, t);
+		case `line`: return new Rg(e, t);
+		case `raster`: return new kl$1(e, t);
+		case `symbol`: return new vv(e, t);
+	}
+}
 var kv = class {
 	constructor(e) {
 		this._methodToThrottle = e, this._triggered = !1, this._channel = new MessageChannel(), this._channel.port2.onmessage = () => {
@@ -13259,6 +14817,10 @@ var jv = class {
 };
 function Mv(e, t, n) {
 	return !(e < 0 || e > 25 || n < 0 || n >= 2 ** e || t < 0 || t >= 2 ** e);
+}
+function Nv(e, t) {
+	let { x: n, y: r } = xm.fromLngLat(t);
+	return !(e < 0 || e > 25 || r < 0 || r >= 1 || n < 0 || n >= 1);
 }
 var Pv = class {
 	constructor(e, t, n) {
@@ -15845,8 +17407,8 @@ var aC = class {
 		let f = this.sourceLayerCoder.decode(n), p = this.vtLayers[f].feature(r);
 		if (i.needGeometry) {
 			let e = Cd$1(p, !0);
-			if (!i.filter(new G(this.tileID.overscaledZ), e, this.tileID.canonical)) return;
-		} else if (!i.filter(new G(this.tileID.overscaledZ), p)) return;
+			if (!i.filter(new G$1(this.tileID.overscaledZ), e, this.tileID.canonical)) return;
+		} else if (!i.filter(new G$1(this.tileID.overscaledZ), p)) return;
 		let m = this.getId(p, f);
 		for (let t of d) {
 			if (a && !a.has(t)) continue;
@@ -15956,6 +17518,17 @@ var cC = class {
 		for (let e of t) this.remove(e.value.tileID, e);
 	}
 };
+function uC(e, t, n, r, i) {
+	let a = [];
+	for (let o of e) {
+		let e;
+		for (let s = 0; s < o.length - 1; s++) {
+			let c = o[s], u = o[s + 1];
+			c.x < t && u.x < t || (c.x < t ? c = new l(t, c.y + (u.y - c.y) * ((t - c.x) / (u.x - c.x)))._round() : u.x < t && (u = new l(t, c.y + (u.y - c.y) * ((t - c.x) / (u.x - c.x)))._round()), !(c.y < n && u.y < n) && (c.y < n ? c = new l(c.x + (u.x - c.x) * ((n - c.y) / (u.y - c.y)), n)._round() : u.y < n && (u = new l(c.x + (u.x - c.x) * ((n - c.y) / (u.y - c.y)), n)._round()), !(c.x >= r && u.x >= r) && (c.x >= r ? c = new l(r, c.y + (u.y - c.y) * ((r - c.x) / (u.x - c.x)))._round() : u.x >= r && (u = new l(r, c.y + (u.y - c.y) * ((r - c.x) / (u.x - c.x)))._round()), !(c.y >= i && u.y >= i) && (c.y >= i ? c = new l(c.x + (u.x - c.x) * ((i - c.y) / (u.y - c.y)), i)._round() : u.y >= i && (u = new l(c.x + (u.x - c.x) * ((i - c.y) / (u.y - c.y)), i)._round()), (!e || !c.equals(e[e.length - 1])) && (e = [c], a.push(e)), e.push(u)))));
+		}
+	}
+	return a;
+}
 W$1(`Anchor`, class e extends l {
 	constructor(e, t, n, r) {
 		super(e, t), this.angle = n, r !== void 0 && (this.segment = r);
@@ -15964,13 +17537,25 @@ W$1(`Anchor`, class e extends l {
 		return new e(this.x, this.y, this.angle, this.segment);
 	}
 });
-(function(e) {
+var zC = function(e) {
 	return e[e.center = 1] = `center`, e[e.left = 2] = `left`, e[e.right = 3] = `right`, e[e.top = 4] = `top`, e[e.bottom = 5] = `bottom`, e[e[`top-left`] = 6] = `top-left`, e[e[`top-right`] = 7] = `top-right`, e[e[`bottom-left`] = 8] = `bottom-left`, e[e[`bottom-right`] = 9] = `bottom-right`, e;
-})({});
+}({});
+function WC(e) {
+	switch (e) {
+		case `right`:
+		case `top-right`:
+		case `bottom-right`: return `right`;
+		case `left`:
+		case `top-left`:
+		case `bottom-left`: return `left`;
+	}
+	return `center`;
+}
 /**
 * MapLibre GL JS
 * @license 3-Clause BSD. Full text of license: https://github.com/maplibre/maplibre-gl-js/blob/v6.3.0/LICENSE.txt
 */
+var Dr = `6.3.0`;
 function Or() {
 	var e = new h(4);
 	return h != Float32Array && (e[1] = 0, e[2] = 0), e[0] = 1, e[3] = 1, e;
@@ -15981,6 +17566,10 @@ function kr(e, t) {
 }
 function Ar(e) {
 	return e[0] * e[3] - e[2] * e[1];
+}
+function jr(e, t, n) {
+	var r = t[0], i = t[1], a = t[2], o = t[3], s = Math.sin(n), c = Math.cos(n);
+	return e[0] = r * c + a * s, e[1] = i * c + o * s, e[2] = r * -s + a * c, e[3] = i * -s + o * c, e;
 }
 var Mr;
 var Nr;
@@ -16039,7 +17628,7 @@ var Ir = new class {
 function U() {
 	return Ir.getCurrentTime();
 }
-(class e {
+var W = class e {
 	static {
 		this.docStyle = typeof window < `u` && window.document?.documentElement.style;
 	}
@@ -16108,7 +17697,7 @@ function U() {
 	static removeAttributes(t) {
 		for (let { name: n, value: r } of t.attributes) e.isPossiblyDangerous(n, r) && t.removeAttribute(n);
 	}
-});
+};
 var Br;
 (function(e) {
 	let t, n, r, i;
@@ -16179,10 +17768,376 @@ var Br;
 		}, i.src = a;
 	});
 })(Br ||= {}), Br.resetRequestQueue();
+var Vr = class {
+	constructor(e) {
+		this._transformRequestFn = e ?? null;
+	}
+	transformRequest(e, t) {
+		return this._transformRequestFn && this._transformRequestFn(e, t) || { url: e };
+	}
+	setTransformRequest(e) {
+		this._transformRequestFn = e;
+	}
+};
 var Hr = class extends Bn {};
+var G = class extends Hr {};
+var Ur = class extends Hr {
+	constructor(e = {}) {
+		super(`style.load`, e);
+	}
+};
+var Wr = class extends Hr {
+	constructor(e, t = {}) {
+		super(e, t), this.dataType = `style`;
+	}
+};
 var K = class extends Hr {
 	constructor(e, t = {}) {
 		super(e, t), this.dataType = `source`;
+	}
+};
+var Gr = class extends Hr {
+	preventDefault() {
+		this._defaultPrevented = !0;
+	}
+	get defaultPrevented() {
+		return this._defaultPrevented;
+	}
+	constructor(e, t, n, r = {}) {
+		n = n instanceof MouseEvent ? n : new MouseEvent(e, n);
+		let i = W.mousePos(t.getCanvas(), n), a = t.unproject(i);
+		super(e, Dt({
+			point: i,
+			lngLat: a,
+			originalEvent: n
+		}, r)), this._defaultPrevented = !1, this.target = t;
+	}
+};
+var Kr = class extends Hr {
+	preventDefault() {
+		this._defaultPrevented = !0;
+	}
+	get defaultPrevented() {
+		return this._defaultPrevented;
+	}
+	constructor(e, t, n) {
+		let r = e === `touchend` ? n.changedTouches : n.touches, i = W.touchPos(t.getCanvasContainer(), r), a = i.map((e) => t.unproject(e)), o = i.reduce((e, t, n, r) => e.add(t.div(r.length)), new l(0, 0)), s = t.unproject(o);
+		super(e, {
+			points: i,
+			point: o,
+			lngLats: a,
+			lngLat: s,
+			originalEvent: n
+		}), this._defaultPrevented = !1;
+	}
+};
+var qr = class extends Hr {
+	preventDefault() {
+		this._defaultPrevented = !0;
+	}
+	get defaultPrevented() {
+		return this._defaultPrevented;
+	}
+	constructor(e, t) {
+		super(`wheel`, { originalEvent: t }), this._defaultPrevented = !1;
+	}
+};
+var Jr = class extends Hr {};
+var Yr = class extends Hr {
+	constructor(e = {}) {
+		super(`terrain`, e);
+	}
+};
+var Xr = class extends Hr {
+	constructor(e = {}) {
+		super(`projectiontransition`, e);
+	}
+};
+var Zr = class extends Hr {};
+var Qr = class extends Hr {
+	constructor(e = {}) {
+		super(`styleimagemissing`, e);
+	}
+};
+function $r(e) {
+	let t = [];
+	if (typeof e == `string`) t.push({
+		id: `default`,
+		url: e
+	});
+	else if (e && e.length > 0) {
+		let n = [];
+		for (let { id: r, url: i } of e) {
+			let e = `${r}${i}`;
+			n.includes(e) || (n.push(e), t.push({
+				id: r,
+				url: i
+			}));
+		}
+	}
+	return t;
+}
+function ei(e, t, n) {
+	try {
+		let r = new URL(e);
+		return r.pathname += `${t}${n}`, r.toString();
+	} catch {
+		throw Error(`Invalid sprite URL "${e}", must be absolute. Modify style specification directly or use TransformStyleFunction to correct the issue dynamically`);
+	}
+}
+async function ti(e, t, n, r) {
+	let i = $r(e), a = n > 1 ? `@2x` : ``, o = {}, s = {};
+	for (let { id: e, url: n } of i) {
+		o[e] = Pn(await t.transformRequest(ei(n, a, `.json`), `SpriteJSON`), r);
+		let c = await t.transformRequest(ei(n, a, `.png`), `SpriteImage`);
+		s[e] = Br.getImage(c, r);
+	}
+	return await Promise.all([...Object.values(o), ...Object.values(s)]), ni(o, s);
+}
+async function ni(e, t) {
+	let n = {};
+	for (let r in e) {
+		n[r] = {};
+		let i = Fr.getImageCanvasContext((await t[r]).data), a = (await e[r]).data;
+		for (let e in a) {
+			let { width: t, height: o, x: s, y: c, sdf: l, pixelRatio: u, stretchX: d, stretchY: f, content: p, textFitWidth: m, textFitHeight: h } = a[e], g = {
+				width: t,
+				height: o,
+				x: s,
+				y: c,
+				context: i
+			};
+			n[r][e] = {
+				data: null,
+				pixelRatio: u,
+				sdf: l,
+				stretchX: d,
+				stretchY: f,
+				content: p,
+				textFitWidth: m,
+				textFitHeight: h,
+				spriteData: g
+			};
+		}
+	}
+	return n;
+}
+var ri = class extends Hn {
+	constructor() {
+		super(), this.images = {}, this.updatedImages = {}, this.callbackDispatchedThisFrame = {}, this.loaded = !1, this.requestors = [], this.missingImageResolver = null, this.patterns = {}, this.atlasImage = new mf$1({
+			width: 1,
+			height: 1
+		}), this.dirty = !0;
+	}
+	destroy() {
+		this.atlasTexture &&= (this.atlasTexture.destroy(), null);
+		for (let e of Object.keys(this.images)) this.removeImage(e);
+		this.patterns = {}, this.atlasImage = new mf$1({
+			width: 1,
+			height: 1
+		}), this.dirty = !0;
+	}
+	isLoaded() {
+		return this.loaded;
+	}
+	setLoaded(e) {
+		if (this.loaded !== e && (this.loaded = e, e)) {
+			for (let { ids: e, promiseResolve: t } of this.requestors) t(this._getImagesForIds(e));
+			this.requestors = [];
+		}
+	}
+	getImage(e) {
+		let t = this.images[e];
+		if (t && !t.data && t.spriteData) {
+			let e = t.spriteData;
+			t.data = new mf$1({
+				width: e.width,
+				height: e.height
+			}, e.context.getImageData(e.x, e.y, e.width, e.height).data), t.spriteData = null;
+		}
+		return t;
+	}
+	addImage(e, t) {
+		if (this.images[e]) throw Error(`Image id ${e} already exist, use updateImage instead`);
+		this._validate(e, t) && (this.images[e] = t, t.isWebGLImage && this.updateImage(e, t, !1));
+	}
+	_validate(e, t) {
+		let n = !0, r = t.data || t.spriteData;
+		return this._validateStretch(t.stretchX, r?.width) || (this.fire(new Vn(Error(`Image "${e}" has invalid "stretchX" value`))), n = !1), this._validateStretch(t.stretchY, r?.height) || (this.fire(new Vn(Error(`Image "${e}" has invalid "stretchY" value`))), n = !1), this._validateContent(t.content, t) || (this.fire(new Vn(Error(`Image "${e}" has invalid "content" value`))), n = !1), n;
+	}
+	_validateStretch(e, t) {
+		if (!e) return !0;
+		let n = 0;
+		for (let r of e) {
+			if (r[0] < n || r[1] < r[0] || t < r[1]) return !1;
+			n = r[1];
+		}
+		return !0;
+	}
+	_validateContent(e, t) {
+		if (!e) return !0;
+		if (e.length !== 4) return !1;
+		let n = t.spriteData, r = n?.width || t.data.width, i = n?.height || t.data.height;
+		return e[0] < 0 || r < e[0] || e[1] < 0 || i < e[1] || e[2] < 0 || r < e[2] || e[3] < 0 || i < e[3] || e[2] < e[0] ? !1 : e[3] >= e[1];
+	}
+	updateImage(e, t, n = !0) {
+		let r = this.getImage(e);
+		if (n && (r.data.width !== t.data.width || r.data.height !== t.data.height)) throw Error(`size mismatch between old image (${r.data.width}x${r.data.height}) and new image (${t.data.width}x${t.data.height}).`);
+		t.version = r.version + 1, this.images[e] = t, this.updatedImages[e] = !0;
+	}
+	removeImage(e) {
+		let t = this.images[e];
+		delete this.images[e], delete this.patterns[e], t.userImage?.onRemove && t.userImage.onRemove();
+	}
+	listImages() {
+		return Object.keys(this.images);
+	}
+	setMissingImageResolver(e) {
+		this.missingImageResolver = e;
+	}
+	getImages(e) {
+		return new Promise((t, n) => {
+			let r = !0;
+			if (!this.isLoaded()) for (let t of e) this.images[t] || (r = !1);
+			this.isLoaded() || r ? t(this._getImagesForIds(e)) : this.requestors.push({
+				ids: e,
+				promiseResolve: t
+			});
+		});
+	}
+	async _getImagesForIds(e) {
+		let t = new Set(e.filter((e) => !this.getImage(e))), n = this.missingImageResolver;
+		n && await Promise.all(Array.from(t, (e) => n(e)));
+		let r = {};
+		for (let n of e) {
+			let e = this.getImage(n);
+			e && (t.delete(n), r[n] = {
+				data: e.data.clone(),
+				pixelRatio: e.pixelRatio,
+				sdf: e.sdf,
+				version: e.version,
+				stretchX: e.stretchX,
+				stretchY: e.stretchY,
+				content: e.content,
+				textFitWidth: e.textFitWidth,
+				textFitHeight: e.textFitHeight,
+				hasRenderCallback: !!e.userImage?.render,
+				isWebGLImage: e.isWebGLImage
+			});
+		}
+		for (let e of t) this.fire(new Qr({ id: e })), Vt(`Image "${e}" could not be loaded. Please make sure you have added the image before it is needed with map.addImage(), resolved it with map.setMissingStyleImageResolver(), or included it in a "sprite" property in your style.`);
+		return r;
+	}
+	getPixelSize() {
+		let { width: e, height: t } = this.atlasImage;
+		return {
+			width: e,
+			height: t
+		};
+	}
+	getPattern(e) {
+		let t = this.patterns[e], n = this.getImage(e);
+		if (!n) return null;
+		if (t && t.position.version === n.version) return t.position;
+		if (t) t.position.version = n.version;
+		else {
+			let t = {
+				w: n.data.width + 2,
+				h: n.data.height + 2,
+				x: 0,
+				y: 0
+			}, r = new N_(t, n);
+			this.patterns[e] = {
+				bin: t,
+				position: r
+			};
+		}
+		return this._updatePatternAtlas(), this.patterns[e].position;
+	}
+	bind(e) {
+		let t = e.gl;
+		this.atlasTexture ? this.dirty &&= (this.atlasTexture.update(this.atlasImage), !1) : this.atlasTexture = new kf$1(e, this.atlasImage, t.RGBA), this.atlasTexture.bind(t.LINEAR, t.CLAMP_TO_EDGE);
+	}
+	_updatePatternAtlas() {
+		let e = [];
+		for (let t in this.patterns) e.push(this.patterns[t].bin);
+		let { w: t, h: n } = M_(e), r = this.atlasImage;
+		r.resize({
+			width: t || 1,
+			height: n || 1
+		});
+		for (let e in this.patterns) {
+			let { bin: t } = this.patterns[e], n = t.x + 1, i = t.y + 1, a = this.getImage(e).data, o = a.width, s = a.height;
+			mf$1.copy(a, r, {
+				x: 0,
+				y: 0
+			}, {
+				x: n,
+				y: i
+			}, {
+				width: o,
+				height: s
+			}), mf$1.copy(a, r, {
+				x: 0,
+				y: s - 1
+			}, {
+				x: n,
+				y: i - 1
+			}, {
+				width: o,
+				height: 1
+			}), mf$1.copy(a, r, {
+				x: 0,
+				y: 0
+			}, {
+				x: n,
+				y: i + s
+			}, {
+				width: o,
+				height: 1
+			}), mf$1.copy(a, r, {
+				x: o - 1,
+				y: 0
+			}, {
+				x: n - 1,
+				y: i
+			}, {
+				width: 1,
+				height: s
+			}), mf$1.copy(a, r, {
+				x: 0,
+				y: 0
+			}, {
+				x: n + o,
+				y: i
+			}, {
+				width: 1,
+				height: s
+			});
+		}
+		this.dirty = !0;
+	}
+	beginFrame() {
+		this.callbackDispatchedThisFrame = {};
+	}
+	dispatchRenderCallbacks(e) {
+		for (let t of e) {
+			if (this.callbackDispatchedThisFrame[t]) continue;
+			this.callbackDispatchedThisFrame[t] = !0;
+			let e = this.getImage(t);
+			e || Vt(`Image with ID: "${t}" was not found`), j_(e) && this.updateImage(t, e);
+		}
+	}
+	cloneImages() {
+		let e = {};
+		for (let t in this.images) {
+			let n = this.images[t];
+			e[t] = {
+				...n,
+				data: n.data ? n.data.clone() : null
+			};
+		}
+		return e;
 	}
 };
 async function ii(e, t, n, r) {
@@ -16269,7 +18224,7 @@ function li(e, t, n, r, i, a, o) {
 	}
 }
 var ui = M.layout_symbol[`text-font`].default.join(`,`);
-(class e {
+var di = class e {
 	static {
 		this.loadGlyphRange = ii;
 	}
@@ -16348,7 +18303,7 @@ var ui = M.layout_symbol[`text-font`].default.join(`,`);
 		let a = (await e[i]).draw(String.fromCodePoint(n)), o = /^\p{gc=Cf}+$/u.test(String.fromCodePoint(n));
 		return {
 			id: n,
-			bitmap: new pf({
+			bitmap: new pf$1({
 				width: a.width || 60,
 				height: a.height || 60
 			}, a.data),
@@ -16415,7 +18370,170 @@ var ui = M.layout_symbol[`text-font`].default.join(`,`);
 		}
 		this.entries = {};
 	}
+};
+var fi;
+var pi = () => fi ||= new xl$1({
+	anchor: new K$1(M.light.anchor, `anchor`),
+	position: new K$1(M.light.position, `position`),
+	color: new K$1(M.light.color, `color`),
+	intensity: new K$1(M.light.intensity, `intensity`)
 });
+var mi = class extends Hn {
+	constructor(e, t) {
+		super(), this._transitionable = new ul$1(pi(), `light`, t), this.setLight(e), this._transitioning = this._transitionable.untransitioned();
+	}
+	getLight() {
+		return this._transitionable.serialize();
+	}
+	getCartesianPosition() {
+		return Wt(this.properties.get(`position`));
+	}
+	setLight(e, t = {}) {
+		if (!this._validate(Ec$1.light, e, t)) for (let t in e) {
+			let n = e[t];
+			t.endsWith(`-transition`) ? this._transitionable.setTransition(t.slice(0, -sl$1.length), n) : this._transitionable.setValue(t, n);
+		}
+	}
+	updateTransitions(e) {
+		this._transitioning = this._transitionable.transitioned(e, this._transitioning);
+	}
+	hasTransition() {
+		return this._transitioning.hasTransition();
+	}
+	recalculate(e) {
+		this.properties = this._transitioning.possiblyEvaluate(e);
+	}
+	_validate(e, t, n) {
+		return jc$1(this, e, { value: t }, n);
+	}
+};
+var hi;
+var gi = () => hi ||= new xl$1({
+	"sky-color": new K$1(M.sky[`sky-color`], `sky-color`),
+	"horizon-color": new K$1(M.sky[`horizon-color`], `horizon-color`),
+	"fog-color": new K$1(M.sky[`fog-color`], `fog-color`),
+	"fog-ground-blend": new K$1(M.sky[`fog-ground-blend`], `fog-ground-blend`),
+	"horizon-fog-blend": new K$1(M.sky[`horizon-fog-blend`], `horizon-fog-blend`),
+	"sky-horizon-blend": new K$1(M.sky[`sky-horizon-blend`], `sky-horizon-blend`),
+	"atmosphere-blend": new K$1(M.sky[`atmosphere-blend`], `atmosphere-blend`)
+});
+var _i = class extends Hn {
+	constructor(e, t) {
+		super(), this._transitionable = new ul$1(gi(), `sky`, t), this.setSky(e), this._transitioning = this._transitionable.untransitioned(), this.recalculate(new G$1(0));
+	}
+	setSky(e, t = {}) {
+		if (!this._validate(Ec$1.sky, e, t)) {
+			e ||= {
+				"sky-color": `transparent`,
+				"horizon-color": `transparent`,
+				"fog-color": `transparent`,
+				"fog-ground-blend": 1,
+				"atmosphere-blend": 0
+			};
+			for (let t in e) {
+				let n = e[t];
+				t.endsWith(`-transition`) ? this._transitionable.setTransition(t.slice(0, -sl$1.length), n) : this._transitionable.setValue(t, n);
+			}
+		}
+	}
+	getSky() {
+		return this._transitionable.serialize();
+	}
+	updateTransitions(e) {
+		this._transitioning = this._transitionable.transitioned(e, this._transitioning);
+	}
+	hasTransition() {
+		return this._transitioning.hasTransition();
+	}
+	recalculate(e) {
+		this.properties = this._transitioning.possiblyEvaluate(e);
+	}
+	_validate(e, t, n = {}) {
+		return jc$1(this, e, { value: t }, n);
+	}
+	calculateFogBlendOpacity(e) {
+		return e < 60 ? 0 : e < 70 ? (e - 60) / 10 : 1;
+	}
+};
+var vi = class {
+	constructor(e, t) {
+		this.width = e, this.height = t, this.nextRow = 0, this.data = new Uint8Array(this.width * this.height), this.dashEntry = {};
+	}
+	getDash(e, t) {
+		let n = e.join(`,`) + String(t);
+		return this.dashEntry[n] ||= this.addDash(e, t), this.dashEntry[n];
+	}
+	getDashRanges(e, t, n) {
+		let r = e.length % 2 == 1, i = [], a = r ? -e[e.length - 1] * n : 0, o = e[0] * n, s = !0;
+		i.push({
+			left: a,
+			right: o,
+			isDash: s,
+			zeroLength: e[0] === 0
+		});
+		let c = e[0];
+		for (let t = 1; t < e.length; t++) {
+			s = !s;
+			let r = e[t];
+			a = c * n, c += r, o = c * n, i.push({
+				left: a,
+				right: o,
+				isDash: s,
+				zeroLength: r === 0
+			});
+		}
+		return i;
+	}
+	addRoundDash(e, t, n) {
+		let r = t / 2;
+		for (let t = -n; t <= n; t++) {
+			let i = this.nextRow + n + t, a = this.width * i, o = 0, s = e[o];
+			for (let i = 0; i < this.width; i++) {
+				i / s.right > 1 && (s = e[++o]);
+				let c = Math.abs(i - s.left), l = Math.abs(i - s.right), u = Math.min(c, l), d, f = t / n * (r + 1);
+				if (s.isDash) {
+					let e = r - Math.abs(f);
+					d = Math.sqrt(u * u + e * e);
+				} else d = r - Math.sqrt(u * u + f * f);
+				this.data[a + i] = Math.max(0, Math.min(255, d + 128));
+			}
+		}
+	}
+	addRegularDash(e) {
+		for (let t = e.length - 1; t >= 0; --t) {
+			let n = e[t], r = e[t + 1];
+			n.zeroLength ? e.splice(t, 1) : r?.isDash === n.isDash && (r.left = n.left, e.splice(t, 1));
+		}
+		let t = e[0], n = e[e.length - 1];
+		t.isDash === n.isDash && (t.left = n.left - this.width, n.right = t.right + this.width);
+		let r = this.width * this.nextRow, i = 0, a = e[i];
+		for (let t = 0; t < this.width; t++) {
+			t / a.right > 1 && (a = e[++i]);
+			let n = Math.abs(t - a.left), o = Math.abs(t - a.right), s = Math.min(n, o), c = a.isDash ? s : -s;
+			this.data[r + t] = Math.max(0, Math.min(255, c + 128));
+		}
+	}
+	addDash(e, t) {
+		let n = t ? 7 : 0, r = 2 * n + 1;
+		if (this.nextRow + r > this.height) return Vt(`LineAtlas out of space`), null;
+		let i = 0;
+		for (let t of e) i += t;
+		if (i !== 0) {
+			let r = this.width / i, a = this.getDashRanges(e, this.width, r);
+			t ? this.addRoundDash(a, r, n) : this.addRegularDash(a);
+		}
+		let a = {
+			y: this.nextRow + n,
+			height: 2 * n,
+			width: i
+		};
+		return this.nextRow += r, this.dirty = !0, a;
+	}
+	bind(e) {
+		let t = e.gl;
+		this.texture ? (t.bindTexture(t.TEXTURE_2D, this.texture), this.dirty && (this.dirty = !1, t.texSubImage2D(t.TEXTURE_2D, 0, 0, 0, this.width, this.height, t.ALPHA, t.UNSIGNED_BYTE, this.data))) : (this.texture = t.createTexture(), t.bindTexture(t.TEXTURE_2D, this.texture), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_S, t.REPEAT), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_WRAP_T, t.REPEAT), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MIN_FILTER, t.LINEAR), t.texParameteri(t.TEXTURE_2D, t.TEXTURE_MAG_FILTER, t.LINEAR), t.texImage2D(t.TEXTURE_2D, 0, t.ALPHA, this.width, this.height, 0, t.ALPHA, t.UNSIGNED_BYTE, this.data));
+	}
+};
 function yi(e) {
 	if (!e) return !1;
 	let t = globalThis.location;
@@ -16549,6 +18667,106 @@ var Mi = class {
 var Ni;
 function Pi() {
 	return Ni || (Ni = new Mi(ki(), Dn), Ni.registerMessageHandler(`GR`, (e, t, n) => Nn(t, n))), Ni;
+}
+function Fi(e, t) {
+	let n = b();
+	return E(n, n, [
+		1,
+		1,
+		0
+	]), D(n, n, [
+		e.width * .5,
+		e.height * .5,
+		1
+	]), e.calculatePosMatrix ? T(n, n, e.calculatePosMatrix(t.toUnwrapped())) : n;
+}
+function Ii(e, t, n) {
+	if (e) for (let r of e) {
+		let e = t[r];
+		if (e?.source === n && e.type === `fill-extrusion`) return !0;
+	}
+	else for (let e in t) {
+		let r = t[e];
+		if (r.source === n && r.type === `fill-extrusion`) return !0;
+	}
+	return !1;
+}
+function Li(e, t, n, r, i, a, o) {
+	let s = Ii(i?.layers ?? null, t, e.id), c = a.maxPitchScaleFactor(), l = e.tilesIn(r, c, s);
+	l.sort(Bi);
+	let u = [];
+	for (let r of l) u.push({
+		wrappedTileID: r.tileID.wrapped().key,
+		queryResults: r.tile.queryRenderedFeatures(t, n, e.getState(), r.queryGeometry, r.cameraQueryGeometry, r.scale, i, a, c, Fi(a, r.tileID), o ? (e, t) => o(r.tileID, e, t) : void 0)
+	});
+	return Hi(Vi(u), e);
+}
+function Ri(e, t, n, r, i, a, o) {
+	let s = {}, c = a.queryRenderedSymbols(r), l = [];
+	for (let e of Object.keys(c).map(Number)) l.push(o[e]);
+	l.sort(Bi);
+	for (let n of l) {
+		let r = n.featureIndex.lookupSymbolFeatures(c[n.bucketInstanceId], t, n.bucketIndex, n.sourceLayerIndex, {
+			filterSpec: i.filter,
+			globalState: i.globalState
+		}, i.layers, i.availableImages, e);
+		for (let e in r) {
+			s[e] ||= [];
+			let t = r[e];
+			t.sort((e, t) => {
+				let r = n.featureSortOrder;
+				if (r) {
+					let n = r.indexOf(e.featureIndex);
+					return r.indexOf(t.featureIndex) - n;
+				}
+				return t.featureIndex - e.featureIndex;
+			});
+			for (let n of t) s[e].push(n);
+		}
+	}
+	return Ui(s, e, n);
+}
+function zi(e, t) {
+	let n = e.getRenderableIds().map((t) => e.getTileByID(t)), r = [], i = {};
+	for (let e of n) {
+		let n = e.tileID.canonical.key;
+		i[n] || (i[n] = !0, e.querySourceFeatures(r, t));
+	}
+	return r;
+}
+function Bi(e, t) {
+	let n = e.tileID, r = t.tileID;
+	return n.overscaledZ - r.overscaledZ || n.canonical.y - r.canonical.y || n.wrap - r.wrap || n.canonical.x - r.canonical.x;
+}
+function Vi(e) {
+	let t = {}, n = {};
+	for (let { queryResults: r, wrappedTileID: i } of e) {
+		n[i] ||= {};
+		let e = n[i];
+		for (let n in r) {
+			let i = r[n];
+			e[n] ||= {};
+			let a = e[n];
+			t[n] ||= [];
+			for (let e of i) a[e.featureIndex] || (a[e.featureIndex] = !0, t[n].push(e));
+		}
+	}
+	return t;
+}
+function Hi(e, t) {
+	for (let n in e) for (let r of e[n]) Wi(r, t);
+	return e;
+}
+function Ui(e, t, n) {
+	for (let r in e) for (let i of e[r]) {
+		let e = n[t[r].source];
+		Wi(i, e);
+	}
+	return e;
+}
+function Wi(e, t) {
+	let n = e.feature, r = t.getFeatureState(n.layer[`source-layer`], n.id);
+	n.source = n.layer.source, n.layer[`source-layer`] && (n.sourceLayer = n.layer[`source-layer`]), n.state = r;
 }
 async function Gi(e, t, n, r) {
 	let i = e;
@@ -16883,7 +19101,7 @@ var Yi = class extends Hn {
 				e.texture = this.map.painter.getTileTexture(a.width), e.texture ? e.texture.update(a, {
 					useMipmap: !0,
 					premultiply: n
-				}) : (e.texture = new kf(r, a, i.RGBA, {
+				}) : (e.texture = new kf$1(r, a, i.RGBA, {
 					useMipmap: !0,
 					premultiply: n
 				}), e.texture.bind(i.LINEAR, i.CLAMP_TO_EDGE, i.LINEAR_MIPMAP_NEAREST)), e.state = `loaded`;
@@ -16948,7 +19166,7 @@ var Xi = class extends Yi {
 		if (typeof VideoFrame < `u` && m()) {
 			let t = e.width + 2, n = e.height + 2;
 			try {
-				return new mf({
+				return new mf$1({
 					width: t,
 					height: n
 				}, await en(e, -1, -1, t, n));
@@ -17447,7 +19665,7 @@ var va = class extends Hn {
 	prepare() {
 		if (Object.keys(this.tiles).length === 0 || !this.image) return;
 		let e = this.map.painter.context, t = e.gl;
-		this.texture ? this._imageDirty && (this.texture.update(this.image), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE)) : (this.texture = new kf(e, this.image, t.RGBA), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE)), this._imageDirty = !1;
+		this.texture ? this._imageDirty && (this.texture.update(this.image), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE)) : (this.texture = new kf$1(e, this.image, t.RGBA), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE)), this._imageDirty = !1;
 		let n = !1;
 		for (let e in this.tiles) {
 			let t = this.tiles[e];
@@ -17582,7 +19800,7 @@ var wa = class extends va {
 	prepare() {
 		if (Object.keys(this.tiles).length === 0 || this.video.readyState < 2) return;
 		let e = this.map.painter.context, t = e.gl;
-		this.texture ? this.video.paused || (this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE), t.texSubImage2D(t.TEXTURE_2D, 0, 0, 0, t.RGBA, t.UNSIGNED_BYTE, this.video)) : (this.texture = new kf(e, this.video, t.RGBA), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE));
+		this.texture ? this.video.paused || (this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE), t.texSubImage2D(t.TEXTURE_2D, 0, 0, 0, t.RGBA, t.UNSIGNED_BYTE, this.video)) : (this.texture = new kf$1(e, this.video, t.RGBA), this.texture.bind(t.LINEAR, t.CLAMP_TO_EDGE));
 		let n = !1;
 		for (let e in this.tiles) {
 			let t = this.tiles[e];
@@ -17632,7 +19850,7 @@ var Ta = class extends va {
 		let e = !1;
 		if (this.canvas.width !== this.width && (this.width = this.canvas.width, e = !0), this.canvas.height !== this.height && (this.height = this.canvas.height, e = !0), this._hasInvalidDimensions() || Object.keys(this.tiles).length === 0) return;
 		let t = this.map.painter.context, n = t.gl;
-		this.texture ? (e || this._playing) && this.texture.update(this.canvas, { premultiply: !0 }) : (this.texture = new kf(t, this.canvas, n.RGBA, { premultiply: !0 }), this.texture.bind(n.LINEAR, n.CLAMP_TO_EDGE));
+		this.texture ? (e || this._playing) && this.texture.update(this.canvas, { premultiply: !0 }) : (this.texture = new kf$1(t, this.canvas, n.RGBA, { premultiply: !0 }), this.texture.bind(n.LINEAR, n.CLAMP_TO_EDGE));
 		let r = !1;
 		for (let e in this.tiles) {
 			let t = this.tiles[e];
@@ -17805,7 +20023,7 @@ var Ia = class {
 			n.uploadPending() && n.upload(e);
 		}
 		let t = e.gl;
-		this.imageAtlas && !this.imageAtlas.uploaded && (this.imageAtlasTexture = new kf(e, this.imageAtlas.image, t.RGBA), this.imageAtlas.uploaded = !0), this.glyphAtlasImage &&= (this.glyphAtlasTexture = new kf(e, this.glyphAtlasImage, t.ALPHA), null);
+		this.imageAtlas && !this.imageAtlas.uploaded && (this.imageAtlasTexture = new kf$1(e, this.imageAtlas.image, t.RGBA), this.imageAtlas.uploaded = !0), this.glyphAtlasImage &&= (this.glyphAtlasTexture = new kf$1(e, this.glyphAtlasImage, t.ALPHA), null);
 	}
 	prepare(e) {
 		this.imageAtlas && this.imageAtlas.patchUpdatedImages(e, this.imageAtlasTexture);
@@ -17837,8 +20055,8 @@ var Ia = class {
 			let r = a.feature(t);
 			if (o.needGeometry) {
 				let e = Cd$1(r, !0);
-				if (!o.filter(new G(this.tileID.overscaledZ), e, this.tileID.canonical)) continue;
-			} else if (!o.filter(new G(this.tileID.overscaledZ), r)) continue;
+				if (!o.filter(new G$1(this.tileID.overscaledZ), e, this.tileID.canonical)) continue;
+			} else if (!o.filter(new G$1(this.tileID.overscaledZ), r)) continue;
 			let f = new ry(r, s, c, l, n.getId(r, i));
 			f.tile = u, e.push(f);
 		}
@@ -18533,13 +20751,212 @@ var ro = class e extends Hn {
 		return !0;
 	}
 };
+var io = class {
+	constructor(e, t) {
+		this.reset(e, t);
+	}
+	reset(e, t) {
+		this.points = e || [], this._distances = [0];
+		for (let e = 1; e < this.points.length; e++) this._distances[e] = this._distances[e - 1] + this.points[e].dist(this.points[e - 1]);
+		this.length = this._distances[this._distances.length - 1], this.padding = Math.min(t || 0, this.length * .5), this.paddedLength = this.length - this.padding * 2;
+	}
+	lerp(e) {
+		if (this.points.length === 1) return this.points[0];
+		e = Tt(e, 0, 1);
+		let t = 1, n = this._distances[t], r = e * this.paddedLength + this.padding;
+		for (; n < r && t < this._distances.length;) n = this._distances[++t];
+		let i = t - 1, a = this._distances[i], o = n - a, s = o > 0 ? (r - a) / o : 0;
+		return this.points[i].mult(1 - s).add(this.points[t].mult(s));
+	}
+};
+function ao(e, t) {
+	let n = !0;
+	return e === `always` || (e === `never` || t === `never`) && (n = !1), n;
+}
+var oo = class {
+	constructor(e, t, n) {
+		let r = this.boxCells = [], i = this.circleCells = [];
+		this.xCellCount = Math.ceil(e / n), this.yCellCount = Math.ceil(t / n);
+		for (let e = 0; e < this.xCellCount * this.yCellCount; e++) r.push([]), i.push([]);
+		this.circleKeys = [], this.boxKeys = [], this.bboxes = [], this.circles = [], this.width = e, this.height = t, this.xScale = this.xCellCount / e, this.yScale = this.yCellCount / t, this.boxUid = 0, this.circleUid = 0;
+	}
+	keysLength() {
+		return this.boxKeys.length + this.circleKeys.length;
+	}
+	insert(e, t, n, r, i) {
+		this._forEachCell(t, n, r, i, this._insertBoxCell, this.boxUid++), this.boxKeys.push(e), this.bboxes.push(t), this.bboxes.push(n), this.bboxes.push(r), this.bboxes.push(i);
+	}
+	insertCircle(e, t, n, r) {
+		this._forEachCell(t - r, n - r, t + r, n + r, this._insertCircleCell, this.circleUid++), this.circleKeys.push(e), this.circles.push(t), this.circles.push(n), this.circles.push(r);
+	}
+	_insertBoxCell(e, t, n, r, i, a) {
+		this.boxCells[i].push(a);
+	}
+	_insertCircleCell(e, t, n, r, i, a) {
+		this.circleCells[i].push(a);
+	}
+	_query(e, t, n, r, i, a, o) {
+		if (n < 0 || e > this.width || r < 0 || t > this.height) return [];
+		let s = [];
+		if (e <= 0 && t <= 0 && this.width <= n && this.height <= r) {
+			if (i) return [{
+				key: null,
+				x1: e,
+				y1: t,
+				x2: n,
+				y2: r
+			}];
+			for (let e = 0; e < this.boxKeys.length; e++) s.push({
+				key: this.boxKeys[e],
+				x1: this.bboxes[e * 4],
+				y1: this.bboxes[e * 4 + 1],
+				x2: this.bboxes[e * 4 + 2],
+				y2: this.bboxes[e * 4 + 3]
+			});
+			for (let e = 0; e < this.circleKeys.length; e++) {
+				let t = this.circles[e * 3], n = this.circles[e * 3 + 1], r = this.circles[e * 3 + 2];
+				s.push({
+					key: this.circleKeys[e],
+					x1: t - r,
+					y1: n - r,
+					x2: t + r,
+					y2: n + r
+				});
+			}
+		} else {
+			let c = {
+				hitTest: i,
+				overlapMode: a,
+				seenUids: {
+					box: {},
+					circle: {}
+				}
+			};
+			this._forEachCell(e, t, n, r, this._queryCell, s, c, o);
+		}
+		return s;
+	}
+	query(e, t, n, r) {
+		return this._query(e, t, n, r, !1, null);
+	}
+	hitTest(e, t, n, r, i, a) {
+		return this._query(e, t, n, r, !0, i, a).length > 0;
+	}
+	hitTestCircle(e, t, n, r, i) {
+		let a = e - n, o = e + n, s = t - n, c = t + n;
+		if (o < 0 || a > this.width || c < 0 || s > this.height) return !1;
+		let l = [], u = {
+			hitTest: !0,
+			overlapMode: r,
+			circle: {
+				x: e,
+				y: t,
+				radius: n
+			},
+			seenUids: {
+				box: {},
+				circle: {}
+			}
+		};
+		return this._forEachCell(a, s, o, c, this._queryCellCircle, l, u, i), l.length > 0;
+	}
+	_queryCell(e, t, n, r, i, a, o, s) {
+		let { seenUids: c, hitTest: l, overlapMode: u } = o, d = this.boxCells[i], f = 1e-6;
+		if (d !== null) {
+			let i = this.bboxes;
+			for (let o of d) if (!c.box[o]) {
+				c.box[o] = !0;
+				let d = o * 4, p = this.boxKeys[o];
+				if (e <= i[d + 2] + f && t <= i[d + 3] + f && n >= i[d + 0] - f && r >= i[d + 1] - f && (!s || s(p)) && (!l || !ao(u, p.overlapMode)) && (a.push({
+					key: p,
+					x1: i[d],
+					y1: i[d + 1],
+					x2: i[d + 2],
+					y2: i[d + 3]
+				}), l)) return !0;
+			}
+		}
+		let p = this.circleCells[i];
+		if (p !== null) {
+			let i = this.circles;
+			for (let o of p) if (!c.circle[o]) {
+				c.circle[o] = !0;
+				let d = o * 3, f = this.circleKeys[o];
+				if (this._circleAndRectCollide(i[d], i[d + 1], i[d + 2], e, t, n, r) && (!s || s(f)) && (!l || !ao(u, f.overlapMode))) {
+					let e = i[d], t = i[d + 1], n = i[d + 2];
+					if (a.push({
+						key: f,
+						x1: e - n,
+						y1: t - n,
+						x2: e + n,
+						y2: t + n
+					}), l) return !0;
+				}
+			}
+		}
+		return !1;
+	}
+	_queryCellCircle(e, t, n, r, i, a, o, s) {
+		let { circle: c, seenUids: l, overlapMode: u } = o, d = this.boxCells[i];
+		if (d !== null) {
+			let e = this.bboxes;
+			for (let t of d) if (!l.box[t]) {
+				l.box[t] = !0;
+				let n = t * 4, r = this.boxKeys[t];
+				if (this._circleAndRectCollide(c.x, c.y, c.radius, e[n + 0], e[n + 1], e[n + 2], e[n + 3]) && (!s || s(r)) && !ao(u, r.overlapMode)) return a.push(!0), !0;
+			}
+		}
+		let f = this.circleCells[i];
+		if (f !== null) {
+			let e = this.circles;
+			for (let t of f) if (!l.circle[t]) {
+				l.circle[t] = !0;
+				let n = t * 3, r = this.circleKeys[t];
+				if (this._circlesCollide(e[n], e[n + 1], e[n + 2], c.x, c.y, c.radius) && (!s || s(r)) && !ao(u, r.overlapMode)) return a.push(!0), !0;
+			}
+		}
+	}
+	_forEachCell(e, t, n, r, i, a, o, s) {
+		let c = this._convertToXCellCoord(e), l = this._convertToYCellCoord(t), u = this._convertToXCellCoord(n), d = this._convertToYCellCoord(r);
+		for (let f = c; f <= u; f++) for (let c = l; c <= d; c++) {
+			let l = this.xCellCount * c + f;
+			if (i.call(this, e, t, n, r, l, a, o, s)) return;
+		}
+	}
+	_convertToXCellCoord(e) {
+		return Math.max(0, Math.min(this.xCellCount - 1, Math.floor(e * this.xScale)));
+	}
+	_convertToYCellCoord(e) {
+		return Math.max(0, Math.min(this.yCellCount - 1, Math.floor(e * this.yScale)));
+	}
+	_circlesCollide(e, t, n, r, i, a) {
+		let o = r - e, s = i - t, c = n + a;
+		return c * c > o * o + s * s;
+	}
+	_circleAndRectCollide(e, t, n, r, i, a, o) {
+		let s = (a - r) / 2, c = Math.abs(e - (r + s));
+		if (c > s + n) return !1;
+		let l = (o - i) / 2, u = Math.abs(t - (i + l));
+		if (u > l + n) return !1;
+		if (c <= s || u <= l) return !0;
+		let d = c - s, f = u - l;
+		return d * d + f * f <= n * n;
+	}
+};
 function so(e, t) {
 	let n = 1 / (t[0] * t[0] + t[1] * t[1] + t[2] * t[2]), r = 1 / (t[8] * t[8] + t[9] * t[9] + t[10] * t[10]), i = t[0] * n, a = t[4] * n, o = t[8] * r, s = t[1] * n, c = t[5] * n, l = t[9] * r, u = t[2] * n, d = t[6] * n, f = t[10] * r;
 	e[0] = i, e[1] = a, e[2] = o, e[4] = s, e[5] = c, e[6] = l, e[8] = u, e[9] = d, e[10] = f;
 	let p = t[12], m = t[13], h = t[14];
 	return e[12] = -i * p - s * m - u * h, e[13] = -a * p - c * m - d * h, e[14] = -o * p - l * m - f * h, e[3] = 0, e[7] = 0, e[11] = 0, e[15] = 1, e;
 }
-b();
+function co(e, t) {
+	return e[0] = 1 / t[0], e[1] = 0, e[2] = 0, e[3] = 0, e[4] = 0, e[5] = 1 / t[5], e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 0, e[11] = 1 / t[14], e[12] = 0, e[13] = 0, e[14] = -1, e[15] = t[10] / t[14], e;
+}
+function lo(e, t) {
+	let n = 1 / (t[0] * t[5] - t[1] * t[4]);
+	return e[0] = t[5] * n, e[1] = -t[1] * n, e[2] = 0, e[3] = 0, e[4] = -t[4] * n, e[5] = t[0] * n, e[6] = 0, e[7] = 0, e[8] = 0, e[9] = 0, e[10] = 1 / t[10], e[11] = 0, e[12] = 0, e[13] = 0, e[14] = 0, e[15] = 1 / t[15], e;
+}
+var uo = b();
 function fo(e, t, n) {
 	let r = b();
 	if (!e) {
@@ -18804,6 +21221,701 @@ function Mo(e, t, n) {
 	let r = t[0], i = t[1];
 	return e[0] = n[0] * r + n[4] * i + n[12], e[1] = n[1] * r + n[5] * i + n[13], e[3] = n[3] * r + n[7] * i + n[15], e;
 }
+function No(e, t) {
+	let n = uo;
+	return lo(n, t.pitchedLabelPlaneMatrix), e.map((e) => {
+		let r = ho(e.x, e.y, n, t.getElevation), i = t.transform.projectTileCoordinates(r.point.x, r.point.y, t.unwrappedTileID, t.getElevation);
+		return i.point.x = (i.point.x * .5 + .5) * t.width, i.point.y = (-i.point.y * .5 + .5) * t.height, i;
+	});
+}
+function Po(e) {
+	let t = 0, n = 0, r = 0, i = 0;
+	for (let a = 0; a < e.length; a++) e[a].isOccluded ? (r = a + 1, i = 0) : (i++, i > n && (n = i, t = r));
+	return e.slice(t, t + n);
+}
+var Fo = class {
+	constructor(e, t = new oo(e.width + 200, e.height + 200, 25), n = new oo(e.width + 200, e.height + 200, 25)) {
+		this.transform = e, this.grid = t, this.ignoredGrid = n, this.pitchFactor = Math.cos(e.pitch * Math.PI / 180) * e.cameraToCenterDistance, this.screenRightBoundary = e.width + 100, this.screenBottomBoundary = e.height + 100, this.gridRightBoundary = e.width + 200, this.gridBottomBoundary = e.height + 200, this.perspectiveRatioCutoff = .6;
+	}
+	placeCollisionBox(e, t, n, r, i, a, o, s, c, l, u, d) {
+		let f = e.anchorPointX + s[0], p = e.anchorPointY + s[1], m = this.projectAndGetPerspectiveRatio(f, p, i, l, d), h = n * m.perspectiveRatio, g;
+		if (!a && !o) {
+			let t = m.x + (u ? u.x * h : 0), n = m.y + (u ? u.y * h : 0);
+			g = {
+				allPointsOccluded: !1,
+				box: [
+					t + e.x1 * h,
+					n + e.y1 * h,
+					t + e.x2 * h,
+					n + e.y2 * h
+				]
+			};
+		} else g = this._projectCollisionBox(e, h, r, i, a, o, s, m, l, u, d);
+		let [_, v, y, b] = g.box, x = a ? g.allPointsOccluded : m.isOccluded, S = x;
+		return S ||= m.perspectiveRatio < this.perspectiveRatioCutoff, S ||= !this.isInsideGrid(_, v, y, b), S || t !== `always` && this.grid.hitTest(_, v, y, b, t, c) ? {
+			box: [
+				_,
+				v,
+				y,
+				b
+			],
+			placeable: !1,
+			offscreen: !1,
+			occluded: x
+		} : {
+			box: [
+				_,
+				v,
+				y,
+				b
+			],
+			placeable: !0,
+			offscreen: this.isOffscreen(_, v, y, b),
+			occluded: x
+		};
+	}
+	placeCollisionCircles(e, t, n, r, i, a, o, s, c, l$3, u, d, f, p) {
+		let m = [], h = new l(t.anchorX, t.anchorY), g = this.getPerspectiveRatio(h.x, h.y, a, p), _ = (c ? i * this.transform.getPitchedTextCorrection(t.anchorX, t.anchorY, a) / g : i * g) / 24, v = {
+			projections: {},
+			offsets: {},
+			cachedAnchorPoint: void 0,
+			anyProjectionOccluded: !1
+		}, y = t.lineOffsetX * _, b = t.lineOffsetY * _, x = {
+			getElevation: p,
+			pitchedLabelPlaneMatrix: o,
+			lineVertexArray: n,
+			pitchWithMap: c,
+			projectionCache: v,
+			transform: this.transform,
+			tileAnchorPoint: h,
+			unwrappedTileID: a,
+			width: this.transform.width,
+			height: this.transform.height,
+			translation: f
+		}, S = yo(_, r, y, b, !1, t, !1, x), C = !1, w = !1, T = !0;
+		if (S) {
+			let t = u * .5 * g + d, n = new l(-100, -100), r = new l(this.screenRightBoundary, this.screenBottomBoundary), i = new io(), a = S.first, o = S.last, f = [];
+			for (let e = a.path.length - 1; e >= 1; e--) f.push(a.path[e]);
+			for (let e = 1; e < o.path.length; e++) f.push(o.path[e]);
+			let p = t * 2.5;
+			if (c) {
+				let e = this.projectPathToScreenSpace(f, x);
+				f = e.some((e) => e.signedDistanceFromCamera <= 0) ? [] : e.map((e) => e.point);
+			}
+			let h = [];
+			if (f.length > 0) {
+				let e = f[0].clone(), t = f[0].clone();
+				for (let n = 1; n < f.length; n++) e.x = Math.min(e.x, f[n].x), e.y = Math.min(e.y, f[n].y), t.x = Math.max(t.x, f[n].x), t.y = Math.max(t.y, f[n].y);
+				h = e.x >= n.x && t.x <= r.x && e.y >= n.y && t.y <= r.y ? [f] : t.x < n.x || e.x > r.x || t.y < n.y || e.y > r.y ? [] : uC([f], n.x, n.y, r.x, r.y);
+			}
+			for (let n of h) {
+				i.reset(n, t * .25);
+				let r = 0;
+				r = i.length <= .5 * t ? 1 : Math.ceil(i.paddedLength / p) + 1;
+				for (let n = 0; n < r; n++) {
+					let a = n / Math.max(r - 1, 1), o = i.lerp(a), c = o.x + 100, u = o.y + 100;
+					m.push(c, u, t, 0);
+					let d = c - t, f = u - t, p = c + t, h = u + t;
+					if (T &&= this.isOffscreen(d, f, p, h), w ||= this.isInsideGrid(d, f, p, h), e !== `always` && this.grid.hitTestCircle(c, u, t, e, l$3) && (C = !0, !s)) return {
+						circles: [],
+						offscreen: !1,
+						collisionDetected: C
+					};
+				}
+			}
+		}
+		return {
+			circles: !s && C || !w || g < this.perspectiveRatioCutoff ? [] : m,
+			offscreen: T,
+			collisionDetected: C
+		};
+	}
+	projectPathToScreenSpace(e, t) {
+		return Po(No(e, t));
+	}
+	queryRenderedSymbols(e) {
+		if (e.length === 0 || this.grid.keysLength() === 0 && this.ignoredGrid.keysLength() === 0) return {};
+		let t = [], n = new Uv();
+		for (let r of e) {
+			let e = new l(r.x + 100, r.y + 100);
+			n.extend(e), t.push(e);
+		}
+		let { minX: r, minY: i, maxX: a, maxY: o } = n, s = this.grid.query(r, i, a, o).concat(this.ignoredGrid.query(r, i, a, o)), c = {}, l$4 = {};
+		for (let e of s) {
+			let n = e.key;
+			if (c[n.bucketInstanceId] === void 0 && (c[n.bucketInstanceId] = {}), c[n.bucketInstanceId][n.featureIndex]) continue;
+			Dd$1(t, [
+				new l(e.x1, e.y1),
+				new l(e.x2, e.y1),
+				new l(e.x2, e.y2),
+				new l(e.x1, e.y2)
+			]) && (c[n.bucketInstanceId][n.featureIndex] = !0, l$4[n.bucketInstanceId] === void 0 && (l$4[n.bucketInstanceId] = []), l$4[n.bucketInstanceId].push(n.featureIndex));
+		}
+		return l$4;
+	}
+	insertCollisionBox(e, t, n, r, i, a) {
+		let o = n ? this.ignoredGrid : this.grid, s = {
+			bucketInstanceId: r,
+			featureIndex: i,
+			collisionGroupID: a,
+			overlapMode: t
+		};
+		o.insert(s, e[0], e[1], e[2], e[3]);
+	}
+	insertCollisionCircles(e, t, n, r, i, a) {
+		let o = n ? this.ignoredGrid : this.grid, s = {
+			bucketInstanceId: r,
+			featureIndex: i,
+			collisionGroupID: a,
+			overlapMode: t
+		};
+		for (let t = 0; t < e.length; t += 4) o.insertCircle(s, e[t], e[t + 1], e[t + 2]);
+	}
+	projectAndGetPerspectiveRatio(e, t, n, r, i) {
+		if (i) {
+			let n;
+			r ? (n = [
+				e,
+				t,
+				r(e, t),
+				1
+			], Me(n, n, i)) : (n = [
+				e,
+				t,
+				0,
+				1
+			], Mo(n, n, i));
+			let a = n[3];
+			return {
+				x: (n[0] / a + 1) / 2 * this.transform.width + 100,
+				y: (-n[1] / a + 1) / 2 * this.transform.height + 100,
+				perspectiveRatio: .5 + .5 * (this.transform.cameraToCenterDistance / a),
+				isOccluded: !1,
+				signedDistanceFromCamera: a
+			};
+		}
+		{
+			let i = this.transform.projectTileCoordinates(e, t, n, r);
+			return {
+				x: (i.point.x + 1) / 2 * this.transform.width + 100,
+				y: (-i.point.y + 1) / 2 * this.transform.height + 100,
+				perspectiveRatio: .5 + .5 * (this.transform.cameraToCenterDistance / i.signedDistanceFromCamera),
+				isOccluded: i.isOccluded,
+				signedDistanceFromCamera: i.signedDistanceFromCamera
+			};
+		}
+	}
+	getPerspectiveRatio(e, t, n, r) {
+		let i = this.transform.projectTileCoordinates(e, t, n, r);
+		return .5 + .5 * (this.transform.cameraToCenterDistance / i.signedDistanceFromCamera);
+	}
+	isOffscreen(e, t, n, r) {
+		return n < 100 || e >= this.screenRightBoundary || r < 100 || t > this.screenBottomBoundary;
+	}
+	isInsideGrid(e, t, n, r) {
+		return n >= 0 && e < this.gridRightBoundary && r >= 0 && t < this.gridBottomBoundary;
+	}
+	getViewportMatrix() {
+		let e = C([]);
+		return E(e, e, [
+			-100,
+			-100,
+			0
+		]), e;
+	}
+	_projectCollisionBox(e, t, n, r, i, a, o, s, c, l$5, u) {
+		let d = 1, f = 0, p = 0, m = 1, h = e.anchorPointX + o[0], g = e.anchorPointY + o[1];
+		if (a && !i) {
+			let e = this.projectAndGetPerspectiveRatio(h + 1, g, r, c, u), t = e.x - s.x, n = e.y - s.y, i = Math.atan(n / t) + (t < 0 ? Math.PI : 0), a = Math.sin(i), o = Math.cos(i);
+			d = o, f = a, p = -a, m = o;
+		} else if (!a && i) {
+			let e = mo(this.transform);
+			d = e.vecEast[0], f = e.vecEast[1], p = e.vecSouth[0], m = e.vecSouth[1];
+		}
+		let _ = s.x, v = s.y, y = t;
+		if (i && (_ = h, v = g, y = 2 ** -(this.transform.zoom - n.overscaledZ), y *= this.transform.getPitchedTextCorrection(h, g, r), !l$5)) {
+			let t = Tt(.5 + .5 * (s.signedDistanceFromCamera / this.transform.cameraToCenterDistance), 0, 4);
+			y *= t;
+		}
+		l$5 && (_ += d * l$5.x * y + p * l$5.y * y, v += f * l$5.x * y + m * l$5.y * y);
+		let b = e.x1 * y, x = e.x2 * y, S = (b + x) / 2, C = e.y1 * y, w = e.y2 * y, T = (C + w) / 2, E = [
+			{
+				offsetX: b,
+				offsetY: C
+			},
+			{
+				offsetX: S,
+				offsetY: C
+			},
+			{
+				offsetX: x,
+				offsetY: C
+			},
+			{
+				offsetX: x,
+				offsetY: T
+			},
+			{
+				offsetX: x,
+				offsetY: w
+			},
+			{
+				offsetX: S,
+				offsetY: w
+			},
+			{
+				offsetX: b,
+				offsetY: w
+			},
+			{
+				offsetX: b,
+				offsetY: T
+			}
+		], D = [];
+		for (let { offsetX: e, offsetY: t } of E) D.push(new l(_ + d * e + p * t, v + f * e + m * t));
+		let O = !1;
+		if (i) {
+			let e = D.map((e) => this.projectAndGetPerspectiveRatio(e.x, e.y, r, c, u));
+			O = e.some((e) => !e.isOccluded), D = e.map((e) => new l(e.x, e.y));
+		} else O = !0;
+		return {
+			box: bt(D),
+			allPointsOccluded: !O
+		};
+	}
+};
+var Io = class {
+	constructor(e, t, n, r) {
+		this.opacity = e ? Math.max(0, Math.min(1, e.opacity + (e.placed ? t : -t))) : r && n ? 1 : 0, this.placed = n;
+	}
+	isHidden() {
+		return this.opacity === 0 && !this.placed;
+	}
+};
+var Lo = class {
+	constructor(e, t, n, r, i) {
+		this.text = new Io(e ? e.text : null, t, n, i), this.icon = new Io(e ? e.icon : null, t, r, i);
+	}
+	isHidden() {
+		return this.text.isHidden() && this.icon.isHidden();
+	}
+};
+var Ro = class {
+	constructor(e, t, n) {
+		this.text = e, this.icon = t, this.skipFade = n;
+	}
+};
+var zo = class {
+	constructor(e, t, n, r, i) {
+		this.bucketInstanceId = e, this.featureIndex = t, this.sourceLayerIndex = n, this.bucketIndex = r, this.tileID = i;
+	}
+};
+var Bo = class {
+	constructor(e) {
+		this.crossSourceCollisions = e, this.maxGroupID = 0, this.collisionGroups = {};
+	}
+	get(e) {
+		if (this.crossSourceCollisions) return {
+			ID: 0,
+			predicate: null
+		};
+		if (!this.collisionGroups[e]) {
+			let t = ++this.maxGroupID;
+			this.collisionGroups[e] = {
+				ID: t,
+				predicate: (e) => e.collisionGroupID === t
+			};
+		}
+		return this.collisionGroups[e];
+	}
+};
+function Vo(e, t, n, r, i) {
+	let { horizontalAlign: a, verticalAlign: o } = z_(e), s = -(a - .5) * t, c = -(o - .5) * n;
+	return new l(s + r[0] * i, c + r[1] * i);
+}
+var Ho = class {
+	constructor(e, t, n, r, i) {
+		this.transform = e.clone(), this.terrain = t, this.collisionIndex = new Fo(this.transform), this.placements = {}, this.opacities = {}, this.variableOffsets = {}, this.stale = !1, this.commitTime = 0, this.fadeDuration = n, this.retainedQueryData = {}, this.collisionGroups = new Bo(r), this.collisionCircleArrays = {}, this.collisionBoxArrays = /* @__PURE__ */ new Map(), this.prevPlacement = i, i && (i.prevPlacement = void 0), this.placedOrientations = {};
+	}
+	_getTerrainElevationFunc(e) {
+		let t = this.terrain;
+		return t ? (n, r) => t.getElevation(e, n, r) : null;
+	}
+	getBucketParts(e, t, n, r) {
+		let i = n.getBucket(t), a = n.latestFeatureIndex;
+		if (!i || !a || t.id !== i.layerIds[0]) return;
+		let o = n.collisionBoxArray, s = i.layers[0].layout, c = i.layers[0].paint, l = 2 ** (this.transform.zoom - n.tileID.overscaledZ), u = n.tileSize / j, d = n.tileID.toUnwrapped(), f = s.get(`text-rotation-alignment`) === `map`, p = nt(n, 1, this.transform.zoom), m = ut(this.collisionIndex.transform, n, c.get(`text-translate`), c.get(`text-translate-anchor`)), h = ut(this.collisionIndex.transform, n, c.get(`icon-translate`), c.get(`icon-translate-anchor`)), g = fo(f, this.transform, p);
+		this.retainedQueryData[i.bucketInstanceId] = new zo(i.bucketInstanceId, a, i.sourceLayerIndex, i.index, n.tileID);
+		let _ = {
+			bucket: i,
+			layout: s,
+			translationText: m,
+			translationIcon: h,
+			unwrappedTileID: d,
+			pitchedLabelPlaneMatrix: g,
+			scale: l,
+			textPixelRatio: u,
+			holdingForFade: n.holdingForSymbolFade(),
+			collisionBoxArray: o,
+			partiallyEvaluatedTextSize: tv(i.textSizeData, this.transform.zoom),
+			collisionGroup: this.collisionGroups.get(i.sourceID)
+		};
+		if (r) for (let t of i.sortKeyRanges) {
+			let { sortKey: n, symbolInstanceStart: r, symbolInstanceEnd: i } = t;
+			e.push({
+				sortKey: n,
+				symbolInstanceStart: r,
+				symbolInstanceEnd: i,
+				parameters: _
+			});
+		}
+		else e.push({
+			symbolInstanceStart: 0,
+			symbolInstanceEnd: i.symbolInstances.length,
+			parameters: _
+		});
+	}
+	attemptAnchorPlacement(e, t, n, r, i, a, o, s, c, l, u, d, f, p, m, h, g, _, v, y) {
+		let b = zC[e.textAnchor], x = [e.textOffset0, e.textOffset1], S = Vo(b, n, r, x, i), C = this.collisionIndex.placeCollisionBox(t, d, s, c, l, o, a, h, u.predicate, v, S, y);
+		if (!(_ && !this.collisionIndex.placeCollisionBox(_, d, s, c, l, o, a, g, u.predicate, v, S, y).placeable) && C.placeable) {
+			let e;
+			if (this.prevPlacement?.variableOffsets[f.crossTileID] && this.prevPlacement?.placements[f.crossTileID]?.text && (e = this.prevPlacement.variableOffsets[f.crossTileID].anchor), f.crossTileID === 0) throw Error(`symbolInstance.crossTileID can't be 0`);
+			return this.variableOffsets[f.crossTileID] = {
+				textOffset: x,
+				width: n,
+				height: r,
+				anchor: b,
+				textBoxScale: i,
+				prevAnchor: e
+			}, this.markUsedJustification(p, b, f, m), p.allowVerticalPlacement && (this.markUsedOrientation(p, m, f), this.placedOrientations[f.crossTileID] = m), {
+				shift: S,
+				placedGlyphBoxes: C
+			};
+		}
+	}
+	placeLayerBucketPart(e, t, n) {
+		let { bucket: r, layout: a, translationText: o, translationIcon: s, unwrappedTileID: c, pitchedLabelPlaneMatrix: l, textPixelRatio: u, holdingForFade: d, collisionBoxArray: f, partiallyEvaluatedTextSize: p, collisionGroup: m } = e.parameters, h = a.get(`text-optional`), g = a.get(`icon-optional`), _ = nv(a, `text-overlap`, `text-allow-overlap`), v = _ === `always`, y = nv(a, `icon-overlap`, `icon-allow-overlap`), b = y === `always`, x = a.get(`text-rotation-alignment`) === `map`, S = a.get(`text-pitch-alignment`) === `map`, C = a.get(`icon-text-fit`) !== `none`, w = a.get(`symbol-z-order`) === `viewport-y`, T = v && (b || !r.hasIconData() || g), E = b && (v || !r.hasTextData() || h);
+		!r.collisionArrays && f && r.deserializeCollisionBoxes(f);
+		let D = this.retainedQueryData[r.bucketInstanceId].tileID, O = this._getTerrainElevationFunc(D), k = this.transform.getFastPathSimpleProjectionMatrix(D), A = (e, i, f) => {
+			if (t[e.crossTileID]) return;
+			if (d) {
+				this.placements[e.crossTileID] = new Ro(!1, !1, !1);
+				return;
+			}
+			let b = !1, w = !1, A = !0, ee = null, j = {
+				box: null,
+				placeable: !1,
+				offscreen: null,
+				occluded: !1
+			}, te = {
+				box: null,
+				placeable: !1,
+				offscreen: null
+			}, ne = null, re = null, ie = null, M = 0, ae = 0, oe = 0;
+			i.textFeatureIndex ? M = i.textFeatureIndex : e.useRuntimeCollisionCircles && (M = e.featureIndex), i.verticalTextFeatureIndex && (ae = i.verticalTextFeatureIndex);
+			let se = i.textBox;
+			if (se) {
+				let t = (t) => {
+					let n = 1;
+					if (r.allowVerticalPlacement && !t && this.prevPlacement) {
+						let t = this.prevPlacement.placedOrientations[e.crossTileID];
+						t && (this.placedOrientations[e.crossTileID] = t, n = t, this.markUsedOrientation(r, n, e));
+					}
+					return n;
+				}, a = (t, n) => {
+					if (r.allowVerticalPlacement && e.numVerticalGlyphVertices > 0 && i.verticalTextBox) {
+						for (let e of r.writingModes) if (e === 2 ? (j = n(), te = j) : j = t(), j?.placeable) break;
+					} else j = t();
+				}, l = e.textAnchorOffsetStartIndex, d = e.textAnchorOffsetEndIndex;
+				if (d === l) {
+					let n = (t, n) => {
+						let i = this.collisionIndex.placeCollisionBox(t, _, u, D, c, S, x, o, m.predicate, O, void 0, k);
+						return i?.placeable && (this.markUsedOrientation(r, n, e), this.placedOrientations[e.crossTileID] = n), i;
+					};
+					a(() => n(se, 1), () => {
+						let t = i.verticalTextBox;
+						return r.allowVerticalPlacement && e.numVerticalGlyphVertices > 0 && t ? n(t, 2) : {
+							box: null,
+							offscreen: null
+						};
+					}), t(j?.placeable);
+				} else {
+					let f = zC[this.prevPlacement?.variableOffsets[e.crossTileID]?.anchor], p = (t, i, a) => {
+						let p = t.x2 - t.x1, h = t.y2 - t.y1, g = e.textBoxScale, v = C && y === `never` ? i : null, w = null, T = _ === `never` ? 1 : 2, E = `never`;
+						f && T++;
+						for (let n = 0; n < T; n++) {
+							for (let n = l; n < d; n++) {
+								let i = r.textAnchorOffsets.get(n);
+								if (f && i.textAnchor !== f) continue;
+								let l = this.attemptAnchorPlacement(i, t, p, h, g, x, S, u, D, c, m, E, e, r, a, o, s, v, O);
+								if (l && (w = l.placedGlyphBoxes, w?.placeable)) return b = !0, ee = l.shift, w;
+							}
+							f ? f = null : E = _;
+						}
+						return n && !w && (w = {
+							box: this.collisionIndex.placeCollisionBox(se, `always`, u, D, c, S, x, o, m.predicate, O, void 0, k).box,
+							offscreen: !1,
+							placeable: !1,
+							occluded: !1
+						}), w;
+					};
+					a(() => p(se, i.iconBox, 1), () => {
+						let t = i.verticalTextBox, n = j?.placeable;
+						return r.allowVerticalPlacement && !n && e.numVerticalGlyphVertices > 0 && t ? p(t, i.verticalIconBox, 2) : {
+							box: null,
+							occluded: !0,
+							offscreen: null
+						};
+					}), j && (b = j.placeable, A = j.offscreen);
+					let h = t(j?.placeable);
+					if (!b && this.prevPlacement) {
+						let t = this.prevPlacement.variableOffsets[e.crossTileID];
+						t && (this.variableOffsets[e.crossTileID] = t, this.markUsedJustification(r, t.anchor, e, h));
+					}
+				}
+			}
+			if (ne = j, b = ne?.placeable, A = ne?.offscreen, e.useRuntimeCollisionCircles && e.centerJustifiedTextSymbolIndex >= 0) {
+				let t = r.text.placedSymbolArray.get(e.centerJustifiedTextSymbolIndex), i = ev(r.textSizeData, p, t), s = a.get(`text-padding`), u = e.collisionCircleDiameter;
+				re = this.collisionIndex.placeCollisionCircles(_, t, r.lineVertexArray, r.glyphOffsetArray, i, c, l, n, S, m.predicate, u, s, o, O), re.circles.length && re.collisionDetected && !n && Vt(`Collisions detected, but collision boxes are not shown`), b = v || re.circles.length > 0 && !re.collisionDetected, A &&= re.offscreen;
+			}
+			if (i.iconFeatureIndex && (oe = i.iconFeatureIndex), i.iconBox) {
+				let e = (e) => this.collisionIndex.placeCollisionBox(e, y, u, D, c, S, x, s, m.predicate, O, C && ee ? ee : void 0, k);
+				te && te.placeable && i.verticalIconBox ? (ie = e(i.verticalIconBox), w = ie.placeable) : (ie = e(i.iconBox), w = ie.placeable), A &&= ie.offscreen;
+			}
+			let ce = h || e.numHorizontalGlyphVertices === 0 && e.numVerticalGlyphVertices === 0, le = g || e.numIconVertices === 0;
+			!ce && !le ? w = b = w && b : le ? ce || (w &&= b) : b = w && b;
+			let ue = b && ne.placeable, de = w && ie.placeable;
+			if (ue && (te && te.placeable && ae ? this.collisionIndex.insertCollisionBox(ne.box, _, a.get(`text-ignore-placement`), r.bucketInstanceId, ae, m.ID) : this.collisionIndex.insertCollisionBox(ne.box, _, a.get(`text-ignore-placement`), r.bucketInstanceId, M, m.ID)), de && this.collisionIndex.insertCollisionBox(ie.box, y, a.get(`icon-ignore-placement`), r.bucketInstanceId, oe, m.ID), re && b && this.collisionIndex.insertCollisionCircles(re.circles, _, a.get(`text-ignore-placement`), r.bucketInstanceId, M, m.ID), n && this.storeCollisionData(r.bucketInstanceId, f, i, ne, ie, re), e.crossTileID === 0) throw Error(`symbolInstance.crossTileID can't be 0`);
+			if (r.bucketInstanceId === 0) throw Error(`bucket.bucketInstanceId can't be 0`);
+			let fe = (b || T) && !ne?.occluded, pe = (w || E) && !ie?.occluded;
+			this.placements[e.crossTileID] = new Ro(fe, pe, A || r.justReloaded), t[e.crossTileID] = !0;
+		};
+		if (w) {
+			if (e.symbolInstanceStart !== 0) throw Error(`bucket.bucketInstanceId should be 0`);
+			let t = r.getSortedSymbolIndexes(-this.transform.bearingInRadians);
+			for (let e = t.length - 1; e >= 0; --e) {
+				let n = t[e];
+				A(r.symbolInstances.get(n), r.collisionArrays[n], n);
+			}
+		} else for (let t = e.symbolInstanceStart; t < e.symbolInstanceEnd; t++) A(r.symbolInstances.get(t), r.collisionArrays[t], t);
+		r.justReloaded = !1;
+	}
+	storeCollisionData(e, t, n, r, i, a) {
+		if (n.textBox || n.iconBox) {
+			let a;
+			this.collisionBoxArrays.has(e) ? a = this.collisionBoxArrays.get(e) : (a = /* @__PURE__ */ new Map(), this.collisionBoxArrays.set(e, a));
+			let o;
+			a.has(t) ? o = a.get(t) : (o = {
+				text: null,
+				icon: null
+			}, a.set(t, o)), n.textBox && (o.text = r.box), n.iconBox && (o.icon = i.box);
+		}
+		if (a) {
+			let t = this.collisionCircleArrays[e];
+			t === void 0 && (t = this.collisionCircleArrays[e] = []);
+			for (let e = 0; e < a.circles.length; e += 4) t.push(a.circles[e + 0] - 100), t.push(a.circles[e + 1] - 100), t.push(a.circles[e + 2]), t.push(+!!a.collisionDetected);
+		}
+	}
+	markUsedJustification(e, t, n, r) {
+		let i = {
+			left: n.leftJustifiedTextSymbolIndex,
+			center: n.centerJustifiedTextSymbolIndex,
+			right: n.rightJustifiedTextSymbolIndex
+		}, a;
+		a = r === 2 ? n.verticalPlacedTextSymbolIndex : i[WC(t)];
+		let o = [
+			n.leftJustifiedTextSymbolIndex,
+			n.centerJustifiedTextSymbolIndex,
+			n.rightJustifiedTextSymbolIndex,
+			n.verticalPlacedTextSymbolIndex
+		];
+		for (let t of o) t >= 0 && (a >= 0 && t !== a ? e.text.placedSymbolArray.get(t).crossTileID = 0 : e.text.placedSymbolArray.get(t).crossTileID = n.crossTileID);
+	}
+	markUsedOrientation(e, t, n) {
+		let r = t === 1 || t === 3 ? t : 0, i = t === 2 ? t : 0, a = [
+			n.leftJustifiedTextSymbolIndex,
+			n.centerJustifiedTextSymbolIndex,
+			n.rightJustifiedTextSymbolIndex
+		];
+		for (let t of a) e.text.placedSymbolArray.get(t).placedOrientation = r;
+		n.verticalPlacedTextSymbolIndex && (e.text.placedSymbolArray.get(n.verticalPlacedTextSymbolIndex).placedOrientation = i);
+	}
+	commit(e) {
+		this.commitTime = e, this.zoomAtLastRecencyCheck = this.transform.zoom;
+		let t = this.prevPlacement, n = !1;
+		this.prevZoomAdjustment = t ? t.zoomAdjustment(this.transform.zoom) : 0;
+		let r = t ? t.symbolFadeChange(e) : 1, i = t ? t.opacities : {}, a = t ? t.variableOffsets : {}, o = t ? t.placedOrientations : {};
+		for (let e in this.placements) {
+			let t = this.placements[e], a = i[e];
+			a ? (this.opacities[e] = new Lo(a, r, t.text, t.icon), n ||= t.text !== a.text.placed, n ||= t.icon !== a.icon.placed) : (this.opacities[e] = new Lo(null, r, t.text, t.icon, t.skipFade), n ||= t.text || t.icon);
+		}
+		for (let e in i) {
+			let t = i[e];
+			if (!this.opacities[e]) {
+				let i = new Lo(t, r, !1, !1);
+				i.isHidden() || (this.opacities[e] = i, n ||= t.text.placed, n ||= t.icon.placed);
+			}
+		}
+		for (let e in a) !this.variableOffsets[e] && this.opacities[e] && !this.opacities[e].isHidden() && (this.variableOffsets[e] = a[e]);
+		for (let e in o) !this.placedOrientations[e] && this.opacities[e] && !this.opacities[e].isHidden() && (this.placedOrientations[e] = o[e]);
+		if (t && t.lastPlacementChangeTime === void 0) throw Error(`Last placement time for previous placement is not defined`);
+		n ? this.lastPlacementChangeTime = e : typeof this.lastPlacementChangeTime != `number` && (this.lastPlacementChangeTime = t ? t.lastPlacementChangeTime : e);
+	}
+	updateLayerOpacities(e, t) {
+		let n = {};
+		for (let r of t) {
+			let t = r.getBucket(e);
+			t && r.latestFeatureIndex && e.id === t.layerIds[0] && this.updateBucketOpacities(t, r.tileID, n, r.collisionBoxArray);
+		}
+	}
+	updateBucketOpacities(e, t, n, r) {
+		e.hasTextData() && (e.text.opacityVertexArray.clear(), e.text.hasVisibleVertices = !1), e.hasIconData() && (e.icon.opacityVertexArray.clear(), e.icon.hasVisibleVertices = !1), e.hasIconCollisionBoxData() && e.iconCollisionBox.collisionVertexArray.clear(), e.hasTextCollisionBoxData() && e.textCollisionBox.collisionVertexArray.clear();
+		let i = e.layers[0], a = i.layout, o = new Lo(null, 0, !1, !1, !0), s = a.get(`text-allow-overlap`), c = a.get(`icon-allow-overlap`), l$6 = i._unevaluatedLayout.hasValue(`text-variable-anchor`) || i._unevaluatedLayout.hasValue(`text-variable-anchor-offset`), u = a.get(`text-rotation-alignment`) === `map`, d = a.get(`text-pitch-alignment`) === `map`, f = a.get(`icon-text-fit`) !== `none`, p = new Lo(null, 0, s && (c || !e.hasIconData() || a.get(`icon-optional`)), c && (s || !e.hasTextData() || a.get(`text-optional`)), !0);
+		!e.collisionArrays && r && (e.hasIconCollisionBoxData() || e.hasTextCollisionBoxData()) && e.deserializeCollisionBoxes(r);
+		let m = (e, t, n) => {
+			for (let r = 0; r < t / 4; r++) e.opacityVertexArray.emplaceBack(n);
+			e.hasVisibleVertices ||= n !== Yo;
+		}, h = this.collisionBoxArrays.get(e.bucketInstanceId);
+		for (let t = 0; t < e.symbolInstances.length; t++) {
+			let r = e.symbolInstances.get(t), { numHorizontalGlyphVertices: i, numVerticalGlyphVertices: a, crossTileID: s } = r, c = n[s], g = this.opacities[s];
+			c ? g = o : g || (g = p, this.opacities[s] = g), n[s] = !0;
+			let _ = i > 0 || a > 0, v = r.numIconVertices > 0, y = this.placedOrientations[r.crossTileID], b = y === 2, x = y === 1 || y === 3;
+			if (_) {
+				let t = Jo(g.text), n = b ? Yo : t;
+				m(e.text, i, n);
+				let o = x ? Yo : t;
+				m(e.text, a, o);
+				let s = g.text.isHidden(), c = [
+					r.rightJustifiedTextSymbolIndex,
+					r.centerJustifiedTextSymbolIndex,
+					r.leftJustifiedTextSymbolIndex
+				];
+				for (let t of c) t >= 0 && (e.text.placedSymbolArray.get(t).hidden = s || b ? 1 : 0);
+				r.verticalPlacedTextSymbolIndex >= 0 && (e.text.placedSymbolArray.get(r.verticalPlacedTextSymbolIndex).hidden = s || x ? 1 : 0);
+				let l = this.variableOffsets[r.crossTileID];
+				l && this.markUsedJustification(e, l.anchor, r, y);
+				let u = this.placedOrientations[r.crossTileID];
+				u && (this.markUsedJustification(e, `left`, r, u), this.markUsedOrientation(e, u, r));
+			}
+			if (v) {
+				let t = Jo(g.icon), n = !(f && r.verticalPlacedIconSymbolIndex && b);
+				if (r.placedIconSymbolIndex >= 0) {
+					let i = n ? t : Yo;
+					m(e.icon, r.numIconVertices, i), e.icon.placedSymbolArray.get(r.placedIconSymbolIndex).hidden = g.icon.isHidden();
+				}
+				if (r.verticalPlacedIconSymbolIndex >= 0) {
+					let i = n ? Yo : t;
+					m(e.icon, r.numVerticalIconVertices, i), e.icon.placedSymbolArray.get(r.verticalPlacedIconSymbolIndex).hidden = g.icon.isHidden();
+				}
+			}
+			let S = h?.has(t) ? h.get(t) : {
+				text: null,
+				icon: null
+			};
+			if (e.hasIconCollisionBoxData() || e.hasTextCollisionBoxData()) {
+				let n = e.collisionArrays[t];
+				if (n) {
+					let t = new l(0, 0);
+					if (n.textBox || n.verticalTextBox) {
+						let r = !0;
+						if (l$6) {
+							let e = this.variableOffsets[s];
+							e ? (t = Vo(e.anchor, e.width, e.height, e.textOffset, e.textBoxScale), u && t._rotate(d ? -this.transform.bearingInRadians : this.transform.bearingInRadians)) : r = !1;
+						}
+						if (n.textBox || n.verticalTextBox) {
+							let i;
+							n.textBox && (i = b), n.verticalTextBox && (i = x), Uo(e.textCollisionBox.collisionVertexArray, g.text.placed, !r || i, S.text, t.x, t.y);
+						}
+					}
+					if (n.iconBox || n.verticalIconBox) {
+						let r = !!(!x && n.verticalIconBox), i;
+						n.iconBox && (i = r), n.verticalIconBox && (i = !r), Uo(e.iconCollisionBox.collisionVertexArray, g.icon.placed, i, S.icon, f ? t.x : 0, f ? t.y : 0);
+					}
+				}
+			}
+		}
+		if (e.sortFeatures(-this.transform.bearingInRadians), this.retainedQueryData[e.bucketInstanceId] && (this.retainedQueryData[e.bucketInstanceId].featureSortOrder = e.featureSortOrder), e.hasTextData() && e.text.opacityVertexBuffer && e.text.opacityVertexBuffer.updateData(e.text.opacityVertexArray), e.hasIconData() && e.icon.opacityVertexBuffer && e.icon.opacityVertexBuffer.updateData(e.icon.opacityVertexArray), e.hasIconCollisionBoxData() && e.iconCollisionBox.collisionVertexBuffer && e.iconCollisionBox.collisionVertexBuffer.updateData(e.iconCollisionBox.collisionVertexArray), e.hasTextCollisionBoxData() && e.textCollisionBox.collisionVertexBuffer && e.textCollisionBox.collisionVertexBuffer.updateData(e.textCollisionBox.collisionVertexArray), e.text.opacityVertexArray.length !== e.text.layoutVertexArray.length / 4) throw Error(`bucket.text.opacityVertexArray.length (= ${e.text.opacityVertexArray.length}) !== bucket.text.layoutVertexArray.length (= ${e.text.layoutVertexArray.length}) / 4`);
+		if (e.icon.opacityVertexArray.length !== e.icon.layoutVertexArray.length / 4) throw Error(`bucket.icon.opacityVertexArray.length (= ${e.icon.opacityVertexArray.length}) !== bucket.icon.layoutVertexArray.length (= ${e.icon.layoutVertexArray.length}) / 4`);
+		e.bucketInstanceId in this.collisionCircleArrays && (e.collisionCircleArray = this.collisionCircleArrays[e.bucketInstanceId], delete this.collisionCircleArrays[e.bucketInstanceId]);
+	}
+	symbolFadeChange(e) {
+		return this.fadeDuration === 0 ? 1 : (e - this.commitTime) / this.fadeDuration + this.prevZoomAdjustment;
+	}
+	zoomAdjustment(e) {
+		return Math.max(0, (this.transform.zoom - e) / 1.5);
+	}
+	hasTransitions(e) {
+		return this.stale || e - this.lastPlacementChangeTime < this.fadeDuration;
+	}
+	stillRecent(e, t) {
+		let n = this.zoomAtLastRecencyCheck === t ? 1 - this.zoomAdjustment(t) : 1;
+		return this.zoomAtLastRecencyCheck = t, this.commitTime + this.fadeDuration * n > e;
+	}
+	setStale() {
+		this.stale = !0;
+	}
+};
+function Uo(e, t, n, r, i, a) {
+	(!r || r.length === 0) && (r = [
+		0,
+		0,
+		0,
+		0
+	]);
+	let o = r[0] - 100, s = r[1] - 100, c = r[2] - 100, l = r[3] - 100;
+	e.emplaceBack(+!!t, +!!n, i || 0, a || 0, o, s), e.emplaceBack(+!!t, +!!n, i || 0, a || 0, c, s), e.emplaceBack(+!!t, +!!n, i || 0, a || 0, c, l), e.emplaceBack(+!!t, +!!n, i || 0, a || 0, o, l);
+}
+var Wo = 2 ** 25;
+var Go = 2 ** 24;
+var Ko = 2 ** 17;
+var qo = 2 ** 16;
+function Jo(e) {
+	if (e.opacity === 0 && !e.placed) return 0;
+	if (e.opacity === 1 && e.placed) return 4294967295;
+	let t = +!!e.placed, n = Math.floor(e.opacity * 127);
+	return n * Wo + t * Go + n * Ko + t * qo + n * 512 + t * 256 + n * 2 + t;
+}
+var Yo = 0;
+var Xo = class {
+	constructor(e) {
+		this._sortAcrossTiles = e.layout.get(`symbol-z-order`) !== `viewport-y` && !e.layout.get(`symbol-sort-key`).isConstant(), this._currentTileIndex = 0, this._currentPartIndex = 0, this._seenCrossTileIDs = {}, this._bucketParts = [];
+	}
+	continuePlacement(e, t, n, r, i) {
+		let a = this._bucketParts;
+		for (; this._currentTileIndex < e.length;) {
+			let n = e[this._currentTileIndex];
+			if (t.getBucketParts(a, r, n, this._sortAcrossTiles), this._currentTileIndex++, i()) return !0;
+		}
+		for (this._sortAcrossTiles && (this._sortAcrossTiles = !1, a.sort((e, t) => e.sortKey - t.sortKey)); this._currentPartIndex < a.length;) {
+			let e = a[this._currentPartIndex];
+			if (t.placeLayerBucketPart(e, this._seenCrossTileIDs, n), this._currentPartIndex++, i()) return !0;
+		}
+		return !1;
+	}
+};
+var Zo = class {
+	constructor(e, t, n, r, i, a, o, s) {
+		this.placement = new Ho(e, t, a, o, s), this._currentPlacementIndex = n.length - 1, this._forceFullPlacement = r, this._showCollisionBoxes = i, this._done = !1;
+	}
+	isDone() {
+		return this._done;
+	}
+	continuePlacement(e, t, n) {
+		let r = U(), i = () => !this._forceFullPlacement && U() - r > 2;
+		for (; this._currentPlacementIndex >= 0;) {
+			let r = t[e[this._currentPlacementIndex]], a = this.placement.collisionIndex.transform.zoom;
+			if (_v(r) && r.layout && (!r.minzoom || r.minzoom <= a) && (!r.maxzoom || r.maxzoom > a)) {
+				if (this._inProgressLayer ||= new Xo(r), this._inProgressLayer.continuePlacement(n[r.source], this.placement, this._showCollisionBoxes, r, i)) return;
+				delete this._inProgressLayer;
+			}
+			this._currentPlacementIndex--;
+		}
+		this._done = !0;
+	}
+	commit(e) {
+		return this.placement.commit(e), this.placement;
+	}
+};
 var Qo = [
 	Int8Array,
 	Uint8Array,
@@ -19938,18 +23050,3680 @@ var xs = Ml$1([{
 }]);
 var Ss = `#define PROJECTION_MERCATOR`;
 var Cs = `mercator`;
-j / 128;
-new Pp({
+var ws = class {
+	constructor() {
+		this._cachedMesh = null;
+	}
+	get name() {
+		return `mercator`;
+	}
+	get useSubdivision() {
+		return !1;
+	}
+	get shaderVariantName() {
+		return Cs;
+	}
+	get shaderDefine() {
+		return Ss;
+	}
+	get shaderPreludeCode() {
+		return ys.projectionMercator;
+	}
+	get vertexShaderPreludeCode() {
+		return ys.projectionMercator.vertexSource;
+	}
+	get subdivisionGranularity() {
+		return Pp.noSubdivision;
+	}
+	get useGlobeControls() {
+		return !1;
+	}
+	get transitionState() {
+		return 0;
+	}
+	destroy() {}
+	getMeshFromTileID(e, t, n, r, i) {
+		if (this._cachedMesh) return this._cachedMesh;
+		let a = new _u$1();
+		a.emplaceBack(0, 0), a.emplaceBack(j, 0), a.emplaceBack(0, j), a.emplaceBack(j, j);
+		let o = e.createVertexBuffer(a, xs.members), s = zu$1.simpleSegment(0, 0, 4, 2), c = new Pu$1();
+		c.emplaceBack(1, 0, 2), c.emplaceBack(1, 2, 3);
+		let l = e.createIndexBuffer(c);
+		return this._cachedMesh = new bs(o, l, s), this._cachedMesh;
+	}
+	recalculate() {}
+	hasTransition() {
+		return !1;
+	}
+};
+var Ts = class e {
+	constructor(e = 0, t = 0, n = 0, r = 0) {
+		if (isNaN(e) || e < 0 || isNaN(t) || t < 0 || isNaN(n) || n < 0 || isNaN(r) || r < 0) throw Error(`Invalid value for edge-insets, top, bottom, left and right must all be numbers`);
+		this.top = e, this.bottom = t, this.left = n, this.right = r;
+	}
+	interpolate(e, t, n) {
+		return t.top != null && e.top != null && (this.top = Ni$1.number(e.top, t.top, n)), t.bottom != null && e.bottom != null && (this.bottom = Ni$1.number(e.bottom, t.bottom, n)), t.left != null && e.left != null && (this.left = Ni$1.number(e.left, t.left, n)), t.right != null && e.right != null && (this.right = Ni$1.number(e.right, t.right, n)), this;
+	}
+	getCenter(e, t) {
+		return new l(Tt((this.left + e - this.right) / 2, 0, e), Tt((this.top + t - this.bottom) / 2, 0, t));
+	}
+	equals(e) {
+		return this.top === e.top && this.bottom === e.bottom && this.left === e.left && this.right === e.right;
+	}
+	clone() {
+		return new e(this.top, this.bottom, this.left, this.right);
+	}
+	toJSON() {
+		return {
+			top: this.top,
+			bottom: this.bottom,
+			left: this.left,
+			right: this.right
+		};
+	}
+};
+function Es(e, t) {
+	if (!e.renderWorldCopies || e.lngRange) return;
+	let n = t.lng - e.center.lng;
+	t.lng += n > 180 ? -360 : n < -180 ? 360 : 0;
+}
+function Ds(e) {
+	return Math.max(0, Math.floor(e));
+}
+var Os = class {
+	constructor(e, t) {
+		this.applyConstrain = (e, t) => this._constrainOverride === null ? this._callbacks.defaultConstrain(e, t) : this._constrainOverride(e, t), this._callbacks = e, this._tileSize = 512, this._renderWorldCopies = t?.renderWorldCopies === void 0 || !!t?.renderWorldCopies, this._minZoom = t?.minZoom || 0, this._maxZoom = t?.maxZoom || 22, this._minPitch = t?.minPitch === void 0 || t?.minPitch === null ? 0 : t?.minPitch, this._maxPitch = t?.maxPitch === void 0 || t?.maxPitch === null ? 60 : t?.maxPitch, this._constrainOverride = t?.constrainOverride ?? null, this.setMaxBounds(), this._width = 0, this._height = 0, this._center = new dm$1(0, 0), this._elevation = 0, this._zoom = 0, this._tileZoom = Ds(this._zoom), this._scale = Nt(this._zoom), this._bearingInRadians = 0, this._fovInRadians = .6435011087932844, this._pitchInRadians = 0, this._rollInRadians = 0, this._unmodified = !0, this._edgeInsets = new Ts(), this._minElevationForCurrentTile = 0, this._autoCalculateNearFarZ = !0;
+	}
+	apply(e, t, n) {
+		this._constrainOverride = e.constrainOverride, this._latRange = e.latRange, this._lngRange = e.lngRange, this._width = e.width, this._height = e.height, this._center = e.center, this._elevation = e.elevation, this._minElevationForCurrentTile = e.minElevationForCurrentTile, this._zoom = e.zoom, this._tileZoom = Ds(this._zoom), this._scale = Nt(this._zoom), this._bearingInRadians = e.bearingInRadians, this._fovInRadians = e.fovInRadians, this._pitchInRadians = e.pitchInRadians, this._rollInRadians = e.rollInRadians, this._unmodified = e.unmodified, this._edgeInsets = new Ts(e.padding.top, e.padding.bottom, e.padding.left, e.padding.right), this._minZoom = e.minZoom, this._maxZoom = e.maxZoom, this._minPitch = e.minPitch, this._maxPitch = e.maxPitch, this._renderWorldCopies = e.renderWorldCopies, this._cameraToCenterDistance = e.cameraToCenterDistance, this._nearZ = e.nearZ, this._farZ = e.farZ, this._autoCalculateNearFarZ = !n && e.autoCalculateNearFarZ, t && this.constrainInternal(), this._calcMatrices();
+	}
+	get pixelsToClipSpaceMatrix() {
+		return this._pixelsToClipSpaceMatrix;
+	}
+	get clipSpaceToPixelsMatrix() {
+		return this._clipSpaceToPixelsMatrix;
+	}
+	get minElevationForCurrentTile() {
+		return this._minElevationForCurrentTile;
+	}
+	setMinElevationForCurrentTile(e) {
+		this._minElevationForCurrentTile = e;
+	}
+	get tileSize() {
+		return this._tileSize;
+	}
+	get tileZoom() {
+		return this._tileZoom;
+	}
+	get scale() {
+		return this._scale;
+	}
+	get width() {
+		return this._width;
+	}
+	get height() {
+		return this._height;
+	}
+	get bearingInRadians() {
+		return this._bearingInRadians;
+	}
+	get lngRange() {
+		return this._lngRange;
+	}
+	get latRange() {
+		return this._latRange;
+	}
+	get pixelsToGLUnits() {
+		return this._pixelsToGLUnits;
+	}
+	get minZoom() {
+		return this._minZoom;
+	}
+	setMinZoom(e) {
+		this._minZoom !== e && (this._minZoom = e, this.setZoom(this.applyConstrain(this._center, this.zoom).zoom));
+	}
+	get maxZoom() {
+		return this._maxZoom;
+	}
+	setMaxZoom(e) {
+		this._maxZoom !== e && (this._maxZoom = e, this.setZoom(this.applyConstrain(this._center, this.zoom).zoom));
+	}
+	get minPitch() {
+		return this._minPitch;
+	}
+	setMinPitch(e) {
+		this._minPitch !== e && (this._minPitch = e, this.setPitch(Math.max(this.pitch, e)));
+	}
+	get maxPitch() {
+		return this._maxPitch;
+	}
+	setMaxPitch(e) {
+		this._maxPitch !== e && (this._maxPitch = e, this.setPitch(Math.min(this.pitch, e)));
+	}
+	get renderWorldCopies() {
+		return this._renderWorldCopies;
+	}
+	setRenderWorldCopies(e) {
+		e === void 0 ? e = !0 : e === null && (e = !1), this._renderWorldCopies = e;
+	}
+	get constrainOverride() {
+		return this._constrainOverride;
+	}
+	setConstrainOverride(e) {
+		e === void 0 && (e = null), this._constrainOverride !== e && (this._constrainOverride = e, this.constrainInternal(), this._calcMatrices());
+	}
+	get worldSize() {
+		return this._tileSize * this._scale;
+	}
+	get centerOffset() {
+		return this.centerPoint._sub(this.size._div(2));
+	}
+	get size() {
+		return new l(this._width, this._height);
+	}
+	get bearing() {
+		return this._bearingInRadians / Math.PI * 180;
+	}
+	setBearing(e) {
+		let t = Et(e, -180, 180) * Math.PI / 180;
+		this._bearingInRadians !== t && (this._unmodified = !1, this._bearingInRadians = t, this._calcMatrices(), this._rotationMatrix = Or(), jr(this._rotationMatrix, this._rotationMatrix, -this._bearingInRadians));
+	}
+	get rotationMatrix() {
+		return this._rotationMatrix;
+	}
+	get pitchInRadians() {
+		return this._pitchInRadians;
+	}
+	get pitch() {
+		return this._pitchInRadians / Math.PI * 180;
+	}
+	setPitch(e) {
+		let t = Tt(e, this.minPitch, this.maxPitch) / 180 * Math.PI;
+		this._pitchInRadians !== t && (this._unmodified = !1, this._pitchInRadians = t, this._calcMatrices());
+	}
+	get rollInRadians() {
+		return this._rollInRadians;
+	}
+	get roll() {
+		return this._rollInRadians / Math.PI * 180;
+	}
+	setRoll(e) {
+		let t = e / 180 * Math.PI;
+		this._rollInRadians !== t && (this._unmodified = !1, this._rollInRadians = t, this._calcMatrices());
+	}
+	get fovInRadians() {
+		return this._fovInRadians;
+	}
+	get fov() {
+		return cn(this._fovInRadians);
+	}
+	setFov(e) {
+		e = Tt(e, .1, 150), this.fov !== e && (this._unmodified = !1, this._fovInRadians = sn(e), this._calcMatrices());
+	}
+	get zoom() {
+		return this._zoom;
+	}
+	setZoom(e) {
+		let t = this.applyConstrain(this._center, e).zoom;
+		this._zoom !== t && (this._unmodified = !1, this._zoom = t, this._tileZoom = Math.max(0, Math.floor(t)), this._scale = Nt(t), this.constrainInternal(), this._calcMatrices());
+	}
+	get center() {
+		return this._center;
+	}
+	setCenter(e) {
+		(e.lat !== this._center.lat || e.lng !== this._center.lng) && (this._unmodified = !1, this._center = e, this.constrainInternal(), this._calcMatrices());
+	}
+	get elevation() {
+		return this._elevation;
+	}
+	setElevation(e) {
+		e !== this._elevation && (this._elevation = e, this.constrainInternal(), this._calcMatrices());
+	}
+	get padding() {
+		return this._edgeInsets.toJSON();
+	}
+	setPadding(e) {
+		this._edgeInsets.equals(e) || (this._unmodified = !1, this._edgeInsets.interpolate(this._edgeInsets, e, 1), this._calcMatrices());
+	}
+	get centerPoint() {
+		return this._edgeInsets.getCenter(this._width, this._height);
+	}
+	get pixelsPerMeter() {
+		return this._pixelPerMeter;
+	}
+	get unmodified() {
+		return this._unmodified;
+	}
+	get cameraToCenterDistance() {
+		return this._cameraToCenterDistance;
+	}
+	get nearZ() {
+		return this._nearZ;
+	}
+	get farZ() {
+		return this._farZ;
+	}
+	get autoCalculateNearFarZ() {
+		return this._autoCalculateNearFarZ;
+	}
+	overrideNearFarZ(e, t) {
+		this._autoCalculateNearFarZ = !1, this._nearZ = e, this._farZ = t, this._calcMatrices();
+	}
+	clearNearFarZOverride() {
+		this._autoCalculateNearFarZ = !0, this._calcMatrices();
+	}
+	isPaddingEqual(e) {
+		return this._edgeInsets.equals(e);
+	}
+	interpolatePadding(e, t, n) {
+		this._unmodified = !1, this._edgeInsets.interpolate(e, t, n), this.constrainInternal(), this._calcMatrices();
+	}
+	resize(e, t, n = !0) {
+		this._width = e, this._height = t, n && this.constrainInternal(), this._calcMatrices();
+	}
+	getMaxBounds() {
+		return this._latRange?.length !== 2 || this._lngRange?.length !== 2 ? null : new Ki([this._lngRange[0], this._latRange[0]], [this._lngRange[1], this._latRange[1]]);
+	}
+	setMaxBounds(e) {
+		e ? (this._lngRange = [e.getWest(), e.getEast()], this._latRange = [e.getSouth(), e.getNorth()], this.constrainInternal()) : (this._lngRange = null, this._latRange = [-pn, pn]);
+	}
+	getCameraQueryGeometry(e, t) {
+		if (t.length === 1) return [t[0], e];
+		{
+			let { minX: n, minY: r, maxX: i, maxY: a } = Uv.fromPoints(t).extend(e);
+			return [
+				new l(n, r),
+				new l(i, r),
+				new l(i, a),
+				new l(n, a),
+				new l(n, r)
+			];
+		}
+	}
+	constrainInternal() {
+		if (!this.center || !this._width || !this._height || this._constraining) return;
+		this._constraining = !0;
+		let e = this._unmodified, { center: t, zoom: n } = this.applyConstrain(this.center, this.zoom);
+		this.setCenter(t), this.setZoom(n), this._unmodified = e, this._constraining = !1;
+	}
+	_calcMatrices() {
+		if (this._width && this._height) {
+			this._pixelsToGLUnits = [2 / this._width, -2 / this._height];
+			let e = C(/* @__PURE__ */ new Float64Array(16));
+			D(e, e, [
+				this._width / 2,
+				-this._height / 2,
+				1
+			]), E(e, e, [
+				1,
+				-1,
+				0
+			]), this._clipSpaceToPixelsMatrix = e, e = C(/* @__PURE__ */ new Float64Array(16)), D(e, e, [
+				1,
+				-1,
+				1
+			]), E(e, e, [
+				-1,
+				-1,
+				0
+			]), D(e, e, [
+				2 / this._width,
+				2 / this._height,
+				1
+			]), this._pixelsToClipSpaceMatrix = e;
+			let t = this.fovInRadians / 2;
+			this._cameraToCenterDistance = .5 / Math.tan(t) * this._height;
+		}
+		this._callbacks.calcMatrices();
+	}
+	calculateCenterFromCameraLngLatAlt(e, t, n, r) {
+		let i = n === void 0 ? this.bearing : n, a = r = r === void 0 ? this.pitch : r, { distanceToCenter: o, clampedElevation: s } = this._distanceToCenterFromAltElevationPitch(t, this.elevation, a), { x: c, y: l } = Am(a, i), u = xm.fromLngLat(e, t), d = ym(1, u.y), f, p, m = 0;
+		do {
+			if (m += 1, m > 10) break;
+			p = o / d;
+			let e = c * p, t = l * p;
+			f = new xm(u.x + e, u.y + t), d = 1 / f.meterInMercatorCoordinateUnits();
+		} while (Math.abs(o - p * d) > 1e-12);
+		return {
+			center: f.toLngLat(),
+			elevation: s,
+			zoom: Pt(this.height / 2 / Math.tan(this.fovInRadians / 2) / p / this.tileSize)
+		};
+	}
+	recalculateZoomAndCenter(e) {
+		if (this.elevation - e === 0) return;
+		let t = 1 / this.worldSize, n = gm(1, this.center.lat) * this.worldSize, r = xm.fromLngLat(this.center, this.elevation), i = r.x / t, a = r.y / t, o = r.z / t, s = this.pitch, c = this.bearing, { x: l, y: u, z: d } = Am(s, c), f = this.cameraToCenterDistance, p = i + f * -l, m = a + f * -u, h = o + f * d, { distanceToCenter: g, clampedElevation: _ } = this._distanceToCenterFromAltElevationPitch(h / n, e, s), v = g * n, y = p + l * v, b = m + u * v, x = new xm(y * t, b * t, 0).toLngLat(), S = gm(1, x.lat), C = Pt(this.height / 2 / Math.tan(this.fovInRadians / 2) / g / S / this.tileSize);
+		this._elevation = _, this._center = x, this.setZoom(C);
+	}
+	_distanceToCenterFromAltElevationPitch(e, t, n) {
+		let r = -Math.cos(sn(n)), i = e - t, a, o = t;
+		return r * i >= 0 || Math.abs(r) < .1 ? (a = 1e4, o = e + a * r) : a = -i / r, {
+			distanceToCenter: a,
+			clampedElevation: o
+		};
+	}
+	getCameraPoint() {
+		let e = this.pitchInRadians, t = Math.tan(e) * (this.cameraToCenterDistance || 1);
+		return this.centerPoint.add(new l(t * Math.sin(this.rollInRadians), t * Math.cos(this.rollInRadians)));
+	}
+	getCameraAltitude() {
+		return Math.cos(this.pitchInRadians) * this._cameraToCenterDistance / this._pixelPerMeter + this.elevation;
+	}
+	getCameraLngLat() {
+		let e = gm(1, this.center.lat) * this.worldSize, t = this.cameraToCenterDistance / e;
+		return km(this.center, this.elevation, this.pitch, this.bearing, t).toLngLat();
+	}
+	getMercatorTileCoordinates(e) {
+		if (!e) return [
+			0,
+			0,
+			1,
+			1
+		];
+		let t = e.canonical.z >= 0 ? 1 << e.canonical.z : 2 ** e.canonical.z;
+		return [
+			e.canonical.x / t,
+			e.canonical.y / t,
+			1 / t / j,
+			1 / t / j
+		];
+	}
+};
+var ks = class e {
+	constructor(e, t) {
+		this.min = e, this.max = t, this.center = pe([], de([], this.min, this.max), .5);
+	}
+	quadrant(t) {
+		let n = [t % 2 == 0, t < 2], r = ce(this.min), i = ce(this.max);
+		for (let e = 0; e < n.length; e++) r[e] = n[e] ? this.min[e] : this.center[e], i[e] = n[e] ? this.center[e] : this.max[e];
+		return i[2] = this.max[2], new e(r, i);
+	}
+	distanceX(e) {
+		return Math.max(Math.min(this.max[0], e[0]), this.min[0]) - e[0];
+	}
+	distanceY(e) {
+		return Math.max(Math.min(this.max[1], e[1]), this.min[1]) - e[1];
+	}
+	intersectsFrustum(e) {
+		let t = !0;
+		for (let n of e.planes) {
+			let e = this.intersectsPlane(n);
+			if (e === 0) return 0;
+			e === 1 && (t = !1);
+		}
+		return t ? 2 : e.aabb.min[0] > this.max[0] || e.aabb.min[1] > this.max[1] || e.aabb.min[2] > this.max[2] || e.aabb.max[0] < this.min[0] || e.aabb.max[1] < this.min[1] || e.aabb.max[2] < this.min[2] ? 0 : 1;
+	}
+	intersectsPlane(e) {
+		let t = e[3], n = e[3];
+		for (let r = 0; r < 3; r++) e[r] > 0 ? (t += e[r] * this.min[r], n += e[r] * this.max[r]) : (n += e[r] * this.min[r], t += e[r] * this.max[r]);
+		return t >= 0 ? 2 : n < 0 ? 0 : 1;
+	}
+};
+var As = class {
+	distanceToTile2d(e, t, n, r) {
+		let i = r, a = i.distanceX([e, t]), o = i.distanceY([e, t]);
+		return Math.hypot(a, o);
+	}
+	getWrap(e, t, n) {
+		return n;
+	}
+	getTileBoundingVolume(e, t, n, r) {
+		let i = Math.min(0, n), a = Math.max(0, n);
+		if (r?.terrain) {
+			let n = new Iv(e.z, t, e.z, e.x, e.y), o = r.terrain.getMinMaxElevation(n);
+			i = o.minElevation ?? i, a = o.maxElevation ?? a;
+		}
+		let o = 1 << e.z;
+		return new ks([
+			t + e.x / o,
+			e.y / o,
+			i
+		], [
+			t + (e.x + 1) / o,
+			(e.y + 1) / o,
+			a
+		]);
+	}
+	allowVariableZoom(e, t) {
+		let r = Tt(78.5 - e.fov * (Math.abs(Math.cos(e.rollInRadians)) * e.height + Math.abs(Math.sin(e.rollInRadians)) * e.width) / e.height / 2, 0, 60);
+		return !!t.terrain || e.pitch > r;
+	}
+	allowWorldCopies() {
+		return !0;
+	}
+	prepareNextFrame() {}
+};
+var js = class e {
+	constructor(e, t, n) {
+		this.points = e, this.planes = t, this.aabb = n;
+	}
+	static fromInvProjectionMatrix(t, n = 1, r = 0, i, a) {
+		let o = [
+			[
+				-1,
+				1,
+				-1,
+				1
+			],
+			[
+				1,
+				1,
+				-1,
+				1
+			],
+			[
+				1,
+				-1,
+				-1,
+				1
+			],
+			[
+				-1,
+				-1,
+				-1,
+				1
+			],
+			[
+				-1,
+				1,
+				1,
+				1
+			],
+			[
+				1,
+				1,
+				1,
+				1
+			],
+			[
+				1,
+				-1,
+				1,
+				1
+			],
+			[
+				-1,
+				-1,
+				1,
+				1
+			]
+		], s = a ? [
+			[
+				6,
+				5,
+				4
+			],
+			[
+				0,
+				1,
+				2
+			],
+			[
+				0,
+				3,
+				7
+			],
+			[
+				2,
+				1,
+				5
+			],
+			[
+				3,
+				2,
+				6
+			],
+			[
+				0,
+				4,
+				5
+			]
+		] : [
+			[
+				0,
+				1,
+				2
+			],
+			[
+				6,
+				5,
+				4
+			],
+			[
+				0,
+				3,
+				7
+			],
+			[
+				2,
+				1,
+				5
+			],
+			[
+				3,
+				2,
+				6
+			],
+			[
+				0,
+				4,
+				5
+			]
+		], c = 2 ** r, l = o.map((e) => Ms(e, t, n, c));
+		i && Ns(l, s[0], i, a);
+		let u = s.map((e) => {
+			let r = ge([], ve([], Ee([], l[e[0]], l[e[1]]), Ee([], l[e[2]], l[e[1]]))), i = -_e(r, l[e[1]]);
+			return r.concat(i);
+		}), d = [
+			1 / 0,
+			1 / 0,
+			1 / 0
+		], f = [
+			-1 / 0,
+			-1 / 0,
+			-1 / 0
+		];
+		for (let e of l) for (let t = 0; t < 3; t++) d[t] = Math.min(d[t], e[t]), f[t] = Math.max(f[t], e[t]);
+		return new e(l, u, new ks(d, f));
+	}
+};
+function Ms(e, t, n, r) {
+	let i = Me([], e, t), a = 1 / i[3] / n * r;
+	return Ne(i, i, [
+		a,
+		a,
+		1 / i[3],
+		a
+	]);
+}
+function Ns(e, t, n, r) {
+	let i = r ? 4 : 0, a = r ? 0 : 4, o = 0, s = [], c = [];
+	for (let t = 0; t < 4; t++) {
+		let n = Ee([], e[t + a], e[t + i]), r = le(n);
+		pe(n, n, 1 / r), s.push(r), c.push(n);
+	}
+	for (let t = 0; t < 4; t++) {
+		let r = pt(e[t + i], c[t], n);
+		o = r !== null && r >= 0 ? Math.max(o, r) : Math.max(o, s[t]);
+	}
+	let l = Ps(e, t), u = Fs(n, l);
+	if (u !== null) {
+		let e = u / _e(c[0], l);
+		o = Math.min(o, e);
+	}
+	for (let t = 0; t < 4; t++) {
+		let n = Math.min(o, s[t]);
+		e[t + a] = [
+			e[t + i][0] + c[t][0] * n,
+			e[t + i][1] + c[t][1] * n,
+			e[t + i][2] + c[t][2] * n,
+			1
+		];
+	}
+}
+function Ps(e, t) {
+	let n = Ee([], e[t[0]], e[t[1]]), r = Ee([], e[t[2]], e[t[1]]), i = [
+		0,
+		0,
+		0,
+		0
+	];
+	return ge(i, ve([], n, r)), i[3] = -_e(i, e[t[0]]), i;
+}
+function Fs(e, t) {
+	let i = Ae([], e, 1 / De(e)), a = Ee([], t, pe([], i, _e(t, i))), o = De(a);
+	if (o > 0) {
+		let e = Math.sqrt(1 - i[3] * i[3]);
+		return dt(t, de([], pe([], i, -i[3]), pe([], a, e / o)));
+	}
+	return null;
+}
+var Is = class t {
+	get pixelsToClipSpaceMatrix() {
+		return this._helper.pixelsToClipSpaceMatrix;
+	}
+	get clipSpaceToPixelsMatrix() {
+		return this._helper.clipSpaceToPixelsMatrix;
+	}
+	get pixelsToGLUnits() {
+		return this._helper.pixelsToGLUnits;
+	}
+	get centerOffset() {
+		return this._helper.centerOffset;
+	}
+	get size() {
+		return this._helper.size;
+	}
+	get rotationMatrix() {
+		return this._helper.rotationMatrix;
+	}
+	get centerPoint() {
+		return this._helper.centerPoint;
+	}
+	get pixelsPerMeter() {
+		return this._helper.pixelsPerMeter;
+	}
+	setMinZoom(e) {
+		this._helper.setMinZoom(e);
+	}
+	setMaxZoom(e) {
+		this._helper.setMaxZoom(e);
+	}
+	setMinPitch(e) {
+		this._helper.setMinPitch(e);
+	}
+	setMaxPitch(e) {
+		this._helper.setMaxPitch(e);
+	}
+	setRenderWorldCopies(e) {
+		this._helper.setRenderWorldCopies(e);
+	}
+	setBearing(e) {
+		this._helper.setBearing(e);
+	}
+	setPitch(e) {
+		this._helper.setPitch(e);
+	}
+	setRoll(e) {
+		this._helper.setRoll(e);
+	}
+	setFov(e) {
+		this._helper.setFov(e);
+	}
+	setZoom(e) {
+		this._helper.setZoom(e);
+	}
+	setCenter(e) {
+		this._helper.setCenter(e);
+	}
+	setElevation(e) {
+		this._helper.setElevation(e);
+	}
+	setMinElevationForCurrentTile(e) {
+		this._helper.setMinElevationForCurrentTile(e);
+	}
+	setPadding(e) {
+		this._helper.setPadding(e);
+	}
+	interpolatePadding(e, t, n) {
+		this._helper.interpolatePadding(e, t, n);
+	}
+	isPaddingEqual(e) {
+		return this._helper.isPaddingEqual(e);
+	}
+	resize(e, t, n = !0) {
+		this._helper.resize(e, t, n);
+	}
+	getMaxBounds() {
+		return this._helper.getMaxBounds();
+	}
+	setMaxBounds(e) {
+		this._helper.setMaxBounds(e);
+	}
+	setConstrainOverride(e) {
+		this._helper.setConstrainOverride(e);
+	}
+	overrideNearFarZ(e, t) {
+		this._helper.overrideNearFarZ(e, t);
+	}
+	clearNearFarZOverride() {
+		this._helper.clearNearFarZOverride();
+	}
+	getCameraQueryGeometry(e) {
+		return this._helper.getCameraQueryGeometry(this.getCameraPoint(), e);
+	}
+	get tileSize() {
+		return this._helper.tileSize;
+	}
+	get tileZoom() {
+		return this._helper.tileZoom;
+	}
+	get scale() {
+		return this._helper.scale;
+	}
+	get worldSize() {
+		return this._helper.worldSize;
+	}
+	get width() {
+		return this._helper.width;
+	}
+	get height() {
+		return this._helper.height;
+	}
+	get lngRange() {
+		return this._helper.lngRange;
+	}
+	get latRange() {
+		return this._helper.latRange;
+	}
+	get minZoom() {
+		return this._helper.minZoom;
+	}
+	get maxZoom() {
+		return this._helper.maxZoom;
+	}
+	get zoom() {
+		return this._helper.zoom;
+	}
+	get center() {
+		return this._helper.center;
+	}
+	get minPitch() {
+		return this._helper.minPitch;
+	}
+	get maxPitch() {
+		return this._helper.maxPitch;
+	}
+	get pitch() {
+		return this._helper.pitch;
+	}
+	get pitchInRadians() {
+		return this._helper.pitchInRadians;
+	}
+	get roll() {
+		return this._helper.roll;
+	}
+	get rollInRadians() {
+		return this._helper.rollInRadians;
+	}
+	get bearing() {
+		return this._helper.bearing;
+	}
+	get bearingInRadians() {
+		return this._helper.bearingInRadians;
+	}
+	get fov() {
+		return this._helper.fov;
+	}
+	get fovInRadians() {
+		return this._helper.fovInRadians;
+	}
+	get elevation() {
+		return this._helper.elevation;
+	}
+	get minElevationForCurrentTile() {
+		return this._helper.minElevationForCurrentTile;
+	}
+	get padding() {
+		return this._helper.padding;
+	}
+	get unmodified() {
+		return this._helper.unmodified;
+	}
+	get renderWorldCopies() {
+		return this._helper.renderWorldCopies;
+	}
+	get cameraToCenterDistance() {
+		return this._helper.cameraToCenterDistance;
+	}
+	get constrainOverride() {
+		return this._helper.constrainOverride;
+	}
+	get nearZ() {
+		return this._helper.nearZ;
+	}
+	get farZ() {
+		return this._helper.farZ;
+	}
+	get autoCalculateNearFarZ() {
+		return this._helper.autoCalculateNearFarZ;
+	}
+	setTransitionState(e) {}
+	constructor(t) {
+		this._posMatrixCache = /* @__PURE__ */ new Map(), this._alignedPosMatrixCache = /* @__PURE__ */ new Map(), this._fogMatrixCacheF32 = /* @__PURE__ */ new Map(), this.defaultConstrain = (t, n) => {
+			n = Tt(+n, this.minZoom, this.maxZoom);
+			let r = {
+				center: new dm$1(t.lng, t.lat),
+				zoom: n
+			}, i = this._helper._lngRange;
+			!this._helper._renderWorldCopies && i === null && (i = [-179.9999999999, 180 - 1e-10]);
+			let a = this.tileSize * Nt(r.zoom), o = 0, s = a, c = 0, l$7 = a, u = 0, f = 0, { x: p, y: m } = this.size;
+			if (this._helper._latRange) {
+				let e = this._helper._latRange;
+				o = hm(e[1]) * a, s = hm(e[0]) * a, s - o < m && (u = m / (s - o));
+			}
+			i && (c = Et(mm(i[0]) * a, 0, a), l$7 = Et(mm(i[1]) * a, 0, a), l$7 < c && (l$7 += a), l$7 - c < p && (f = p / (l$7 - c)));
+			let { x: h, y: g } = Tm(a, t), _, v, y = Math.max(f || 0, u || 0);
+			if (y) return r.center = Em(a, new l(f ? (l$7 + c) / 2 : h, u ? (s + o) / 2 : g)).wrap(), r.zoom += Pt(y), r;
+			if (this._helper._latRange) {
+				let e = m / 2;
+				g - e < o && (v = o + e), g + e > s && (v = s - e);
+			}
+			if (i) {
+				let e = (c + l$7) / 2, t = h;
+				this._helper._renderWorldCopies && (t = Et(h, e - a / 2, e + a / 2));
+				let n = p / 2;
+				t - n < c && (_ = c + n), t + n > l$7 && (_ = l$7 - n);
+			}
+			if (_ !== void 0 || v !== void 0) r.center = Em(a, new l(_ ?? h, v ?? g)).wrap();
+			return r;
+		}, this.applyConstrain = (e, t) => this._helper.applyConstrain(e, t), this._helper = new Os({
+			calcMatrices: () => this._calcMatrices(),
+			defaultConstrain: (e, t) => this.defaultConstrain(e, t)
+		}, t), this._coveringTilesDetailsProvider = new As();
+	}
+	clone() {
+		let e = new t();
+		return e.apply(this, !1), e;
+	}
+	apply(e, t, n) {
+		this._helper.apply(e, t, n);
+	}
+	get cameraPosition() {
+		return this._cameraPosition;
+	}
+	get projectionMatrix() {
+		return this._projectionMatrix;
+	}
+	get modelViewProjectionMatrix() {
+		return this._viewProjMatrix;
+	}
+	get inverseProjectionMatrix() {
+		return this._invProjMatrix;
+	}
+	get mercatorMatrix() {
+		return this._mercatorMatrix;
+	}
+	getVisibleUnwrappedCoordinates(e) {
+		let t = [new Fv(0, e)];
+		if (this._helper._renderWorldCopies) {
+			let n = this.screenPointToMercatorCoordinate(new l(0, 0)), r = this.screenPointToMercatorCoordinate(new l(this._helper._width, 0)), i = this.screenPointToMercatorCoordinate(new l(this._helper._width, this._helper._height)), a = this.screenPointToMercatorCoordinate(new l(0, this._helper._height)), o = Math.floor(Math.min(n.x, r.x, i.x, a.x)), s = Math.floor(Math.max(n.x, r.x, i.x, a.x));
+			for (let n = o - 1; n <= s + 1; n++) n !== 0 && t.push(new Fv(n, e));
+		}
+		return t;
+	}
+	getCameraFrustum() {
+		return js.fromInvProjectionMatrix(this._invViewProjMatrix, this.worldSize);
+	}
+	getClippingPlane() {
+		return null;
+	}
+	getCoveringTilesDetailsProvider() {
+		return this._coveringTilesDetailsProvider;
+	}
+	recalculateZoomAndCenter(e) {
+		let t = this.screenPointToLocation(this.centerPoint, e), n = e ? e.getElevationForLngLatZoom(t, this._helper._tileZoom) : 0;
+		this._helper.recalculateZoomAndCenter(n);
+	}
+	setLocationAtPoint(e, t, n = this.elevation) {
+		let r = n - this.elevation, i = this.screenPointToMercatorCoordinateAtZ(t, r), a = this.screenPointToMercatorCoordinateAtZ(this.centerPoint, 0), o = xm.fromLngLat(e), s = new xm(o.x - (i.x - a.x), o.y - (i.y - a.y));
+		this.setCenter(s?.toLngLat()), this._helper._renderWorldCopies && this.setCenter(this.center.wrap());
+	}
+	locationToScreenPoint(e, t) {
+		return t ? this.coordinatePoint(xm.fromLngLat(e), t.getElevationForLngLat(e, this), this._pixelMatrix3D) : this.coordinatePoint(xm.fromLngLat(e));
+	}
+	screenPointToLocation(e, t) {
+		return this.screenPointToMercatorCoordinate(e, t)?.toLngLat();
+	}
+	screenPointToLocationAtElevation(e, t) {
+		return this.screenPointToMercatorCoordinateAtZ(e, t - this.elevation)?.toLngLat();
+	}
+	screenPointToMercatorCoordinate(e, t) {
+		if (t) {
+			let n = t.pointCoordinate(e);
+			if (n != null) return n;
+		}
+		return this.screenPointToMercatorCoordinateAtZ(e);
+	}
+	screenPointToMercatorCoordinateAtZ(e, t) {
+		let n = t || 0, r = [
+			e.x,
+			e.y,
+			0,
+			1
+		], i = [
+			e.x,
+			e.y,
+			1,
+			1
+		];
+		Me(r, r, this._pixelMatrixInverse), Me(i, i, this._pixelMatrixInverse);
+		let a = r[3], o = i[3], s = r[0] / a, c = i[0] / o, l = r[1] / a, u = i[1] / o, d = r[2] / a, f = i[2] / o, p = d === f ? 0 : (n - d) / (f - d);
+		return new xm(Ni$1.number(s, c, p) / this.worldSize, Ni$1.number(l, u, p) / this.worldSize, n);
+	}
+	coordinatePoint(e, t = 0, n = this._pixelMatrix) {
+		let r = [
+			e.x * this.worldSize,
+			e.y * this.worldSize,
+			t,
+			1
+		];
+		return Me(r, r, n), new l(r[0] / r[3], r[1] / r[3]);
+	}
+	getBounds() {
+		let e = Math.max(0, this._helper._height / 2 - Dm(this));
+		return new Ki().extend(this.screenPointToLocation(new l(0, e))).extend(this.screenPointToLocation(new l(this._helper._width, e))).extend(this.screenPointToLocation(new l(this._helper._width, this._helper._height))).extend(this.screenPointToLocation(new l(0, this._helper._height)));
+	}
+	isPointOnMapSurface(e, t) {
+		return t ? t.pointCoordinate(e) != null : e.y > this.height / 2 - Dm(this);
+	}
+	calculatePosMatrix(e, t = !1, n = !1) {
+		let r = e.key ?? Lv(e.wrap, e.canonical.z, e.canonical.z, e.canonical.x, e.canonical.y), i = t ? this._alignedPosMatrixCache : this._posMatrixCache;
+		if (i.has(r)) {
+			let e = i.get(r);
+			return n ? e.f32 : e.f64;
+		}
+		let a = Om(e, this.worldSize);
+		T(a, t ? this._alignedProjMatrix : this._viewProjMatrix, a);
+		let o = {
+			f64: a,
+			f32: new Float32Array(a)
+		};
+		return i.set(r, o), n ? o.f32 : o.f64;
+	}
+	calculateFogMatrix(e) {
+		let t = e.key, n = this._fogMatrixCacheF32;
+		if (n.has(t)) return n.get(t);
+		let r = Om(e, this.worldSize);
+		return T(r, this._fogMatrix, r), n.set(t, new Float32Array(r)), n.get(t);
+	}
+	calculateCenterFromCameraLngLatAlt(e, t, n, r) {
+		return this._helper.calculateCenterFromCameraLngLatAlt(e, t, n, r);
+	}
+	_calculateNearFarZIfNeeded(e, t, n) {
+		if (!this._helper.autoCalculateNearFarZ) return;
+		let r = Math.min(this.elevation, this.minElevationForCurrentTile, this.getCameraAltitude() - 100), i = e - r * this._helper._pixelPerMeter / Math.cos(t), a = r < 0 ? i : e, o = Math.PI / 2 + this.pitchInRadians, s = sn(this.fov) * (Math.abs(Math.cos(sn(this.roll))) * this.height + Math.abs(Math.sin(sn(this.roll))) * this.width) / this.height * (.5 + n.y / this.height), c = Math.sin(s) * a / Math.sin(Tt(Math.PI - o - s, .01, Math.PI - .01)), l = Dm(this), u = Math.atan(l / this._helper.cameraToCenterDistance), d = sn(90 - Sm), f = u > d ? 2 * u * (.5 + n.y / (l * 2)) : d, p = Math.sin(f) * a / Math.sin(Tt(Math.PI - o - f, .01, Math.PI - .01)), m = Math.min(c, p);
+		this._helper._farZ = (Math.cos(Math.PI / 2 - t) * m + a) * 1.01, this._helper._nearZ = this._helper._height / 50;
+	}
+	_calcMatrices() {
+		if (!this._helper._height) return;
+		let t = this.centerOffset, n = Tm(this.worldSize, this.center), r = n.x, i = n.y;
+		this._helper._pixelPerMeter = gm(1, this.center.lat) * this.worldSize;
+		let o = sn(Math.min(this.pitch, Sm)), s = Math.max(this._helper.cameraToCenterDistance / 2, this._helper.cameraToCenterDistance + this._helper._elevation * this._helper._pixelPerMeter / Math.cos(o));
+		this._calculateNearFarZIfNeeded(s, o, t);
+		let c;
+		c = /* @__PURE__ */ new Float64Array(16), ne(c, this.fovInRadians, this._helper._width / this._helper._height, this._helper._nearZ, this._helper._farZ), this._invProjMatrix = /* @__PURE__ */ new Float64Array(16), co(this._invProjMatrix, c), c[8] = -t.x * 2 / this._helper._width, c[9] = t.y * 2 / this._helper._height, this._projectionMatrix = x(c), D(c, c, [
+			1,
+			-1,
+			1
+		]), E(c, c, [
+			0,
+			0,
+			-this._helper.cameraToCenterDistance
+		]), A(c, c, -this.rollInRadians), O(c, c, this.pitchInRadians), A(c, c, -this.bearingInRadians), E(c, c, [
+			-r,
+			-i,
+			0
+		]), this._mercatorMatrix = D([], c, [
+			this.worldSize,
+			this.worldSize,
+			this.worldSize
+		]), D(c, c, [
+			1,
+			1,
+			this._helper._pixelPerMeter
+		]), this._pixelMatrix = T(/* @__PURE__ */ new Float64Array(16), this.clipSpaceToPixelsMatrix, c), E(c, c, [
+			0,
+			0,
+			-this.elevation
+		]), this._viewProjMatrix = c, this._invViewProjMatrix = w([], c);
+		let l = [
+			0,
+			0,
+			-1,
+			1
+		];
+		Me(l, l, this._invViewProjMatrix), this._cameraPosition = [
+			l[0] / l[3],
+			l[1] / l[3],
+			l[2] / l[3]
+		], this._fogMatrix = /* @__PURE__ */ new Float64Array(16), ne(this._fogMatrix, this.fovInRadians, this.width / this.height, s, this._helper._farZ), this._fogMatrix[8] = -t.x * 2 / this.width, this._fogMatrix[9] = t.y * 2 / this.height, D(this._fogMatrix, this._fogMatrix, [
+			1,
+			-1,
+			1
+		]), E(this._fogMatrix, this._fogMatrix, [
+			0,
+			0,
+			-this.cameraToCenterDistance
+		]), A(this._fogMatrix, this._fogMatrix, -this.rollInRadians), O(this._fogMatrix, this._fogMatrix, this.pitchInRadians), A(this._fogMatrix, this._fogMatrix, -this.bearingInRadians), E(this._fogMatrix, this._fogMatrix, [
+			-r,
+			-i,
+			0
+		]), D(this._fogMatrix, this._fogMatrix, [
+			1,
+			1,
+			this._helper._pixelPerMeter
+		]), E(this._fogMatrix, this._fogMatrix, [
+			0,
+			0,
+			-this.elevation
+		]), this._pixelMatrix3D = T(/* @__PURE__ */ new Float64Array(16), this.clipSpaceToPixelsMatrix, c);
+		let u = this._helper._width % 2 / 2, d = this._helper._height % 2 / 2, f = Math.cos(this.bearingInRadians), p = Math.sin(-this.bearingInRadians), m = r - Math.round(r) + f * u + p * d, h = i - Math.round(i) + f * d + p * u, g = new Float64Array(c);
+		if (E(g, g, [
+			m > .5 ? m - 1 : m,
+			h > .5 ? h - 1 : h,
+			0
+		]), this._alignedProjMatrix = g, c = w(/* @__PURE__ */ new Float64Array(16), this._pixelMatrix), !c) throw Error(`failed to invert matrix`);
+		this._pixelMatrixInverse = c, this._clearMatrixCaches();
+	}
+	_clearMatrixCaches() {
+		this._posMatrixCache.clear(), this._alignedPosMatrixCache.clear(), this._fogMatrixCacheF32.clear();
+	}
+	maxPitchScaleFactor() {
+		if (!this._pixelMatrixInverse) return 1;
+		let e = this.screenPointToMercatorCoordinate(new l(0, 0)), t = [
+			e.x * this.worldSize,
+			e.y * this.worldSize,
+			0,
+			1
+		];
+		return Me(t, t, this._pixelMatrix)[3] / this._helper.cameraToCenterDistance;
+	}
+	getCameraPoint() {
+		return this._helper.getCameraPoint();
+	}
+	getCameraAltitude() {
+		return this._helper.getCameraAltitude();
+	}
+	getCameraLngLat() {
+		let e = gm(1, this.center.lat) * this.worldSize, t = this._helper.cameraToCenterDistance / e;
+		return km(this.center, this.elevation, this.pitch, this.bearing, t).toLngLat();
+	}
+	lngLatToCameraDepth(e, t) {
+		let n = xm.fromLngLat(e), r = [
+			n.x * this.worldSize,
+			n.y * this.worldSize,
+			t,
+			1
+		];
+		return Me(r, r, this._viewProjMatrix), r[2] / r[3];
+	}
+	getProjectionData(e) {
+		let { overscaledTileID: t, aligned: n, applyTerrainMatrix: r } = e, i = this._helper.getMercatorTileCoordinates(t), a = t ? this.calculatePosMatrix(t, n, !0) : null, o;
+		return o = t?.terrainRttPosMatrix32f && r ? t.terrainRttPosMatrix32f : a || lt(), {
+			mainMatrix: o,
+			tileMercatorCoords: i,
+			clippingPlane: [
+				0,
+				0,
+				0,
+				0
+			],
+			projectionTransition: 0,
+			fallbackMatrix: o,
+			clipAntimeridian: !1
+		};
+	}
+	isLocationOccluded(e) {
+		return !1;
+	}
+	getPixelScale() {
+		return 1;
+	}
+	getCircleRadiusCorrection() {
+		return 1;
+	}
+	getPitchedTextCorrection(e, t, n) {
+		return 1;
+	}
+	transformLightDirection(e) {
+		return ce(e);
+	}
+	getRayDirectionFromPixel(e) {
+		throw Error(`Not implemented.`);
+	}
+	projectTileCoordinates(e, t, n, r) {
+		let i = this.calculatePosMatrix(n), a;
+		r ? (a = [
+			e,
+			t,
+			r(e, t),
+			1
+		], Me(a, a, i)) : (a = [
+			e,
+			t,
+			0,
+			1
+		], Mo(a, a, i));
+		let o = a[3];
+		return {
+			point: new l(a[0] / o, a[1] / o),
+			signedDistanceFromCamera: o,
+			isOccluded: !1
+		};
+	}
+	populateCache(e) {
+		for (let t of e) this.calculatePosMatrix(t);
+	}
+	getProjectionDataForCustomLayer(e = !0) {
+		let t = new Iv(0, 0, 0, 0, 0), n = this.getProjectionData({
+			overscaledTileID: t,
+			applyGlobeMatrix: e
+		}), r = Om(t, this.worldSize);
+		T(r, this._viewProjMatrix, r);
+		let i = [
+			j,
+			j,
+			this.worldSize / this._helper.pixelsPerMeter
+		], a = st();
+		return D(a, r, i), {
+			...n,
+			tileMercatorCoords: [
+				0,
+				0,
+				1,
+				1
+			],
+			fallbackMatrix: a,
+			mainMatrix: a
+		};
+	}
+	getFastPathSimpleProjectionMatrix(e) {
+		return this.calculatePosMatrix(e);
+	}
+};
+function Ls() {
+	Vt(`Map cannot fit within canvas with the given bounds, padding, and/or offset.`);
+}
+function Rs(e) {
+	if (e.useSlerp) {
+		if (e.k < 1) {
+			let t = fn(e.startEulerAngles.roll, e.startEulerAngles.pitch, e.startEulerAngles.bearing), n = fn(e.endEulerAngles.roll, e.endEulerAngles.pitch, e.endEulerAngles.bearing), r = /* @__PURE__ */ new Float64Array(4);
+			Ie(r, t, n, e.k);
+			let i = un(r);
+			e.tr.setRoll(i.roll), e.tr.setPitch(i.pitch), e.tr.setBearing(i.bearing);
+		} else e.tr.setRoll(e.endEulerAngles.roll), e.tr.setPitch(e.endEulerAngles.pitch), e.tr.setBearing(e.endEulerAngles.bearing);
+	} else e.tr.setRoll(Ni$1.number(e.startEulerAngles.roll, e.endEulerAngles.roll, e.k)), e.tr.setPitch(Ni$1.number(e.startEulerAngles.pitch, e.endEulerAngles.pitch, e.k)), e.tr.setBearing(Ni$1.number(e.startEulerAngles.bearing, e.endEulerAngles.bearing, e.k));
+}
+function zs(t, n, r, i, a) {
+	let o = a.padding, s = Tm(a.worldSize, r.getNorthWest()), c = Tm(a.worldSize, r.getNorthEast()), l$8 = Tm(a.worldSize, r.getSouthEast()), u = Tm(a.worldSize, r.getSouthWest()), f = sn(-i), p = s.rotate(f), m = c.rotate(f), h = l$8.rotate(f), g = u.rotate(f), _ = new l(Math.max(p.x, m.x, g.x, h.x), Math.max(p.y, m.y, g.y, h.y)), v = new l(Math.min(p.x, m.x, g.x, h.x), Math.min(p.y, m.y, g.y, h.y)), y = _.sub(v), b = a.width - (o.left + o.right + n.left + n.right), x = a.height - (o.top + o.bottom + n.top + n.bottom), S = b / y.x, C = x / y.y;
+	if (C < 0 || S < 0) {
+		Ls();
+		return;
+	}
+	let w = Math.min(Pt(a.scale * Math.min(S, C)), t.maxZoom), T = l.convert(t.offset), O = new l((n.left - n.right) / 2, (n.top - n.bottom) / 2).rotate(sn(i)), k = T.add(O).mult(a.scale / Nt(w));
+	return {
+		center: Em(a.worldSize, s.add(l$8).div(2).sub(k)),
+		zoom: w,
+		bearing: i
+	};
+}
+var Bs = class {
+	get useGlobeControls() {
+		return !1;
+	}
+	handlePanInertia(e, t) {
+		let n = e.mag(), r = Math.abs(Dm(t));
+		return {
+			easingOffset: e.mult(Math.min(r * .75 / n, 1)),
+			easingCenter: t.center
+		};
+	}
+	handleMapControlsRollPitchBearingZoom(e, t) {
+		e.bearingDelta && t.setBearing(t.bearing + e.bearingDelta), e.pitchDelta && t.setPitch(t.pitch + e.pitchDelta), e.rollDelta && t.setRoll(t.roll + e.rollDelta), e.zoomDelta && t.setZoom(t.zoom + e.zoomDelta);
+	}
+	handleMapControlsPan(e, t, n) {
+		e.around.distSqr(t.centerPoint) < .01 || t.setLocationAtPoint(n, e.around, e.aroundElevation);
+	}
+	cameraForBoxAndBearing(e, t, n, r, i) {
+		return zs(e, t, n, r, i);
+	}
+	handleJumpToCenterZoom(e, t) {
+		let n = t.zoom === void 0 ? e.zoom : +t.zoom;
+		e.zoom !== n && e.setZoom(+t.zoom), t.center !== void 0 && e.setCenter(dm$1.convert(t.center));
+	}
+	handleEaseTo(t, n) {
+		let r = t.zoom, i = t.padding, a = {
+			roll: t.roll,
+			pitch: t.pitch,
+			bearing: t.bearing
+		}, o = {
+			roll: n.roll === void 0 ? t.roll : n.roll,
+			pitch: n.pitch === void 0 ? t.pitch : n.pitch,
+			bearing: n.bearing === void 0 ? t.bearing : n.bearing
+		}, c = n.zoom !== void 0, l = !t.isPaddingEqual(n.padding), u = !1, f = c ? +n.zoom : t.zoom, p = t.centerPoint.add(n.offsetAsPoint), m = t.screenPointToLocation(p), { center: h, zoom: g } = t.applyConstrain(dm$1.convert(n.center || m), f ?? r);
+		Es(t, h);
+		let _ = Tm(t.worldSize, m), v = Tm(t.worldSize, h).sub(_), y = Nt(g - r);
+		return u = g !== r, {
+			easeFunc: (e) => {
+				if (u && t.setZoom(Ni$1.number(r, g, e)), ln(a, o) || Rs({
+					startEulerAngles: a,
+					endEulerAngles: o,
+					tr: t,
+					k: e,
+					useSlerp: a.roll != o.roll
+				}), l && (t.interpolatePadding(i, n.padding, e), p = t.centerPoint.add(n.offsetAsPoint)), n.around) t.setLocationAtPoint(n.around, n.aroundPoint);
+				else {
+					let n = Nt(t.zoom - r), i = (g > r ? Math.min(2, y) : Math.max(.5, y)) ** (1 - e), a = Em(t.worldSize, _.add(v.mult(e * i)).mult(n));
+					t.setLocationAtPoint(t.renderWorldCopies ? a.wrap() : a, p);
+				}
+			},
+			isZooming: u,
+			elevationCenter: h
+		};
+	}
+	handleFlyTo(t, n) {
+		let r = n.zoom !== void 0, i = t.zoom, a = t.applyConstrain(dm$1.convert(n.center || n.locationAtOffset), r ? +n.zoom : i), o = a.center, s = a.zoom;
+		Es(t, o);
+		let c = t.worldSize, l = Tm(c, n.locationAtOffset), u = Tm(c, o).sub(l), f = u.mag(), p = Nt(s - i), m = n.minZoom === void 0 ? t.minZoom : +n.minZoom, h = Math.max(m, t.minZoom), g = Math.min(h, i, s), _ = t.applyConstrain(o, g).zoom;
+		return {
+			easeFunc: (e, n, r, a) => {
+				t.setZoom(e === 1 ? s : i + Pt(n));
+				let d = e === 1 ? o : Em(c, l.add(u.mult(r)));
+				t.setLocationAtPoint(t.renderWorldCopies ? d.wrap() : d, a);
+			},
+			scaleOfZoom: p,
+			targetCenter: o,
+			scaleOfMinZoom: Nt(_ - i),
+			pixelPathLength: f
+		};
+	}
+};
+var Vs;
+var Hs = () => Vs ||= new xl$1({ type: new K$1(M.projection.type, `type`) });
+var Us = j / 128;
+function Ws(e, t) {
+	let n = Gs(t, `16bit`), r = _u$1.deserialize({
+		arrayBuffer: n.vertices,
+		length: n.vertices.byteLength / 2 / 2
+	}), i = Pu$1.deserialize({
+		arrayBuffer: n.indices,
+		length: n.indices.byteLength / 2 / 3
+	});
+	return new bs(e.createVertexBuffer(r, xs.members), e.createIndexBuffer(i), zu$1.simpleSegment(0, 0, r.length, i.length));
+}
+function Gs(e, t) {
+	let n = e.granularity === void 0 ? 1 : Math.max(e.granularity, 1), r = n + (e.generateBorders ? 2 : 0), i = n + (e.extendToNorthPole || e.generateBorders ? 1 : 0) + (e.extendToSouthPole || e.generateBorders ? 1 : 0), a = r + 1, o = i + 1, s = e.generateBorders ? -1 : 0, c = e.generateBorders || e.extendToNorthPole ? -1 : 0, l = n + +!!e.generateBorders, u = n + (e.generateBorders || e.extendToSouthPole ? 1 : 0), d = a * o, f = r * i * 6, p = a * o > 65536;
+	if (p && t === `16bit`) throw Error(`Granularity is too large and meshes would not fit inside 16 bit vertex indices.`);
+	let m = p || t === `32bit`, h = new Int16Array(d * 2), g = 0;
+	for (let t = c; t <= u; t++) for (let r = s; r <= l; r++) {
+		let i = r / n * j;
+		r === -1 && (i = -Us), r === n + 1 && (i = 8192 + Us);
+		let a = t / n * j;
+		t === -1 && (a = e.extendToNorthPole ? -32768 : -Us), t === n + 1 && (a = e.extendToSouthPole ? 32767 : 8192 + Us), h[g++] = i, h[g++] = a;
+	}
+	let _ = m ? new Uint32Array(f) : new Uint16Array(f), v = 0;
+	for (let e = 0; e < i; e++) for (let t = 0; t < r; t++) {
+		let n = t + e * a, r = t + 1 + e * a, i = t + (e + 1) * a, o = t + 1 + (e + 1) * a;
+		_[v++] = n, _[v++] = i, _[v++] = r, _[v++] = r, _[v++] = i, _[v++] = o;
+	}
+	return {
+		vertices: h.buffer.slice(0),
+		indices: _.buffer.slice(0),
+		uses32bitIndices: m
+	};
+}
+var Ks = new Pp({
 	fill: new Np(128, 2),
 	line: new Np(512, 0),
 	tile: new Np(128, 32),
 	stencil: new Np(128, 1),
 	circle: 3
 });
+var qs = class {
+	constructor() {
+		this._tileMeshCache = {};
+	}
+	get name() {
+		return `vertical-perspective`;
+	}
+	get transitionState() {
+		return 1;
+	}
+	get useSubdivision() {
+		return !0;
+	}
+	get shaderVariantName() {
+		return `globe`;
+	}
+	get shaderDefine() {
+		return `#define GLOBE`;
+	}
+	get shaderPreludeCode() {
+		return ys.projectionGlobe;
+	}
+	get vertexShaderPreludeCode() {
+		return ys.projectionMercator.vertexSource;
+	}
+	get subdivisionGranularity() {
+		return Ks;
+	}
+	get useGlobeControls() {
+		return !0;
+	}
+	destroy() {}
+	_getMeshKey(e) {
+		return `${e.granularity.toString(36)}_${e.generateBorders ? `b` : ``}${e.extendToNorthPole ? `n` : ``}${e.extendToSouthPole ? `s` : ``}`;
+	}
+	getMeshFromTileID(e, t, n, r, i) {
+		let a = (i === `stencil` ? Ks.stencil : Ks.tile).getGranularityForZoomLevel(t.z), o = t.y === 0 && r, s = t.y === (1 << t.z) - 1 && r;
+		return this._getMesh(e, {
+			granularity: a,
+			generateBorders: n,
+			extendToNorthPole: o,
+			extendToSouthPole: s
+		});
+	}
+	_getMesh(e, t) {
+		let n = this._getMeshKey(t);
+		if (n in this._tileMeshCache) return this._tileMeshCache[n];
+		let r = Ws(e, t);
+		return this._tileMeshCache[n] = r, r;
+	}
+	recalculate(e) {}
+	hasTransition() {
+		return !1;
+	}
+};
+var Js = class extends Hn {
+	constructor(e, t) {
+		super(), this._transitionable = new ul$1(Hs(), `projection`, t), this.setProjection(e), this._transitioning = this._transitionable.untransitioned(), this.recalculate(new G$1(0)), this._mercatorProjection = new ws(), this._verticalPerspectiveProjection = new qs();
+	}
+	get transitionState() {
+		let e = this.properties.get(`type`);
+		if (typeof e == `string` && e === `mercator`) return 0;
+		if (typeof e == `string` && e === `vertical-perspective`) return 1;
+		if (e instanceof si$1) {
+			if (e.from === e.to) return e.from === `mercator` ? 0 : 1;
+			if (e.from === `vertical-perspective` && e.to === `mercator`) return 1 - e.transition;
+			if (e.from === `mercator` && e.to === `vertical-perspective`) return e.transition;
+		}
+		return 1;
+	}
+	get useGlobeRendering() {
+		return this.transitionState > 0;
+	}
+	get currentProjection() {
+		return this.useGlobeRendering ? this._verticalPerspectiveProjection : this._mercatorProjection;
+	}
+	get name() {
+		return `globe`;
+	}
+	get useSubdivision() {
+		return this.currentProjection.useSubdivision;
+	}
+	get shaderVariantName() {
+		return this.currentProjection.shaderVariantName;
+	}
+	get shaderDefine() {
+		return this.currentProjection.shaderDefine;
+	}
+	get shaderPreludeCode() {
+		return this.currentProjection.shaderPreludeCode;
+	}
+	get vertexShaderPreludeCode() {
+		return this.currentProjection.vertexShaderPreludeCode;
+	}
+	get subdivisionGranularity() {
+		return this.currentProjection.subdivisionGranularity;
+	}
+	get useGlobeControls() {
+		return this.transitionState > 0;
+	}
+	destroy() {
+		this._mercatorProjection.destroy(), this._verticalPerspectiveProjection.destroy();
+	}
+	getMeshFromTileID(e, t, n, r, i) {
+		return this.currentProjection.getMeshFromTileID(e, t, n, r, i);
+	}
+	setProjection(e) {
+		this._transitionable.setValue(`type`, e?.type || `mercator`);
+	}
+	updateTransitions(e) {
+		this._transitioning = this._transitionable.transitioned(e, this._transitioning);
+	}
+	hasTransition() {
+		return this._transitioning.hasTransition() || this.currentProjection.hasTransition();
+	}
+	recalculate(e) {
+		this.properties = this._transitioning.possiblyEvaluate(e);
+	}
+};
+function Ys(e) {
+	let t = tc(e.worldSize, e.center.lat);
+	return 2 * Math.PI * t;
+}
+function Xs(e, t, n) {
+	let a = _e(ec(t), ec(n)), o = Math.acos(a), s = Ys(e);
+	return o / (2 * Math.PI) * s;
+}
+function Zs(e, t) {
+	return [_t(e * Math.PI * 2 + Math.PI, Math.PI * 2), 2 * Math.atan(Math.exp(Math.PI - t * Math.PI * 2)) - Math.PI * .5];
+}
+function Qs(e, t) {
+	let n = Math.cos(t), r = /* @__PURE__ */ new Float64Array(3);
+	return r[0] = Math.sin(e) * n, r[1] = Math.sin(t), r[2] = Math.cos(e) * n, r;
+}
+function $s(e, t, n, r, i) {
+	let a = 1 / (1 << i), o = e / j * a + n * a, s = t / j * a + r * a, c = _t(o * Math.PI * 2 + Math.PI, Math.PI * 2), l = 2 * Math.atan(Math.exp(Math.PI - s * Math.PI * 2)) - Math.PI * .5, u = Math.cos(l), d = /* @__PURE__ */ new Float64Array(3);
+	return d[0] = Math.sin(c) * u, d[1] = Math.sin(l), d[2] = Math.cos(c) * u, d;
+}
+function ec(e) {
+	return Qs(e.lng * Math.PI / 180, e.lat * Math.PI / 180);
+}
 function tc(e, t) {
 	return e / (2 * Math.PI) / Math.cos(t * Math.PI / 180);
 }
-ks();
+function nc(e) {
+	let t = Math.asin(e[1]) / Math.PI * 180, n = Math.sqrt(e[0] * e[0] + e[2] * e[2]);
+	if (n > 1e-6) {
+		let r = e[0] / n, i = e[2] / n, a = Math.acos(i);
+		return new dm$1(Et((r > 0 ? a : -a) / Math.PI * 180, -180, 180), t);
+	}
+	return new dm$1(0, t);
+}
+function rc(e) {
+	let t = ot();
+	return t[0] = e[0] * -e[3], t[1] = e[1] * -e[3], t[2] = e[2] * -e[3], {
+		center: t,
+		radius: Math.sqrt(1 - e[3] * e[3])
+	};
+}
+function ic(e, t, n) {
+	let r = ot();
+	Ee(r, n, e);
+	let i = ot();
+	return me(i, e, r, t / De(r)), i;
+}
+function ac(e) {
+	return Math.cos(e * Math.PI / 180);
+}
+function oc(e, t) {
+	let n = ac(e);
+	return Pt(ac(t) / n);
+}
+function sc(e, t) {
+	return 360 / Ys({
+		worldSize: e,
+		center: { lat: t }
+	});
+}
+function cc(e, t) {
+	let n = e.rotate(t.bearingInRadians), r = t.zoom + oc(t.center.lat, 0), i = yt(1 / ac(t.center.lat), 1 / ac(Math.min(Math.abs(t.center.lat), 60)), vt(r, 7, 3, 0, 1)), a = sc(t.worldSize, t.center.lat);
+	return new dm$1(t.center.lng - n.x * a * i, Tt(t.center.lat + n.y * a, -pn, pn));
+}
+function lc(e) {
+	let t = .5 * e, n = Math.sin(t), r = Math.cos(t);
+	return Math.log(n + r) - Math.log(r - n);
+}
+function uc(e, t, n, r) {
+	let i = e.lat + n * r;
+	if (Math.abs(n) > 1) {
+		let a = e.lat + n, o = (Math.sign(a) === Math.sign(e.lat) ? Math.abs(e.lat) : -Math.abs(e.lat)) * Math.PI / 180, s = Math.abs(e.lat + n) * Math.PI / 180, c = lc(o + r * (s - o)), l = lc(o), u = lc(s), d = (c - l) / (u - l);
+		return new dm$1(e.lng + t * d, i);
+	}
+	return new dm$1(e.lng + t * r, i);
+}
+var dc = class {
+	constructor(e) {
+		this._cachePrevious = /* @__PURE__ */ new Map(), this._cache = /* @__PURE__ */ new Map(), this._hadAnyChanges = !1, this._boundingVolumeFactory = e;
+	}
+	swapBuffers() {
+		if (!this._hadAnyChanges) return;
+		let e = this._cachePrevious;
+		this._cachePrevious = this._cache, this._cache = e, this._cache.clear(), this._hadAnyChanges = !1;
+	}
+	getTileBoundingVolume(e, t, n, r) {
+		let i = `${e.z}_${e.x}_${e.y}_${r?.terrain ? `t` : ``}_${Math.round(n)}`, a = this._cache.get(i);
+		if (a) return a;
+		let o = this._cachePrevious.get(i);
+		if (o) return this._cache.set(i, o), o;
+		let s = this._boundingVolumeFactory(e, t, n, r);
+		return this._cache.set(i, s), this._hadAnyChanges = !0, s;
+	}
+};
+var fc = class e {
+	constructor(e, t, n, r) {
+		this.min = n, this.max = r, this.points = e, this.planes = t;
+	}
+	static fromAabb(t, n) {
+		let r = [];
+		for (let e = 0; e < 8; e++) r.push([
+			(e >> 0 & 1) == 1 ? n[0] : t[0],
+			(e >> 1 & 1) == 1 ? n[1] : t[1],
+			(e >> 2 & 1) == 1 ? n[2] : t[2]
+		]);
+		return new e(r, [
+			[
+				-1,
+				0,
+				0,
+				n[0]
+			],
+			[
+				1,
+				0,
+				0,
+				-t[0]
+			],
+			[
+				0,
+				-1,
+				0,
+				n[1]
+			],
+			[
+				0,
+				1,
+				0,
+				-t[1]
+			],
+			[
+				0,
+				0,
+				-1,
+				n[2]
+			],
+			[
+				0,
+				0,
+				1,
+				-t[2]
+			]
+		], t, n);
+	}
+	static fromCenterSizeAngles(t, r, i) {
+		let a = Re([], i[0], i[1], i[2]), o = xe([], [
+			r[0],
+			0,
+			0
+		], a), s = xe([], [
+			0,
+			r[1],
+			0
+		], a), c = xe([], [
+			0,
+			0,
+			r[2]
+		], a), l = [...t], u = [...t];
+		for (let e = 0; e < 8; e++) for (let n = 0; n < 3; n++) {
+			let r = t[n] + o[n] * ((e >> 0 & 1) == 1 ? 1 : -1) + s[n] * ((e >> 1 & 1) == 1 ? 1 : -1) + c[n] * ((e >> 2 & 1) == 1 ? 1 : -1);
+			l[n] = Math.min(l[n], r), u[n] = Math.max(u[n], r);
+		}
+		let d = [];
+		for (let e = 0; e < 8; e++) {
+			let r = [...t];
+			de(r, r, pe([], o, (e >> 0 & 1) == 1 ? 1 : -1)), de(r, r, pe([], s, (e >> 1 & 1) == 1 ? 1 : -1)), de(r, r, pe([], c, (e >> 2 & 1) == 1 ? 1 : -1)), d.push(r);
+		}
+		return new e(d, [
+			[...o, -_e(o, d[0])],
+			[...s, -_e(s, d[0])],
+			[...c, -_e(c, d[0])],
+			[
+				-o[0],
+				-o[1],
+				-o[2],
+				-_e(o, d[7])
+			],
+			[
+				-s[0],
+				-s[1],
+				-s[2],
+				-_e(s, d[7])
+			],
+			[
+				-c[0],
+				-c[1],
+				-c[2],
+				-_e(c, d[7])
+			]
+		], l, u);
+	}
+	intersectsFrustum(e) {
+		let t = !0, n = this.points.length, r = this.planes.length, i = e.planes.length, a = e.points.length;
+		for (let r = 0; r < i; r++) {
+			let i = e.planes[r], a = 0;
+			for (let e = 0; e < n; e++) {
+				let t = this.points[e];
+				i[0] * t[0] + i[1] * t[1] + i[2] * t[2] + i[3] >= 0 && a++;
+			}
+			if (a === 0) return 0;
+			a < n && (t = !1);
+		}
+		if (t) return 2;
+		for (let t = 0; t < r; t++) {
+			let n = this.planes[t], r = 0;
+			for (let t = 0; t < a; t++) {
+				let i = e.points[t];
+				n[0] * i[0] + n[1] * i[1] + n[2] * i[2] + n[3] >= 0 && r++;
+			}
+			if (r === 0) return 0;
+		}
+		return 1;
+	}
+	intersectsPlane(e) {
+		let t = this.points.length, n = 0;
+		for (let r = 0; r < t; r++) {
+			let t = this.points[r];
+			e[0] * t[0] + e[1] * t[1] + e[2] * t[2] + e[3] >= 0 && n++;
+		}
+		return n === t ? 2 : n === 0 ? 0 : 1;
+	}
+};
+function pc(e, t, n) {
+	let r = e - t;
+	return r < 0 ? -r : Math.max(0, r - n);
+}
+function mc(e, t, n, r, i) {
+	let a = e - n, o;
+	return o = a < 0 ? Math.min(-a, 1 + a - i) : a > i ? Math.min(Math.max(a - i, 0), 1 - a) : 0, Math.max(o, pc(t, r, i));
+}
+var hc = class {
+	constructor() {
+		this._boundingVolumeCache = new dc(this._computeTileBoundingVolume);
+	}
+	prepareNextFrame() {
+		this._boundingVolumeCache.swapBuffers();
+	}
+	distanceToTile2d(e, t, n, r) {
+		let i = 1 << n.z, a = 1 / i, o = n.x / i, s = n.y / i, c = .5, l = 2;
+		return l = Math.min(l, mc(e, t, o, s, a)), l = Math.min(l, mc(e, t, o + c, -s - a, a)), l = Math.min(l, mc(e, t, o + c, 2 - s - a, a)), l;
+	}
+	getWrap(e, t, n) {
+		let r = 1 << t.z, i = 1 / r, a = t.x / r, o = pc(e.x, a, i), s = pc(e.x, a - 1, i), c = pc(e.x, a + 1, i), l = Math.min(o, s, c);
+		return l === c ? 1 : l === s ? -1 : 0;
+	}
+	allowVariableZoom(e, t) {
+		return Ua(e, t) > 4;
+	}
+	allowWorldCopies() {
+		return !1;
+	}
+	getTileBoundingVolume(e, t, n, r) {
+		return this._boundingVolumeCache.getTileBoundingVolume(e, t, n, r);
+	}
+	_computeTileBoundingVolume(e, t, n, r) {
+		let i = Math.min(0, n), a = Math.max(0, n);
+		if (r?.terrain) {
+			let n = new Iv(e.z, t, e.z, e.x, e.y), o = r.terrain.getMinMaxElevation(n);
+			i = o.minElevation ?? i, a = o.maxElevation ?? a;
+		}
+		if (i /= 6371008.8, a /= 6371008.8, i += 1, a += 1, e.z <= 0) return fc.fromAabb([
+			-a,
+			-a,
+			-a
+		], [
+			a,
+			a,
+			a
+		]);
+		if (e.z === 1) return fc.fromAabb([
+			e.x === 0 ? -a : 0,
+			e.y === 0 ? 0 : -a,
+			-a
+		], [
+			e.x === 0 ? 0 : a,
+			e.y === 0 ? a : 0,
+			a
+		]);
+		{
+			let t = [
+				$s(0, 0, e.x, e.y, e.z),
+				$s(j, 0, e.x, e.y, e.z),
+				$s(j, j, e.x, e.y, e.z),
+				$s(0, j, e.x, e.y, e.z)
+			], n = [];
+			for (let e of t) n.push(pe([], e, a));
+			if (a !== i) for (let e of t) n.push(pe([], e, i));
+			e.y === 0 && n.push([
+				0,
+				1,
+				0
+			]), e.y === (1 << e.z) - 1 && n.push([
+				0,
+				-1,
+				0
+			]);
+			let r = [
+				1,
+				1,
+				1
+			], o = [
+				-1,
+				-1,
+				-1
+			];
+			for (let e of n) for (let t = 0; t < 3; t++) r[t] = Math.min(r[t], e[t]), o[t] = Math.max(o[t], e[t]);
+			let s = $s(j / 2, j / 2, e.x, e.y, e.z), c = ve([], [
+				0,
+				1,
+				0
+			], s);
+			ge(c, c);
+			let l = ve([], s, c);
+			ge(l, l);
+			let u = ve([], t[2], t[1]);
+			ge(u, u);
+			let d = ve([], t[0], t[3]);
+			ge(d, d), n.push(pe([], s, a)), e.y >= (1 << e.z) / 2 && n.push(pe([], $s(4096, 0, e.x, e.y, e.z), a)), e.y < (1 << e.z) / 2 && n.push(pe([], $s(4096, 8192, e.x, e.y, e.z), a));
+			let f = gc(s, n), p = gc(l, n), m = [
+				-s[0],
+				-s[1],
+				-s[2],
+				f.max
+			], h = [
+				s[0],
+				s[1],
+				s[2],
+				-f.min
+			], g = [
+				-l[0],
+				-l[1],
+				-l[2],
+				p.max
+			], _ = [
+				l[0],
+				l[1],
+				l[2],
+				-p.min
+			], v = [...u, 0], y = [...d, 0], b = [];
+			return e.y === 0 ? b.push(ft(y, v, m), ft(y, v, h)) : b.push(ft(g, v, m), ft(g, v, h), ft(g, y, m), ft(g, y, h)), e.y === (1 << e.z) - 1 ? b.push(ft(y, v, m), ft(y, v, h)) : b.push(ft(_, v, m), ft(_, v, h), ft(_, y, m), ft(_, y, h)), new fc(b, [
+				m,
+				h,
+				g,
+				_,
+				v,
+				y
+			], r, o);
+		}
+	}
+};
+function gc(e, t) {
+	let n = 1 / 0, r = -1 / 0;
+	for (let i of t) {
+		let t = _e(e, i);
+		n = Math.min(n, t), r = Math.max(r, t);
+	}
+	return {
+		min: n,
+		max: r
+	};
+}
+var _c = class e {
+	get pixelsToClipSpaceMatrix() {
+		return this._helper.pixelsToClipSpaceMatrix;
+	}
+	get clipSpaceToPixelsMatrix() {
+		return this._helper.clipSpaceToPixelsMatrix;
+	}
+	get pixelsToGLUnits() {
+		return this._helper.pixelsToGLUnits;
+	}
+	get centerOffset() {
+		return this._helper.centerOffset;
+	}
+	get size() {
+		return this._helper.size;
+	}
+	get rotationMatrix() {
+		return this._helper.rotationMatrix;
+	}
+	get centerPoint() {
+		return this._helper.centerPoint;
+	}
+	get pixelsPerMeter() {
+		return this._helper.pixelsPerMeter;
+	}
+	setMinZoom(e) {
+		this._helper.setMinZoom(e);
+	}
+	setMaxZoom(e) {
+		this._helper.setMaxZoom(e);
+	}
+	setMinPitch(e) {
+		this._helper.setMinPitch(e);
+	}
+	setMaxPitch(e) {
+		this._helper.setMaxPitch(e);
+	}
+	setRenderWorldCopies(e) {
+		this._helper.setRenderWorldCopies(e);
+	}
+	setBearing(e) {
+		this._helper.setBearing(e);
+	}
+	setPitch(e) {
+		this._helper.setPitch(e);
+	}
+	setRoll(e) {
+		this._helper.setRoll(e);
+	}
+	setFov(e) {
+		this._helper.setFov(e);
+	}
+	setZoom(e) {
+		this._helper.setZoom(e);
+	}
+	setCenter(e) {
+		this._helper.setCenter(e);
+	}
+	setElevation(e) {
+		this._helper.setElevation(e);
+	}
+	setMinElevationForCurrentTile(e) {
+		this._helper.setMinElevationForCurrentTile(e);
+	}
+	setPadding(e) {
+		this._helper.setPadding(e);
+	}
+	interpolatePadding(e, t, n) {
+		this._helper.interpolatePadding(e, t, n);
+	}
+	isPaddingEqual(e) {
+		return this._helper.isPaddingEqual(e);
+	}
+	resize(e, t) {
+		this._helper.resize(e, t);
+	}
+	getMaxBounds() {
+		return this._helper.getMaxBounds();
+	}
+	setMaxBounds(e) {
+		this._helper.setMaxBounds(e);
+	}
+	setConstrainOverride(e) {
+		this._helper.setConstrainOverride(e);
+	}
+	overrideNearFarZ(e, t) {
+		this._helper.overrideNearFarZ(e, t);
+	}
+	clearNearFarZOverride() {
+		this._helper.clearNearFarZOverride();
+	}
+	getCameraQueryGeometry(e) {
+		return this._helper.getCameraQueryGeometry(this.getCameraPoint(), e);
+	}
+	get tileSize() {
+		return this._helper.tileSize;
+	}
+	get tileZoom() {
+		return this._helper.tileZoom;
+	}
+	get scale() {
+		return this._helper.scale;
+	}
+	get worldSize() {
+		return this._helper.worldSize;
+	}
+	get width() {
+		return this._helper.width;
+	}
+	get height() {
+		return this._helper.height;
+	}
+	get lngRange() {
+		return this._helper.lngRange;
+	}
+	get latRange() {
+		return this._helper.latRange;
+	}
+	get minZoom() {
+		return this._helper.minZoom;
+	}
+	get maxZoom() {
+		return this._helper.maxZoom;
+	}
+	get zoom() {
+		return this._helper.zoom;
+	}
+	get center() {
+		return this._helper.center;
+	}
+	get minPitch() {
+		return this._helper.minPitch;
+	}
+	get maxPitch() {
+		return this._helper.maxPitch;
+	}
+	get pitch() {
+		return this._helper.pitch;
+	}
+	get pitchInRadians() {
+		return this._helper.pitchInRadians;
+	}
+	get roll() {
+		return this._helper.roll;
+	}
+	get rollInRadians() {
+		return this._helper.rollInRadians;
+	}
+	get bearing() {
+		return this._helper.bearing;
+	}
+	get bearingInRadians() {
+		return this._helper.bearingInRadians;
+	}
+	get fov() {
+		return this._helper.fov;
+	}
+	get fovInRadians() {
+		return this._helper.fovInRadians;
+	}
+	get elevation() {
+		return this._helper.elevation;
+	}
+	get minElevationForCurrentTile() {
+		return this._helper.minElevationForCurrentTile;
+	}
+	get padding() {
+		return this._helper.padding;
+	}
+	get unmodified() {
+		return this._helper.unmodified;
+	}
+	get renderWorldCopies() {
+		return this._helper.renderWorldCopies;
+	}
+	get constrainOverride() {
+		return this._helper.constrainOverride;
+	}
+	get nearZ() {
+		return this._helper.nearZ;
+	}
+	get farZ() {
+		return this._helper.farZ;
+	}
+	get autoCalculateNearFarZ() {
+		return this._helper.autoCalculateNearFarZ;
+	}
+	setTransitionState(e) {}
+	constructor(e) {
+		this._cachedClippingPlane = at(), this._projectionMatrix = ct(), this._globeViewProjMatrix32f = lt(), this._globeViewProjMatrixF64 = ct(), this._globeViewProjMatrixF64Inverted = ct(), this._globeProjMatrixInverted = ct(), this._cameraPosition = ot(), this.defaultConstrain = (e, t) => {
+			let n = Tt(e.lat, -pn, pn), r = Tt(+t, this.minZoom + oc(0, n), this.maxZoom);
+			return {
+				center: new dm$1(e.lng, n),
+				zoom: r
+			};
+		}, this.applyConstrain = (e, t) => this._helper.applyConstrain(e, t), this._helper = new Os({
+			calcMatrices: () => this._calcMatrices(),
+			defaultConstrain: (e, t) => this.defaultConstrain(e, t)
+		}, e), this._coveringTilesDetailsProvider = new hc();
+	}
+	clone() {
+		let t = new e();
+		return t.apply(this, !1), t;
+	}
+	apply(e, t) {
+		this._helper.apply(e, t);
+	}
+	get projectionMatrix() {
+		return this._projectionMatrix;
+	}
+	get modelViewProjectionMatrix() {
+		return this._globeViewProjMatrixF64;
+	}
+	get inverseProjectionMatrix() {
+		return this._globeProjMatrixInverted;
+	}
+	get cameraPosition() {
+		let e = ot();
+		return e[0] = this._cameraPosition[0], e[1] = this._cameraPosition[1], e[2] = this._cameraPosition[2], e;
+	}
+	get cameraToCenterDistance() {
+		return this._helper.cameraToCenterDistance;
+	}
+	getProjectionData(e) {
+		let { overscaledTileID: t, applyGlobeMatrix: n } = e, r = this._helper.getMercatorTileCoordinates(t);
+		return {
+			mainMatrix: this._globeViewProjMatrix32f,
+			tileMercatorCoords: r,
+			clippingPlane: this._cachedClippingPlane,
+			projectionTransition: +!!n,
+			fallbackMatrix: this._globeViewProjMatrix32f,
+			clipAntimeridian: t?.canonical.z === 0
+		};
+	}
+	_computeClippingPlane(e) {
+		let t = this.pitchInRadians, n = this.cameraToCenterDistance / e, r = Math.sin(t) * n, i = Math.cos(t) * n + 1, a = 1 / Math.sqrt(r * r + i * i) * 1, o = -r, s = i, c = Math.sqrt(o * o + s * s);
+		o /= c, s /= c;
+		let l = [
+			0,
+			o,
+			s
+		];
+		we(l, l, [
+			0,
+			0,
+			0
+		], -this.bearingInRadians), Se(l, l, [
+			0,
+			0,
+			0
+		], -1 * this.center.lat * Math.PI / 180), Ce(l, l, [
+			0,
+			0,
+			0
+		], this.center.lng * Math.PI / 180);
+		let u = 1 / le(l);
+		return pe(l, l, u), [...l, -a * u];
+	}
+	isLocationOccluded(e) {
+		return !this.isSurfacePointVisible(ec(e));
+	}
+	transformLightDirection(e) {
+		let t = this._helper._center.lng * Math.PI / 180, n = this._helper._center.lat * Math.PI / 180, r = Math.cos(n), i = [
+			Math.sin(t) * r,
+			Math.sin(n),
+			Math.cos(t) * r
+		], a = [
+			i[2],
+			0,
+			-i[0]
+		], o = [
+			0,
+			0,
+			0
+		];
+		ve(o, a, i), ge(a, a), ge(o, o);
+		let s = [
+			a[0] * e[0] + o[0] * e[1] + i[0] * e[2],
+			a[1] * e[0] + o[1] * e[1] + i[1] * e[2],
+			a[2] * e[0] + o[2] * e[1] + i[2] * e[2]
+		], c = [
+			0,
+			0,
+			0
+		];
+		return ge(c, s), c;
+	}
+	getPixelScale() {
+		return 1 / Math.cos(this._helper._center.lat * Math.PI / 180);
+	}
+	getCircleRadiusCorrection() {
+		return Math.cos(this._helper._center.lat * Math.PI / 180);
+	}
+	getPitchedTextCorrection(e, t, n) {
+		let r = Cm(e, t, n.canonical), i = Zs(r.x, r.y);
+		return this.getCircleRadiusCorrection() / Math.cos(i[1]);
+	}
+	projectTileCoordinates(e, t, n, r) {
+		let i = n.canonical, a = $s(e, t, i.x, i.y, i.z), o = 1 + (r ? r(e, t) : 0) / um, s = [
+			a[0] * o,
+			a[1] * o,
+			a[2] * o,
+			1
+		];
+		Me(s, s, this._globeViewProjMatrixF64);
+		let c = this._cachedClippingPlane, l$9 = c[0] * a[0] + c[1] * a[1] + c[2] * a[2] + c[3] < 0;
+		return {
+			point: new l(s[0] / s[3], s[1] / s[3]),
+			signedDistanceFromCamera: s[3],
+			isOccluded: l$9
+		};
+	}
+	_calcMatrices() {
+		if (!this._helper._width || !this._helper._height) return;
+		let e = tc(this.worldSize, this.center.lat), t = st();
+		this._helper.autoCalculateNearFarZ && (this._helper._nearZ = .5, this._helper._farZ = this.cameraToCenterDistance + e * 2), ne(t, this.fovInRadians, this.width / this.height, this._helper._nearZ, this._helper._farZ);
+		let r = this.centerOffset;
+		t[8] = -r.x * 2 / this._helper._width, t[9] = r.y * 2 / this._helper._height, this._projectionMatrix = x(t), this._globeProjMatrixInverted = st(), w(this._globeProjMatrixInverted, t), E(t, t, [
+			0,
+			0,
+			-this.cameraToCenterDistance
+		]), A(t, t, this.rollInRadians), O(t, t, -this.pitchInRadians), A(t, t, this.bearingInRadians), E(t, t, [
+			0,
+			0,
+			-e
+		]);
+		let i = ot();
+		i[0] = e, i[1] = e, i[2] = e, O(t, t, this.center.lat * Math.PI / 180), k(t, t, -this.center.lng * Math.PI / 180), D(t, t, i), this._globeViewProjMatrixF64 = t, this._globeViewProjMatrix32f = new Float32Array(t), this._globeViewProjMatrixF64Inverted = st(), w(this._globeViewProjMatrixF64Inverted, t);
+		let o = ot();
+		this._cameraPosition = ot(), this._cameraPosition[2] = this.cameraToCenterDistance / e, we(this._cameraPosition, this._cameraPosition, o, -this.rollInRadians), Se(this._cameraPosition, this._cameraPosition, o, this.pitchInRadians), we(this._cameraPosition, this._cameraPosition, o, -this.bearingInRadians), de(this._cameraPosition, this._cameraPosition, [
+			0,
+			0,
+			1
+		]), Se(this._cameraPosition, this._cameraPosition, o, -this.center.lat * Math.PI / 180), Ce(this._cameraPosition, this._cameraPosition, o, this.center.lng * Math.PI / 180), this._cachedClippingPlane = this._computeClippingPlane(e);
+		let s = x(this._globeViewProjMatrixF64Inverted);
+		D(s, s, [
+			1,
+			1,
+			-1
+		]), this._cachedFrustum = js.fromInvProjectionMatrix(s, 1, 0, this._cachedClippingPlane, !0);
+	}
+	calculateFogMatrix(e) {
+		Vt(`calculateFogMatrix is not supported on globe projection.`);
+		let t = st();
+		return C(t), t;
+	}
+	getVisibleUnwrappedCoordinates(e) {
+		return [new Fv(0, e)];
+	}
+	getCameraFrustum() {
+		return this._cachedFrustum;
+	}
+	getClippingPlane() {
+		return this._cachedClippingPlane;
+	}
+	getCoveringTilesDetailsProvider() {
+		return this._coveringTilesDetailsProvider;
+	}
+	recalculateZoomAndCenter(e) {
+		if (e) {
+			Vt(`terrain is not fully supported on vertical perspective projection.`);
+			return;
+		}
+		this._helper.recalculateZoomAndCenter(0);
+	}
+	maxPitchScaleFactor() {
+		return 1;
+	}
+	getCameraPoint() {
+		return this._helper.getCameraPoint();
+	}
+	getCameraAltitude() {
+		return this._helper.getCameraAltitude();
+	}
+	getCameraLngLat() {
+		return this._helper.getCameraLngLat();
+	}
+	lngLatToCameraDepth(e, t) {
+		if (!this._globeViewProjMatrixF64) return 1;
+		let n = ec(e);
+		pe(n, n, 1 + t / um);
+		let r = at();
+		return Me(r, [
+			n[0],
+			n[1],
+			n[2],
+			1
+		], this._globeViewProjMatrixF64), r[2] / r[3];
+	}
+	populateCache(e) {}
+	getBounds() {
+		let e = this.width * .5, t = this.height * .5, n = [
+			new l(0, 0),
+			new l(e, 0),
+			new l(this.width, 0),
+			new l(this.width, t),
+			new l(this.width, this.height),
+			new l(e, this.height),
+			new l(0, this.height),
+			new l(0, t)
+		], r = [];
+		for (let e of n) r.push(this.unprojectScreenPoint(e));
+		let i = 0, a = 0, o = 0, s = 0, c = this.center;
+		for (let e of r) {
+			let t = ht(c.lng, e.lng), n = ht(c.lat, e.lat);
+			t < a && (a = t), t > i && (i = t), n < s && (s = n), n > o && (o = n);
+		}
+		let l$10 = [
+			c.lng + a,
+			c.lat + s,
+			c.lng + i,
+			c.lat + o
+		];
+		return this.isSurfacePointOnScreen([
+			0,
+			1,
+			0
+		]) && (l$10[3] = 90, l$10[0] = -180, l$10[2] = 180), this.isSurfacePointOnScreen([
+			0,
+			-1,
+			0
+		]) && (l$10[1] = -90, l$10[0] = -180, l$10[2] = 180), new Ki(l$10);
+	}
+	calculateCenterFromCameraLngLatAlt(e, t, n, r) {
+		return this._helper.calculateCenterFromCameraLngLatAlt(e, t, n, r);
+	}
+	setLocationAtPoint(e, t, n) {
+		let r = ec(this.unprojectScreenPoint(t)), i = ec(e), a = ot();
+		Te(a);
+		let o = ot();
+		Ce(o, r, a, -this.center.lng * Math.PI / 180), Se(o, o, a, this.center.lat * Math.PI / 180);
+		let s = i[0] * i[0] + i[2] * i[2], c = o[0] * o[0];
+		if (s < c) return;
+		let l = Math.sqrt(s - c), u = -l, d = mt(i[0], i[2], o[0], l), f = mt(i[0], i[2], o[0], u), p = ot();
+		Ce(p, i, a, -d);
+		let m = mt(p[1], p[2], o[1], o[2]), h = ot();
+		Ce(h, i, a, -f);
+		let g = mt(h[1], h[2], o[1], o[2]), _ = Math.PI * .5, v = m >= -_ && m <= _, y = g >= -_ && g <= _, b, x;
+		if (v && y) {
+			let e = this.center.lng * Math.PI / 180, t = this.center.lat * Math.PI / 180, n = gt(d, e), r = gt(m, t), i = gt(f, e), a = gt(g, t);
+			n + r < i + a ? (b = d, x = m) : (b = f, x = g);
+		} else if (v) b = d, x = m;
+		else if (y) b = f, x = g;
+		else return;
+		let S = b / Math.PI * 180, C = x / Math.PI * 180, w = this.center.lat;
+		this.setCenter(new dm$1(S, Tt(C, -90, 90))), this.setZoom(this.zoom + oc(w, this.center.lat));
+	}
+	locationToScreenPoint(e, t) {
+		let n = ec(e);
+		if (t) pe(n, n, 1 + t.getElevationForLngLatZoom(e, this._helper._tileZoom) / um);
+		return this._projectSurfacePointToScreen(n);
+	}
+	_projectSurfacePointToScreen(e) {
+		let t = at();
+		return Me(t, [...e, 1], this._globeViewProjMatrixF64), t[0] /= t[3], t[1] /= t[3], new l((t[0] * .5 + .5) * this.width, (-t[1] * .5 + .5) * this.height);
+	}
+	screenPointToMercatorCoordinate(e, t) {
+		if (t) {
+			let n = t.pointCoordinate(e);
+			if (n) return n;
+		}
+		return xm.fromLngLat(this.unprojectScreenPoint(e));
+	}
+	screenPointToLocation(e, t) {
+		return this.screenPointToMercatorCoordinate(e, t)?.toLngLat();
+	}
+	screenPointToLocationAtElevation(e, t) {
+		return this.screenPointToLocation(e);
+	}
+	isPointOnMapSurface(e, t) {
+		let n = this._cameraPosition, r = this.getRayDirectionFromPixel(e);
+		return !!this.rayPlanetIntersection(n, r);
+	}
+	getRayDirectionFromPixel(e) {
+		let t = at();
+		t[0] = e.x / this.width * 2 - 1, t[1] = (e.y / this.height * 2 - 1) * -1, t[2] = 1, t[3] = 1, Me(t, t, this._globeViewProjMatrixF64Inverted), t[0] /= t[3], t[1] /= t[3], t[2] /= t[3];
+		let n = ot();
+		n[0] = t[0] - this._cameraPosition[0], n[1] = t[1] - this._cameraPosition[1], n[2] = t[2] - this._cameraPosition[2];
+		let r = ot();
+		return ge(r, n), r;
+	}
+	isSurfacePointVisible(e) {
+		let t = this._cachedClippingPlane;
+		return t[0] * e[0] + t[1] * e[1] + t[2] * e[2] + t[3] >= 0;
+	}
+	isSurfacePointOnScreen(e) {
+		if (!this.isSurfacePointVisible(e)) return !1;
+		let t = at();
+		return Me(t, [...e, 1], this._globeViewProjMatrixF64), t[0] /= t[3], t[1] /= t[3], t[2] /= t[3], t[0] > -1 && t[0] < 1 && t[1] > -1 && t[1] < 1 && t[2] > -1 && t[2] < 1;
+	}
+	rayPlanetIntersection(e, t) {
+		let n = _e(e, t), r = ot(), i = ot();
+		pe(i, t, n), Ee(r, e, i);
+		let a = 1 - _e(r, r);
+		if (a < 0) return null;
+		let o = _e(e, e) - 1, s = -n + (n < 0 ? 1 : -1) * Math.sqrt(a), c = o / s, l = s;
+		return {
+			tMin: Math.min(c, l),
+			tMax: Math.max(c, l)
+		};
+	}
+	unprojectScreenPoint(e) {
+		let t = this._cameraPosition, r = this.getRayDirectionFromPixel(e), i = this.rayPlanetIntersection(t, r);
+		if (i) {
+			let e = ot();
+			de(e, t, [
+				r[0] * i.tMin,
+				r[1] * i.tMin,
+				r[2] * i.tMin
+			]);
+			let a = ot();
+			return ge(a, e), nc(a);
+		}
+		let a = this._cachedClippingPlane, o = a[0] * r[0] + a[1] * r[1] + a[2] * r[2], s = -dt(a, t) / o, c = ot();
+		if (s > 0) de(c, t, [
+			r[0] * s,
+			r[1] * s,
+			r[2] * s
+		]);
+		else {
+			let e = ot();
+			de(e, t, [
+				r[0] * 2,
+				r[1] * 2,
+				r[2] * 2
+			]);
+			let i = dt(this._cachedClippingPlane, e);
+			Ee(c, e, [
+				this._cachedClippingPlane[0] * i,
+				this._cachedClippingPlane[1] * i,
+				this._cachedClippingPlane[2] * i
+			]);
+		}
+		let l = rc(a);
+		return nc(ic(l.center, l.radius, c));
+	}
+	getProjectionDataForCustomLayer(e = !0) {
+		let t = this.getProjectionData({
+			overscaledTileID: new Iv(0, 0, 0, 0, 0),
+			applyGlobeMatrix: e
+		});
+		return t.tileMercatorCoords = [
+			0,
+			0,
+			1,
+			1
+		], t;
+	}
+	getFastPathSimpleProjectionMatrix(e) {}
+};
+var vc = class e {
+	get pixelsToClipSpaceMatrix() {
+		return this._helper.pixelsToClipSpaceMatrix;
+	}
+	get clipSpaceToPixelsMatrix() {
+		return this._helper.clipSpaceToPixelsMatrix;
+	}
+	get pixelsToGLUnits() {
+		return this._helper.pixelsToGLUnits;
+	}
+	get centerOffset() {
+		return this._helper.centerOffset;
+	}
+	get size() {
+		return this._helper.size;
+	}
+	get rotationMatrix() {
+		return this._helper.rotationMatrix;
+	}
+	get centerPoint() {
+		return this._helper.centerPoint;
+	}
+	get pixelsPerMeter() {
+		return this._helper.pixelsPerMeter;
+	}
+	setMinZoom(e) {
+		this._helper.setMinZoom(e);
+	}
+	setMaxZoom(e) {
+		this._helper.setMaxZoom(e);
+	}
+	setMinPitch(e) {
+		this._helper.setMinPitch(e);
+	}
+	setMaxPitch(e) {
+		this._helper.setMaxPitch(e);
+	}
+	setRenderWorldCopies(e) {
+		this._helper.setRenderWorldCopies(e);
+	}
+	setBearing(e) {
+		this._helper.setBearing(e);
+	}
+	setPitch(e) {
+		this._helper.setPitch(e);
+	}
+	setRoll(e) {
+		this._helper.setRoll(e);
+	}
+	setFov(e) {
+		this._helper.setFov(e);
+	}
+	setZoom(e) {
+		this._helper.setZoom(e);
+	}
+	setCenter(e) {
+		this._helper.setCenter(e);
+	}
+	setElevation(e) {
+		this._helper.setElevation(e);
+	}
+	setMinElevationForCurrentTile(e) {
+		this._helper.setMinElevationForCurrentTile(e);
+	}
+	setPadding(e) {
+		this._helper.setPadding(e);
+	}
+	interpolatePadding(e, t, n) {
+		this._helper.interpolatePadding(e, t, n);
+	}
+	isPaddingEqual(e) {
+		return this._helper.isPaddingEqual(e);
+	}
+	resize(e, t, n = !0) {
+		this._helper.resize(e, t, n);
+	}
+	getMaxBounds() {
+		return this._helper.getMaxBounds();
+	}
+	setMaxBounds(e) {
+		this._helper.setMaxBounds(e);
+	}
+	setConstrainOverride(e) {
+		this._helper.setConstrainOverride(e);
+	}
+	overrideNearFarZ(e, t) {
+		this._helper.overrideNearFarZ(e, t);
+	}
+	clearNearFarZOverride() {
+		this._helper.clearNearFarZOverride();
+	}
+	getCameraQueryGeometry(e) {
+		return this._helper.getCameraQueryGeometry(this.getCameraPoint(), e);
+	}
+	get tileSize() {
+		return this._helper.tileSize;
+	}
+	get tileZoom() {
+		return this._helper.tileZoom;
+	}
+	get scale() {
+		return this._helper.scale;
+	}
+	get worldSize() {
+		return this._helper.worldSize;
+	}
+	get width() {
+		return this._helper.width;
+	}
+	get height() {
+		return this._helper.height;
+	}
+	get lngRange() {
+		return this._helper.lngRange;
+	}
+	get latRange() {
+		return this._helper.latRange;
+	}
+	get minZoom() {
+		return this._helper.minZoom;
+	}
+	get maxZoom() {
+		return this._helper.maxZoom;
+	}
+	get zoom() {
+		return this._helper.zoom;
+	}
+	get center() {
+		return this._helper.center;
+	}
+	get minPitch() {
+		return this._helper.minPitch;
+	}
+	get maxPitch() {
+		return this._helper.maxPitch;
+	}
+	get pitch() {
+		return this._helper.pitch;
+	}
+	get pitchInRadians() {
+		return this._helper.pitchInRadians;
+	}
+	get roll() {
+		return this._helper.roll;
+	}
+	get rollInRadians() {
+		return this._helper.rollInRadians;
+	}
+	get bearing() {
+		return this._helper.bearing;
+	}
+	get bearingInRadians() {
+		return this._helper.bearingInRadians;
+	}
+	get fov() {
+		return this._helper.fov;
+	}
+	get fovInRadians() {
+		return this._helper.fovInRadians;
+	}
+	get elevation() {
+		return this._helper.elevation;
+	}
+	get minElevationForCurrentTile() {
+		return this._helper.minElevationForCurrentTile;
+	}
+	get padding() {
+		return this._helper.padding;
+	}
+	get unmodified() {
+		return this._helper.unmodified;
+	}
+	get renderWorldCopies() {
+		return this._helper.renderWorldCopies;
+	}
+	get cameraToCenterDistance() {
+		return this._helper.cameraToCenterDistance;
+	}
+	get constrainOverride() {
+		return this._helper.constrainOverride;
+	}
+	get nearZ() {
+		return this._helper.nearZ;
+	}
+	get farZ() {
+		return this._helper.farZ;
+	}
+	get autoCalculateNearFarZ() {
+		return this._helper.autoCalculateNearFarZ;
+	}
+	get isGlobeRendering() {
+		return this._globeness > 0;
+	}
+	setTransitionState(e) {
+		this._globeness = e, this._calcMatrices(), this._verticalPerspectiveTransform.getCoveringTilesDetailsProvider().prepareNextFrame(), this._mercatorTransform.getCoveringTilesDetailsProvider().prepareNextFrame();
+	}
+	get currentTransform() {
+		return this.isGlobeRendering ? this._verticalPerspectiveTransform : this._mercatorTransform;
+	}
+	constructor(e) {
+		this._globeness = 1, this.defaultConstrain = (e, t) => this.currentTransform.defaultConstrain(e, t), this.applyConstrain = (e, t) => this._helper.applyConstrain(e, t), this._helper = new Os({
+			calcMatrices: () => this._calcMatrices(),
+			defaultConstrain: (e, t) => this.defaultConstrain(e, t)
+		}, e), this._globeness = 1, this._mercatorTransform = new Is(), this._verticalPerspectiveTransform = new _c();
+	}
+	clone() {
+		let t = new e();
+		return t._globeness = this._globeness, t.apply(this, !1), t;
+	}
+	apply(e, t) {
+		this._helper.apply(e, t), this._mercatorTransform.apply(this, !1), this._verticalPerspectiveTransform.apply(this, !1);
+	}
+	get projectionMatrix() {
+		return this.currentTransform.projectionMatrix;
+	}
+	get modelViewProjectionMatrix() {
+		return this.currentTransform.modelViewProjectionMatrix;
+	}
+	get inverseProjectionMatrix() {
+		return this.currentTransform.inverseProjectionMatrix;
+	}
+	get cameraPosition() {
+		return this.currentTransform.cameraPosition;
+	}
+	getProjectionData(e) {
+		let t = this._mercatorTransform.getProjectionData(e), n = this._verticalPerspectiveTransform.getProjectionData(e);
+		return {
+			mainMatrix: this.isGlobeRendering ? n.mainMatrix : t.mainMatrix,
+			clippingPlane: n.clippingPlane,
+			tileMercatorCoords: n.tileMercatorCoords,
+			projectionTransition: e.applyGlobeMatrix ? this._globeness : 0,
+			fallbackMatrix: t.fallbackMatrix,
+			clipAntimeridian: n.clipAntimeridian
+		};
+	}
+	isLocationOccluded(e) {
+		return this.currentTransform.isLocationOccluded(e);
+	}
+	transformLightDirection(e) {
+		return this.currentTransform.transformLightDirection(e);
+	}
+	getPixelScale() {
+		return yt(this._mercatorTransform.getPixelScale(), this._verticalPerspectiveTransform.getPixelScale(), this._globeness);
+	}
+	getCircleRadiusCorrection() {
+		return yt(this._mercatorTransform.getCircleRadiusCorrection(), this._verticalPerspectiveTransform.getCircleRadiusCorrection(), this._globeness);
+	}
+	getPitchedTextCorrection(e, t, n) {
+		return yt(this._mercatorTransform.getPitchedTextCorrection(e, t, n), this._verticalPerspectiveTransform.getPitchedTextCorrection(e, t, n), this._globeness);
+	}
+	projectTileCoordinates(e, t, n, r) {
+		return this.currentTransform.projectTileCoordinates(e, t, n, r);
+	}
+	_calcMatrices() {
+		!this._helper._width || !this._helper._height || (this._verticalPerspectiveTransform.apply(this, !1), this._helper._nearZ = this._verticalPerspectiveTransform.nearZ, this._helper._farZ = this._verticalPerspectiveTransform.farZ, this._mercatorTransform.apply(this, !0, this.isGlobeRendering), this._helper._nearZ = this._mercatorTransform.nearZ, this._helper._farZ = this._mercatorTransform.farZ);
+	}
+	calculateFogMatrix(e) {
+		return this.currentTransform.calculateFogMatrix(e);
+	}
+	getVisibleUnwrappedCoordinates(e) {
+		return this.currentTransform.getVisibleUnwrappedCoordinates(e);
+	}
+	getCameraFrustum() {
+		return this.currentTransform.getCameraFrustum();
+	}
+	getClippingPlane() {
+		return this.currentTransform.getClippingPlane();
+	}
+	getCoveringTilesDetailsProvider() {
+		return this.currentTransform.getCoveringTilesDetailsProvider();
+	}
+	recalculateZoomAndCenter(e) {
+		this.currentTransform.recalculateZoomAndCenter(e);
+	}
+	maxPitchScaleFactor() {
+		return this._mercatorTransform.maxPitchScaleFactor();
+	}
+	getCameraPoint() {
+		return this._helper.getCameraPoint();
+	}
+	getCameraAltitude() {
+		return this._helper.getCameraAltitude();
+	}
+	getCameraLngLat() {
+		return this._helper.getCameraLngLat();
+	}
+	lngLatToCameraDepth(e, t) {
+		return this.currentTransform.lngLatToCameraDepth(e, t);
+	}
+	populateCache(e) {
+		this._mercatorTransform.populateCache(e), this._verticalPerspectiveTransform.populateCache(e);
+	}
+	getBounds() {
+		return this.currentTransform.getBounds();
+	}
+	calculateCenterFromCameraLngLatAlt(e, t, n, r) {
+		return this._helper.calculateCenterFromCameraLngLatAlt(e, t, n, r);
+	}
+	setLocationAtPoint(e, t, n) {
+		if (!this.isGlobeRendering) {
+			this._mercatorTransform.setLocationAtPoint(e, t, n), this.apply(this._mercatorTransform, !1);
+			return;
+		}
+		this._verticalPerspectiveTransform.setLocationAtPoint(e, t, n), this.apply(this._verticalPerspectiveTransform, !1);
+	}
+	locationToScreenPoint(e, t) {
+		return this.currentTransform.locationToScreenPoint(e, t);
+	}
+	screenPointToMercatorCoordinate(e, t) {
+		return this.currentTransform.screenPointToMercatorCoordinate(e, t);
+	}
+	screenPointToLocation(e, t) {
+		return this.currentTransform.screenPointToLocation(e, t);
+	}
+	screenPointToLocationAtElevation(e, t) {
+		return this.currentTransform.screenPointToLocationAtElevation(e, t);
+	}
+	isPointOnMapSurface(e, t) {
+		return this.currentTransform.isPointOnMapSurface(e, t);
+	}
+	getRayDirectionFromPixel(e) {
+		return this._verticalPerspectiveTransform.getRayDirectionFromPixel(e);
+	}
+	getProjectionDataForCustomLayer(e = !0) {
+		let t = this._mercatorTransform.getProjectionDataForCustomLayer(e);
+		if (!this.isGlobeRendering) return t;
+		let n = this._verticalPerspectiveTransform.getProjectionDataForCustomLayer(e);
+		return n.fallbackMatrix = t.mainMatrix, n;
+	}
+	getFastPathSimpleProjectionMatrix(e) {
+		return this.currentTransform.getFastPathSimpleProjectionMatrix(e);
+	}
+};
+var yc = class e {
+	get useGlobeControls() {
+		return !0;
+	}
+	handlePanInertia(e, t) {
+		let n = cc(e, t);
+		return Math.abs(n.lng - t.center.lng) > 180 && (n.lng = t.center.lng + 179.5 * Math.sign(n.lng - t.center.lng)), {
+			easingCenter: n,
+			easingOffset: new l(0, 0)
+		};
+	}
+	handleMapControlsRollPitchBearingZoom(e, t) {
+		let r = e.around, i = t.screenPointToLocation(r);
+		e.bearingDelta && t.setBearing(t.bearing + e.bearingDelta), e.pitchDelta && t.setPitch(t.pitch + e.pitchDelta), e.rollDelta && t.setRoll(t.roll + e.rollDelta);
+		let a = t.zoom;
+		e.zoomDelta && t.setZoom(t.zoom + e.zoomDelta);
+		let o = t.zoom - a;
+		if (o === 0) return;
+		let s = ht(t.center.lng, i.lng), c = s / (Math.abs(s / 180) + 1), l = ht(t.center.lat, i.lat), f = t.getRayDirectionFromPixel(r), p = t.cameraPosition, m = _e(p, f) * -1, h = ot();
+		de(h, p, [
+			f[0] * m,
+			f[1] * m,
+			f[2] * m
+		]);
+		let g = le(h), _ = g - 1, v = Math.exp(-Math.max(_ - .3, 0) * .5), y = vt(g, .95, .999, 0, 1), x = vt(tc(t.worldSize, t.center.lat) / Math.min(t.width, t.height), .9, .5, 1, .25), S = Math.min(v, yt(1, x, y)), C = (1 - Nt(-o)) * S, w = t.center.lat, T = t.zoom, E = new dm$1(t.center.lng + c * C, Tt(t.center.lat + l * C, -pn, pn));
+		t.setLocationAtPoint(i, r);
+		let D = t.center, O = vt(Math.abs(s), 45, 85, 0, 1), k = Math.max(O, y) ** .25, A = ht(D.lng, E.lng), ee = ht(D.lat, E.lat);
+		t.setCenter(new dm$1(D.lng + A * k, D.lat + ee * k).wrap()), t.setZoom(T + oc(w, t.center.lat));
+	}
+	handleMapControlsPan(e, t, n) {
+		if (!e.panDelta) return;
+		let r = t.center.lat, i = t.zoom;
+		t.setCenter(cc(e.panDelta, t).wrap()), t.setZoom(i + oc(r, t.center.lat));
+	}
+	cameraForBoxAndBearing(t, n, r, i, a) {
+		let o = zs(t, n, r, i, a), s = n.left / a.width * 2 - 1, c = (a.width - n.right) / a.width * 2 - 1, l = n.top / a.height * -2 + 1, u = (a.height - n.bottom) / a.height * -2 + 1, d = ht(r.getWest(), r.getEast()) < 0, f = d ? r.getEast() : r.getWest(), p = d ? r.getWest() : r.getEast(), m = Math.max(r.getNorth(), r.getSouth()), h = Math.min(r.getNorth(), r.getSouth()), g = f + ht(f, p) * .5, _ = m + ht(m, h) * .5, v = a.clone();
+		v.setCenter(o.center), v.setBearing(o.bearing), v.setPitch(0), v.setRoll(0), v.setZoom(o.zoom);
+		let y = v.modelViewProjectionMatrix, b = [
+			ec(r.getNorthWest()),
+			ec(r.getNorthEast()),
+			ec(r.getSouthWest()),
+			ec(r.getSouthEast()),
+			ec(new dm$1(p, _)),
+			ec(new dm$1(f, _)),
+			ec(new dm$1(g, m)),
+			ec(new dm$1(g, h))
+		], x = ec(o.center), S = 1 / 0;
+		for (let t of b) s < 0 && (S = e.getLesserNonNegativeNonNull(S, e.solveVectorScale(t, x, y, `x`, s))), c > 0 && (S = e.getLesserNonNegativeNonNull(S, e.solveVectorScale(t, x, y, `x`, c))), l > 0 && (S = e.getLesserNonNegativeNonNull(S, e.solveVectorScale(t, x, y, `y`, l))), u < 0 && (S = e.getLesserNonNegativeNonNull(S, e.solveVectorScale(t, x, y, `y`, u)));
+		if (!Number.isFinite(S) || S === 0) {
+			Ls();
+			return;
+		}
+		return o.zoom = Math.min(v.zoom + Pt(S), t.maxZoom), o;
+	}
+	handleJumpToCenterZoom(e, t) {
+		let n = e.center.lat, r = e.applyConstrain(t.center ? dm$1.convert(t.center) : e.center, e.zoom).center;
+		e.setCenter(r.wrap());
+		let i = t.zoom === void 0 ? e.zoom + oc(n, r.lat) : +t.zoom;
+		e.zoom !== i && e.setZoom(i);
+	}
+	handleEaseTo(e, t) {
+		let n = e.zoom, r = e.center, i = e.padding, a = {
+			roll: e.roll,
+			pitch: e.pitch,
+			bearing: e.bearing
+		}, o = {
+			roll: t.roll === void 0 ? e.roll : t.roll,
+			pitch: t.pitch === void 0 ? e.pitch : t.pitch,
+			bearing: t.bearing === void 0 ? e.bearing : t.bearing
+		}, c = t.zoom !== void 0, l$11 = !e.isPaddingEqual(t.padding), u = !1, f = t.center ? dm$1.convert(t.center) : r, p = e.applyConstrain(f, n).center;
+		Es(e, p);
+		let m = e.clone();
+		m.setCenter(p), m.setZoom(c ? +t.zoom : n + oc(r.lat, f.lat)), m.setBearing(t.bearing);
+		let h = new l(Tt(e.centerPoint.x + t.offsetAsPoint.x, 0, e.width), Tt(e.centerPoint.y + t.offsetAsPoint.y, 0, e.height));
+		m.setLocationAtPoint(p, h);
+		let g = (t.offset && t.offsetAsPoint.mag()) > 0 ? m.center : p, _ = c ? +t.zoom : n + oc(r.lat, g.lat), v = n + oc(r.lat, 0), y = _ + oc(g.lat, 0), b = ht(r.lng, g.lng), x = ht(r.lat, g.lat), S = Nt(y - v);
+		return u = _ !== n, {
+			easeFunc: (n) => {
+				if (ln(a, o) || Rs({
+					startEulerAngles: a,
+					endEulerAngles: o,
+					tr: e,
+					k: n,
+					useSlerp: a.roll != o.roll
+				}), l$11 && e.interpolatePadding(i, t.padding, n), t.around) Vt(`Easing around a point is not supported under globe projection.`), e.setLocationAtPoint(t.around, t.aroundPoint);
+				else {
+					let t = n * (y > v ? Math.min(2, S) : Math.max(.5, S)) ** (1 - n), i = uc(r, b, x, t);
+					e.setCenter(i.wrap());
+				}
+				if (u) {
+					let t = Ni$1.number(v, y, n) + oc(0, e.center.lat);
+					e.setZoom(t);
+				}
+			},
+			isZooming: u,
+			elevationCenter: g
+		};
+	}
+	handleFlyTo(e, t) {
+		let n = t.zoom !== void 0, r = e.center, i = e.zoom, a = e.padding, o = !e.isPaddingEqual(t.padding), s = e.applyConstrain(dm$1.convert(t.center || t.locationAtOffset), i).center, c = n ? +t.zoom : e.zoom + oc(e.center.lat, s.lat), l$12 = e.clone();
+		l$12.setCenter(s), l$12.setZoom(c), l$12.setBearing(t.bearing);
+		let u = new l(Tt(e.centerPoint.x + t.offsetAsPoint.x, 0, e.width), Tt(e.centerPoint.y + t.offsetAsPoint.y, 0, e.height));
+		l$12.setLocationAtPoint(s, u);
+		let f = l$12.center;
+		Es(e, f);
+		let p = Xs(e, r, f), m = i + oc(r.lat, 0), h = c + oc(f.lat, 0), g = Nt(h - m), _ = typeof t.minZoom == `number` ? +t.minZoom : e.minZoom, v = Math.max(_, e.minZoom) + oc(f.lat, 0), y = Math.min(v, m, h) + oc(0, f.lat), x = Nt(e.applyConstrain(f, y).zoom + oc(f.lat, 0) - m), S = ht(r.lng, f.lng), C = ht(r.lat, f.lat);
+		return {
+			easeFunc: (n, i, s, l) => {
+				let u = uc(r, S, C, s);
+				o && e.interpolatePadding(a, t.padding, n);
+				let d = n === 1 ? f : u;
+				e.setCenter(d.wrap());
+				let p = m + Pt(i);
+				e.setZoom(n === 1 ? c : p + oc(0, d.lat));
+			},
+			scaleOfZoom: g,
+			targetCenter: f,
+			scaleOfMinZoom: x,
+			pixelPathLength: p
+		};
+	}
+	static solveVectorScale(e, t, n, r, i) {
+		let a = i, o = r === `x` ? [
+			n[0],
+			n[4],
+			n[8],
+			n[12]
+		] : [
+			n[1],
+			n[5],
+			n[9],
+			n[13]
+		], s = [
+			n[3],
+			n[7],
+			n[11],
+			n[15]
+		], c = e[0] * o[0] + e[1] * o[1] + e[2] * o[2], l = e[0] * s[0] + e[1] * s[1] + e[2] * s[2], u = t[0] * o[0] + t[1] * o[1] + t[2] * o[2], d = t[0] * s[0] + t[1] * s[1] + t[2] * s[2], f = (u + o[3] - a * d - a * s[3]) / (u - c - a * d + a * l);
+		return u + a * l === c + a * d || s[3] * (c - u) + o[3] * (d - l) + c * d === u * l ? null : f;
+	}
+	static getLesserNonNegativeNonNull(e, t) {
+		return t !== null && t >= 0 && t < e ? t : e;
+	}
+};
+var bc = class {
+	constructor(e) {
+		this._globe = e, this._mercatorCameraHelper = new Bs(), this._verticalPerspectiveCameraHelper = new yc();
+	}
+	get useGlobeControls() {
+		return this._globe.useGlobeRendering;
+	}
+	get currentHelper() {
+		return this.useGlobeControls ? this._verticalPerspectiveCameraHelper : this._mercatorCameraHelper;
+	}
+	handlePanInertia(e, t) {
+		return this.currentHelper.handlePanInertia(e, t);
+	}
+	handleMapControlsRollPitchBearingZoom(e, t) {
+		this.currentHelper.handleMapControlsRollPitchBearingZoom(e, t);
+	}
+	handleMapControlsPan(e, t, n) {
+		this.currentHelper.handleMapControlsPan(e, t, n);
+	}
+	cameraForBoxAndBearing(e, t, n, r, i) {
+		return this.currentHelper.cameraForBoxAndBearing(e, t, n, r, i);
+	}
+	handleJumpToCenterZoom(e, t) {
+		this.currentHelper.handleJumpToCenterZoom(e, t);
+	}
+	handleEaseTo(e, t) {
+		return this.currentHelper.handleEaseTo(e, t);
+	}
+	handleFlyTo(e, t) {
+		return this.currentHelper.handleFlyTo(e, t);
+	}
+};
+function xc(e, t, n) {
+	let r = { constrainOverride: t };
+	if (Array.isArray(e)) {
+		let t = new Js({ type: e }, n);
+		return {
+			projection: t,
+			transform: new vc(r),
+			cameraHelper: new bc(t)
+		};
+	}
+	switch (e) {
+		case `mercator`: return {
+			projection: new ws(),
+			transform: new Is(r),
+			cameraHelper: new Bs()
+		};
+		case `globe`: {
+			let e = new Js({ type: [
+				`interpolate`,
+				[`linear`],
+				[`zoom`],
+				11,
+				`vertical-perspective`,
+				12,
+				`mercator`
+			] }, {});
+			return {
+				projection: e,
+				transform: new vc(r),
+				cameraHelper: new bc(e)
+			};
+		}
+		case `vertical-perspective`: return {
+			projection: new qs(),
+			transform: new _c(r),
+			cameraHelper: new yc()
+		};
+		default: return Vt(`Unknown projection name: ${e}. Falling back to mercator projection.`), {
+			projection: new ws(),
+			transform: new Is(r),
+			cameraHelper: new Bs()
+		};
+	}
+}
+var Sc = ks$1();
+var Cc = class extends Hn {
+	constructor(e, t = {}) {
+		super(), this._rtlPluginLoaded = () => {
+			for (let e in this.tileManagers) {
+				let t = this.tileManagers[e].getSource().type;
+				(t === `vector` || t === `geojson`) && this.tileManagers[e].reload();
+			}
+		}, this.map = e, this.dispatcher = new Mi(ki(), e._getMapId()), this.dispatcher.registerMessageHandler(`GG`, (e, t) => this.getGlyphs(e, t)), this.dispatcher.registerMessageHandler(`GI`, (e, t) => this.getImages(e, t)), this.dispatcher.registerMessageHandler(`GDA`, (e, t) => this.getDashes(e, t)), this.imageManager = new ri(), this.imageManager.setEventedParent(this), this.imageManager.setMissingImageResolver(e._missingStyleImageResolver);
+		let n = e._container?.lang || typeof document < `u` && document.documentElement?.lang || void 0;
+		this.glyphManager = new di(e._requestManager, t.localIdeographFontFamily, n), this.lineAtlas = new vi(256, 512), this.crossTileSymbolIndex = new ls(), this._setInitialValues(), this._resetUpdates(), this.dispatcher.broadcast(`SR`, kn()), Fa().on(Ma, this._rtlPluginLoaded), this.on(`data`, (e) => {
+			if (e.dataType !== `source` || e.sourceDataType !== `metadata`) return;
+			let t = this.tileManagers[e.sourceId];
+			if (!t) return;
+			let n = t.getSource();
+			if (n?.vectorLayerIds) for (let e in this._layers) {
+				let t = this._layers[e];
+				t.source === n.id && this._validateLayer(t);
+			}
+		});
+	}
+	_setInitialValues() {
+		this._spritesImagesIds = {}, this._layers = {}, this._order = [], this.tileManagers = {}, this.zoomHistory = new Bc$1(), this._availableImages = [], this._imagesListDirty = !1, this._globalState = {}, this._serializedLayers = {}, this.stylesheet = null, this.light = null, this.sky = null, this.projection && (this.projection.destroy(), delete this.projection), this._loaded = !1, this._changed = !1, this._updatedLayers = {}, this._updatedSources = {}, this._changedImages = {}, this._glyphsDidChange = !1, this._updatedPaintProps = {}, this._layerOrderChanged = !1, this.crossTileSymbolIndex = new ((this.crossTileSymbolIndex?.constructor) || Object)(), this.pauseablePlacement = void 0, this.placement = void 0, this.z = 0;
+	}
+	setGlobalStateProperty(e, t) {
+		this._checkLoaded();
+		let n = t === null ? this.stylesheet.state?.[e]?.default ?? null : t;
+		if (Rt(n, this._globalState[e])) return this;
+		this._globalState[e] = n, this._applyGlobalStateChanges([e]);
+	}
+	getGlobalState() {
+		return this._globalState;
+	}
+	setGlobalState(e) {
+		this._checkLoaded();
+		let t = [];
+		for (let n in e) Rt(this._globalState[n], e[n].default) || (t.push(n), this._globalState[n] = e[n].default);
+		this._applyGlobalStateChanges(t);
+	}
+	_applyGlobalStateChanges(e) {
+		if (e.length === 0) return;
+		let t = /* @__PURE__ */ new Set(), n = {};
+		for (let r of e) {
+			n[r] = this._globalState[r];
+			for (let e in this._layers) {
+				let n = this._layers[e], i = n.getLayoutAffectingGlobalStateRefs(), a = n.getPaintAffectingGlobalStateRefs(), o = n.getVisibilityAffectingGlobalStateRefs();
+				if (i.has(r) && t.add(n.source), a.has(r)) for (let { name: e, value: t } of a.get(r)) this._updatePaintProperty(n, e, t);
+				o?.has(r) && (n.recalculateVisibility(), this._updateLayer(n));
+			}
+		}
+		this.dispatcher.broadcast(`UGS`, n);
+		for (let e in this.tileManagers) t.has(e) && (this._reloadSource(e), this._changed = !0);
+	}
+	async loadURL(e, t = {}, n) {
+		this.fire(new Wr(`dataloading`)), t.validate = typeof t.validate != `boolean` || t.validate, this._loadStyleRequest = new AbortController();
+		let r = this._loadStyleRequest;
+		try {
+			let i = await this.map._requestManager.transformRequest(e, `Style`);
+			Sn(r.signal);
+			let a = await Pn(i, r);
+			this._loadStyleRequest === r && (this._loadStyleRequest = null), this._load(a.data, t, n);
+		} catch (e) {
+			this._loadStyleRequest === r && (this._loadStyleRequest = null), e && !r.signal.aborted && this.fire(new Vn(it(e)));
+		}
+	}
+	loadJSON(e, t = {}, n) {
+		this.fire(new Wr(`dataloading`)), this._frameRequest = new AbortController(), Fr.frameAsync(this._frameRequest, this.map._ownerWindow).then(() => {
+			this._frameRequest = null, t.validate = t.validate !== !1, this._load(e, t, n);
+		}).catch(() => {});
+	}
+	loadEmpty() {
+		this.fire(new Wr(`dataloading`)), this._load(Sc, { validate: !1 });
+	}
+	_load(e, t, n) {
+		let r = t.transformStyle ? t.transformStyle(n, e) : e;
+		if (!(t.validate && kc$1(this, r))) {
+			r = { ...r }, this._loaded = !0, this.stylesheet = r;
+			for (let e in r.sources) this.addSource(e, r.sources[e], { validate: !1 });
+			r.sprite ? this._loadSprite(r.sprite) : this.imageManager.setLoaded(!0), this.glyphManager.setURL(r.glyphs), this._createLayers(), this.light = new mi(this.stylesheet.light ?? {}, this._globalState), this._setProjectionInternal(this.stylesheet.projection?.type || `mercator`), this.sky = new _i(this.stylesheet.sky, this._globalState), this.map.setTerrain(this.stylesheet.terrain ?? null, { validate: !1 }), this.fire(new Wr(`data`)), this.fire(new Ur());
+		}
+	}
+	_createLayers() {
+		let e = Gn(this.stylesheet.layers);
+		this.setGlobalState(this.stylesheet.state ?? null), this.dispatcher.broadcast(`SL`, e), this._order = e.map((e) => e.id), this._layers = {}, this._serializedLayers = null;
+		for (let t of e) {
+			let e = Ov(t, this._globalState);
+			if (e.setEventedParent(this, { layer: { id: t.id } }), this._layers[t.id] = e, Ol$1(e) && this.tileManagers[e.source]) {
+				let n = t.paint?.[`raster-fade-duration`] ?? e.paint.get(`raster-fade-duration`);
+				this.tileManagers[e.source].setRasterFadeDuration(n);
+			}
+		}
+	}
+	_loadSprite(e, t = !1, n = void 0) {
+		this.imageManager.setLoaded(!1);
+		let r = new AbortController();
+		this._spriteRequest = r;
+		let i;
+		ti(e, this.map._requestManager, this.map.getPixelRatio(), this._spriteRequest).then((e) => {
+			if (this._spriteRequest = null, e) for (let n in e) {
+				this._spritesImagesIds[n] = [];
+				let r = this._spritesImagesIds[n] ? this._spritesImagesIds[n].filter((t) => !(t in e)) : [];
+				for (let e of r) this.imageManager.removeImage(e), this._changedImages[e] = !0;
+				for (let r in e[n]) {
+					let i = n === "default" ? r : `${n}:${r}`;
+					this._spritesImagesIds[n].push(i), i in this.imageManager.images ? this.imageManager.updateImage(i, e[n][r], !1) : this.imageManager.addImage(i, e[n][r]), t && (this._changedImages[i] = !0);
+				}
+			}
+		}).catch((e) => {
+			this._spriteRequest = null, i = e, r.signal.aborted || this.fire(new Vn(i));
+		}).finally(() => {
+			this.imageManager.setLoaded(!0), this._availableImages = this.imageManager.listImages(), t && (this._changed = !0), this.dispatcher.broadcast(`SI`, this._availableImages), this.fire(new Wr(`data`)), n && n(i);
+		});
+	}
+	_unloadSprite() {
+		for (let e of Object.values(this._spritesImagesIds).flat()) this.imageManager.removeImage(e), this._changedImages[e] = !0;
+		this._spritesImagesIds = {}, this._availableImages = this.imageManager.listImages(), this._imagesListDirty = !0, this._changed = !0, this.fire(new Wr(`data`));
+	}
+	_validateLayer(e) {
+		let t = this.tileManagers[e.source];
+		if (!t) return;
+		let n = e.sourceLayer;
+		if (!n) return;
+		let r = t.getSource();
+		(r.type === `geojson` || r.vectorLayerIds && !r.vectorLayerIds.includes(n)) && this.fire(new Vn(Error(`Source layer "${n}" does not exist on source "${r.id}" as specified by style layer "${e.id}".`)));
+	}
+	loaded() {
+		if (!this._loaded || Object.keys(this._updatedSources).length) return !1;
+		for (let e in this.tileManagers) if (!this.tileManagers[e].loaded()) return !1;
+		return this.imageManager.isLoaded();
+	}
+	_serializeByIds(e, t = !1) {
+		let n = this._serializedAllLayers();
+		if (!e || e.length === 0) return Object.values(t ? zt(n) : n);
+		let r = [];
+		for (let i of e) if (n[i]) {
+			let e = t ? zt(n[i]) : n[i];
+			r.push(e);
+		}
+		return r;
+	}
+	_serializedAllLayers() {
+		let e = this._serializedLayers;
+		if (e) return e;
+		e = this._serializedLayers = {};
+		let t = Object.keys(this._layers);
+		for (let n of t) {
+			let t = this._layers[n];
+			t.type !== `custom` && (e[n] = t.serialize());
+		}
+		return e;
+	}
+	hasTransitions() {
+		if (this.light?.hasTransition() || this.sky?.hasTransition() || this.projection?.hasTransition()) return !0;
+		for (let e in this.tileManagers) if (this.tileManagers[e].hasTransition()) return !0;
+		for (let e in this._layers) if (this._layers[e].hasTransition()) return !0;
+		return !1;
+	}
+	_checkLoaded() {
+		if (!this._loaded) throw Error(`Style is not done loading.`);
+	}
+	update(e) {
+		if (!this._loaded) return;
+		let t = this._changed;
+		if (t) {
+			this._imagesListDirty &&= (this.dispatcher.broadcast(`SI`, this._availableImages), !1);
+			let t = Object.keys(this._updatedLayers), n = Object.keys(this._removedLayers);
+			(t.length || n.length) && this._updateWorkerLayers(t, n);
+			for (let e in this._updatedSources) {
+				let t = this._updatedSources[e];
+				if (t === `reload`) this._reloadSource(e);
+				else if (t === `clear`) this._clearSource(e);
+				else throw Error(`Invalid action ${t}`);
+			}
+			this._updateTilesForChangedImages(), this._updateTilesForChangedGlyphs();
+			for (let t in this._updatedPaintProps) this._layers[t].updateTransitions(e);
+			this.light.updateTransitions(e), this.sky.updateTransitions(e), this._resetUpdates();
+		}
+		let n = {};
+		for (let e in this.tileManagers) {
+			let t = this.tileManagers[e];
+			n[e] = t.used, t.used = !1;
+		}
+		for (let t of this._order) {
+			let n = this._layers[t];
+			n.recalculate(e, this._availableImages), !n.isHidden(e.zoom) && n.source && (this.tileManagers[n.source].used = !0);
+		}
+		for (let e in n) {
+			let t = this.tileManagers[e];
+			!!n[e] != !!t.used && t.fire(new K(`data`, {
+				sourceDataType: `visibility`,
+				sourceId: e
+			}));
+		}
+		this.light.recalculate(e), this.sky.recalculate(e), this.projection.recalculate(e), this.z = e.zoom, t && this.fire(new Wr(`data`));
+	}
+	_updateTilesForChangedImages() {
+		let e = Object.keys(this._changedImages);
+		if (e.length) {
+			for (let t in this.tileManagers) this.tileManagers[t].reloadTilesForDependencies([`icons`, `patterns`], e);
+			this._changedImages = {};
+		}
+	}
+	_updateTilesForChangedGlyphs() {
+		if (this._glyphsDidChange) {
+			for (let e in this.tileManagers) this.tileManagers[e].reloadTilesForDependencies([`glyphs`], [``]);
+			this._glyphsDidChange = !1;
+		}
+	}
+	_updateWorkerLayers(e, t) {
+		this.dispatcher.broadcast(`UL`, {
+			layers: this._serializeByIds(e, !1),
+			removedIds: t
+		});
+	}
+	_resetUpdates() {
+		this._changed = !1, this._updatedLayers = {}, this._removedLayers = {}, this._updatedSources = {}, this._updatedPaintProps = {}, this._changedImages = {}, this._glyphsDidChange = !1;
+	}
+	setState(e, t = {}) {
+		this._checkLoaded();
+		let n = this.serialize();
+		if (e = t.transformStyle ? t.transformStyle(n, e) : e, (t.validate ?? !0) && kc$1(this, e)) return !1;
+		e = zt(e), e.layers = Gn(e.layers);
+		let r = nr(n, e), i = this._getOperationsToPerform(r);
+		if (i.unimplemented.length > 0) throw Error(`Unimplemented: ${i.unimplemented.join(`, `)}.`);
+		if (i.operations.length === 0) return !1;
+		for (let e of i.operations) e();
+		return this.stylesheet = e, this._serializedLayers = null, this.fire(new Ur({ style: this })), !0;
+	}
+	_getOperationsToPerform(e) {
+		let t = [], n = [];
+		for (let r of e) switch (r.command) {
+			case `setCenter`:
+			case `setZoom`:
+			case `setBearing`:
+			case `setPitch`:
+			case `setRoll`: continue;
+			case `addLayer`:
+				t.push(() => this.addLayer.apply(this, r.args));
+				break;
+			case `removeLayer`:
+				t.push(() => this.removeLayer.apply(this, r.args));
+				break;
+			case `setPaintProperty`:
+				t.push(() => this.setPaintProperty.apply(this, r.args));
+				break;
+			case `setLayoutProperty`:
+				t.push(() => this.setLayoutProperty.apply(this, r.args));
+				break;
+			case `setFilter`:
+				t.push(() => this.setFilter.apply(this, r.args));
+				break;
+			case `addSource`:
+				t.push(() => this.addSource.apply(this, r.args));
+				break;
+			case `removeSource`:
+				t.push(() => this.removeSource.apply(this, r.args));
+				break;
+			case `setLayerZoomRange`:
+				t.push(() => this.setLayerZoomRange.apply(this, r.args));
+				break;
+			case `setLight`:
+				t.push(() => this.setLight.apply(this, r.args));
+				break;
+			case `setGeoJSONSourceData`:
+				t.push(() => this.setGeoJSONSourceData.apply(this, r.args));
+				break;
+			case `setGlyphs`:
+				t.push(() => this.setGlyphs.apply(this, r.args));
+				break;
+			case `setSprite`:
+				t.push(() => this.setSprite.apply(this, r.args));
+				break;
+			case `setTerrain`:
+				t.push(() => this.map.setTerrain.apply(this, r.args));
+				break;
+			case `setSky`:
+				t.push(() => this.setSky.apply(this, r.args));
+				break;
+			case `setProjection`:
+				this.setProjection.apply(this, r.args);
+				break;
+			case `setGlobalState`:
+				t.push(() => this.setGlobalState.apply(this, r.args));
+				break;
+			case `setTransition`:
+				t.push(() => {});
+				break;
+			default: n.push(r.command);
+		}
+		return {
+			operations: t,
+			unimplemented: n
+		};
+	}
+	addImage(e, t) {
+		if (this.getImage(e)) {
+			this.fire(new Vn(Error(`An image named "${e}" already exists.`)));
+			return;
+		}
+		this.imageManager.addImage(e, t), this._afterImageUpdated(e);
+	}
+	updateImage(e, t) {
+		this.imageManager.updateImage(e, t);
+	}
+	getImage(e) {
+		return this.imageManager.getImage(e);
+	}
+	setMissingImageResolver(e) {
+		this.imageManager.setMissingImageResolver(e);
+	}
+	removeImage(e) {
+		if (!this.getImage(e)) {
+			this.fire(new Vn(Error(`An image named "${e}" does not exist.`)));
+			return;
+		}
+		this.imageManager.removeImage(e), this._afterImageUpdated(e);
+	}
+	_afterImageUpdated(e) {
+		this._availableImages = this.imageManager.listImages(), this._changedImages[e] = !0, this._imagesListDirty = !0, this._changed = !0, this.fire(new Wr(`data`));
+	}
+	listImages() {
+		return this._checkLoaded(), this.imageManager.listImages();
+	}
+	addSource(e, t, n = {}) {
+		if (this._checkLoaded(), this.tileManagers[e] !== void 0) throw Error(`Source "${e}" already exists.`);
+		if (!t.type) throw Error(`The type property must be defined, but only the following properties were given: ${Object.keys(t).join(`, `)}.`);
+		if (Dc$1.has(t.type) && this._validate(Ec$1.source, `sources.${e}`, t, null, n)) return;
+		this.map?._collectResourceTiming && (t.collectResourceTiming = !0);
+		let r = this.tileManagers[e] = new ro(e, t, this.dispatcher);
+		r.style = this, r.setEventedParent(this, () => ({
+			isSourceLoaded: r.loaded(),
+			source: r.serialize(),
+			sourceId: e
+		})), r.onAdd(this.map), this._changed = !0;
+	}
+	removeSource(e) {
+		if (this._checkLoaded(), this.tileManagers[e] === void 0) throw Error(`There is no source with this ID=${e}`);
+		for (let t in this._layers) if (this._layers[t].source === e) return this.fire(new Vn(Error(`Source "${e}" cannot be removed while layer "${t}" is using it.`)));
+		let t = this.tileManagers[e];
+		delete this.tileManagers[e], delete this._updatedSources[e], t.fire(new K(`data`, {
+			sourceDataType: `metadata`,
+			sourceId: e
+		})), t.setEventedParent(null), t.onRemove(this.map), this._changed = !0;
+	}
+	setGeoJSONSourceData(e, t) {
+		if (this._checkLoaded(), this.tileManagers[e] === void 0) throw Error(`There is no source with this ID=${e}`);
+		let n = this.tileManagers[e].getSource();
+		if (n.type !== `geojson`) throw Error(`geojsonSource.type is ${n.type}, which is !== 'geojson`);
+		n.setData(t), this._changed = !0;
+	}
+	getSource(e) {
+		return this.tileManagers[e]?.getSource();
+	}
+	addLayer(e, t, n = {}) {
+		this._checkLoaded();
+		let r = e.id;
+		if (this.getLayer(r)) {
+			this.fire(new Vn(Error(`Layer "${r}" already exists on this map.`)));
+			return;
+		}
+		let i;
+		if (e.type === `custom`) {
+			if (Ac$1(this, Tv(e))) return;
+			i = Ov(e, this._globalState);
+		} else {
+			if (`source` in e && typeof e.source == `object` && (this.addSource(r, e.source), e = zt(e), e = Dt(e, { source: r })), this._validate(Ec$1.layer, `layers.${r}`, e, { arrayIndex: -1 }, n)) return;
+			i = Ov(e, this._globalState), this._validateLayer(i), i.setEventedParent(this, { layer: { id: r } });
+		}
+		let a = t ? this._order.indexOf(t) : this._order.length;
+		if (t && a === -1) {
+			this.fire(new Vn(Error(`Cannot add layer "${r}" before non-existing layer "${t}".`)));
+			return;
+		}
+		if (this._order.splice(a, 0, r), this._layerOrderChanged = !0, this._layers[r] = i, this._removedLayers[r] && i.source && i.type !== `custom`) {
+			let e = this._removedLayers[r];
+			delete this._removedLayers[r], e.type === i.type ? (this._updatedSources[i.source] = `reload`, this.tileManagers[i.source].pause()) : this._updatedSources[i.source] = `clear`;
+		}
+		this._updateLayer(i), i.onAdd && i.onAdd(this.map);
+	}
+	moveLayer(e, t) {
+		if (this._checkLoaded(), this._changed = !0, !this._layers[e]) {
+			this.fire(new Vn(Error(`The layer '${e}' does not exist in the map's style and cannot be moved.`)));
+			return;
+		}
+		if (e === t) return;
+		let n = this._order.indexOf(e);
+		this._order.splice(n, 1);
+		let r = t ? this._order.indexOf(t) : this._order.length;
+		if (t && r === -1) {
+			this.fire(new Vn(Error(`Cannot move layer "${e}" before non-existing layer "${t}".`)));
+			return;
+		}
+		this._order.splice(r, 0, e), this._layerOrderChanged = !0;
+	}
+	removeLayer(e) {
+		this._checkLoaded();
+		let t = this._layers[e];
+		if (!t) {
+			this.fire(new Vn(Error(`Cannot remove non-existing layer "${e}".`)));
+			return;
+		}
+		t.setEventedParent(null);
+		let n = this._order.indexOf(e);
+		this._order.splice(n, 1), this._layerOrderChanged = !0, this._changed = !0, this._removedLayers[e] = t, delete this._layers[e], this._serializedLayers && delete this._serializedLayers[e], delete this._updatedLayers[e], delete this._updatedPaintProps[e], t.onRemove && t.onRemove(this.map);
+	}
+	getLayer(e) {
+		return this._layers[e];
+	}
+	getLayersOrder() {
+		return [...this._order];
+	}
+	hasLayer(e) {
+		return e in this._layers;
+	}
+	setLayerZoomRange(e, t, n) {
+		this._checkLoaded();
+		let r = this.getLayer(e);
+		if (!r) {
+			this.fire(new Vn(Error(`Cannot set the zoom range of non-existing layer "${e}".`)));
+			return;
+		}
+		(r.minzoom !== t || r.maxzoom !== n) && (t != null && (r.minzoom = t), n != null && (r.maxzoom = n), this._updateLayer(r));
+	}
+	setFilter(e, t, n = {}) {
+		this._checkLoaded();
+		let r = this.getLayer(e);
+		if (!r) {
+			this.fire(new Vn(Error(`Cannot filter non-existing layer "${e}".`)));
+			return;
+		}
+		if (!Rt(r.filter, t)) {
+			if (t == null) {
+				r.setFilter(void 0), this._updateLayer(r);
+				return;
+			}
+			this._validate(Ec$1.filter, `layers.${r.id}.filter`, t, null, n) || (r.setFilter(zt(t)), this._updateLayer(r));
+		}
+	}
+	getFilter(e) {
+		return zt(this.getLayer(e).filter);
+	}
+	setLayoutProperty(e, t, n, r = {}) {
+		this._checkLoaded();
+		let i = this.getLayer(e);
+		if (!i) {
+			this.fire(new Vn(Error(`Cannot style non-existing layer "${e}".`)));
+			return;
+		}
+		Rt(i.getLayoutProperty(t), n) || (i.setLayoutProperty(t, n, r), this._updateLayer(i));
+	}
+	getLayoutProperty(e, t) {
+		let n = this.getLayer(e);
+		if (!n) {
+			this.fire(new Vn(Error(`Cannot get style of non-existing layer "${e}".`)));
+			return;
+		}
+		return n.getLayoutProperty(t);
+	}
+	setPaintProperty(e, t, n, r = {}) {
+		this._checkLoaded();
+		let i = this.getLayer(e);
+		if (!i) {
+			this.fire(new Vn(Error(`Cannot style non-existing layer "${e}".`)));
+			return;
+		}
+		Rt(i.getPaintProperty(t), n) || this._updatePaintProperty(i, t, n, r);
+	}
+	_updatePaintProperty(e, t, n, r = {}) {
+		e.setPaintProperty(t, n, r) && this._updateLayer(e), Ol$1(e) && t === `raster-fade-duration` && this.tileManagers[e.source].setRasterFadeDuration(n), this._changed = !0, this._updatedPaintProps[e.id] = !0, this._serializedLayers = null;
+	}
+	getPaintProperty(e, t) {
+		return this.getLayer(e).getPaintProperty(t);
+	}
+	setFeatureState(e, t) {
+		this._checkLoaded();
+		let n = e.source, r = e.sourceLayer, i = this.tileManagers[n];
+		if (i === void 0) {
+			this.fire(new Vn(Error(`The source '${n}' does not exist in the map's style.`)));
+			return;
+		}
+		let a = i.getSource().type;
+		if (a === `geojson` && r) {
+			this.fire(new Vn(Error(`GeoJSON sources cannot have a sourceLayer parameter.`)));
+			return;
+		}
+		if (a === `vector` && !r) {
+			this.fire(new Vn(Error(`The sourceLayer parameter must be provided for vector source types.`)));
+			return;
+		}
+		if (e.id === void 0) {
+			this.fire(new Vn(Error(`The feature id parameter must be provided.`)));
+			return;
+		}
+		let o = [
+			`__proto__`,
+			`constructor`,
+			`prototype`
+		];
+		if (t && Object.keys(t).some((e) => o.includes(e))) {
+			this.fire(new Vn(Error(`The feature state should not include one of the following keys: ${o}`)));
+			return;
+		}
+		i.setFeatureState(r, e.id, t);
+	}
+	removeFeatureState(e, t) {
+		this._checkLoaded();
+		let n = e.source, r = this.tileManagers[n];
+		if (r === void 0) {
+			this.fire(new Vn(Error(`The source '${n}' does not exist in the map's style.`)));
+			return;
+		}
+		let i = r.getSource().type, a = i === `vector` ? e.sourceLayer : void 0;
+		if (i === `vector` && !a) {
+			this.fire(new Vn(Error(`The sourceLayer parameter must be provided for vector source types.`)));
+			return;
+		}
+		if (t && typeof e.id != `string` && typeof e.id != `number`) {
+			this.fire(new Vn(Error(`A feature id is required to remove its specific state property.`)));
+			return;
+		}
+		r.removeFeatureState(a, e.id, t);
+	}
+	getFeatureState(e) {
+		this._checkLoaded();
+		let t = e.source, n = e.sourceLayer, r = this.tileManagers[t];
+		if (r === void 0) {
+			this.fire(new Vn(Error(`The source '${t}' does not exist in the map's style.`)));
+			return;
+		}
+		if (r.getSource().type === `vector` && !n) {
+			this.fire(new Vn(Error(`The sourceLayer parameter must be provided for vector source types.`)));
+			return;
+		}
+		return e.id === void 0 && this.fire(new Vn(Error(`The feature id parameter must be provided.`))), r.getFeatureState(n, e.id);
+	}
+	getTransition() {
+		return Dt({
+			duration: 300,
+			delay: 0
+		}, this.stylesheet?.transition);
+	}
+	serialize() {
+		if (!this._loaded) return;
+		let e = It(this.tileManagers, (e) => e.serialize()), t = this._serializeByIds(this._order, !0), n = this.map.getTerrain() || void 0, r = this.stylesheet;
+		return Lt({
+			version: r.version,
+			name: r.name,
+			metadata: r.metadata,
+			light: r.light,
+			sky: r.sky,
+			center: r.center,
+			zoom: r.zoom,
+			bearing: r.bearing,
+			pitch: r.pitch,
+			sprite: r.sprite,
+			glyphs: r.glyphs,
+			transition: r.transition,
+			projection: r.projection,
+			sources: e,
+			layers: t,
+			terrain: n
+		}, (e) => e !== void 0);
+	}
+	_updateLayer(e) {
+		this._updatedLayers[e.id] = !0, e.source && !this._updatedSources[e.source] && this.tileManagers[e.source].getSource().type !== `raster` && (this._updatedSources[e.source] = `reload`, this.tileManagers[e.source].pause()), this._serializedLayers = null, this._changed = !0;
+	}
+	_flattenAndSortRenderedFeatures(e) {
+		let t = (e) => this._layers[e].type === `fill-extrusion`, n = {}, r = [];
+		for (let i = this._order.length - 1; i >= 0; i--) {
+			let a = this._order[i];
+			if (t(a)) {
+				n[a] = i;
+				for (let t of e) {
+					let e = t[a];
+					if (e) for (let t of e) r.push(t);
+				}
+			}
+		}
+		r.sort((e, t) => t.intersectionZ - e.intersectionZ);
+		let i = [];
+		for (let a = this._order.length - 1; a >= 0; a--) {
+			let o = this._order[a];
+			if (t(o)) for (let e = r.length - 1; e >= 0; e--) {
+				let t = r[e].feature;
+				if (n[t.layer.id] < a) break;
+				i.push(t), r.pop();
+			}
+			else for (let t of e) {
+				let e = t[o];
+				if (e) for (let t of e) i.push(t.feature);
+			}
+		}
+		return i;
+	}
+	queryRenderedFeatures(e, t, n) {
+		t?.filter && this._validate(Ec$1.filter, `queryRenderedFeatures.filter`, t.filter, null, t);
+		let r = {};
+		if (t?.layers) {
+			if (!(Array.isArray(t.layers) || t.layers instanceof Set)) return this.fire(new Vn(Error(`parameters.layers must be an Array or a Set of strings`))), [];
+			for (let e of t.layers) {
+				let t = this._layers[e];
+				if (!t) return this.fire(new Vn(Error(`The layer '${e}' does not exist in the map's style and cannot be queried for features.`))), [];
+				r[t.source] = !0;
+			}
+		}
+		let i = [];
+		t.availableImages = this._availableImages;
+		let a = this._serializedAllLayers(), o = t.layers instanceof Set ? t.layers : Array.isArray(t.layers) ? new Set(t.layers) : null, s = {
+			...t,
+			layers: o,
+			globalState: this._globalState
+		};
+		for (let o in this.tileManagers) t.layers && !r[o] || i.push(Li(this.tileManagers[o], this._layers, a, e, s, n, this.map.terrain ? (e, t, n) => this.map.terrain.getElevation(e, t, n) : void 0));
+		return this.placement && i.push(Ri(this._layers, a, this.tileManagers, e, s, this.placement.collisionIndex, this.placement.retainedQueryData)), this._flattenAndSortRenderedFeatures(i);
+	}
+	querySourceFeatures(e, t) {
+		t?.filter && this._validate(Ec$1.filter, `querySourceFeatures.filter`, t.filter, null, t);
+		let n = this.tileManagers[e];
+		return n ? zi(n, t ? {
+			...t,
+			globalState: this._globalState
+		} : { globalState: this._globalState }) : [];
+	}
+	getLight() {
+		return this.light.getLight();
+	}
+	setLight(e, t = {}) {
+		this._checkLoaded();
+		let n = this.light.getLight(), r = !1;
+		for (let t in e) if (!Rt(e[t], n[t])) {
+			r = !0;
+			break;
+		}
+		if (!r) return;
+		let i = {
+			now: U(),
+			transition: Dt({
+				duration: 300,
+				delay: 0
+			}, this.stylesheet.transition)
+		};
+		this.light.setLight(e, t), this.light.updateTransitions(i);
+	}
+	getProjection() {
+		return this.stylesheet?.projection;
+	}
+	setProjection(e) {
+		this._checkLoaded();
+		let t = e ?? { type: `mercator` };
+		if (this.stylesheet.projection = e, this.projection) {
+			if (this.projection.name === t.type) return;
+			this.projection.destroy(), delete this.projection;
+		}
+		this._setProjectionInternal(t.type);
+	}
+	getSky() {
+		return this.stylesheet?.sky;
+	}
+	setSky(e, t = {}) {
+		this._checkLoaded();
+		let n = this.getSky(), r = !1;
+		if (!e && !n) return;
+		if (e && !n) r = !0;
+		else if (!e && n) r = !0;
+		else for (let t in e) if (!Rt(e[t], n[t])) {
+			r = !0;
+			break;
+		}
+		if (!r) return;
+		let i = {
+			now: U(),
+			transition: Dt({
+				duration: 300,
+				delay: 0
+			}, this.stylesheet.transition)
+		};
+		this.stylesheet.sky = e, this.sky.setSky(e, t), this.sky.updateTransitions(i);
+	}
+	_setProjectionInternal(e) {
+		let t = xc(e, this.map._camera?.transform.constrainOverride, this._globalState);
+		this.projection = t.projection, this.map.migrateProjection(t.transform, t.cameraHelper);
+		for (let e in this.tileManagers) this.tileManagers[e].reload();
+	}
+	_validate(e, t, n, r, i = {}) {
+		return jc$1(this, e, {
+			key: t,
+			style: this.serialize(),
+			value: n,
+			...r
+		}, i);
+	}
+	_remove(e = !0) {
+		this._frameRequest &&= (this._frameRequest.abort(), null), this._loadStyleRequest &&= (this._loadStyleRequest.abort(), null), this._spriteRequest &&= (this._spriteRequest.abort(), null), Fa().off(Ma, this._rtlPluginLoaded);
+		for (let e in this._layers) this._layers[e].setEventedParent(null);
+		for (let e in this.tileManagers) {
+			let t = this.tileManagers[e];
+			t.setEventedParent(null), t.onRemove(this.map);
+		}
+		this.imageManager.setEventedParent(null), this.setEventedParent(null), e && this.dispatcher.broadcast(`RM`, void 0), this.dispatcher.remove(e);
+	}
+	_clearSource(e) {
+		this.tileManagers[e].clearTiles();
+	}
+	_reloadSource(e) {
+		this.tileManagers[e].resume(), this.tileManagers[e].reload();
+	}
+	_updateSources(e) {
+		for (let t in this.tileManagers) this.tileManagers[t].update(e, this.map.terrain);
+	}
+	_generateCollisionBoxes() {
+		for (let e in this.tileManagers) this._reloadSource(e);
+	}
+	_updatePlacement(e, t, n, r, i = !1) {
+		let a = !1, o = !1, s = {};
+		for (let t of this._order) {
+			let n = this._layers[t];
+			if (n.type !== `symbol`) continue;
+			if (!s[n.source]) {
+				let e = this.tileManagers[n.source];
+				s[n.source] = e.getRenderableIds(!0).map((t) => e.getTileByID(t)).sort((e, t) => t.tileID.overscaledZ - e.tileID.overscaledZ || (e.tileID.isLessThan(t.tileID) ? -1 : 1));
+			}
+			let r = this.crossTileSymbolIndex.addLayer(n, s[n.source], e.center.lng);
+			a ||= r;
+		}
+		if (this.crossTileSymbolIndex.pruneUnusedLayers(this._order), i ||= this._layerOrderChanged || n === 0, (i || !this.pauseablePlacement || this.pauseablePlacement.isDone() && !this.placement.stillRecent(U(), e.zoom)) && (this.pauseablePlacement = new Zo(e, this.map.terrain, this._order, i, t, n, r, this.placement), this._layerOrderChanged = !1), this.pauseablePlacement.isDone() ? this.placement.setStale() : (this.pauseablePlacement.continuePlacement(this._order, this._layers, s), this.pauseablePlacement.isDone() && (this.placement = this.pauseablePlacement.commit(U()), o = !0), a && this.pauseablePlacement.placement.setStale()), o || a) for (let e of this._order) {
+			let t = this._layers[e];
+			t.type === `symbol` && this.placement.updateLayerOpacities(t, s[t.source]);
+		}
+		return !this.pauseablePlacement.isDone() || this.placement.hasTransitions(U());
+	}
+	_releaseSymbolFadeTiles() {
+		for (let e in this.tileManagers) this.tileManagers[e].releaseSymbolFadeTiles();
+	}
+	async getImages(e, t) {
+		let n = await this.imageManager.getImages(t.icons);
+		this._updateTilesForChangedImages();
+		let r = this.tileManagers[t.source];
+		return r && r.setDependencies(t.tileID.key, t.type, t.icons), n;
+	}
+	async getGlyphs(e, t) {
+		let n = await this.glyphManager.getGlyphs(t.stacks), r = this.tileManagers[t.source];
+		return r && r.setDependencies(t.tileID.key, t.type, [``]), n;
+	}
+	getGlyphsUrl() {
+		return this.stylesheet.glyphs || null;
+	}
+	setGlyphs(e, t = {}) {
+		this._checkLoaded(), !(e && this._validate(Ec$1.glyphs, `glyphs`, e, null, t)) && (this._glyphsDidChange = !0, this.stylesheet.glyphs = e, this.glyphManager.entries = {}, this.glyphManager.setURL(e));
+	}
+	async getDashes(e, t) {
+		let n = {};
+		for (let [e, r] of Object.entries(t.dashes)) n[e] = this.lineAtlas.getDash(r.dasharray, r.round);
+		return n;
+	}
+	addSprite(e, t, n = {}, r) {
+		this._checkLoaded();
+		let i = [{
+			id: e,
+			url: t
+		}], a = [...$r(this.stylesheet.sprite), ...i];
+		this._validate(Ec$1.sprite, `sprite`, a, null, n) || (this.stylesheet.sprite = a, this._loadSprite(i, !0, r));
+	}
+	removeSprite(e) {
+		this._checkLoaded();
+		let t = $r(this.stylesheet.sprite);
+		if (!t.find((t) => t.id === e)) {
+			this.fire(new Vn(Error(`Sprite "${e}" doesn't exists on this map.`)));
+			return;
+		}
+		if (this._spritesImagesIds[e]) for (let t of this._spritesImagesIds[e]) this.imageManager.removeImage(t), this._changedImages[t] = !0;
+		t.splice(t.findIndex((t) => t.id === e), 1), this.stylesheet.sprite = t.length > 0 ? t : void 0, delete this._spritesImagesIds[e], this._availableImages = this.imageManager.listImages(), this._imagesListDirty = !0, this._changed = !0, this.fire(new Wr(`data`));
+	}
+	getSprite() {
+		return $r(this.stylesheet.sprite);
+	}
+	setSprite(e, t = {}, n) {
+		this._checkLoaded(), !(e && this._validate(Ec$1.sprite, `sprite`, e, null, t)) && (this.stylesheet.sprite = e, e ? this._loadSprite(e, !0, n) : (this._unloadSprite(), n && n(null)));
+	}
+	destroy() {
+		this._frameRequest &&= (this._frameRequest.abort(), null), this._loadStyleRequest &&= (this._loadStyleRequest.abort(), null), this._spriteRequest &&= (this._spriteRequest.abort(), null);
+		for (let e in this.tileManagers) {
+			let t = this.tileManagers[e];
+			t.setEventedParent(null), t.onRemove(this.map);
+		}
+		this.tileManagers = {}, this.imageManager && (this.imageManager.setEventedParent(null), this.imageManager.destroy(), this._availableImages = [], this._spritesImagesIds = {}), this.glyphManager && this.glyphManager.destroy();
+		for (let e in this._layers) {
+			let t = this._layers[e];
+			t.setEventedParent(null), t.onRemove && t.onRemove(this.map);
+		}
+		this._setInitialValues(), this.setEventedParent(null), this.dispatcher.unregisterMessageHandler(`GG`), this.dispatcher.unregisterMessageHandler(`GI`), this.dispatcher.unregisterMessageHandler(`GDA`), this.dispatcher.remove(!0), this._listeners = {}, this._oneTimeListeners = {};
+	}
+};
 var wc = Ml$1([{
 	name: `a_pos`,
 	type: `Int16`,
@@ -20005,6 +26779,17 @@ var kc = (e, t) => ({
 	u_texture: new Zu$1(e, t.u_texture),
 	u_terrain_coords_id: new Qu$1(e, t.u_terrain_coords_id),
 	u_ele_delta: new Qu$1(e, t.u_ele_delta)
+});
+var Ac = (e, t, n, r, i) => ({
+	u_texture: 0,
+	u_ele_delta: e,
+	u_fog_matrix: t,
+	u_fog_color: n ? n.properties.get(`fog-color`) : B.white,
+	u_fog_ground_blend: n ? n.properties.get(`fog-ground-blend`) : 1,
+	u_fog_ground_blend_opacity: i ? 0 : n ? n.calculateFogBlendOpacity(r) : 0,
+	u_horizon_color: n ? n.properties.get(`horizon-color`) : B.white,
+	u_horizon_fog_blend: n ? n.properties.get(`horizon-fog-blend`) : 1,
+	u_is_globe_mode: +!!i
 });
 var jc = (e) => ({ u_ele_delta: e });
 var Mc = (e, t) => ({
@@ -21547,7 +28332,7 @@ function Xu(e, t, n, r) {
 function Zu(e, t) {
 	let n = e.context, r = n.gl;
 	n.setColorMode(e.colorModeForRenderPass());
-	let i = t.heatmapFbos.get(_f);
+	let i = t.heatmapFbos.get(_f$1);
 	i && (n.activeTexture.set(r.TEXTURE0), r.bindTexture(r.TEXTURE_2D, i.colorAttachment.get()), n.activeTexture.set(r.TEXTURE1), nd(n, t).bind(r.LINEAR, r.CLAMP_TO_EDGE), e.useProgram(`heatmapTexture`).draw(n, r.TRIANGLES, Z.disabled, Q.disabled, e.colorModeForRenderPass(), $.disabled, ll(e, t, 0, 1), null, null, t.id, e.viewportBuffer, e.quadTriangleIndexBuffer, e.viewportSegments, t.paint, e.transform.zoom));
 }
 function Qu(e, t, n, r, i) {
@@ -21593,8 +28378,8 @@ function ed(e, t, n) {
 		t.width / 4,
 		t.height / 4
 	]);
-	let i = n.heatmapFbos.get(_f);
-	i ? (r.bindTexture(r.TEXTURE_2D, i.colorAttachment.get()), e.bindFramebuffer.set(i.framebuffer)) : (i = td(e, t.width / 4, t.height / 4), n.heatmapFbos.set(_f, i));
+	let i = n.heatmapFbos.get(_f$1);
+	i ? (r.bindTexture(r.TEXTURE_2D, i.colorAttachment.get()), e.bindFramebuffer.set(i.framebuffer)) : (i = td(e, t.width / 4, t.height / 4), n.heatmapFbos.set(_f$1, i));
 }
 function td(e, t, n) {
 	let r = e.gl, i = r.createTexture();
@@ -21603,7 +28388,7 @@ function td(e, t, n) {
 	return a.colorAttachment.set(i), a;
 }
 function nd(e, t) {
-	return t.colorRampTexture ||= new kf(e, t.colorRamp, e.gl.RGBA), t.colorRampTexture;
+	return t.colorRampTexture ||= new kf$1(e, t.colorRamp, e.gl.RGBA), t.colorRampTexture;
 }
 function rd(e, t, n, r) {
 	let i = e.context, a = i.bindFramebuffer.get(), o = i.viewport.get(), [, , s, c] = o;
@@ -21645,13 +28430,13 @@ function od(e, t, n, r, i, a, o, s) {
 		let r = t.getSource().maxzoom, i = o.canonical.z === r ? Math.ceil(1 << e.transform.maxZoom - o.canonical.z) : 1;
 		c = Tt(Mt(a.maxLineLength / j * 1024 * i), 256, n.maxTextureSize);
 	}
-	return s.gradient = gf({
+	return s.gradient = gf$1({
 		expression: i.gradientExpression(),
 		evaluationKey: `lineProgress`,
 		resolution: c,
 		image: s.gradient || void 0,
 		clips: a.lineClipsArray
-	}), s.texture ? s.texture.update(s.gradient) : s.texture = new kf(n, s.gradient, r.RGBA), s.version = i.gradientVersion, s.texture;
+	}), s.texture ? s.texture.update(s.gradient) : s.texture = new kf$1(n, s.gradient, r.RGBA), s.version = i.gradientVersion, s.texture;
 }
 function sd(e, t, n, r, i) {
 	e.activeTexture.set(t.TEXTURE0), n.imageAtlasTexture.bind(t.LINEAR, t.CLAMP_TO_EDGE), r.updatePaintBuffers(i);
@@ -21844,11 +28629,11 @@ function Sd(e, t, n, r, i, a, o) {
 		if (s.activeTexture.set(c.TEXTURE1), s.pixelStoreUnpackPremultiplyAlpha.set(!1), n.demTexture ||= e.getTileTexture(p), n.demTexture) {
 			let e = n.demTexture;
 			e.update(m, { premultiply: !1 }), e.bind(c.NEAREST, c.CLAMP_TO_EDGE);
-		} else n.demTexture = new kf(s, m, c.RGBA, { premultiply: !1 }), n.demTexture.bind(c.NEAREST, c.CLAMP_TO_EDGE);
+		} else n.demTexture = new kf$1(s, m, c.RGBA, { premultiply: !1 }), n.demTexture.bind(c.NEAREST, c.CLAMP_TO_EDGE);
 		s.activeTexture.set(c.TEXTURE0);
 		let h = n.fbo;
 		if (!h) {
-			let e = new kf(s, {
+			let e = new kf$1(s, {
 				width: f,
 				height: f,
 				data: null
@@ -21889,7 +28674,7 @@ function Td(e, t, n, r, i, a, o, s, c) {
 		if (u.activeTexture.set(f.TEXTURE0), u.pixelStoreUnpackPremultiplyAlpha.set(!1), r.demTexture ||= e.getTileTexture(b), r.demTexture) {
 			let e = r.demTexture;
 			e.update(x, { premultiply: !1 }), e.bind(h, f.CLAMP_TO_EDGE);
-		} else r.demTexture = new kf(u, x, f.RGBA, { premultiply: !1 }), r.demTexture.bind(h, f.CLAMP_TO_EDGE);
+		} else r.demTexture = new kf$1(u, x, f.RGBA, { premultiply: !1 }), r.demTexture.bind(h, f.CLAMP_TO_EDGE);
 		let S = l.getMeshFromTileID(u, v.canonical, s, !0, `raster`), C = e.getTerrainDataForTile(v, c), w = d.getProjectionData({
 			overscaledTileID: v,
 			aligned: m,
@@ -22147,6 +28932,25 @@ function Yd(e, t) {
 		e.height
 	]);
 }
+function Xd(e, t, n, r) {
+	let { isRenderingGlobe: i } = r, a = e.context, o = a.gl, s = e.transform, c = e.colorModeForRenderPass(), l = e.getDepthModeFor3D(), u = e.useProgram(`terrain`);
+	a.bindFramebuffer.set(null), a.viewport.set([
+		0,
+		0,
+		e.width,
+		e.height
+	]);
+	for (let r of n) {
+		let n = t.getTerrainMesh(r.tileID), d = e.renderToTexture.getTexture(r), f = t.getTerrainData(r.tileID);
+		a.activeTexture.set(o.TEXTURE0), o.bindTexture(o.TEXTURE_2D, d.texture);
+		let h = Ac(t.getSkirtLength(s.zoom), s.calculateFogMatrix(r.tileID.toUnwrapped()), e.style.sky, s.pitch, i), g = s.getProjectionData({
+			overscaledTileID: r.tileID,
+			applyTerrainMatrix: !1,
+			applyGlobeMatrix: !0
+		});
+		u.draw(a, o.TRIANGLES, l, Q.disabled, c, $.backCCW, h, f, g, `terrain`, n.vertexBuffer, n.indexBuffer, n.segments);
+	}
+}
 function Zd(e, t) {
 	if (!t.mesh) {
 		let n = new _u$1();
@@ -22201,7 +29005,7 @@ var tf = {
 	terrainDepth: Jd,
 	terrainCoords: Yd
 };
-(class e {
+var nf = class e {
 	constructor(e, t) {
 		this.drawFunctions = tf, this.context = new Mu(e), this.transform = t, this.layerOpacityFbo = null, this._tileTextures = {}, this._rttObjectRecyclePool = [], this._rttSharedFbo = null, this.terrainFacilitator = {
 			depthDirty: !0,
@@ -22450,7 +29254,7 @@ var tf = {
 		if (n.isHidden(this.transform.zoom) || n.type !== `background` && n.type !== `custom` && !(r || []).length) return;
 		this.id = n.id;
 		let a = this.drawFunctions;
-		_v(n) ? a.symbol(e, t, n, r, this.style.placement.variableOffsets, i) : rf(n) ? a.circle(e, t, n, r, i) : vf(n) ? a.heatmap(e, t, n, r, i) : Lg(n) ? a.line(e, t, n, r, i) : $p(n) ? a.fill(e, t, n, r, i) : Km(n) ? a.fillExtrusion(e, t, n, r, i) : Cf(n) ? a.hillshade(e, t, n, r, i) : Mf(n) ? a.colorRelief(e, t, n, r, i) : Ol$1(n) ? a.raster(e, t, n, r, i) : Cv(n) ? a.background(e, t, n, r, i) : Ev(n) && a.custom(e, t, n, i);
+		_v(n) ? a.symbol(e, t, n, r, this.style.placement.variableOffsets, i) : rf$1(n) ? a.circle(e, t, n, r, i) : vf$1(n) ? a.heatmap(e, t, n, r, i) : Lg(n) ? a.line(e, t, n, r, i) : $p(n) ? a.fill(e, t, n, r, i) : Km(n) ? a.fillExtrusion(e, t, n, r, i) : Cf$1(n) ? a.hillshade(e, t, n, r, i) : Mf$1(n) ? a.colorRelief(e, t, n, r, i) : Ol$1(n) ? a.raster(e, t, n, r, i) : Cv(n) ? a.background(e, t, n, r, i) : Ev(n) && a.custom(e, t, n, i);
 	}
 	static {
 		this.MAX_TEXTURE_POOL_SIZE_PER_BUCKET = 50;
@@ -22466,7 +29270,7 @@ var tf = {
 	acquireRTT(e) {
 		let t = this.context.gl, n = this._rttObjectRecyclePool.pop();
 		if (n) return n.size !== e && (t.bindTexture(t.TEXTURE_2D, n.texture.texture), t.texImage2D(t.TEXTURE_2D, 0, t.RGBA, e, e, 0, t.RGBA, t.UNSIGNED_BYTE, null), n.texture.size = [e, e], n.size = e), n;
-		let r = new kf(this.context, {
+		let r = new kf$1(this.context, {
 			width: e,
 			height: e,
 			data: null
@@ -22518,7 +29322,7 @@ var tf = {
 		if (this.debugOverlayCanvas == null) {
 			this.debugOverlayCanvas = document.createElement(`canvas`), this.debugOverlayCanvas.width = 512, this.debugOverlayCanvas.height = 512;
 			let e = this.context.gl;
-			this.debugOverlayTexture = new kf(this.context, this.debugOverlayCanvas, e.RGBA);
+			this.debugOverlayTexture = new kf$1(this.context, this.debugOverlayCanvas, e.RGBA);
 		}
 	}
 	destroy() {
@@ -22548,37 +29352,3455 @@ var tf = {
 		let { drawingBufferWidth: e, drawingBufferHeight: t } = this.context.gl;
 		return this.width !== e || this.height !== t;
 	}
-});
+};
+var rf = class extends Error {
+	constructor(e, t) {
+		super(`WebGL2 is required to display this map. We are sorry, but it seems that your browser does not support WebGL2, a technology for rendering 3D graphics on the web. Read more on https://wiki.openstreetmap.org/wiki/This_map_requires_WebGL`), this.name = `GPUInitializationError`, this.requestedAttributes = e, this.statusMessage = t?.statusMessage ?? null;
+	}
+};
+function af(e, t) {
+	let n = !1, r = null, i, a = () => {
+		r = null, n &&= (e(...i), r = setTimeout(a, t), !1);
+	};
+	return (...e) => (n = !0, i = e, r || a(), r);
+}
+var of = class {
+	constructor(e) {
+		this._getHashParams = () => new URLSearchParams(window.location.hash.replace(`#`, ``)), this._getCurrentHash = () => {
+			let e = this._getHashParams();
+			return this._hashName ? (e.get(this._hashName) || ``).split(`/`) : ([...e.keys()][0] ?? ``).split(`/`);
+		}, this._onHashChange = () => {
+			let e = this._getCurrentHash();
+			if (!this._isValidHash(e)) return !1;
+			let t = this._map.dragRotate.isEnabled() && this._map.touchZoomRotate.isEnabled() ? +(e[3] || 0) : this._map.getBearing();
+			return this._map.jumpTo({
+				center: [+e[2], +e[1]],
+				zoom: +e[0],
+				bearing: t,
+				pitch: +(e[4] || 0)
+			}), !0;
+		}, this._updateHashUnthrottled = () => {
+			let e = window.location.href.replace(/(#.*)?$/, this.getHashString());
+			window.history.replaceState(window.history.state, null, e);
+		}, this._removeHash = () => {
+			let e = this._getHashParams();
+			if (this._hashName) e.delete(this._hashName);
+			else {
+				let t = Array.from(e.keys());
+				t.length > 0 && e.delete(t[0]);
+			}
+			let t = decodeURIComponent(e.toString()).replace(/=&/g, `&`).replace(/=$/g, ``), n = t ? `#${t}` : ``, r = window.location.href.replace(/(#.+)?$/, n);
+			r = r.replace(`&&`, `&`), window.history.replaceState(window.history.state, null, r);
+		}, this._updateHash = af(this._updateHashUnthrottled, 300), this._hashName = e && encodeURIComponent(e);
+	}
+	addTo(e) {
+		return this._map = e, addEventListener(`hashchange`, this._onHashChange, !1), this._map.on(`moveend`, this._updateHash), this;
+	}
+	remove() {
+		return removeEventListener(`hashchange`, this._onHashChange, !1), this._map.off(`moveend`, this._updateHash), clearTimeout(this._updateHash()), this._removeHash(), delete this._map, this;
+	}
+	getHashString(e) {
+		let t = this._map.getCenter(), n = Math.round(this._map.getZoom() * 100) / 100, r = 10 ** Math.ceil((n * Math.LN2 + Math.log(512 / 360 / .5)) / Math.LN10), i = Math.round(t.lng * r) / r, a = Math.round(t.lat * r) / r, o = this._map.getBearing(), s = this._map.getPitch(), c = ``;
+		if (c += e ? `/${i}/${a}/${n}` : `${n}/${a}/${i}`, (o || s) && (c += `/${Math.round(o * 10) / 10}`), s && (c += `/${Math.round(s)}`), this._hashName) {
+			let e = this._getHashParams();
+			return e.set(this._hashName, c), `#${decodeURIComponent(e.toString()).replace(/=&/g, `&`).replace(/=$/g, ``)}`;
+		}
+		return `#${c}`;
+	}
+	_isValidHash(e) {
+		if (e.length < 3 || e.some((e) => isNaN(+e))) return !1;
+		try {
+			new dm$1(+e[2], +e[1]);
+		} catch {
+			return !1;
+		}
+		let t = +e[0], n = +(e[3] || 0), r = +(e[4] || 0);
+		return t >= this._map.getMinZoom() && t <= this._map.getMaxZoom() && n >= -180 && n <= 180 && r >= this._map.getMinPitch() && r <= this._map.getMaxPitch();
+	}
+};
 var sf = {
 	linearity: .3,
 	easing: Ct(0, 0, .3, 1)
 };
-Dt({
+var cf = Dt({
 	deceleration: 2500,
 	maxSpeed: 1400
 }, sf);
-Dt({
+var lf = Dt({
 	deceleration: 20,
 	maxSpeed: 1400
 }, sf);
-Dt({
+var uf = Dt({
 	deceleration: 1e3,
 	maxSpeed: 360
 }, sf);
-Dt({
+var df = Dt({
 	deceleration: 1e3,
 	maxSpeed: 90
 }, sf);
-Dt({
+var ff = Dt({
 	deceleration: 1e3,
 	maxSpeed: 360
 }, sf);
-Ml$1([{
+var pf = class {
+	constructor(e) {
+		this._map = e, this.clear();
+	}
+	clear() {
+		this._inertiaBuffer = [];
+	}
+	record(e) {
+		this._drainInertiaBuffer(), this._inertiaBuffer.push({
+			time: U(),
+			settings: e
+		});
+	}
+	_drainInertiaBuffer() {
+		let e = this._inertiaBuffer, t = U();
+		for (; e.length > 0 && t - e[0].time > 160;) e.shift();
+	}
+	_onMoveEnd(e) {
+		if (this._drainInertiaBuffer(), this._inertiaBuffer.length < 2) return;
+		let t = {
+			zoom: 0,
+			bearing: 0,
+			pitch: 0,
+			roll: 0,
+			pan: new l(0, 0),
+			pinchAround: void 0,
+			around: void 0
+		};
+		for (let { settings: e } of this._inertiaBuffer) t.zoom += e.zoomDelta || 0, t.bearing += e.bearingDelta || 0, t.pitch += e.pitchDelta || 0, t.roll += e.rollDelta || 0, e.panDelta && t.pan._add(e.panDelta), e.around && (t.around = e.around), e.pinchAround && (t.pinchAround = e.pinchAround);
+		let n = this._inertiaBuffer[this._inertiaBuffer.length - 1].time - this._inertiaBuffer[0].time, r = {};
+		if (t.pan.mag()) {
+			let i = hf(t.pan.mag(), n, Dt({}, cf, e || {})), a = t.pan.mult(i.amount / t.pan.mag()), o = this._map._camera.cameraHelper.handlePanInertia(a, this._map._camera.transform);
+			r.center = o.easingCenter, r.offset = o.easingOffset, mf(r, i);
+		}
+		if (t.zoom) {
+			let e = hf(t.zoom, n, lf);
+			r.zoom = Ft(this._map.getZoom() + e.amount, this._map.getZoomSnap(), e.amount), mf(r, e);
+		}
+		if (t.bearing) {
+			let e = hf(t.bearing, n, uf);
+			r.bearing = this._map.getBearing() + Tt(e.amount, -179, 179), mf(r, e);
+		}
+		if (t.pitch) {
+			let e = hf(t.pitch, n, df);
+			r.pitch = this._map.getPitch() + e.amount, mf(r, e);
+		}
+		if (t.roll) {
+			let e = hf(t.roll, n, ff);
+			r.roll = this._map.getRoll() + Tt(e.amount, -179, 179), mf(r, e);
+		}
+		if (r.zoom || r.bearing) {
+			let e = t.pinchAround === void 0 ? t.around : t.pinchAround;
+			r.around = e ? this._map.unproject(e) : this._map.getCenter();
+		}
+		return this.clear(), Dt(r, { noMoveStart: !0 });
+	}
+};
+function mf(e, t) {
+	(!e.duration || e.duration < t.duration) && (e.duration = t.duration, e.easing = t.easing);
+}
+function hf(e, t, n) {
+	let { maxSpeed: r, linearity: i, deceleration: a } = n, o = Tt(e * i / (t / 1e3), -r, r), s = Math.abs(o) / (a * i);
+	return {
+		easing: n.easing,
+		duration: s * 1e3,
+		amount: s / 2 * o
+	};
+}
+var gf = class {
+	constructor(e, t) {
+		this._map = e, this._clickTolerance = t.clickTolerance;
+	}
+	reset() {
+		delete this._mousedownPos;
+	}
+	wheel(e) {
+		return this._firePreventable(new qr(this._map, e));
+	}
+	mousedown(e, t) {
+		return this._mousedownPos = t, this._firePreventable(new Gr(e.type, this._map, e));
+	}
+	mouseup(e) {
+		this._map.fire(new Gr(e.type, this._map, e));
+	}
+	click(e, t) {
+		this._mousedownPos && this._mousedownPos.dist(t) >= this._clickTolerance || this._map.fire(new Gr(e.type, this._map, e));
+	}
+	dblclick(e) {
+		return this._firePreventable(new Gr(e.type, this._map, e));
+	}
+	mouseover(e) {
+		this._map.fire(new Gr(e.type, this._map, e));
+	}
+	mouseout(e) {
+		this._map.fire(new Gr(e.type, this._map, e));
+	}
+	touchstart(e) {
+		return this._firePreventable(new Kr(e.type, this._map, e));
+	}
+	touchmove(e) {
+		this._map.fire(new Kr(e.type, this._map, e));
+	}
+	touchend(e) {
+		this._map.fire(new Kr(e.type, this._map, e));
+	}
+	touchcancel(e) {
+		this._map.fire(new Kr(e.type, this._map, e));
+	}
+	_firePreventable(e) {
+		if (this._map.fire(e), e.defaultPrevented) return {};
+	}
+	isEnabled() {
+		return !0;
+	}
+	isActive() {
+		return !1;
+	}
+	enable() {}
+	disable() {}
+};
+var _f = class {
+	constructor(e) {
+		this._map = e;
+	}
+	reset() {
+		this._delayContextMenu = !1, this._ignoreContextMenu = !0, delete this._contextMenuEvent;
+	}
+	mousemove(e) {
+		this._map.fire(new Gr(e.type, this._map, e));
+	}
+	mousedown() {
+		this._delayContextMenu = !0, this._ignoreContextMenu = !1;
+	}
+	mouseup() {
+		this._delayContextMenu = !1, this._contextMenuEvent && (this._map.fire(new Gr(`contextmenu`, this._map, this._contextMenuEvent)), delete this._contextMenuEvent);
+	}
+	contextmenu(e) {
+		this._delayContextMenu ? this._contextMenuEvent = e : this._ignoreContextMenu || this._map.fire(new Gr(e.type, this._map, e)), this._map.listens(`contextmenu`) && e.preventDefault();
+	}
+	isEnabled() {
+		return !0;
+	}
+	isActive() {
+		return !1;
+	}
+	enable() {}
+	disable() {}
+};
+var vf = class {
+	constructor(e, t, n) {
+		this._map = e, this._tr = n, this._el = e.getCanvasContainer(), this._container = e.getContainer(), this._clickTolerance = t.clickTolerance || 1, t.boxZoom && typeof t.boxZoom == `object` && (this._boxZoomEnd = t.boxZoom.boxZoomEnd);
+	}
+	isEnabled() {
+		return !!this._enabled;
+	}
+	isActive() {
+		return !!this._active;
+	}
+	enable() {
+		this.isEnabled() || (this._enabled = !0);
+	}
+	disable() {
+		this.isEnabled() && (this._enabled = !1);
+	}
+	mousedown(e, t) {
+		this.isEnabled() && e.shiftKey && e.button === 0 && (W.disableDrag(), this._startPos = this._lastPos = t, this._active = !0);
+	}
+	mousemoveWindow(e, t) {
+		if (!this._active) return;
+		let n = t;
+		if (this._lastPos.equals(n) || !this._box && n.dist(this._startPos) < this._clickTolerance) return;
+		let r = this._startPos;
+		this._lastPos = n, this._box || (this._box = W.create(`div`, `maplibregl-boxzoom`, this._container), this._container.classList.add(`maplibregl-crosshair`), this._fireEvent(`boxzoomstart`, e));
+		let i = Math.min(r.x, n.x), a = Math.max(r.x, n.x), o = Math.min(r.y, n.y), s = Math.max(r.y, n.y);
+		this._box.style.transform = `translate(${i}px,${o}px)`, this._box.style.width = `${a - i}px`, this._box.style.height = `${s - o}px`;
+	}
+	mouseupWindow(e, t) {
+		if (!this._active || e.button !== 0) return;
+		let n = this._startPos, r = t;
+		if (this.reset(), W.suppressClick(), n.x === r.x && n.y === r.y) this._fireEvent(`boxzoomcancel`, e);
+		else {
+			if (this._map.fire(new Jr(`boxzoomend`, { originalEvent: e })), this._boxZoomEnd) {
+				this._boxZoomEnd(this._map, n, r, e);
+				return;
+			}
+			return { cameraAnimation: (e) => e.fitScreenCoordinates(n, r, this._tr.bearing, { linear: !0 }) };
+		}
+	}
+	keydown(e) {
+		this._active && e.keyCode === 27 && (this.reset(), this._fireEvent(`boxzoomcancel`, e));
+	}
+	reset() {
+		this._active = !1, this._container.classList.remove(`maplibregl-crosshair`), this._box &&= (this._box.remove(), null), W.enableDrag(), delete this._startPos, delete this._lastPos;
+	}
+	_fireEvent(e, t) {
+		return this._map.fire(new Jr(e, { originalEvent: t }));
+	}
+};
+function yf(e, t) {
+	if (e.length !== t.length) throw Error(`The number of touches and points are not equal - touches ${e.length}, points ${t.length}`);
+	let n = {};
+	for (let r = 0; r < e.length; r++) n[e[r].identifier] = t[r];
+	return n;
+}
+function bf(e) {
+	let t = new l(0, 0);
+	for (let n of e) t._add(n);
+	return t.div(e.length);
+}
+var xf = class {
+	constructor(e) {
+		this.reset(), this.numTouches = e.numTouches;
+	}
+	reset() {
+		delete this.centroid, delete this.startTime, delete this.touches, this.aborted = !1;
+	}
+	touchstart(e, t, n) {
+		(this.centroid || n.length > this.numTouches) && (this.aborted = !0), !this.aborted && (this.startTime === void 0 && (this.startTime = e.timeStamp), n.length === this.numTouches && (this.centroid = bf(t), this.touches = yf(n, t)));
+	}
+	touchmove(e, t, n) {
+		if (this.aborted || !this.centroid) return;
+		let r = yf(n, t);
+		for (let e in this.touches) {
+			let t = this.touches[e], n = r[e];
+			(!n || n.dist(t) > 30) && (this.aborted = !0);
+		}
+	}
+	touchend(e, t, n) {
+		if ((!this.centroid || e.timeStamp - this.startTime > 500) && (this.aborted = !0), n.length === 0) {
+			let e = !this.aborted && this.centroid;
+			if (this.reset(), e) return e;
+		}
+	}
+};
+var Sf = class {
+	constructor(e) {
+		this.singleTap = new xf(e), this.numTaps = e.numTaps, this.reset();
+	}
+	reset() {
+		this.lastTime = 1 / 0, delete this.lastTap, this.count = 0, this.singleTap.reset();
+	}
+	touchstart(e, t, n) {
+		this.singleTap.touchstart(e, t, n);
+	}
+	touchmove(e, t, n) {
+		this.singleTap.touchmove(e, t, n);
+	}
+	touchend(e, t, n) {
+		let r = this.singleTap.touchend(e, t, n);
+		if (r) {
+			let t = e.timeStamp - this.lastTime < 500, n = !this.lastTap || this.lastTap.dist(r) < 30;
+			if ((!t || !n) && this.reset(), this.count++, this.lastTime = e.timeStamp, this.lastTap = r, this.count === this.numTaps) return this.reset(), r;
+		}
+	}
+};
+var Cf = class {
+	constructor(e, t) {
+		this._tr = t, this._zoomIn = new Sf({
+			numTouches: 1,
+			numTaps: 2
+		}), this._zoomOut = new Sf({
+			numTouches: 2,
+			numTaps: 1
+		}), this.reset();
+	}
+	reset() {
+		this._active = !1, this._zoomIn.reset(), this._zoomOut.reset();
+	}
+	touchstart(e, t, n) {
+		this._zoomIn.touchstart(e, t, n), this._zoomOut.touchstart(e, t, n);
+	}
+	touchmove(e, t, n) {
+		this._zoomIn.touchmove(e, t, n), this._zoomOut.touchmove(e, t, n);
+	}
+	touchend(e, t, n) {
+		let r = this._zoomIn.touchend(e, t, n), i = this._zoomOut.touchend(e, t, n), a = this._tr;
+		if (r) return this._active = !0, e.preventDefault(), setTimeout(() => this.reset(), 0), { cameraAnimation: (t) => t.easeTo({
+			duration: 300,
+			zoom: Ft(a.zoom + 1, t.getZoomSnap()),
+			around: a.unproject(r)
+		}, { originalEvent: e }) };
+		if (i) return this._active = !0, e.preventDefault(), setTimeout(() => this.reset(), 0), { cameraAnimation: (t) => t.easeTo({
+			duration: 300,
+			zoom: Ft(a.zoom - 1, t.getZoomSnap()),
+			around: a.unproject(i)
+		}, { originalEvent: e }) };
+	}
+	touchcancel() {
+		this.reset();
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+};
+var wf = class {
+	constructor(e) {
+		this._enabled = !!e.enable, this._moveStateManager = e.moveStateManager, this._clickTolerance = e.clickTolerance || 1, this._moveFunction = e.move, this._activateOnStart = !!e.activateOnStart, e.assignEvents(this), this.reset();
+	}
+	reset(e) {
+		this._active = !1, this._moved = !1, delete this._lastPoint, this._moveStateManager.endMove(e);
+	}
+	_move(...e) {
+		let t = this._moveFunction(...e);
+		if (t.bearingDelta || t.pitchDelta || t.rollDelta || t.around || t.panDelta) return this._active = !0, t;
+	}
+	dragStart(e, t) {
+		!this.isEnabled() || this._lastPoint || this._moveStateManager.isValidStartEvent(e) && (this._moveStateManager.startMove(e), this._lastPoint = Array.isArray(t) ? t[0] : t, this._activateOnStart && this._lastPoint && (this._active = !0));
+	}
+	dragMove(e, t) {
+		if (!this.isEnabled()) return;
+		let n = this._lastPoint;
+		if (!n) return;
+		if (e.preventDefault(), !this._moveStateManager.isValidMoveEvent(e)) {
+			this.reset(e);
+			return;
+		}
+		let r = Array.isArray(t) ? t[0] : t;
+		if (!(!this._moved && r.dist(n) < this._clickTolerance)) return this._moved = !0, this._lastPoint = r, this._move(n, r);
+	}
+	dragEnd(e) {
+		!this.isEnabled() || !this._lastPoint || this._moveStateManager.isValidEndEvent(e) && (this._moved && W.suppressClick(), this.reset(e));
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+	getClickTolerance() {
+		return this._clickTolerance;
+	}
+};
+var Tf = {
+	0: 1,
+	2: 2
+};
+function Ef(e, t) {
+	let n = Tf[t];
+	return e.buttons === void 0 || (e.buttons & n) !== n;
+}
+var Df = class {
+	constructor(e) {
+		this._correctEvent = e.checkCorrectEvent;
+	}
+	startMove(e) {
+		this._eventButton = e.button;
+	}
+	endMove(e) {
+		delete this._eventButton;
+	}
+	isValidStartEvent(e) {
+		return this._correctEvent(e);
+	}
+	isValidMoveEvent(e) {
+		return !Ef(e, this._eventButton);
+	}
+	isValidEndEvent(e) {
+		return e.button === this._eventButton;
+	}
+};
+var Of = class {
+	constructor() {
+		this._firstTouch = void 0;
+	}
+	_isOneFingerTouch(e) {
+		return e.targetTouches.length === 1;
+	}
+	_isSameTouchEvent(e) {
+		return e.targetTouches[0].identifier === this._firstTouch;
+	}
+	startMove(e) {
+		this._firstTouch = e.targetTouches[0].identifier;
+	}
+	endMove(e) {
+		delete this._firstTouch;
+	}
+	isValidStartEvent(e) {
+		return this._isOneFingerTouch(e);
+	}
+	isValidMoveEvent(e) {
+		return this._isOneFingerTouch(e) && this._isSameTouchEvent(e);
+	}
+	isValidEndEvent(e) {
+		return this._isOneFingerTouch(e) && this._isSameTouchEvent(e);
+	}
+};
+var kf = class {
+	constructor(e = new Df({ checkCorrectEvent: () => !0 }), t = new Of()) {
+		this.mouseMoveStateManager = e, this.oneFingerTouchMoveStateManager = t;
+	}
+	_executeRelevantHandler(e, t, n) {
+		if (e instanceof MouseEvent) return t(e);
+		if (typeof TouchEvent < `u` && e instanceof TouchEvent) return n(e);
+	}
+	startMove(e) {
+		this._executeRelevantHandler(e, (e) => {
+			this.mouseMoveStateManager.startMove(e);
+		}, (e) => {
+			this.oneFingerTouchMoveStateManager.startMove(e);
+		});
+	}
+	endMove(e) {
+		this._executeRelevantHandler(e, (e) => {
+			this.mouseMoveStateManager.endMove(e);
+		}, (e) => {
+			this.oneFingerTouchMoveStateManager.endMove(e);
+		});
+	}
+	isValidStartEvent(e) {
+		return !!this._executeRelevantHandler(e, (e) => this.mouseMoveStateManager.isValidStartEvent(e), (e) => this.oneFingerTouchMoveStateManager.isValidStartEvent(e));
+	}
+	isValidMoveEvent(e) {
+		return !!this._executeRelevantHandler(e, (e) => this.mouseMoveStateManager.isValidMoveEvent(e), (e) => this.oneFingerTouchMoveStateManager.isValidMoveEvent(e));
+	}
+	isValidEndEvent(e) {
+		return !!this._executeRelevantHandler(e, (e) => this.mouseMoveStateManager.isValidEndEvent(e), (e) => this.oneFingerTouchMoveStateManager.isValidEndEvent(e));
+	}
+};
+var Af = (e) => {
+	e.mousedown = e.dragStart, e.mousemoveWindow = e.dragMove, e.mouseup = e.dragEnd, e.contextmenu = (e) => {
+		e.preventDefault();
+	};
+};
+function jf({ enable: e, clickTolerance: t }) {
+	return new wf({
+		clickTolerance: t,
+		move: (e, t) => ({
+			around: t,
+			panDelta: t.sub(e)
+		}),
+		activateOnStart: !0,
+		moveStateManager: new Df({ checkCorrectEvent: (e) => e.button === 0 && !e.ctrlKey }),
+		enable: e,
+		assignEvents: Af
+	});
+}
+function Mf({ enable: e, clickTolerance: t, aroundCenter: n = !0, minPixelCenterThreshold: r = 100, rotateSpeed: i = .8 }, a) {
+	return new wf({
+		clickTolerance: t,
+		move: (e, t) => {
+			let o = a();
+			if (n && Math.abs(o.y - e.y) > r) return { bearingDelta: dn(new l(e.x, t.y), t, o) };
+			let s = (t.x - e.x) * i;
+			return n && t.y < o.y && (s = -s), { bearingDelta: s };
+		},
+		moveStateManager: new Df({ checkCorrectEvent: (e) => e.button === 0 && e.ctrlKey || e.button === 2 && !e.ctrlKey }),
+		enable: e,
+		assignEvents: Af
+	});
+}
+function Nf({ enable: e, clickTolerance: t, pitchSpeed: n = -.5 }) {
+	return new wf({
+		clickTolerance: t,
+		move: (e, t) => ({ pitchDelta: (t.y - e.y) * n }),
+		moveStateManager: new Df({ checkCorrectEvent: (e) => e.button === 0 && e.ctrlKey || e.button === 2 }),
+		enable: e,
+		assignEvents: Af
+	});
+}
+function Pf({ enable: e, clickTolerance: t, rollDegreesPerPixelMoved: n = .3 }, r) {
+	return new wf({
+		clickTolerance: t,
+		move: (e, t) => {
+			let i = r(), a = (t.x - e.x) * n;
+			return t.y < i.y && (a = -a), { rollDelta: a };
+		},
+		moveStateManager: new Df({ checkCorrectEvent: (e) => e.button === 2 && e.ctrlKey }),
+		enable: e,
+		assignEvents: Af
+	});
+}
+var Ff = class {
+	constructor(e, t) {
+		this._clickTolerance = e.clickTolerance || 1, this._map = t, this.reset();
+	}
+	reset() {
+		this._active = !1, this._touches = {}, this._sum = new l(0, 0);
+	}
+	_shouldBePrevented(e) {
+		return e < (this._map.cooperativeGestures.isEnabled() ? 2 : 1);
+	}
+	touchstart(e, t, n) {
+		return this._calculateTransform(e, t, n);
+	}
+	touchmove(e, t, n) {
+		if (this._active) {
+			if (this._shouldBePrevented(n.length)) {
+				this._map.cooperativeGestures.notifyGestureBlocked(`touch_pan`, e);
+				return;
+			}
+			return e.preventDefault(), this._calculateTransform(e, t, n);
+		}
+	}
+	touchend(e, t, n) {
+		this._calculateTransform(e, t, n), this._active && this._shouldBePrevented(n.length) && this.reset();
+	}
+	touchcancel() {
+		this.reset();
+	}
+	_calculateTransform(e, t, n) {
+		n.length > 0 && (this._active = !0);
+		let r = yf(n, t), i = new l(0, 0), a = new l(0, 0), o = 0;
+		for (let e in r) {
+			let t = r[e], n = this._touches[e];
+			n && (i._add(t), a._add(t.sub(n)), o++, r[e] = t);
+		}
+		if (this._touches = r, this._shouldBePrevented(o) || !a.mag()) return;
+		let s = a.div(o);
+		if (this._sum._add(s), !(this._sum.mag() < this._clickTolerance)) return {
+			around: i.div(o),
+			panDelta: s
+		};
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+};
+var If = class {
+	constructor() {
+		this.reset();
+	}
+	reset() {
+		this._active = !1, delete this._firstTwoTouches;
+	}
+	touchstart(e, t, n) {
+		this._firstTwoTouches || n.length < 2 || (this._firstTwoTouches = [n[0].identifier, n[1].identifier], this._start([t[0], t[1]]));
+	}
+	touchmove(e, t, n) {
+		if (!this._firstTwoTouches) return;
+		e.preventDefault();
+		let [r, i] = this._firstTwoTouches, a = Lf(n, t, r), o = Lf(n, t, i);
+		if (!a || !o) return;
+		let s = this._aroundCenter ? null : a.add(o).div(2);
+		return this._move([a, o], s, e);
+	}
+	touchend(e, t, n) {
+		if (!this._firstTwoTouches) return;
+		let [r, i] = this._firstTwoTouches, a = Lf(n, t, r), o = Lf(n, t, i);
+		a && o || (this._active && W.suppressClick(), this.reset());
+	}
+	touchcancel() {
+		this.reset();
+	}
+	enable(e) {
+		this._enabled = !0, this._aroundCenter = !!e && e.around === `center`;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return !!this._enabled;
+	}
+	isActive() {
+		return !!this._active;
+	}
+};
+function Lf(e, t, n) {
+	for (let r = 0; r < e.length; r++) if (e[r].identifier === n) return t[r];
+}
+var Rf = .1;
+function zf(e, t) {
+	return Math.log(e / t) / Math.LN2;
+}
+var Bf = class extends If {
+	constructor() {
+		super(), this._zoomRate = 1, this._zoomThreshold = Rf;
+	}
+	setZoomRate(e) {
+		this._zoomRate = e ?? 1;
+	}
+	setZoomThreshold(e) {
+		this._zoomThreshold = e ?? Rf;
+	}
+	reset() {
+		super.reset(), delete this._distance, delete this._startDistance;
+	}
+	_start(e) {
+		this._startDistance = this._distance = e[0].dist(e[1]);
+	}
+	_move(e, t) {
+		let n = this._distance;
+		if (this._distance = e[0].dist(e[1]), !(!this._active && Math.abs(zf(this._distance, this._startDistance)) < this._zoomThreshold)) return this._active = !0, {
+			zoomDelta: zf(this._distance, n) * this._zoomRate,
+			pinchAround: t
+		};
+	}
+};
+function Vf(e, t) {
+	return e.angleWith(t) * 180 / Math.PI;
+}
+var Hf = class extends If {
+	reset() {
+		super.reset(), delete this._minDiameter, delete this._startVector, delete this._vector;
+	}
+	_start(e) {
+		this._startVector = this._vector = e[0].sub(e[1]), this._minDiameter = e[0].dist(e[1]);
+	}
+	_move(e, t, n) {
+		let r = this._vector;
+		if (this._vector = e[0].sub(e[1]), !(!this._active && this._isBelowThreshold(this._vector))) return this._active = !0, {
+			bearingDelta: Vf(this._vector, r),
+			pinchAround: t
+		};
+	}
+	_isBelowThreshold(e) {
+		this._minDiameter = Math.min(this._minDiameter, e.mag());
+		let t = 25 / (Math.PI * this._minDiameter) * 360, n = Vf(e, this._startVector);
+		return Math.abs(n) < t;
+	}
+};
+function Uf(e) {
+	return Math.abs(e.y) > Math.abs(e.x);
+}
+var Wf = class extends If {
+	constructor(e) {
+		super(), this._currentTouchCount = 0, this._map = e;
+	}
+	reset() {
+		super.reset(), this._valid = void 0, delete this._firstMove, delete this._lastPoints;
+	}
+	touchstart(e, t, n) {
+		super.touchstart(e, t, n), this._currentTouchCount = n.length;
+	}
+	_start(e) {
+		this._lastPoints = e, Uf(e[0].sub(e[1])) && (this._valid = !1);
+	}
+	_move(e, t, n) {
+		if (this._map.cooperativeGestures.isEnabled() && this._currentTouchCount < 3) return;
+		let r = e[0].sub(this._lastPoints[0]), i = e[1].sub(this._lastPoints[1]);
+		if (this._valid = this.gestureBeginsVertically(r, i, n.timeStamp), this._valid) return this._lastPoints = e, this._active = !0, { pitchDelta: (r.y + i.y) / 2 * -.5 };
+	}
+	gestureBeginsVertically(e, t, n) {
+		if (this._valid !== void 0) return this._valid;
+		let r = e.mag() >= 2, i = t.mag() >= 2;
+		if (!r && !i) return;
+		if (!r || !i) return this._firstMove === void 0 && (this._firstMove = n), n - this._firstMove < 100 && void 0;
+		let a = e.y > 0 == t.y > 0;
+		return Uf(e) && Uf(t) && a;
+	}
+};
+var Gf = {
+	panStep: 100,
+	bearingStep: 15,
+	pitchStep: 10
+};
+var Kf = class {
+	constructor(e, t) {
+		this._tr = t;
+		let n = Gf;
+		this._panStep = n.panStep, this._bearingStep = n.bearingStep, this._pitchStep = n.pitchStep, this._rotationDisabled = !1;
+	}
+	reset() {
+		this._active = !1;
+	}
+	keydown(e) {
+		if (e.altKey || e.ctrlKey || e.metaKey) return;
+		let t = 0, n = 0, r = 0, i = 0, a = 0;
+		switch (e.keyCode) {
+			case 61:
+			case 107:
+			case 171:
+			case 187:
+				t = 1;
+				break;
+			case 189:
+			case 109:
+			case 173:
+				t = -1;
+				break;
+			case 37:
+				e.shiftKey ? n = -1 : (e.preventDefault(), i = -1);
+				break;
+			case 39:
+				e.shiftKey ? n = 1 : (e.preventDefault(), i = 1);
+				break;
+			case 38:
+				e.shiftKey ? r = 1 : (e.preventDefault(), a = -1);
+				break;
+			case 40:
+				e.shiftKey ? r = -1 : (e.preventDefault(), a = 1);
+				break;
+			default: return;
+		}
+		return this._rotationDisabled && (n = 0, r = 0), { cameraAnimation: (o) => {
+			let s = this._tr;
+			o.easeTo({
+				duration: 300,
+				easeId: `keyboardHandler`,
+				easing: qf,
+				zoom: t ? Ft(s.zoom + t * (e.shiftKey ? 2 : 1), o.getZoomSnap()) : s.zoom,
+				bearing: s.bearing + n * this._bearingStep,
+				pitch: s.pitch + r * this._pitchStep,
+				offset: [-i * this._panStep, -a * this._panStep],
+				center: s.center
+			}, { originalEvent: e });
+		} };
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+	disableRotation() {
+		this._rotationDisabled = !0;
+	}
+	enableRotation() {
+		this._rotationDisabled = !1;
+	}
+};
+function qf(e) {
+	return e * (2 - e);
+}
+var Jf = 4.000244140625;
+var Yf = class {
+	constructor(e, t, n) {
+		this._onTimeout = (e) => {
+			this._type = `wheel`, this._delta -= this._lastValue, this._active || this._start(e);
+		}, this._map = e, this._tr = n, this._triggerRenderFrame = t, this._delta = 0, this._defaultZoomRate = .01, this._wheelZoomRate = .0022222222222222222;
+	}
+	setZoomRate(e) {
+		this._defaultZoomRate = e;
+	}
+	setWheelZoomRate(e) {
+		this._wheelZoomRate = e;
+	}
+	isEnabled() {
+		return !!this._enabled;
+	}
+	isActive() {
+		return !!this._active || this._finishTimeout !== void 0;
+	}
+	isZooming() {
+		return !!this._zooming;
+	}
+	enable(e) {
+		this.isEnabled() || (this._enabled = !0, this._aroundCenter = !!e && e.around === `center`);
+	}
+	disable() {
+		this.isEnabled() && (this._enabled = !1);
+	}
+	_shouldBePrevented(e) {
+		return this._map.cooperativeGestures.isEnabled() ? !(e.ctrlKey || this._map.cooperativeGestures.isBypassed(e)) : !1;
+	}
+	wheel(e) {
+		if (!this.isEnabled()) return;
+		if (this._shouldBePrevented(e)) {
+			this._map.cooperativeGestures.notifyGestureBlocked(`wheel_zoom`, e);
+			return;
+		}
+		let t = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 40 : e.deltaY, n = U(), r = n - (this._lastWheelEventTime || 0);
+		this._lastWheelEventTime = n, t !== 0 && t % Jf == 0 ? this._type = `wheel` : t !== 0 && Math.abs(t) < 4 ? this._type = `trackpad` : r > 400 ? (this._type = null, this._lastValue = t, this._timeout = setTimeout(this._onTimeout, 40, e)) : this._type || (this._type = Math.abs(r * t) < 200 ? `trackpad` : `wheel`, this._timeout && (clearTimeout(this._timeout), this._timeout = null, t += this._lastValue)), e.shiftKey && t && (t /= 4), this._type && (this._lastWheelEvent = e, this._delta -= t, this._active || this._start(e)), e.preventDefault();
+	}
+	_start(e) {
+		if (!this._delta) return;
+		this._needsRerender = !1, this._active = !0, this.isZooming() || (this._zooming = !0), this._finishTimeout && (clearTimeout(this._finishTimeout), delete this._finishTimeout);
+		let t = W.mousePos(this._map.getCanvas(), e), n = this._tr;
+		this._aroundPoint = this._aroundCenter ? n.transform.locationToScreenPoint(dm$1.convert(n.center)) : t, this._needsRerender || (this._needsRerender = !0, this._triggerRenderFrame());
+	}
+	renderFrame() {
+		if (!this._needsRerender || (this._needsRerender = !1, !this.isActive())) return;
+		let e = this._tr.transform;
+		if (typeof this._lastExpectedZoom == `number`) {
+			let t = e.zoom - this._lastExpectedZoom;
+			typeof this._startZoom == `number` && (this._startZoom += t), typeof this._targetZoom == `number` && (this._targetZoom += t);
+		}
+		if (this._delta !== 0) {
+			let t = this._type === `wheel` && Math.abs(this._delta) > Jf ? this._wheelZoomRate : this._defaultZoomRate, n = 2 / (1 + Math.exp(-Math.abs(this._delta * t)));
+			this._delta < 0 && n !== 0 && (n = 1 / n);
+			let r = typeof this._targetZoom == `number` ? Nt(this._targetZoom) : e.scale, i = e.applyConstrain(e.getCameraLngLat(), Pt(r * n)).zoom, a = this._map.getZoomSnap();
+			if (this._type === `wheel` && a > 0) {
+				let t = Ft(e.zoom, a);
+				this._targetZoom = Ft(i, a, i - t);
+			} else this._targetZoom = i;
+			this._type === `wheel` && (this._startZoom = e.zoom, this._easing = this._smoothOutEasing(200)), this._delta = 0;
+		}
+		let t = typeof this._targetZoom == `number` ? this._targetZoom : e.zoom, n = this._startZoom, r = this._easing, i = !1, a;
+		if (this._type === `wheel` && n && r) {
+			let e = U() - this._lastWheelEventTime, o = Math.min((e + 5) / 200, 1), s = r(o);
+			a = Ni$1.number(n, t, s), o < 1 ? this._needsRerender = !0 : i = !0;
+		} else a = t, i = !0;
+		return this._active = !0, i && (this._active = !1, this._finishTimeout = setTimeout(() => {
+			this._zooming = !1, this._triggerRenderFrame(), delete this._targetZoom, delete this._lastExpectedZoom, delete this._finishTimeout;
+		}, 200)), this._lastExpectedZoom = a, {
+			noInertia: !0,
+			needsRenderFrame: !i,
+			zoomDelta: a - e.zoom,
+			around: this._aroundPoint,
+			originalEvent: this._lastWheelEvent
+		};
+	}
+	_smoothOutEasing(e) {
+		let n = wt;
+		if (this._prevEase) {
+			let e = this._prevEase, t = (U() - e.start) / e.duration, r = e.easing(t + .01) - e.easing(t), i = .27 / Math.sqrt(r * r + 1e-4) * .01;
+			n = Ct(i, Math.sqrt(.0729 - i * i), .25, 1);
+		}
+		return this._prevEase = {
+			start: U(),
+			duration: e,
+			easing: n
+		}, n;
+	}
+	reset() {
+		this._active = !1, this._zooming = !1, delete this._targetZoom, delete this._lastExpectedZoom, this._finishTimeout && (clearTimeout(this._finishTimeout), delete this._finishTimeout);
+	}
+};
+var Xf = class {
+	constructor(e, t) {
+		this._clickZoom = e, this._tapZoom = t;
+	}
+	enable() {
+		this._clickZoom.enable(), this._tapZoom.enable();
+	}
+	disable() {
+		this._clickZoom.disable(), this._tapZoom.disable();
+	}
+	isEnabled() {
+		return this._clickZoom.isEnabled() && this._tapZoom.isEnabled();
+	}
+	isActive() {
+		return this._clickZoom.isActive() || this._tapZoom.isActive();
+	}
+};
+var Zf = class {
+	constructor(e, t) {
+		this._tr = t, this.reset();
+	}
+	reset() {
+		this._active = !1;
+	}
+	dblclick(e, t) {
+		return e.preventDefault(), { cameraAnimation: (n) => {
+			n.easeTo({
+				duration: 300,
+				zoom: Ft(this._tr.zoom + (e.shiftKey ? -1 : 1), n.getZoomSnap()),
+				around: this._tr.unproject(t)
+			}, { originalEvent: e });
+		} };
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+};
+var Qf = class {
+	constructor() {
+		this._tap = new Sf({
+			numTouches: 1,
+			numTaps: 1
+		}), this._zoomRate = 1, this.reset();
+	}
+	setZoomRate(e) {
+		this._zoomRate = e ?? 1;
+	}
+	reset() {
+		this._active = !1, delete this._swipePoint, delete this._swipeTouch, delete this._tapTime, delete this._tapPoint, this._tap.reset();
+	}
+	touchstart(e, t, n) {
+		if (!this._swipePoint) {
+			if (!this._tapTime) this._tap.touchstart(e, t, n);
+			else {
+				let r = t[0], i = e.timeStamp - this._tapTime < 500, a = this._tapPoint.dist(r) < 30;
+				!i || !a ? this.reset() : n.length > 0 && (this._swipePoint = r, this._swipeTouch = n[0].identifier);
+			}
+		}
+	}
+	touchmove(e, t, n) {
+		if (!this._tapTime) this._tap.touchmove(e, t, n);
+		else if (this._swipePoint) {
+			if (n[0].identifier !== this._swipeTouch) return;
+			let r = t[0], i = r.y - this._swipePoint.y;
+			return this._swipePoint = r, e.preventDefault(), this._active = !0, { zoomDelta: i / 128 * this._zoomRate };
+		}
+	}
+	touchend(e, t, n) {
+		if (this._tapTime) this._swipePoint && n.length === 0 && this.reset();
+		else {
+			let r = this._tap.touchend(e, t, n);
+			r && (this._tapTime = e.timeStamp, this._tapPoint = r);
+		}
+	}
+	touchcancel() {
+		this.reset();
+	}
+	enable() {
+		this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this.reset();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isActive() {
+		return this._active;
+	}
+};
+var $f = class {
+	constructor(e, t, n) {
+		this._el = e, this._mousePan = t, this._touchPan = n;
+	}
+	enable(e) {
+		this._inertiaOptions = e || {}, this._mousePan.enable(), this._touchPan.enable(), this._el.classList.add(`maplibregl-touch-drag-pan`);
+	}
+	disable() {
+		this._mousePan.disable(), this._touchPan.disable(), this._el.classList.remove(`maplibregl-touch-drag-pan`);
+	}
+	isEnabled() {
+		return this._mousePan.isEnabled() && this._touchPan.isEnabled();
+	}
+	isActive() {
+		return this._mousePan.isActive() || this._touchPan.isActive();
+	}
+};
+var ep = class {
+	constructor(e, t, n, r) {
+		this._pitchWithRotate = e.pitchWithRotate, this._rollEnabled = e.rollEnabled, this._mouseRotate = t, this._mousePitch = n, this._mouseRoll = r;
+	}
+	enable() {
+		this._mouseRotate.enable(), this._pitchWithRotate && this._mousePitch.enable(), this._rollEnabled && this._mouseRoll.enable();
+	}
+	disable() {
+		this._mouseRotate.disable(), this._mousePitch.disable(), this._mouseRoll.disable();
+	}
+	isEnabled() {
+		return this._mouseRotate.isEnabled() && (!this._pitchWithRotate || this._mousePitch.isEnabled()) && (!this._rollEnabled || this._mouseRoll.isEnabled());
+	}
+	isActive() {
+		return this._mouseRotate.isActive() || this._mousePitch.isActive() || this._mouseRoll.isActive();
+	}
+};
+var tp = class {
+	constructor(e, t, n, r) {
+		this._el = e, this._touchZoom = t, this._touchRotate = n, this._tapDragZoom = r, this._rotationDisabled = !1, this._enabled = !0;
+	}
+	enable(e) {
+		this._touchZoom.enable(e), this._rotationDisabled || this._touchRotate.enable(e), this._tapDragZoom.enable(), this._el.classList.add(`maplibregl-touch-zoom-rotate`);
+	}
+	disable() {
+		this._touchZoom.disable(), this._touchRotate.disable(), this._tapDragZoom.disable(), this._el.classList.remove(`maplibregl-touch-zoom-rotate`);
+	}
+	isEnabled() {
+		return this._touchZoom.isEnabled() && (this._rotationDisabled || this._touchRotate.isEnabled()) && this._tapDragZoom.isEnabled();
+	}
+	isActive() {
+		return this._touchZoom.isActive() || this._touchRotate.isActive() || this._tapDragZoom.isActive();
+	}
+	setZoomRate(e) {
+		this._touchZoom.setZoomRate(e), this._tapDragZoom.setZoomRate(e);
+	}
+	setZoomThreshold(e) {
+		this._touchZoom.setZoomThreshold(e);
+	}
+	disableRotation() {
+		this._rotationDisabled = !0, this._touchRotate.disable();
+	}
+	enableRotation() {
+		this._rotationDisabled = !1, this._touchZoom.isEnabled() && this._touchRotate.enable();
+	}
+};
+var np = class {
+	constructor(e, t) {
+		this._bypassKey = navigator.userAgent.includes(`Mac`) ? `metaKey` : `ctrlKey`, this._map = e, this._options = t, this._enabled = !1;
+	}
+	isActive() {
+		return !1;
+	}
+	reset() {}
+	_setupUI() {
+		if (this._container) return;
+		let e = this._map.getCanvasContainer();
+		e.classList.add(`maplibregl-cooperative-gestures`), this._container = W.create(`div`, `maplibregl-cooperative-gesture-screen`, e);
+		let t = this._map._getUIString(`CooperativeGesturesHandler.WindowsHelpText`);
+		this._bypassKey === `metaKey` && (t = this._map._getUIString(`CooperativeGesturesHandler.MacHelpText`));
+		let n = this._map._getUIString(`CooperativeGesturesHandler.MobileHelpText`), r = document.createElement(`div`);
+		r.className = `maplibregl-desktop-message`, r.textContent = t, this._container.appendChild(r);
+		let i = document.createElement(`div`);
+		i.className = `maplibregl-mobile-message`, i.textContent = n, this._container.appendChild(i), this._container.setAttribute(`aria-hidden`, `true`);
+	}
+	_destroyUI() {
+		this._container && (this._container.remove(), this._map.getCanvasContainer().classList.remove(`maplibregl-cooperative-gestures`)), delete this._container;
+	}
+	enable() {
+		this._setupUI(), this._enabled = !0;
+	}
+	disable() {
+		this._enabled = !1, this._destroyUI();
+	}
+	isEnabled() {
+		return this._enabled;
+	}
+	isBypassed(e) {
+		return e[this._bypassKey];
+	}
+	notifyGestureBlocked(e, t) {
+		this._enabled && (this._map.fire(new Hr(`cooperativegestureprevented`, {
+			gestureType: e,
+			originalEvent: t
+		})), this._container.classList.add(`maplibregl-show`), setTimeout(() => {
+			this._container.classList.remove(`maplibregl-show`);
+		}, 100));
+	}
+};
+var rp = class {
+	constructor(e) {
+		this._camera = e;
+	}
+	get transform() {
+		return this._camera._requestedCameraState || this._camera.transform;
+	}
+	get center() {
+		return {
+			lng: this.transform.center.lng,
+			lat: this.transform.center.lat
+		};
+	}
+	get zoom() {
+		return this.transform.zoom;
+	}
+	get pitch() {
+		return this.transform.pitch;
+	}
+	get bearing() {
+		return this.transform.bearing;
+	}
+	unproject(e) {
+		return this.transform.screenPointToLocation(l.convert(e), this._camera.terrain);
+	}
+};
+var ip = (e) => e.zoom || e.drag || e.roll || e.pitch || e.rotate;
+var ap = class extends Bn {};
+function op(e) {
+	return e.panDelta?.mag() || e.zoomDelta || e.bearingDelta || e.pitchDelta || e.rollDelta;
+}
+var sp = class {
+	get _ownerDocument() {
+		return this._el?.ownerDocument || document;
+	}
+	get _ownerWindow() {
+		return this._el?.ownerDocument?.defaultView || window;
+	}
+	constructor(e, t, n) {
+		this._terrainGestureAnchorElevation = null, this.handleWindowEvent = (e) => {
+			this.handleEvent(e, `${e.type}Window`);
+		}, this.handleEvent = (e, t) => {
+			if (e.type === `blur`) {
+				this.stop(!0);
+				return;
+			}
+			this._updatingCamera = !0;
+			let n = e.type === `renderFrame` ? void 0 : e, r = { needsRenderFrame: !1 }, i = {}, a = {};
+			for (let { handlerName: o, handler: s, allowed: c } of this._handlers) {
+				if (!s.isEnabled()) continue;
+				let l;
+				if (this._blockedByActive(a, c, o)) s.reset();
+				else if (s[t || e.type]) {
+					if (_n(e, t || e.type)) {
+						let n = W.mousePos(this._map.getCanvas(), e);
+						l = s[t || e.type](e, n);
+					} else if (gn(e, t || e.type)) {
+						let n = e.touches, r = this._getMapTouches(n), i = W.touchPos(this._map.getCanvas(), r);
+						l = s[t || e.type](e, i, r);
+					} else vn(t || e.type) || (l = s[t || e.type](e));
+					this.mergeHandlerResult(r, i, l, o, n), l?.needsRenderFrame && this._triggerRenderFrame();
+				}
+				(l || s.isActive()) && (a[o] = s);
+			}
+			let o = {};
+			for (let e in this._previousActiveHandlers) a[e] || (o[e] = n);
+			this._previousActiveHandlers = a, (Object.keys(o).length || op(r)) && (this._changes.push([
+				r,
+				i,
+				o
+			]), this._triggerRenderFrame()), (Object.keys(a).length || op(r)) && this._camera.stop(!0), this._updatingCamera = !1;
+			let { cameraAnimation: s } = r;
+			s && (this._inertia.clear(), this._fireEvents({}, {}, !0), this._changes = [], s(this._map));
+		}, this._map = e, this._camera = t, this._transformProvider = new rp(this._camera), this._el = this._map.getCanvasContainer(), this._handlers = [], this._handlersById = {}, this._changes = [], this._inertia = new pf(e), this._bearingSnap = n.bearingSnap, this._previousActiveHandlers = {}, this._eventsInProgress = {}, this._addDefaultHandlers(n);
+		let r = this._el;
+		this._listeners = [
+			[
+				r,
+				`touchstart`,
+				{ passive: !0 }
+			],
+			[
+				r,
+				`touchmove`,
+				{ passive: !1 }
+			],
+			[
+				r,
+				`touchend`,
+				void 0
+			],
+			[
+				r,
+				`touchcancel`,
+				void 0
+			],
+			[
+				r,
+				`mousedown`,
+				void 0
+			],
+			[
+				r,
+				`mousemove`,
+				void 0
+			],
+			[
+				r,
+				`mouseup`,
+				void 0
+			],
+			[
+				this._ownerDocument,
+				`mousemove`,
+				{ capture: !0 }
+			],
+			[
+				this._ownerDocument,
+				`mouseup`,
+				void 0
+			],
+			[
+				r,
+				`mouseover`,
+				void 0
+			],
+			[
+				r,
+				`mouseout`,
+				void 0
+			],
+			[
+				r,
+				`dblclick`,
+				void 0
+			],
+			[
+				r,
+				`click`,
+				void 0
+			],
+			[
+				r,
+				`keydown`,
+				{ capture: !1 }
+			],
+			[
+				r,
+				`keyup`,
+				void 0
+			],
+			[
+				r,
+				`wheel`,
+				{ passive: !1 }
+			],
+			[
+				r,
+				`contextmenu`,
+				void 0
+			],
+			[
+				this._ownerWindow,
+				`blur`,
+				void 0
+			]
+		];
+		for (let [e, t, n] of this._listeners) e.addEventListener(t, e === this._ownerDocument ? this.handleWindowEvent : this.handleEvent, n);
+	}
+	destroy() {
+		for (let [e, t, n] of this._listeners) e.removeEventListener(t, e === this._ownerDocument ? this.handleWindowEvent : this.handleEvent, n);
+	}
+	_addDefaultHandlers(e) {
+		let t = this._map, n = t.getCanvasContainer();
+		this._add(`mapEvent`, new gf(t, e));
+		let r = t.boxZoom = new vf(t, e, this._transformProvider);
+		this._add(`boxZoom`, r), e.interactive && e.boxZoom && r.enable();
+		let i = t.cooperativeGestures = new np(t, e.cooperativeGestures);
+		this._add(`cooperativeGestures`, i), e.cooperativeGestures && i.enable();
+		let a = new Cf(t, this._transformProvider), o = new Zf(t, this._transformProvider);
+		t.doubleClickZoom = new Xf(o, a), this._add(`tapZoom`, a), this._add(`clickZoom`, o), e.interactive && e.doubleClickZoom && t.doubleClickZoom.enable();
+		let s = new Qf();
+		this._add(`tapDragZoom`, s);
+		let c = t.touchPitch = new Wf(t);
+		this._add(`touchPitch`, c), e.interactive && e.touchPitch && t.touchPitch.enable(e.touchPitch);
+		let l = () => t.project(t.getCenter()), u = Mf(e, l), d = Nf(e), f = Pf(e, l);
+		t.dragRotate = new ep(e, u, d, f), this._add(`mouseRotate`, u, [`mousePitch`]), this._add(`mousePitch`, d, [`mouseRotate`, `mouseRoll`]), this._add(`mouseRoll`, f, [`mousePitch`]), e.interactive && e.dragRotate && t.dragRotate.enable();
+		let p = jf(e), m = new Ff(e, t);
+		t.dragPan = new $f(n, p, m), this._add(`mousePan`, p), this._add(`touchPan`, m, [`touchZoom`, `touchRotate`]), e.interactive && e.dragPan && t.dragPan.enable(e.dragPan);
+		let h = new Hf(), g = new Bf();
+		t.touchZoomRotate = new tp(n, g, h, s), this._add(`touchRotate`, h, [`touchPan`, `touchZoom`]), this._add(`touchZoom`, g, [`touchPan`, `touchRotate`]), e.interactive && e.touchZoomRotate && t.touchZoomRotate.enable(e.touchZoomRotate), this._add(`blockableMapEvent`, new _f(t));
+		let _ = t.scrollZoom = new Yf(t, () => this._triggerRenderFrame(), this._transformProvider);
+		this._add(`scrollZoom`, _, [`mousePan`]), e.interactive && e.scrollZoom && t.scrollZoom.enable(e.scrollZoom);
+		let v = t.keyboard = new Kf(t, this._transformProvider);
+		this._add(`keyboard`, v), e.interactive && e.keyboard && t.keyboard.enable();
+	}
+	_add(e, t, n) {
+		this._handlers.push({
+			handlerName: e,
+			handler: t,
+			allowed: n
+		}), this._handlersById[e] = t;
+	}
+	stop(e) {
+		if (!this._updatingCamera) {
+			for (let { handler: e } of this._handlers) e.reset();
+			this._inertia.clear(), this._fireEvents({}, {}, e), this._changes = [];
+		}
+	}
+	isActive() {
+		for (let { handler: e } of this._handlers) if (e.isActive()) return !0;
+		return !1;
+	}
+	isZooming() {
+		return !!this._eventsInProgress.zoom || this._map.scrollZoom.isZooming();
+	}
+	isRotating() {
+		return !!this._eventsInProgress.rotate;
+	}
+	isMoving() {
+		return !!ip(this._eventsInProgress) || this.isZooming();
+	}
+	_blockedByActive(e, t, n) {
+		for (let r in e) if (r !== n && !t?.includes(r)) return !0;
+		return !1;
+	}
+	_getMapTouches(e) {
+		let t = [];
+		for (let n of e) {
+			let e = n.target;
+			this._el.contains(e) && t.push(n);
+		}
+		return t;
+	}
+	mergeHandlerResult(e, t, n, r, i) {
+		if (!n) return;
+		Dt(e, n);
+		let a = {
+			handlerName: r,
+			originalEvent: n.originalEvent || i
+		};
+		n.zoomDelta !== void 0 && (t.zoom = a), n.panDelta !== void 0 && (t.drag = a), n.rollDelta !== void 0 && (t.roll = a), n.pitchDelta !== void 0 && (t.pitch = a), n.bearingDelta !== void 0 && (t.rotate = a);
+	}
+	_applyChanges() {
+		let e = {}, t = {}, n = {};
+		for (let [r, i, a] of this._changes) r.panDelta && (e.panDelta = (e.panDelta || new l(0, 0))._add(r.panDelta)), r.zoomDelta && (e.zoomDelta = (e.zoomDelta || 0) + r.zoomDelta), r.bearingDelta && (e.bearingDelta = (e.bearingDelta || 0) + r.bearingDelta), r.pitchDelta && (e.pitchDelta = (e.pitchDelta || 0) + r.pitchDelta), r.rollDelta && (e.rollDelta = (e.rollDelta || 0) + r.rollDelta), r.around !== void 0 && (e.around = r.around), r.pinchAround !== void 0 && (e.pinchAround = r.pinchAround), r.noInertia && (e.noInertia = r.noInertia), Dt(t, i), Dt(n, a);
+		this._updateMapTransform(e, t, n), this._changes = [];
+	}
+	_updateMapTransform(e, t, n) {
+		let r = this._map, i = this._camera.getTransformForUpdate(), a = r.terrain;
+		if (!op(e) && !(a && this._terrainMovement)) {
+			this._fireEvents(t, n, !0);
+			return;
+		}
+		this._camera.stop(!0);
+		let { panDelta: o, zoomDelta: s, bearingDelta: c, pitchDelta: l, rollDelta: u } = e, { around: d, aroundOnSurface: f } = this._resolveAround(e, a, i), p = a ? this._terrainGestureElevation(a, d, f, i, t) : void 0, m = {
+			panDelta: o,
+			zoomDelta: s,
+			rollDelta: u,
+			pitchDelta: l,
+			bearingDelta: c,
+			around: d,
+			aroundElevation: p
+		};
+		this._camera.cameraHelper.useGlobeControls && !i.isPointOnMapSurface(d) && (d = i.centerPoint);
+		let h = this._computePreZoomAroundLoc(i, d, o, p);
+		this._handleMapControls({
+			terrain: a,
+			tr: i,
+			deltasForHelper: m,
+			preZoomAroundLoc: h,
+			combinedEventsInProgress: t,
+			panDelta: o
+		}), this._camera.applyUpdatedTransform(i), this._map._update(), e.noInertia || this._inertia.record(e), this._fireEvents(t, n, !0);
+	}
+	_resolveAround(e, t, n) {
+		let r = e.pinchAround === void 0 ? e.around : e.pinchAround;
+		return r ||= this._camera.transform.centerPoint, t && !n.isPointOnMapSurface(r) ? {
+			around: n.centerPoint,
+			aroundOnSurface: !1
+		} : {
+			around: r,
+			aroundOnSurface: !0
+		};
+	}
+	_terrainGestureElevation(e, t, n, r, i) {
+		if (!n) return;
+		if (!this._terrainMovement && (i.drag || i.zoom)) {
+			let n = e.pointCoordinate(t);
+			this._terrainGestureAnchorElevation = n ? n.z : null;
+		}
+		if (this._terrainGestureAnchorElevation === null) return;
+		let a = this._terrainGestureAnchorElevation;
+		if (!(t.distSqr(r.centerPoint) < .01) && !(a - r.elevation >= .9 * (r.getCameraAltitude() - r.elevation))) return a;
+	}
+	_computePreZoomAroundLoc(e, t, n, r) {
+		if (t.distSqr(e.centerPoint) < .01) return e.center;
+		let i = n ? t.sub(n) : t;
+		return r === void 0 ? e.screenPointToLocation(i) : e.screenPointToLocationAtElevation(i, r);
+	}
+	_handleMapControls({ terrain: e, tr: t, deltasForHelper: n, preZoomAroundLoc: r, combinedEventsInProgress: i, panDelta: a }) {
+		let o = this._camera.cameraHelper;
+		if (o.handleMapControlsRollPitchBearingZoom(n, t), !e) {
+			o.handleMapControlsPan(n, t, r);
+			return;
+		}
+		if (o.useGlobeControls) {
+			!this._terrainMovement && (i.drag || i.zoom) && (this._terrainMovement = !0, this._camera.elevationFreeze = !0), o.handleMapControlsPan(n, t, r);
+			return;
+		}
+		if (!this._terrainMovement && (i.drag || i.zoom)) {
+			this._terrainMovement = !0, this._camera.elevationFreeze = !0, o.handleMapControlsPan(n, t, r);
+			return;
+		}
+		if (n.aroundElevation === void 0 && i.drag && this._terrainMovement && a) {
+			t.setCenter(t.screenPointToLocation(t.centerPoint.sub(a)));
+			return;
+		}
+		o.handleMapControlsPan(n, t, r);
+	}
+	_fireEvents(e, t, n) {
+		let r = ip(this._eventsInProgress), i = ip(e), a = {};
+		for (let t in e) {
+			let { originalEvent: n } = e[t];
+			this._eventsInProgress[t] || (a[`${t}start`] = n), this._eventsInProgress[t] = e[t];
+		}
+		!r && i && this._fireEvent(`movestart`, i.originalEvent);
+		for (let e in a) this._fireEvent(e, a[e]);
+		i && this._fireEvent(`move`, i.originalEvent);
+		for (let t in e) {
+			let { originalEvent: n } = e[t];
+			this._fireEvent(t, n);
+		}
+		let o = {}, s;
+		for (let e in this._eventsInProgress) {
+			let { handlerName: n, originalEvent: r } = this._eventsInProgress[e];
+			this._handlersById[n].isActive() || (delete this._eventsInProgress[e], s = t[n] || r, o[`${e}end`] = s);
+		}
+		for (let e in o) this._fireEvent(e, o[e]);
+		let c = ip(this._eventsInProgress), l = (r || i) && !c;
+		if (l && this._terrainMovement) {
+			this._camera.elevationFreeze = !1, this._terrainMovement = !1, this._terrainGestureAnchorElevation = null;
+			let e = this._camera.getTransformForUpdate();
+			this._map.getCenterClampedToGround() && e.recalculateZoomAndCenter(this._map.terrain), this._camera.applyUpdatedTransform(e);
+		}
+		if (n && l) {
+			this._updatingCamera = !0;
+			let e = this._inertia._onMoveEnd(this._map.dragPan._inertiaOptions), t = (e) => e !== 0 && -this._bearingSnap < e && e < this._bearingSnap;
+			e && (e.essential || !Fr.prefersReducedMotion) ? (t(e.bearing || this._map.getBearing()) && (e.bearing = 0), e.freezeElevation = !0, this._map.easeTo(e, { originalEvent: s })) : (this._map.fire(new G(`moveend`, { originalEvent: s })), t(this._map.getBearing()) && this._map.resetNorth()), this._updatingCamera = !1;
+		}
+	}
+	_fireEvent(e, t) {
+		this._map.fire(new G(e, t ? { originalEvent: t } : {}));
+	}
+	_requestFrame() {
+		return this._map.triggerRepaint(), this._map._renderTaskQueue.add((e) => {
+			delete this._frameId, this.handleEvent(new ap(`renderFrame`, { timeStamp: e })), this._applyChanges();
+		});
+	}
+	_triggerRenderFrame() {
+		this._frameId === void 0 && (this._frameId = this._requestFrame());
+	}
+};
+var cp = class extends Hn {
+	constructor(e) {
+		super(), this._renderFrameCallback = () => {
+			let e = Math.min((U() - this._easeStart) / this._easeOptions.duration, 1);
+			this._onEaseFrame(this._easeOptions.easing(e)), e < 1 && this._easeFrameId ? this._easeFrameId = this._requestRenderFrame(this._renderFrameCallback) : this.stop();
+		}, this.transform = new Is(), this.cameraHelper = new Bs(), e.minZoom !== void 0 && this.transform.setMinZoom(e.minZoom), e.maxZoom !== void 0 && this.transform.setMaxZoom(e.maxZoom), e.minPitch !== void 0 && this.transform.setMinPitch(e.minPitch), e.maxPitch !== void 0 && this.transform.setMaxPitch(e.maxPitch), e.renderWorldCopies !== void 0 && this.transform.setRenderWorldCopies(e.renderWorldCopies), e.transformConstrain !== null && this.transform.setConstrainOverride(e.transformConstrain), this._moving = !1, this._zooming = !1, this._bearingSnap = e.bearingSnap, this._zoomSnap = e.zoomSnap, this._requestRenderFrame = e.requestRenderFrame, this._cancelRenderFrame = e.cancelRenderFrame, this.terrain = e.terrain, this._centerClampedToGround = e.centerClampedToGround ?? !0, this.transformCameraUpdate = e.transformCameraUpdate ?? null, this._stopHandlers = e.stopHandlers ?? (() => {}), this.on(`moveend`, () => {
+			delete this._requestedCameraState;
+		});
+	}
+	migrateProjection(e, t) {
+		e.apply(this.transform, !0), this.transform = e, this.cameraHelper = t;
+	}
+	getCenter() {
+		return new dm$1(this.transform.center.lng, this.transform.center.lat);
+	}
+	setCenter(e, t) {
+		return this.jumpTo({ center: e }, t);
+	}
+	getCenterElevation() {
+		return this.transform.elevation;
+	}
+	setCenterElevation(e, t) {
+		return this.jumpTo({ elevation: e }, t), this;
+	}
+	getCenterClampedToGround() {
+		return this._centerClampedToGround;
+	}
+	setCenterClampedToGround(e) {
+		this._centerClampedToGround = e;
+	}
+	panBy(e, t, n) {
+		return e = l.convert(e).mult(-1), this.panTo(this.transform.center, Dt({ offset: e }, t), n);
+	}
+	panTo(e, t, n) {
+		return this.easeTo(Dt({ center: e }, t), n);
+	}
+	getZoom() {
+		return this.transform.zoom;
+	}
+	setZoom(e, t) {
+		return this.jumpTo({ zoom: e }, t), this;
+	}
+	zoomTo(e, t, n) {
+		return this.easeTo(Dt({ zoom: e }, t), n);
+	}
+	zoomIn(e, t) {
+		return this.zoomTo(Ft(this.getZoom() + 1, this._zoomSnap), e, t), this;
+	}
+	zoomOut(e, t) {
+		return this.zoomTo(Ft(this.getZoom() - 1, this._zoomSnap), e, t), this;
+	}
+	getVerticalFieldOfView() {
+		return this.transform.fov;
+	}
+	setVerticalFieldOfView(e, t) {
+		return e != this.transform.fov && (this.transform.setFov(e), this.fire(new G(`movestart`, t)).fire(new G(`move`, t)).fire(new G(`moveend`, t))), this;
+	}
+	getBearing() {
+		return this.transform.bearing;
+	}
+	setZoomSnap(e) {
+		return this._zoomSnap = e, this;
+	}
+	getZoomSnap() {
+		return this._zoomSnap;
+	}
+	setBearing(e, t) {
+		return this.jumpTo({ bearing: e }, t), this;
+	}
+	getPadding() {
+		return this.transform.padding;
+	}
+	setPadding(e, t) {
+		return this.jumpTo({ padding: e }, t), this;
+	}
+	rotateTo(e, t, n) {
+		return this.easeTo(Dt({ bearing: e }, t), n);
+	}
+	resetNorth(e, t) {
+		return this.rotateTo(0, Dt({ duration: 1e3 }, e), t), this;
+	}
+	resetNorthPitch(e, t) {
+		return this.easeTo(Dt({
+			bearing: 0,
+			pitch: 0,
+			roll: 0,
+			duration: 1e3
+		}, e), t), this;
+	}
+	snapToNorth(e, t) {
+		return Math.abs(this.getBearing()) < this._bearingSnap ? this.resetNorth(e, t) : this;
+	}
+	getPitch() {
+		return this.transform.pitch;
+	}
+	setPitch(e, t) {
+		return this.jumpTo({ pitch: e }, t), this;
+	}
+	getRoll() {
+		return this.transform.roll;
+	}
+	setRoll(e, t) {
+		return this.jumpTo({ roll: e }, t), this;
+	}
+	cameraForBounds(e, t) {
+		e = Ki.convert(e).adjustAntiMeridian();
+		let n = t?.bearing || 0;
+		return this._cameraForBoxAndBearing(e.getNorthWest(), e.getSouthEast(), n, t);
+	}
+	_cameraForBoxAndBearing(e, t, n, r) {
+		let i = {
+			top: 0,
+			bottom: 0,
+			right: 0,
+			left: 0
+		};
+		if (r = Dt({
+			padding: i,
+			offset: [0, 0],
+			maxZoom: this.transform.maxZoom
+		}, r), typeof r.padding == `number`) {
+			let e = r.padding;
+			r.padding = {
+				top: e,
+				bottom: e,
+				right: e,
+				left: e
+			};
+		}
+		let a = Dt(i, r.padding);
+		r.padding = a;
+		let o = this.transform, s = new Ki(e, t), c = this.cameraHelper.cameraForBoxAndBearing(r, a, s, n, o);
+		return c && this._zoomSnap && (c.zoom = Ft(c.zoom, this._zoomSnap, -1)), c;
+	}
+	fitBounds(e, t, n) {
+		return this._fitInternal(this.cameraForBounds(e, t), t, n);
+	}
+	fitScreenCoordinates(e, t, n, r, i) {
+		return this._fitInternal(this._cameraForBoxAndBearing(this.transform.screenPointToLocation(l.convert(e)), this.transform.screenPointToLocation(l.convert(t)), n, r), r, i);
+	}
+	_fitInternal(e, t, n) {
+		return e ? (t = Dt(e, t), delete t.padding, t.linear ? this.easeTo(t, n) : this.flyTo(t, n)) : this;
+	}
+	jumpTo(e, t) {
+		this.stop(), `zoom` in e && this._zoomSnap && (e.zoom = Ft(e.zoom, this._zoomSnap));
+		let n = this.getTransformForUpdate(), r = !1, i = !1, a = !1, o = n.zoom;
+		this.terrain && n.setElevation(this.terrain.getElevationForLngLatZoom(e.center ? dm$1.convert(e.center) : n.center, e.zoom || n.tileZoom)), this.cameraHelper.handleJumpToCenterZoom(n, e);
+		let s = n.zoom !== o;
+		return `elevation` in e && n.elevation !== +e.elevation && n.setElevation(+e.elevation), `bearing` in e && n.bearing !== +e.bearing && (r = !0, n.setBearing(+e.bearing)), `pitch` in e && n.pitch !== +e.pitch && (i = !0, n.setPitch(+e.pitch)), `roll` in e && n.roll !== +e.roll && (a = !0, n.setRoll(+e.roll)), e.padding != null && !n.isPaddingEqual(e.padding) && n.setPadding(e.padding), this.applyUpdatedTransform(n), this.fire(new G(`movestart`, t)).fire(new G(`move`, t)), s && this.fire(new G(`zoomstart`, t)).fire(new G(`zoom`, t)).fire(new G(`zoomend`, t)), r && this.fire(new G(`rotatestart`, t)).fire(new G(`rotate`, t)).fire(new G(`rotateend`, t)), i && this.fire(new G(`pitchstart`, t)).fire(new G(`pitch`, t)).fire(new G(`pitchend`, t)), a && this.fire(new G(`rollstart`, t)).fire(new G(`roll`, t)).fire(new G(`rollend`, t)), this.fire(new G(`moveend`, t));
+	}
+	calculateCameraOptionsFromTo(e, t, n, r = 0) {
+		let i = xm.fromLngLat(e, t), a = xm.fromLngLat(n, r), o = a.x - i.x, s = a.y - i.y, c = a.z - i.z, l = Math.hypot(o, s, c);
+		if (l === 0) throw Error(`Can't calculate camera options with same From and To`);
+		let u = Math.hypot(o, s), d = Pt(this.transform.cameraToCenterDistance / l / this.transform.tileSize), f = Math.atan2(o, -s) * 180 / Math.PI, p = Math.acos(u / l) * 180 / Math.PI;
+		return p = c < 0 ? 90 - p : 90 + p, {
+			center: a.toLngLat(),
+			elevation: r,
+			zoom: d,
+			pitch: p,
+			bearing: f
+		};
+	}
+	calculateCameraOptionsFromCameraLngLatAltRotation(e, t, n, r, i) {
+		let a = this.transform.calculateCenterFromCameraLngLatAlt(e, t, n, r);
+		return {
+			center: a.center,
+			elevation: a.elevation,
+			zoom: a.zoom,
+			bearing: n,
+			pitch: r,
+			roll: i
+		};
+	}
+	easeTo(e, n) {
+		this._stop(!1, e.easeId), e = Dt({
+			offset: [0, 0],
+			duration: 500,
+			easing: wt
+		}, e), `zoom` in e && this._zoomSnap && (e.zoom = Ft(e.zoom, this._zoomSnap)), (e.animate === !1 || !e.essential && Fr.prefersReducedMotion) && (e.duration = 0);
+		let r = this.getTransformForUpdate(), i = this.getBearing(), a = r.pitch, o = r.roll, s = `bearing` in e ? this._normalizeBearing(e.bearing, i) : i, c = `pitch` in e ? +e.pitch : a, l$15 = `roll` in e ? this._normalizeBearing(e.roll, o) : o, u = `padding` in e ? e.padding : r.padding, d = l.convert(e.offset), f, p;
+		e.around && (f = dm$1.convert(e.around), p = r.locationToScreenPoint(f));
+		let m = {
+			moving: this._moving,
+			zooming: this._zooming,
+			rotating: this._rotating,
+			pitching: this._pitching,
+			rolling: this._rolling
+		}, h = this.cameraHelper.handleEaseTo(r, {
+			bearing: s,
+			pitch: c,
+			roll: l$15,
+			padding: u,
+			around: f,
+			aroundPoint: p,
+			offsetAsPoint: d,
+			offset: e.offset,
+			zoom: e.zoom,
+			center: e.center
+		});
+		return this._rotating ||= i !== s, this._pitching ||= c !== a, this._rolling ||= l$15 !== o, this._padding = !r.isPaddingEqual(u), this._zooming ||= h.isZooming, this._easeId = e.easeId, this._prepareEase(n, e.noMoveStart, m), this.terrain && this._prepareElevation(h.elevationCenter), this._ease((t) => {
+			h.easeFunc(t), this.terrain && !e.freezeElevation && this._updateElevation(t), this.applyUpdatedTransform(r), this._fireMoveEvents(n);
+		}, (t) => {
+			this.terrain && e.freezeElevation && this._finalizeElevation(), this._afterEase(n, t);
+		}, e), this;
+	}
+	_prepareEase(e, t, n = {}) {
+		this._moving = !0, !t && !n.moving && this.fire(new G(`movestart`, e)), this._zooming && !n.zooming && this.fire(new G(`zoomstart`, e)), this._rotating && !n.rotating && this.fire(new G(`rotatestart`, e)), this._pitching && !n.pitching && this.fire(new G(`pitchstart`, e)), this._rolling && !n.rolling && this.fire(new G(`rollstart`, e));
+	}
+	_prepareElevation(e) {
+		this._elevationCenter = e, this._elevationStart = this.transform.elevation, this._elevationTarget = this.terrain.getElevationForLngLatZoom(e, this.transform.tileZoom), this.elevationFreeze = !0;
+	}
+	_updateElevation(e) {
+		(this._elevationStart === void 0 || this._elevationCenter === void 0) && this._prepareElevation(this.transform.center), this.transform.setMinElevationForCurrentTile(this.terrain.getMinTileElevationForLngLatZoom(this._elevationCenter, this.transform.tileZoom));
+		let t = this.terrain.getElevationForLngLatZoom(this._elevationCenter, this.transform.tileZoom);
+		if (e < 1 && t !== this._elevationTarget) {
+			let n = this._elevationTarget - this._elevationStart, r = (t - (n * e + this._elevationStart)) / (1 - e);
+			this._elevationStart += e * (n - r), this._elevationTarget = t;
+		}
+		this.transform.setElevation(Ni$1.number(this._elevationStart, this._elevationTarget, e));
+	}
+	_finalizeElevation() {
+		this.elevationFreeze = !1, this.getCenterClampedToGround() && this.transform.recalculateZoomAndCenter(this.terrain);
+	}
+	getTransformForUpdate() {
+		return !this.transformCameraUpdate && !this.terrain ? this.transform : (this._requestedCameraState ||= this.transform.clone(), this._requestedCameraState);
+	}
+	_elevateCameraIfInsideTerrain(e) {
+		if (!this.terrain && e.elevation >= 0 && e.pitch <= 90) return {};
+		let t = e.getCameraLngLat(), n = e.getCameraAltitude(), r = this.terrain ? this.terrain.getElevationForLngLatZoom(t, e.zoom) : 0;
+		if (n < r) {
+			let n = this.calculateCameraOptionsFromTo(t, r, e.center, e.elevation);
+			return {
+				pitch: n.pitch,
+				zoom: n.zoom
+			};
+		}
+		return {};
+	}
+	applyUpdatedTransform(e) {
+		let t = [];
+		if (t.push((e) => this._elevateCameraIfInsideTerrain(e)), this.transformCameraUpdate && t.push((e) => this.transformCameraUpdate(e)), !t.length) return;
+		let n = e.clone();
+		for (let e of t) {
+			let t = n.clone(), { center: r, zoom: i, roll: a, pitch: o, bearing: s, elevation: c } = e(t);
+			r && t.setCenter(r), c !== void 0 && t.setElevation(c), i !== void 0 && t.setZoom(i), a !== void 0 && t.setRoll(a), o !== void 0 && t.setPitch(o), s !== void 0 && t.setBearing(s), n.apply(t, !1);
+		}
+		this.transform.apply(n, !1);
+	}
+	_fireMoveEvents(e) {
+		this.fire(new G(`move`, e)), this._zooming && this.fire(new G(`zoom`, e)), this._rotating && this.fire(new G(`rotate`, e)), this._pitching && this.fire(new G(`pitch`, e)), this._rolling && this.fire(new G(`roll`, e));
+	}
+	_afterEase(e, t) {
+		if (this._easeId && t && this._easeId === t) return;
+		delete this._easeId;
+		let n = this._zooming, r = this._rotating, i = this._pitching, a = this._rolling;
+		this._moving = !1, this._zooming = !1, this._rotating = !1, this._pitching = !1, this._rolling = !1, this._padding = !1, n && this.fire(new G(`zoomend`, e)), r && this.fire(new G(`rotateend`, e)), i && this.fire(new G(`pitchend`, e)), a && this.fire(new G(`rollend`, e)), this.fire(new G(`moveend`, e));
+	}
+	flyTo(e, n) {
+		if (!e.essential && Fr.prefersReducedMotion) {
+			let t = Ot(e, [
+				`center`,
+				`zoom`,
+				`bearing`,
+				`pitch`,
+				`roll`,
+				`elevation`,
+				`padding`
+			]);
+			return this.jumpTo(t, n);
+		}
+		this.stop(), e = Dt({
+			offset: [0, 0],
+			speed: 1.2,
+			curve: 1.42,
+			easing: wt
+		}, e), `zoom` in e && this._zoomSnap && (e.zoom = Ft(e.zoom, this._zoomSnap));
+		let r = this.getTransformForUpdate(), i = r.bearing, a = r.pitch, o = r.roll, s = r.padding, c = `bearing` in e ? this._normalizeBearing(e.bearing, i) : i, l$16 = `pitch` in e ? +e.pitch : a, u = `roll` in e ? this._normalizeBearing(e.roll, o) : o, d = `padding` in e ? e.padding : r.padding, f = l.convert(e.offset), p = r.centerPoint.add(f), m = r.screenPointToLocation(p), h = this.cameraHelper.handleFlyTo(r, {
+			bearing: c,
+			pitch: l$16,
+			roll: u,
+			padding: d,
+			locationAtOffset: m,
+			offsetAsPoint: f,
+			center: e.center,
+			minZoom: e.minZoom,
+			zoom: e.zoom
+		}), g = e.curve, _ = Math.max(r.width, r.height), v = _ / h.scaleOfZoom, y = h.pixelPathLength, b = _ / h.scaleOfMinZoom;
+		g = Math.min(g, Math.sqrt(b / y * 2));
+		let x = g * g;
+		function S(e) {
+			let t = (v * v - _ * _ + (e ? -1 : 1) * x * x * y * y) / (2 * (e ? v : _) * x * y);
+			return Math.log(Math.sqrt(t * t + 1) - t);
+		}
+		function C(e) {
+			return (Math.exp(e) - Math.exp(-e)) / 2;
+		}
+		function w(e) {
+			return (Math.exp(e) + Math.exp(-e)) / 2;
+		}
+		function T(e) {
+			return C(e) / w(e);
+		}
+		let E = S(!1), D = function(e) {
+			return w(E) / w(E + g * e);
+		}, O = function(e) {
+			return _ * ((w(E) * T(E + g * e) - C(E)) / x) / y;
+		}, k = (S(!0) - E) / g;
+		if (Math.abs(y) < 2e-6 || !isFinite(k)) {
+			if (Math.abs(_ - v) < 1e-6) return this.easeTo(e, n);
+			let t = v < _ ? -1 : 1;
+			k = Math.abs(Math.log(v / _)) / g, O = () => 0, D = (e) => Math.exp(t * g * e);
+		}
+		if (`duration` in e) e.duration = +e.duration;
+		else {
+			let t = `screenSpeed` in e ? +e.screenSpeed / g : +e.speed;
+			e.duration = 1e3 * k / t;
+		}
+		return e.maxDuration && e.duration > e.maxDuration && (e.duration = 0), this._zooming = !0, this._rotating = i !== c, this._pitching = l$16 !== a, this._rolling = u !== o, this._padding = !r.isPaddingEqual(d), this._prepareEase(n, !1), this.terrain && this._prepareElevation(h.targetCenter), this._ease((t) => {
+			let m = t * k, g = 1 / D(m), _ = O(m);
+			this._rotating && r.setBearing(Ni$1.number(i, c, t)), this._pitching && r.setPitch(Ni$1.number(a, l$16, t)), this._rolling && r.setRoll(Ni$1.number(o, u, t)), this._padding && (r.interpolatePadding(s, d, t), p = r.centerPoint.add(f)), h.easeFunc(t, g, _, p), this.terrain && !e.freezeElevation && this._updateElevation(t), this.applyUpdatedTransform(r), this._fireMoveEvents(n);
+		}, () => {
+			this.terrain && e.freezeElevation && this._finalizeElevation(), this._afterEase(n);
+		}, e), this;
+	}
+	isEasing() {
+		return !!this._easeFrameId;
+	}
+	stop(e) {
+		return this._stop(e);
+	}
+	_stop(e, t) {
+		if (this._easeFrameId && (this._cancelRenderFrame(this._easeFrameId), delete this._easeFrameId, delete this._onEaseFrame), this._onEaseEnd) {
+			let e = this._onEaseEnd;
+			delete this._onEaseEnd, e.call(this, t);
+		}
+		return e || this._stopHandlers(), this;
+	}
+	_ease(e, t, n) {
+		n.animate === !1 || n.duration === 0 ? (e(1), t()) : (this._easeStart = U(), this._easeOptions = n, this._onEaseFrame = e, this._onEaseEnd = t, this._easeFrameId = this._requestRenderFrame(this._renderFrameCallback));
+	}
+	_normalizeBearing(e, t) {
+		e = Et(e, -180, 180);
+		let n = Math.abs(e - t);
+		return Math.abs(e - 360 - t) < n && (e -= 360), Math.abs(e + 360 - t) < n && (e += 360), e;
+	}
+	isMoving() {
+		return this._moving;
+	}
+	isZooming() {
+		return this._zooming;
+	}
+	isRotating() {
+		return this._rotating;
+	}
+};
+var lp = {
+	compact: !0,
+	customAttribution: `<a href="https://maplibre.org/" target="_blank">MapLibre</a>`
+};
+var up = class {
+	constructor(e = lp) {
+		this._toggleAttribution = () => {
+			this._container.classList.contains(`maplibregl-compact`) && (this._container.classList.contains(`maplibregl-compact-show`) ? (this._container.setAttribute(`open`, ``), this._container.classList.remove(`maplibregl-compact-show`)) : (this._container.classList.add(`maplibregl-compact-show`), this._container.removeAttribute(`open`)));
+		}, this._updateData = (e) => {
+			e && (e.type === `terrain` || e.dataType === `style` || e.dataType === `source` && (e.sourceDataType === `metadata` || e.sourceDataType === `visibility`)) && this._updateAttributions();
+		}, this._updateCompact = () => {
+			this._map.getCanvasContainer().offsetWidth <= 640 || this._compact ? this._compact === !1 ? this._container.setAttribute(`open`, ``) : !this._container.classList.contains(`maplibregl-compact`) && !this._container.classList.contains(`maplibregl-attrib-empty`) && (this._container.setAttribute(`open`, ``), this._container.classList.add(`maplibregl-compact`, `maplibregl-compact-show`)) : (this._container.setAttribute(`open`, ``), this._container.classList.contains(`maplibregl-compact`) && this._container.classList.remove(`maplibregl-compact`, `maplibregl-compact-show`));
+		}, this._updateCompactMinimize = () => {
+			this._container.classList.contains(`maplibregl-compact`) && this._container.classList.contains(`maplibregl-compact-show`) && this._container.classList.remove(`maplibregl-compact-show`);
+		}, this.options = e;
+	}
+	getDefaultPosition() {
+		return `bottom-right`;
+	}
+	onAdd(e) {
+		return this._map = e, this._compact = this.options.compact, this._container = W.create(`details`, `maplibregl-ctrl maplibregl-ctrl-attrib`), this._compactButton = W.create(`summary`, `maplibregl-ctrl-attrib-button`, this._container), this._compactButton.addEventListener(`click`, this._toggleAttribution), this._setElementTitle(this._compactButton, `ToggleAttribution`), this._innerContainer = W.create(`div`, `maplibregl-ctrl-attrib-inner`, this._container), this._updateAttributions(), this._updateCompact(), this._map.on(`styledata`, this._updateData), this._map.on(`sourcedata`, this._updateData), this._map.on(`terrain`, this._updateData), this._map.on(`resize`, this._updateCompact), this._map.on(`drag`, this._updateCompactMinimize), this._container;
+	}
+	onRemove() {
+		this._container.remove(), this._map.off(`styledata`, this._updateData), this._map.off(`sourcedata`, this._updateData), this._map.off(`terrain`, this._updateData), this._map.off(`resize`, this._updateCompact), this._map.off(`drag`, this._updateCompactMinimize), this._map = void 0, this._compact = void 0, this._attribHTML = void 0;
+	}
+	_setElementTitle(e, t) {
+		let n = this._map._getUIString(`AttributionControl.${t}`);
+		e.title = n, e.setAttribute(`aria-label`, n);
+	}
+	_updateAttributions() {
+		if (!this._map.style) return;
+		let e = [];
+		if (this.options.customAttribution && (Array.isArray(this.options.customAttribution) ? e = e.concat(this.options.customAttribution.map((e) => typeof e == `string` ? e : ``)) : typeof this.options.customAttribution == `string` && e.push(this.options.customAttribution)), this._map.style.stylesheet) {
+			let e = this._map.style.stylesheet;
+			this.styleOwner = e.owner, this.styleId = e.id;
+		}
+		let t = this._map.style.tileManagers;
+		for (let n in t) {
+			let r = t[n];
+			if (r.used || r.usedForTerrain) {
+				let t = r.getSource();
+				t.attribution && !e.includes(t.attribution) && e.push(t.attribution);
+			}
+		}
+		e = e.filter((e) => String(e).trim()), e.sort((e, t) => e.length - t.length), e = e.filter((t, n) => {
+			for (let r = n + 1; r < e.length; r++) if (e[r].includes(t)) return !1;
+			return !0;
+		});
+		let n = e.join(` | `);
+		n !== this._attribHTML && (this._attribHTML = n, e.length ? (this._innerContainer.innerHTML = W.sanitize(n), this._container.classList.remove(`maplibregl-attrib-empty`)) : this._container.classList.add(`maplibregl-attrib-empty`), this._updateCompact(), this._editLink = null);
+	}
+};
+var dp = class {
+	constructor(e = {}) {
+		this._updateCompact = () => {
+			let e = this._container.children;
+			if (e.length) {
+				let t = e[0];
+				this._map.getCanvasContainer().offsetWidth <= 640 || this._compact ? this._compact !== !1 && t.classList.add(`maplibregl-compact`) : t.classList.remove(`maplibregl-compact`);
+			}
+		}, this.options = e;
+	}
+	getDefaultPosition() {
+		return `bottom-left`;
+	}
+	onAdd(e) {
+		this._map = e, this._compact = this.options?.compact, this._container = W.create(`div`, `maplibregl-ctrl`);
+		let t = W.create(`a`, `maplibregl-ctrl-logo`);
+		return t.target = `_blank`, t.rel = `noopener nofollow`, t.href = `https://maplibre.org/`, t.setAttribute(`aria-label`, this._map._getUIString(`LogoControl.Title`)), t.setAttribute(`rel`, `noopener nofollow`), this._container.appendChild(t), this._container.style.display = `block`, this._map.on(`resize`, this._updateCompact), this._updateCompact(), this._container;
+	}
+	onRemove() {
+		this._container.remove(), this._map.off(`resize`, this._updateCompact), this._map = void 0, this._compact = void 0;
+	}
+};
+var fp = class {
+	constructor() {
+		this._queue = [], this._id = 0, this._cleared = !1, this._currentlyRunning = !1;
+	}
+	add(e) {
+		let t = ++this._id;
+		return this._queue.push({
+			callback: e,
+			id: t,
+			cancelled: !1
+		}), t;
+	}
+	remove(e) {
+		let t = this._currentlyRunning, n = t ? this._queue.concat(t) : this._queue;
+		for (let t of n) if (t.id === e) {
+			t.cancelled = !0;
+			return;
+		}
+	}
+	run(e = 0) {
+		if (this._currentlyRunning) throw Error(`Attempting to run(), but is already running.`);
+		let t = this._currentlyRunning = this._queue;
+		this._queue = [];
+		for (let n of t) if (!n.cancelled && (n.callback(e), this._cleared)) break;
+		this._cleared = !1, this._currentlyRunning = !1;
+	}
+	clear() {
+		this._currentlyRunning && (this._cleared = !0), this._queue = [];
+	}
+};
+var pp = Ml$1([{
 	name: `a_pos3d`,
 	type: `Int16`,
 	components: 3
 }]);
-Cn.MAX_TILE_CACHE_ZOOM_LEVELS;
+var mp = class extends Hn {
+	constructor(e) {
+		super(), this._lastTilesetChange = U(), this.tileManager = e, this._tiles = {}, this._renderableTilesKeys = [], this._sourceTileCache = {}, this.minzoom = 0, this.maxzoom = 22, this.deltaZoom = 1, this.tileSize = e._source.tileSize * 2 ** this.deltaZoom, e.usedForTerrain = !0, e.tileSize = this.tileSize;
+	}
+	destruct() {
+		this.tileManager.usedForTerrain = !1, this.tileManager.tileSize = null, this.releaseAllRTT();
+	}
+	getSource() {
+		return this.tileManager._source;
+	}
+	update(e, t) {
+		this.tileManager.update(e, t), this._renderableTilesKeys = [];
+		let n = {};
+		for (let r of Ga(e, {
+			tileSize: this.tileSize,
+			minzoom: this.minzoom,
+			maxzoom: this.maxzoom,
+			reparseOverscaled: !1,
+			terrain: t,
+			calculateTileZoom: this.tileManager._source.calculateTileZoom
+		})) n[r.key] = !0, this._renderableTilesKeys.push(r.key), this._tiles[r.key] || (r.terrainRttPosMatrix32f = /* @__PURE__ */ new Float32Array(16), ie(r.terrainRttPosMatrix32f, 0, 8192, 8192, 0, 0, 1), this._tiles[r.key] = new Ia(r, this.tileSize), this._lastTilesetChange = U());
+		for (let e in this._tiles) n[e] || (this._tiles[e].releaseRTT(this.tileManager.map.painter), delete this._tiles[e]);
+	}
+	releaseRTT(e) {
+		for (let t in this._tiles) {
+			let n = this._tiles[t];
+			(n.tileID.equals(e) || n.tileID.isChildOf(e) || e.isChildOf(n.tileID)) && n.releaseRTT(this.tileManager.map.painter);
+		}
+	}
+	releaseAllRTT() {
+		for (let e in this._tiles) this._tiles[e].releaseRTT(this.tileManager.map.painter);
+	}
+	getRenderableTiles() {
+		return this._renderableTilesKeys.map((e) => this.getTileByID(e));
+	}
+	getTileByID(e) {
+		return this._tiles[e];
+	}
+	getTerrainCoords(e, t) {
+		return t ? this._getTerrainCoordsForTileRanges(e, t) : this._getTerrainCoordsForRegularTile(e);
+	}
+	_getTerrainCoordsForRegularTile(e) {
+		let t = {};
+		for (let n of this._renderableTilesKeys) {
+			let r = this._tiles[n].tileID, i = e.clone(), a = st();
+			if (r.canonical.equals(e.canonical)) ie(a, 0, j, j, 0, 0, 1);
+			else if (r.canonical.isChildOf(e.canonical)) {
+				let t = r.canonical.z - e.canonical.z, n = r.canonical.x - (r.canonical.x >> t << t), i = r.canonical.y - (r.canonical.y >> t << t), o = j >> t;
+				ie(a, 0, o, o, 0, 0, 1), E(a, a, [
+					-n * o,
+					-i * o,
+					0
+				]);
+			} else if (e.canonical.isChildOf(r.canonical)) {
+				let t = e.canonical.z - r.canonical.z, n = e.canonical.x - (e.canonical.x >> t << t), i = e.canonical.y - (e.canonical.y >> t << t), o = j >> t;
+				ie(a, 0, j, j, 0, 0, 1), E(a, a, [
+					n * o,
+					i * o,
+					0
+				]), D(a, a, [
+					1 / 2 ** t,
+					1 / 2 ** t,
+					0
+				]);
+			} else continue;
+			i.terrainRttPosMatrix32f = new Float32Array(a), t[n] = i;
+		}
+		return t;
+	}
+	_getTerrainCoordsForTileRanges(e, t) {
+		let n = {};
+		for (let r of this._renderableTilesKeys) {
+			let i = this._tiles[r].tileID;
+			if (!this._isWithinTileRanges(i, t)) continue;
+			let a = e.clone(), o = st();
+			if (i.canonical.z === e.canonical.z) {
+				let t = e.canonical.x - i.canonical.x + e.wrap * (1 << e.canonical.z), n = e.canonical.y - i.canonical.y;
+				ie(o, 0, j, j, 0, 0, 1), E(o, o, [
+					t * j,
+					n * j,
+					0
+				]);
+			} else if (i.canonical.z > e.canonical.z) {
+				let t = i.canonical.z - e.canonical.z, n = i.canonical.x - (i.canonical.x >> t << t) + e.wrap * (1 << i.canonical.z), r = i.canonical.y - (i.canonical.y >> t << t), a = e.canonical.x - (i.canonical.x >> t), s = e.canonical.y - (i.canonical.y >> t), c = j >> t;
+				ie(o, 0, c, c, 0, 0, 1), E(o, o, [
+					-n * c + a * j,
+					-r * c + s * j,
+					0
+				]);
+			} else {
+				let t = e.canonical.z - i.canonical.z, n = e.canonical.x - (e.canonical.x >> t << t) + e.wrap * (1 << e.canonical.z), r = e.canonical.y - (e.canonical.y >> t << t), a = (e.canonical.x >> t) - i.canonical.x, s = (e.canonical.y >> t) - i.canonical.y, c = j << t;
+				ie(o, 0, c, c, 0, 0, 1), E(o, o, [
+					n * j + a * c,
+					r * j + s * c,
+					0
+				]);
+			}
+			a.terrainRttPosMatrix32f = new Float32Array(o), n[r] = a;
+		}
+		return n;
+	}
+	getSourceTile(e, t) {
+		let n = this.tileManager._source, r = e.overscaledZ - this.deltaZoom;
+		if (r > n.maxzoom && (r = n.maxzoom), r < n.minzoom) return;
+		this._sourceTileCache[e.key] ||= e.scaledTo(r).key;
+		let i = this.findTileInCaches(this._sourceTileCache[e.key]);
+		if (!i?.dem && t) for (; r >= n.minzoom && !i?.dem;) i = this.findTileInCaches(e.scaledTo(r--).key);
+		return i;
+	}
+	findTileInCaches(e) {
+		let t = this.tileManager.getTileByID(e);
+		return t || (t = this.tileManager._outOfViewCache.getByKey(e), t);
+	}
+	anyTilesAfterTime(e = U()) {
+		return this._lastTilesetChange >= e;
+	}
+	_isWithinTileRanges(e, t) {
+		let n = t[e.canonical.z];
+		return !!n && (e.wrap > n.minWrap || e.wrap < n.maxWrap || e.canonical.x >= n.minTileXWrapped && e.canonical.x <= n.maxTileXWrapped && e.canonical.y >= n.minTileY && e.canonical.y <= n.maxTileY);
+	}
+};
+var hp = class {
+	constructor(e, t, n, r = `auto`) {
+		this._meshCache = {}, this.painter = e, this.tileManager = new mp(t), this.options = n, this.exaggeration = typeof n.exaggeration == `number` ? n.exaggeration : 1, this._terrainSkirtLength = r, this.qualityFactor = 2, this.meshSize = 128, this._demMatrixCache = /* @__PURE__ */ new Map(), this._elevationSamplerCache = /* @__PURE__ */ new Map(), this.coordsIndex = [], this._coordsTextureSize = 1024;
+	}
+	destroy() {
+		this._fbo &&= (this._fbo.destroy(), null), this._fboCoordsTexture &&= (this._fboCoordsTexture.destroy(), null), this._fboDepthTexture &&= (this._fboDepthTexture.destroy(), null), this._emptyDemTexture &&= (this._emptyDemTexture.destroy(), null), this._emptyDepthTexture &&= (this._emptyDepthTexture.destroy(), null), this._coordsTexture &&= (this._coordsTexture.destroy(), null);
+		for (let e in this._meshCache) this._meshCache[e].destroy();
+		this._meshCache = {}, this.tileManager.destruct();
+	}
+	getDEMElevation(e, t, n, r = j) {
+		let i = e.normalizeCoordinates(t, n, r);
+		if (!i) return 0;
+		let a = this._getElevationSampler(i.tileID);
+		return a ? a(i.x, i.y, r) : 0;
+	}
+	getElevationForLngLatZoom(e, t) {
+		if (!Nv(t, e.wrap())) return 0;
+		let { tileID: n, mercatorX: r, mercatorY: i } = this._getOverscaledTileIDFromLngLatZoom(e, t);
+		return this.getElevation(n, r % j, i % j, j);
+	}
+	getElevationForLngLat(e, t) {
+		let n = Ga(t, {
+			maxzoom: this.tileManager.maxzoom,
+			minzoom: this.tileManager.minzoom,
+			tileSize: 512,
+			terrain: this
+		}), r = 0;
+		for (let e of n) e.canonical.z > r && (r = Math.min(e.canonical.z, this.tileManager.maxzoom));
+		return this.getElevationForLngLatZoom(e, r);
+	}
+	getElevation(e, t, n, r = j) {
+		return this.getDEMElevation(e, t, n, r) * this.exaggeration;
+	}
+	resetElevationCache() {
+		this._elevationSamplerCache.clear();
+	}
+	_getElevationSampler(e) {
+		let t = e.key, n = this._elevationSamplerCache.get(t);
+		if (n) return n;
+		let r = this.tileManager.getSourceTile(e, !0), i = r?.dem;
+		if (!r || !i) return null;
+		let a = this._getDEMTileMatrix(e, r), o = a[0] * i.dim, s = a[5] * i.dim, c = a[12] * i.dim, l = a[13] * i.dim, u = (e, t, n) => {
+			let r = n === 8192 ? 1 : j / n;
+			return i.sampleBilinear(e * r * o + c, t * r * s + l);
+		};
+		return this._elevationSamplerCache.set(t, u), u;
+	}
+	_getDEMTileMatrix(e, t) {
+		let n = `${t.tileID.key}/${e.key}`, r = this._demMatrixCache.get(n);
+		if (r) return r;
+		let i = this.tileManager.getSource().maxzoom, a = e.canonical.z - t.tileID.canonical.z;
+		e.overscaledZ > e.canonical.z && (e.canonical.z >= i ? a = e.canonical.z - i : Vt(`cannot calculate elevation if elevation maxzoom > source.maxzoom`));
+		let o = e.canonical.x - (e.canonical.x >> a << a), s = e.canonical.y - (e.canonical.y >> a << a), c = ee(/* @__PURE__ */ new Float64Array(16), [
+			1 / (j << a),
+			1 / (j << a),
+			0
+		]);
+		return E(c, c, [
+			o * j,
+			s * j,
+			0
+		]), this._demMatrixCache.set(n, c), c;
+	}
+	getTerrainData(e) {
+		if (!this._emptyDemTexture) {
+			let e = this.painter.context, t = new mf$1({
+				width: 1,
+				height: 1
+			}, /* @__PURE__ */ new Uint8Array(4));
+			this._emptyDepthTexture = new kf$1(e, t, e.gl.RGBA, { premultiply: !1 }), this._emptyDemUnpack = [
+				0,
+				0,
+				0,
+				0
+			], this._emptyDemTexture = new kf$1(e, new mf$1({
+				width: 1,
+				height: 1
+			}), e.gl.RGBA, { premultiply: !1 }), this._emptyDemTexture.bind(e.gl.NEAREST, e.gl.CLAMP_TO_EDGE), this._emptyDemMatrix = C([]);
+		}
+		let t = this.tileManager.getSourceTile(e, !0);
+		if (t?.dem && (!t.demTexture || t.needsTerrainPrepare)) {
+			let e = this.painter.context;
+			t.demTexture ||= this.painter.getTileTexture(t.dem.stride), t.demTexture ? t.demTexture.update(t.dem.getPixels(), { premultiply: !1 }) : t.demTexture = new kf$1(e, t.dem.getPixels(), e.gl.RGBA, { premultiply: !1 }), t.demTexture.bind(e.gl.NEAREST, e.gl.CLAMP_TO_EDGE), t.needsTerrainPrepare = !1;
+		}
+		let n = t ? this._getDEMTileMatrix(e, t) : this._emptyDemMatrix;
+		return {
+			u_depth: 2,
+			u_terrain: 3,
+			u_terrain_dim: t?.dem?.dim || 1,
+			u_terrain_matrix: n,
+			u_terrain_unpack: t?.dem?.getUnpackVector() || this._emptyDemUnpack,
+			u_terrain_exaggeration: this.exaggeration,
+			texture: (t?.demTexture || this._emptyDemTexture).texture,
+			depthTexture: (this._fboDepthTexture || this._emptyDepthTexture).texture,
+			tile: t
+		};
+	}
+	getFramebuffer(e) {
+		let t = this.painter, n = t.width / devicePixelRatio, r = t.height / devicePixelRatio;
+		return this._fbo && (this._fbo.width !== n || this._fbo.height !== r) && (this._fbo.destroy(), this._fboCoordsTexture.destroy(), this._fboDepthTexture.destroy(), delete this._fbo, delete this._fboDepthTexture, delete this._fboCoordsTexture), this._fboCoordsTexture || (this._fboCoordsTexture = new kf$1(t.context, {
+			width: n,
+			height: r,
+			data: null
+		}, t.context.gl.RGBA, { premultiply: !1 }), this._fboCoordsTexture.bind(t.context.gl.NEAREST, t.context.gl.CLAMP_TO_EDGE)), this._fboDepthTexture || (this._fboDepthTexture = new kf$1(t.context, {
+			width: n,
+			height: r,
+			data: null
+		}, t.context.gl.RGBA, { premultiply: !1 }), this._fboDepthTexture.bind(t.context.gl.NEAREST, t.context.gl.CLAMP_TO_EDGE)), this._fbo || (this._fbo = t.context.createFramebuffer(n, r, !0, !1), this._fbo.depthAttachment.set(t.context.createRenderbuffer(t.context.gl.DEPTH_COMPONENT16, n, r))), this._fbo.colorAttachment.set(e === `coords` ? this._fboCoordsTexture.texture : this._fboDepthTexture.texture), this._fbo;
+	}
+	getCoordsTexture() {
+		let e = this.painter.context;
+		if (this._coordsTexture) return this._coordsTexture;
+		let t = new Uint8Array(this._coordsTextureSize * this._coordsTextureSize * 4);
+		for (let e = 0, n = 0; e < this._coordsTextureSize; e++) for (let r = 0; r < this._coordsTextureSize; r++, n += 4) t[n + 0] = r & 255, t[n + 1] = e & 255, t[n + 2] = r >> 8 << 4 | e >> 8, t[n + 3] = 0;
+		let r = new kf$1(e, new mf$1({
+			width: this._coordsTextureSize,
+			height: this._coordsTextureSize
+		}, new Uint8Array(t.buffer)), e.gl.RGBA, { premultiply: !1 });
+		return r.bind(e.gl.NEAREST, e.gl.CLAMP_TO_EDGE), this._coordsTexture = r, r;
+	}
+	pointCoordinate(e) {
+		this.painter.maybeDrawDepth(!0), this.painter.maybeDrawCoords();
+		let t = /* @__PURE__ */ new Uint8Array(4), n = this.painter.context, r = n.gl, i = Math.round(e.x * this.painter.pixelRatio / devicePixelRatio), a = Math.round(e.y * this.painter.pixelRatio / devicePixelRatio), o = Math.round(this.painter.height / devicePixelRatio);
+		n.bindFramebuffer.set(this.getFramebuffer(`coords`).framebuffer), r.readPixels(i, o - a - 1, 1, 1, r.RGBA, r.UNSIGNED_BYTE, t), n.bindFramebuffer.set(null);
+		let s = t[0] + (t[2] >> 4 << 8), c = t[1] + ((t[2] & 15) << 8), l = this.coordsIndex[255 - t[3]], u = l && this.tileManager.getTileByID(l);
+		if (!u) return null;
+		let d = this._coordsTextureSize, f = (1 << u.tileID.canonical.z) * d;
+		return new xm((u.tileID.canonical.x * d + s) / f + u.tileID.wrap, (u.tileID.canonical.y * d + c) / f, this.getElevation(u.tileID, s, c, d));
+	}
+	depthAtPoint(e) {
+		let t = /* @__PURE__ */ new Uint8Array(4), n = this.painter.context, r = n.gl;
+		return n.bindFramebuffer.set(this.getFramebuffer(`depth`).framebuffer), r.readPixels(e.x, this.painter.height / devicePixelRatio - e.y - 1, 1, 1, r.RGBA, r.UNSIGNED_BYTE, t), n.bindFramebuffer.set(null), (t[0] / 16777216 + t[1] / 65536 + t[2] / 256 + t[3]) / 256;
+	}
+	getTerrainMesh(e) {
+		let t = this.painter.style.projection?.transitionState > 0, n = t && e.canonical.y === 0, r = t && e.canonical.y === (1 << e.canonical.z) - 1, i = `m_${n ? `n` : ``}_${r ? `s` : ``}`;
+		if (this._meshCache[i]) return this._meshCache[i];
+		let a = this.painter.context, o = new vu$1(), s = new Pu$1(), c = this.meshSize, l = j / c, u = c * c;
+		for (let e = 0; e <= c; e++) for (let t = 0; t <= c; t++) o.emplaceBack(t * l, e * l, 0);
+		for (let e = 0; e < u; e += c + 1) for (let t = 0; t < c; t++) s.emplaceBack(t + e, c + t + e + 1, c + t + e + 2), s.emplaceBack(t + e, c + t + e + 2, t + e + 1);
+		this._terrainSkirtLength !== `none` && this._buildSkirts(o, s, c, l, n, r);
+		let d = new bs(a.createVertexBuffer(o, pp.members), a.createIndexBuffer(s), zu$1.simpleSegment(0, 0, o.length, s.length));
+		return this._meshCache[i] = d, d;
+	}
+	getSkirtLength(e) {
+		return 2 * Math.PI * um / 2 ** Math.max(e, 0) / 5;
+	}
+	getMinTileElevationForLngLatZoom(e, t) {
+		if (!Nv(t, e.wrap())) return 0;
+		let { tileID: n } = this._getOverscaledTileIDFromLngLatZoom(e, t);
+		return this.getMinMaxElevation(n).minElevation ?? 0;
+	}
+	getMinMaxElevation(e) {
+		let t = this.tileManager.getSourceTile(e, !0), n = {
+			minElevation: null,
+			maxElevation: null
+		};
+		return t?.dem && (n.minElevation = t.dem.min * this.exaggeration, n.maxElevation = t.dem.max * this.exaggeration), n;
+	}
+	_getOverscaledTileIDFromLngLatZoom(e, t) {
+		let n = xm.fromLngLat(e.wrap()), r = (1 << t) * j, i = n.x * r, a = n.y * r;
+		return {
+			tileID: new Iv(t, 0, t, Math.floor(i / j), Math.floor(a / j)),
+			mercatorX: i,
+			mercatorY: a
+		};
+	}
+	_buildSkirts(e, t, n, r, i, a) {
+		let o = e.length, s = o + (n + 1), c = (n + 1) * n, l = i ? Fp : 0, u = +!i, d = a ? Ip : j, f = +!a;
+		for (let t = 0; t <= n; t++) e.emplaceBack(t * r, l, u);
+		for (let t = 0; t <= n; t++) e.emplaceBack(t * r, d, f);
+		for (let e = 0; e < n; e++) t.emplaceBack(c + e, s + e, s + e + 1), t.emplaceBack(c + e, s + e + 1, c + e + 1), t.emplaceBack(0 + e, o + e + 1, o + e), t.emplaceBack(0 + e, 0 + e + 1, o + e + 1);
+		let p = e.length, m = p + (n + 1) * 2;
+		for (let t of [0, 1]) for (let i = 0; i <= n; i++) for (let n of [0, 1]) e.emplaceBack(t * j, i * r, n);
+		for (let e = 0; e < n * 2; e += 2) t.emplaceBack(p + e, p + e + 1, p + e + 3), t.emplaceBack(p + e, p + e + 3, p + e + 2), t.emplaceBack(m + e, m + e + 3, m + e + 1), t.emplaceBack(m + e, m + e + 2, m + e + 3);
+	}
+};
+var gp = {
+	background: !0,
+	fill: !0,
+	line: !0,
+	raster: !0,
+	hillshade: !0,
+	"color-relief": !0
+};
+var _p = class {
+	constructor(e, t) {
+		this.painter = e, this.terrain = t, this.rttSize = t.tileManager.tileSize * t.qualityFactor;
+	}
+	getTexture(e) {
+		return e.getRTT(this._stacks.length - 1).texture;
+	}
+	prepareForRender(e, t) {
+		this._stacks = [], this._prevType = null, this._rttTiles = [], this._renderableTiles = this.terrain.tileManager.getRenderableTiles(), this._renderableLayerIds = e._order.filter((n) => !e._layers[n].isHidden(t));
+		let n = /* @__PURE__ */ new Set();
+		for (let t of this._renderableLayerIds) {
+			let r = e._layers[t], i = r.source;
+			i && gp[r.type] && n.add(i);
+		}
+		this._coordsAscending = {}, this._rttFingerprints = {};
+		for (let t of n) {
+			let n = e.tileManagers[t];
+			if (!n) continue;
+			this._coordsAscending[t] = {};
+			let r = this._coordsAscending[t], i = n.getSource(), a = i instanceof va ? i.terrainTileRanges : null;
+			for (let e of n.getVisibleCoordinates()) {
+				let t = this.terrain.tileManager.getTerrainCoords(e, a);
+				for (let e in t) r[e] ||= [], r[e].push(t[e]);
+			}
+			this._rttFingerprints[t] = {};
+			let o = this._rttFingerprints[t], s = n.getState().revision;
+			for (let e in r) o[e] = `${r[e].map((e) => e.key).sort().join()}#${s}`;
+		}
+		for (let e of this._renderableTiles) for (let t in this._rttFingerprints) {
+			let n = this._rttFingerprints[t][e.tileID.key];
+			n && n !== e.rttFingerprint[t] && e.releaseRTT(this.painter);
+		}
+	}
+	renderLayer(e, t) {
+		if (e.isHidden(this.painter.transform.zoom)) return !1;
+		let n = {
+			...t,
+			isRenderingToTexture: !0
+		}, r = e.type, i = this.painter, a = this._renderableLayerIds[this._renderableLayerIds.length - 1] === e.id;
+		if (gp[r] && ((!this._prevType || !gp[this._prevType]) && this._stacks.push([]), this._prevType = r, this._stacks[this._stacks.length - 1].push(e.id), !a)) return !0;
+		if (gp[this._prevType] || gp[r] && a) {
+			this._prevType = r;
+			let e = this._stacks.length - 1, t = this._stacks[e] || [];
+			for (let r of this._renderableTiles) {
+				if (this._rttTiles.push(r), r.getRTT(e)) continue;
+				let a = r.acquireRTT(i, e, this.rttSize);
+				i.bindRTT(a), i.context.clear({
+					color: B.transparent,
+					stencil: 0
+				}), i.currentStencilSource = void 0;
+				for (let e of t) {
+					let t = i.style._layers[e], a = t.source ? this._coordsAscending[t.source][r.tileID.key] : [r.tileID];
+					i.context.viewport.set([
+						0,
+						0,
+						this.rttSize,
+						this.rttSize
+					]), i.renderTileClippingMasks(t, a, !0), i.renderLayer(i, i.style.tileManagers[t.source], t, a, n), t.source && (r.rttFingerprint[t.source] = this._rttFingerprints[t.source][r.tileID.key]);
+				}
+			}
+			return Xd(this.painter, this.terrain, this._rttTiles, n), this._rttTiles = [], gp[r];
+		}
+		return !1;
+	}
+};
+var vp = {
+	"AttributionControl.ToggleAttribution": `Toggle attribution`,
+	"AttributionControl.MapFeedback": `Map feedback`,
+	"FullscreenControl.Enter": `Enter fullscreen`,
+	"FullscreenControl.Exit": `Exit fullscreen`,
+	"GeolocateControl.FindMyLocation": `Find my location`,
+	"GeolocateControl.LocationNotAvailable": `Location not available`,
+	"LogoControl.Title": `MapLibre logo`,
+	"Map.Title": `Map`,
+	"Marker.Title": `Map marker`,
+	"NavigationControl.ResetBearing": `Drag to rotate map, click to reset north`,
+	"NavigationControl.ZoomIn": `Zoom in`,
+	"NavigationControl.ZoomOut": `Zoom out`,
+	"Popup.Close": `Close popup`,
+	"ScaleControl.Feet": `ft`,
+	"ScaleControl.Meters": `m`,
+	"ScaleControl.Kilometers": `km`,
+	"ScaleControl.Miles": `mi`,
+	"ScaleControl.NauticalMiles": `nm`,
+	"GlobeControl.Enable": `Enable globe`,
+	"GlobeControl.Disable": `Disable globe`,
+	"TerrainControl.Enable": `Enable terrain`,
+	"TerrainControl.Disable": `Disable terrain`,
+	"CooperativeGesturesHandler.WindowsHelpText": `Use Ctrl + scroll to zoom the map`,
+	"CooperativeGesturesHandler.MacHelpText": `Use ⌘ + scroll to zoom the map`,
+	"CooperativeGesturesHandler.MobileHelpText": `Use two fingers to move the map`
+};
+var yp = Dr;
+var bp = {
+	hash: !1,
+	interactive: !0,
+	bearingSnap: 7,
+	zoomSnap: 0,
+	attributionControl: lp,
+	maplibreLogo: !1,
+	refreshExpiredTiles: !0,
+	canvasContextAttributes: {
+		antialias: !1,
+		preserveDrawingBuffer: !1,
+		powerPreference: `high-performance`,
+		failIfMajorPerformanceCaveat: !1,
+		desynchronized: !1,
+		contextType: void 0
+	},
+	scrollZoom: !0,
+	minZoom: -2,
+	maxZoom: 22,
+	minPitch: 0,
+	maxPitch: 60,
+	boxZoom: !0,
+	dragRotate: !0,
+	dragPan: !0,
+	keyboard: !0,
+	doubleClickZoom: !0,
+	touchZoomRotate: !0,
+	touchPitch: !0,
+	cooperativeGestures: !1,
+	trackResize: !0,
+	center: [0, 0],
+	elevation: 0,
+	zoom: 0,
+	bearing: 0,
+	pitch: 0,
+	roll: 0,
+	renderWorldCopies: !0,
+	maxTileCacheSize: null,
+	maxTileCacheZoomLevels: Cn.MAX_TILE_CACHE_ZOOM_LEVELS,
+	transformRequest: null,
+	transformCameraUpdate: null,
+	transformConstrain: null,
+	fadeDuration: 300,
+	crossSourceCollisions: !0,
+	clickTolerance: 3,
+	localIdeographFontFamily: `sans-serif`,
+	pitchWithRotate: !0,
+	rollEnabled: !1,
+	rotateSpeed: .8,
+	pitchSpeed: -.5,
+	reduceMotion: void 0,
+	validateStyle: !0,
+	maxCanvasSize: [4096, 4096],
+	cancelPendingTileRequestsWhileZooming: !0,
+	centerClampedToGround: !0,
+	terrainSkirtLength: `auto`,
+	zoomLevelsToOverscale: 4,
+	anisotropicFilterPitch: 20
+};
+var xp = class extends Hn {
+	get _ownerWindow() {
+		return this._container?.ownerDocument?.defaultView || window;
+	}
+	constructor(e) {
+		super(), this._idleTriggered = !1, this._crossFadingFactor = 1, this._renderTaskQueue = new fp(), this._controls = [], this._mapId = At(), this._missingStyleImageResolver = null, this._lostContextStyle = {
+			style: null,
+			images: null
+		}, this._contextLost = (e) => {
+			if (e.preventDefault(), this._frameRequest &&= (this._frameRequest.abort(), null), this.painter.destroy(), this._lostContextStyle = this._getStyleAndImages(), !this.style) {
+				this.fire(new Zr(`webglcontextlost`, { originalEvent: e }));
+				return;
+			}
+			for (let e of Object.values(this.style._layers)) if (e.type === `custom` && console.warn(`Custom layer with id '${e.id}' cannot be restored after WebGL context loss. You will need to re-add it manually after context restoration.`), e._listeners) for (let [t] of Object.entries(e._listeners)) console.warn(`Custom layer with id '${e.id}' had event listeners for event '${t}' which cannot be restored after WebGL context loss. You will need to re-add them manually after context restoration.`);
+			this.style.destroy(), this.style = null, this.fire(new Zr(`webglcontextlost`, { originalEvent: e }));
+		}, this._contextRestored = (e) => {
+			if (this._lostContextStyle.style && this.setStyle(this._lostContextStyle.style, { diff: !1 }), this._lostContextStyle.images && this.style) {
+				this.style.imageManager.images = this._lostContextStyle.images;
+				for (let e in this._lostContextStyle.images) {
+					let t = this._lostContextStyle.images[e];
+					t.isWebGLImage && this.style.imageManager.updateImage(e, t, !1);
+				}
+			}
+			this._lostContextStyle = {
+				style: null,
+				images: null
+			}, this._setupPainter(), this.painter && (this.resize(), this._update(), this._resizeInternal(), this.fire(new Zr(`webglcontextrestored`, { originalEvent: e })));
+		}, this._onMapScroll = (e) => {
+			if (e.target === this._container) return this._container.scrollTop = 0, this._container.scrollLeft = 0, !1;
+		}, this._onWindowOnline = () => {
+			this._update();
+		};
+		let t = {
+			...bp,
+			...e,
+			canvasContextAttributes: {
+				...bp.canvasContextAttributes,
+				...e.canvasContextAttributes
+			}
+		};
+		if (t.minZoom != null && t.maxZoom != null && t.minZoom > t.maxZoom) throw Error(`maxZoom must be greater than or equal to minZoom`);
+		if (t.minPitch != null && t.maxPitch != null && t.minPitch > t.maxPitch) throw Error(`maxPitch must be greater than or equal to minPitch`);
+		if (t.minPitch != null && t.minPitch < 0) throw Error(`minPitch must be greater than or equal to 0`);
+		if (t.maxPitch != null && t.maxPitch > 180) throw Error(`maxPitch must be less than or equal to 180`);
+		if (this._camera = new cp({
+			minZoom: t.minZoom,
+			maxZoom: t.maxZoom,
+			minPitch: t.minPitch,
+			maxPitch: t.maxPitch,
+			bearingSnap: t.bearingSnap,
+			zoomSnap: t.zoomSnap,
+			renderWorldCopies: t.renderWorldCopies,
+			centerClampedToGround: t.centerClampedToGround,
+			terrain: this.terrain,
+			transformConstrain: t.transformConstrain,
+			requestRenderFrame: (e) => this._requestRenderFrame(e),
+			cancelRenderFrame: (e) => this._cancelRenderFrame(e),
+			transformCameraUpdate: t.transformCameraUpdate,
+			stopHandlers: () => this._handlers?.stop(!1)
+		}), this._camera.setEventedParent(this), this._interactive = t.interactive, this._maxTileCacheSize = t.maxTileCacheSize, this._maxTileCacheZoomLevels = t.maxTileCacheZoomLevels, this._canvasContextAttributes = { ...t.canvasContextAttributes }, this._trackResize = t.trackResize === !0, this._terrainSkirtLength = t.terrainSkirtLength, this._refreshExpiredTiles = t.refreshExpiredTiles === !0, this._fadeDuration = t.fadeDuration, this._crossSourceCollisions = t.crossSourceCollisions === !0, this._collectResourceTiming = t.collectResourceTiming === !0, this._locale = {
+			...vp,
+			...t.locale
+		}, this._clickTolerance = t.clickTolerance, this._overridePixelRatio = t.pixelRatio, this._maxCanvasSize = t.maxCanvasSize, this._zoomLevelsToOverscale = t.zoomLevelsToOverscale, this.cancelPendingTileRequestsWhileZooming = t.cancelPendingTileRequestsWhileZooming === !0, this.setAnisotropicFilterPitch(t.anisotropicFilterPitch), t.reduceMotion !== void 0 && (Fr.prefersReducedMotion = t.reduceMotion), this._imageQueueHandle = Br.addThrottleControl(() => this.isMoving()), this._requestManager = new Vr(t.transformRequest), this._container = this._resolveContainer(t.container), t.maxBounds && this.setMaxBounds(t.maxBounds), this._setupContainer(), this._setupPainter(), !this.painter) return;
+		this.on(`move`, () => this._update(!1)), this.on(`moveend`, () => this._update(!1)), this.on(`zoom`, () => this._update(!0)), this.on(`terrain`, () => {
+			this.painter.terrainFacilitator.depthDirty = !0, this._update(!0);
+		}), this.once(`idle`, () => this._idleTriggered = !0), this._handlers = new sp(this, this._camera, t), typeof window < `u` && (this._ownerWindow.addEventListener(`online`, this._onWindowOnline, !1), this._setupResizeObserver());
+		let n = typeof t.hash == `string` && t.hash || void 0;
+		this._hash = t.hash ? new of(n).addTo(this) : void 0, this._hash?._onHashChange() || (this.jumpTo({
+			center: t.center,
+			elevation: t.elevation,
+			zoom: t.zoom,
+			bearing: t.bearing,
+			pitch: t.pitch,
+			roll: t.roll
+		}), t.bounds && (this.resize(), this.fitBounds(t.bounds, Dt({}, t.fitBoundsOptions, { duration: 0 }))));
+		let r = typeof t.style == `string` || t.style?.projection?.type !== `globe`;
+		this.resize(null, r), this._localIdeographFontFamily = t.localIdeographFontFamily, this._validateStyle = t.validateStyle, t.style && this.setStyle(t.style, { localIdeographFontFamily: t.localIdeographFontFamily }), t.attributionControl && this.addControl(new up(typeof t.attributionControl == `boolean` ? void 0 : t.attributionControl)), t.maplibreLogo && this.addControl(new dp(), t.logoPosition), this.on(`style.load`, () => {
+			if (r || this._resizeTransform(), this._camera.transform.unmodified) {
+				let e = Ot(this.style.stylesheet, [
+					`center`,
+					`zoom`,
+					`bearing`,
+					`pitch`,
+					`roll`
+				]);
+				this.jumpTo(e);
+			}
+		}), this.on(`data`, (e) => {
+			this._update(e.dataType === `style`), this.fire(e.dataType === `style` ? new Wr(`styledata`, e) : new K(`sourcedata`, e));
+		}), this.on(`dataloading`, (e) => {
+			this.fire(e.dataType === `style` ? new Wr(`styledataloading`, e) : new K(`sourcedataloading`, e));
+		}), this.on(`dataabort`, (e) => {
+			this.fire(new K(`sourcedataabort`, e));
+		});
+	}
+	_getMapId() {
+		return this._mapId;
+	}
+	setGlobalStateProperty(e, t) {
+		return this.style.setGlobalStateProperty(e, t), this._update(!0);
+	}
+	getGlobalState() {
+		return this.style.getGlobalState();
+	}
+	addControl(e, t) {
+		if (t === void 0 && (t = e.getDefaultPosition ? e.getDefaultPosition() : `top-right`), !e?.onAdd) return this.fire(new Vn(Error(`Invalid argument to map.addControl(). Argument must be a control with onAdd and onRemove methods.`)));
+		let n = e.onAdd(this);
+		this._controls.push(e);
+		let r = this._controlPositions[t];
+		return t.includes(`bottom`) ? r.insertBefore(n, r.firstChild) : r.appendChild(n), this;
+	}
+	removeControl(e) {
+		if (!e?.onRemove) return this.fire(new Vn(Error(`Invalid argument to map.removeControl(). Argument must be a control with onAdd and onRemove methods.`)));
+		let t = this._controls.indexOf(e);
+		return t > -1 && this._controls.splice(t, 1), e.onRemove(this), this;
+	}
+	hasControl(e) {
+		return this._controls.includes(e);
+	}
+	coveringTiles(e) {
+		return Ga(this._camera.transform, e);
+	}
+	setTransformCameraUpdate(e) {
+		this._camera.transformCameraUpdate = e;
+	}
+	getCenter() {
+		return new dm$1(this._camera.transform.center.lng, this._camera.transform.center.lat);
+	}
+	setCenter(e, t) {
+		return this._camera.setCenter(e, t), this;
+	}
+	getCenterElevation() {
+		return this._camera.transform.elevation;
+	}
+	setCenterElevation(e, t) {
+		return this._camera.setCenterElevation(e, t), this;
+	}
+	setCenterClampedToGround(e) {
+		this._camera.setCenterClampedToGround(e);
+	}
+	panBy(e, t, n) {
+		return this._camera.panBy(e, t, n), this;
+	}
+	panTo(e, t, n) {
+		return this._camera.panTo(e, t, n), this;
+	}
+	getZoom() {
+		return this._camera.transform.zoom;
+	}
+	setZoom(e, t) {
+		return this._camera.setZoom(e, t), this;
+	}
+	zoomTo(e, t, n) {
+		return this._camera.zoomTo(e, t, n), this;
+	}
+	zoomIn(e, t) {
+		return this._camera.zoomIn(e, t), this;
+	}
+	zoomOut(e, t) {
+		return this._camera.zoomOut(e, t), this;
+	}
+	getVerticalFieldOfView() {
+		return this._camera.transform.fov;
+	}
+	setVerticalFieldOfView(e, t) {
+		return this._camera.setVerticalFieldOfView(e, t), this;
+	}
+	getBearing() {
+		return this._camera.transform.bearing;
+	}
+	setBearing(e, t) {
+		return this._camera.setBearing(e, t), this;
+	}
+	getZoomSnap() {
+		return this._camera.getZoomSnap();
+	}
+	setZoomSnap(e) {
+		return this._camera.setZoomSnap(e), this;
+	}
+	getPadding() {
+		return this._camera.transform.padding;
+	}
+	setPadding(e, t) {
+		return this._camera.setPadding(e, t), this;
+	}
+	rotateTo(e, t, n) {
+		return this._camera.rotateTo(e, t, n), this;
+	}
+	resetNorth(e, t) {
+		return this._camera.resetNorth(e, t), this;
+	}
+	resetNorthPitch(e, t) {
+		return this._camera.resetNorthPitch(e, t), this;
+	}
+	snapToNorth(e, t) {
+		return this._camera.snapToNorth(e, t), this;
+	}
+	getPitch() {
+		return this._camera.transform.pitch;
+	}
+	setPitch(e, t) {
+		return this._camera.setPitch(e, t), this;
+	}
+	getRoll() {
+		return this._camera.transform.roll;
+	}
+	setRoll(e, t) {
+		return this._camera.setRoll(e, t), this;
+	}
+	cameraForBounds(e, t) {
+		return this._camera.cameraForBounds(e, t);
+	}
+	fitBounds(e, t, n) {
+		return this._camera.fitBounds(e, t, n), this;
+	}
+	fitScreenCoordinates(e, t, n, r, i) {
+		return this._camera.fitScreenCoordinates(e, t, n, r, i), this;
+	}
+	jumpTo(e, t) {
+		return this._camera.jumpTo(e, t), this;
+	}
+	calculateCameraOptionsFromCameraLngLatAltRotation(e, t, n, r, i) {
+		return this._camera.calculateCameraOptionsFromCameraLngLatAltRotation(e, t, n, r, i);
+	}
+	easeTo(e, t) {
+		return this._camera.easeTo(e, t), this;
+	}
+	flyTo(e, t) {
+		return this._camera.flyTo(e, t), this;
+	}
+	stop() {
+		return this._camera.stop(), this;
+	}
+	queryTerrainElevation(e) {
+		return this.terrain ? this.terrain.getElevationForLngLat(dm$1.convert(e), this._camera.transform) : null;
+	}
+	getCenterClampedToGround() {
+		return this._camera.getCenterClampedToGround();
+	}
+	calculateCameraOptionsFromTo(e, t, n, r) {
+		return r == null && this.terrain && (r = this.terrain.getElevationForLngLat(n, this._camera.transform)), this._camera.calculateCameraOptionsFromTo(e, t, n, r);
+	}
+	resize(e, t = !0) {
+		if (this._lostContextStyle.style !== null) return this;
+		this._resizeInternal(t);
+		let n = !this._camera._moving;
+		return n && (this.stop(), this.fire(new G(`movestart`, e)).fire(new G(`move`, e))), this.fire(new Hr(`resize`, e)), n && this.fire(new G(`moveend`, e)), this;
+	}
+	_resizeInternal(e = !0) {
+		let [t, n] = this._containerDimensions(), r = this._getClampedPixelRatio(t, n);
+		if (this._resizeCanvas(t, n, r), this.painter.resize(t, n, r), this.painter.overLimit()) {
+			let e = this.painter.context.gl;
+			this._maxCanvasSize = [e.drawingBufferWidth, e.drawingBufferHeight];
+			let r = this._getClampedPixelRatio(t, n);
+			this._resizeCanvas(t, n, r), this.painter.resize(t, n, r);
+		}
+		this._resizeTransform(e);
+	}
+	_resizeTransform(e = !0) {
+		let [t, n] = this._containerDimensions();
+		this._camera.transform.resize(t, n, e), this._camera._requestedCameraState?.resize(t, n, e);
+	}
+	_getClampedPixelRatio(e, t) {
+		let { 0: n, 1: r } = this._maxCanvasSize, i = this.getPixelRatio(), a = e * i, o = t * i, s = a > n ? n / a : 1, c = o > r ? r / o : 1;
+		return Math.min(s, c) * i;
+	}
+	getPixelRatio() {
+		return this._overridePixelRatio ?? devicePixelRatio;
+	}
+	setPixelRatio(e) {
+		this._overridePixelRatio = e, this.resize();
+	}
+	getBounds() {
+		return this._camera.transform.getBounds();
+	}
+	getMaxBounds() {
+		return this._camera.transform.getMaxBounds();
+	}
+	setMaxBounds(e) {
+		return this._camera.transform.setMaxBounds(Ki.convert(e)), this._update();
+	}
+	setMinZoom(e) {
+		if (e ??= -2, e >= -2 && e <= this._camera.transform.maxZoom) {
+			let t = this._camera.transform.zoom, n = this._camera.getTransformForUpdate();
+			return n.setMinZoom(e), this._camera.applyUpdatedTransform(n), this._update(), t !== this._camera.transform.zoom && this.fire(new G(`zoomstart`)).fire(new G(`zoom`)).fire(new G(`zoomend`)).fire(new G(`movestart`)).fire(new G(`move`)).fire(new G(`moveend`)), this;
+		}
+		throw Error(`minZoom must be between -2 and the current maxZoom, inclusive`);
+	}
+	getMinZoom() {
+		return this._camera.transform.minZoom;
+	}
+	setMaxZoom(e) {
+		if (e ??= 22, e >= this._camera.transform.minZoom) {
+			let t = this._camera.transform.zoom, n = this._camera.getTransformForUpdate();
+			return n.setMaxZoom(e), this._camera.applyUpdatedTransform(n), this._update(), t !== this._camera.transform.zoom && this.fire(new G(`zoomstart`)).fire(new G(`zoom`)).fire(new G(`zoomend`)).fire(new G(`movestart`)).fire(new G(`move`)).fire(new G(`moveend`)), this;
+		}
+		throw Error(`maxZoom must be greater than the current minZoom`);
+	}
+	getMaxZoom() {
+		return this._camera.transform.maxZoom;
+	}
+	setMinPitch(e) {
+		if (e ??= 0, e < 0) throw Error(`minPitch must be greater than or equal to 0`);
+		if (e >= 0 && e <= this._camera.transform.maxPitch) {
+			let t = this._camera.transform.pitch, n = this._camera.getTransformForUpdate();
+			return n.setMinPitch(e), this._camera.applyUpdatedTransform(n), this._update(), t !== this._camera.transform.pitch && this.fire(new G(`pitchstart`)).fire(new G(`pitch`)).fire(new G(`pitchend`)).fire(new G(`movestart`)).fire(new G(`move`)).fire(new G(`moveend`)), this;
+		}
+		throw Error(`minPitch must be between 0 and the current maxPitch, inclusive`);
+	}
+	getMinPitch() {
+		return this._camera.transform.minPitch;
+	}
+	setMaxPitch(e) {
+		if (e ??= 60, e > 180) throw Error(`maxPitch must be less than or equal to 180`);
+		if (e >= this._camera.transform.minPitch) {
+			let t = this._camera.transform.pitch, n = this._camera.getTransformForUpdate();
+			return n.setMaxPitch(e), this._camera.applyUpdatedTransform(n), this._update(), t !== this._camera.transform.pitch && this.fire(new G(`pitchstart`)).fire(new G(`pitch`)).fire(new G(`pitchend`)).fire(new G(`movestart`)).fire(new G(`move`)).fire(new G(`moveend`)), this;
+		}
+		throw Error(`maxPitch must be greater than the current minPitch`);
+	}
+	getMaxPitch() {
+		return this._camera.transform.maxPitch;
+	}
+	getAnisotropicFilterPitch() {
+		return this._anisotropicFilterPitch;
+	}
+	setAnisotropicFilterPitch(e) {
+		if (e ??= 20, e > 180) throw Error(`anisotropicFilterPitch must be less than or equal to 180`);
+		if (e < 0) throw Error(`anisotropicFilterPitch must be greater than or equal to 0`);
+		return this._anisotropicFilterPitch = e, this._update();
+	}
+	getRenderWorldCopies() {
+		return this._camera.transform.renderWorldCopies;
+	}
+	setRenderWorldCopies(e) {
+		return this._camera.transform.setRenderWorldCopies(e), this._update();
+	}
+	setTransformConstrain(e) {
+		return this._camera.transform.setConstrainOverride(e), this._update();
+	}
+	project(e) {
+		return this._camera.transform.locationToScreenPoint(dm$1.convert(e), this.style && this.terrain);
+	}
+	unproject(e) {
+		return this._camera.transform.screenPointToLocation(l.convert(e), this.terrain);
+	}
+	isMoving() {
+		return this._camera.isMoving() || this._handlers?.isMoving() || !1;
+	}
+	isZooming() {
+		return this._camera.isZooming() || this._handlers?.isZooming() || !1;
+	}
+	isRotating() {
+		return this._camera.isRotating() || this._handlers?.isRotating() || !1;
+	}
+	_createDelegatedListener(e, t, n) {
+		if (e === `mouseenter` || e === `mouseover`) {
+			let r = !1;
+			return {
+				layers: t,
+				listener: n,
+				delegates: {
+					mousemove: (i) => {
+						let a = t.filter((e) => this.getLayer(e)), o = a.length === 0 ? [] : this.queryRenderedFeatures(i.point, { layers: a });
+						o.length ? r || (r = !0, n.call(this, new Gr(e, this, i.originalEvent, { features: o }))) : r = !1;
+					},
+					mouseout: () => {
+						r = !1;
+					}
+				}
+			};
+		}
+		if (e === `mouseleave` || e === `mouseout`) {
+			let r = !1;
+			return {
+				layers: t,
+				listener: n,
+				delegates: {
+					mousemove: (i) => {
+						let a = t.filter((e) => this.getLayer(e));
+						(a.length === 0 ? [] : this.queryRenderedFeatures(i.point, { layers: a })).length ? r = !0 : r && (r = !1, n.call(this, new Gr(e, this, i.originalEvent)));
+					},
+					mouseout: (t) => {
+						r && (r = !1, n.call(this, new Gr(e, this, t.originalEvent)));
+					}
+				}
+			};
+		}
+		{
+			let r = (e) => {
+				let r = t.filter((e) => this.getLayer(e)), i = r.length === 0 ? [] : this.queryRenderedFeatures(e.point, { layers: r });
+				i.length && (e.features = i, n.call(this, e), delete e.features);
+			};
+			return {
+				layers: t,
+				listener: n,
+				delegates: { [e]: r }
+			};
+		}
+	}
+	_saveDelegatedListener(e, t) {
+		this._delegatedListeners ||= {}, this._delegatedListeners[e] ||= [], this._delegatedListeners[e].push(t);
+	}
+	_removeDelegatedListener(e, t, n) {
+		if (!this._delegatedListeners?.[e]) return;
+		let r = this._delegatedListeners[e];
+		for (let e = 0; e < r.length; e++) {
+			let i = r[e];
+			if (i.listener === n && i.layers.length === t.length && i.layers.every((e) => t.includes(e))) {
+				for (let e in i.delegates) this.off(e, i.delegates[e]);
+				r.splice(e, 1);
+				return;
+			}
+		}
+	}
+	on(e, t, n) {
+		if (n === void 0) return super.on(e, t);
+		let r = typeof t == `string` ? [t] : t, i = this._createDelegatedListener(e, r, n);
+		this._saveDelegatedListener(e, i);
+		for (let e in i.delegates) this.on(e, i.delegates[e]);
+		return { unsubscribe: () => {
+			this._removeDelegatedListener(e, r, n);
+		} };
+	}
+	once(e, t, n) {
+		if (n === void 0) return super.once(e, t);
+		let r = typeof t == `string` ? [t] : t, i = this._createDelegatedListener(e, r, n);
+		for (let t in i.delegates) {
+			let a = i.delegates[t];
+			i.delegates[t] = (...t) => {
+				this._removeDelegatedListener(e, r, n), a(...t);
+			};
+		}
+		this._saveDelegatedListener(e, i);
+		for (let e in i.delegates) this.once(e, i.delegates[e]);
+		return this;
+	}
+	off(e, t, n) {
+		if (n === void 0) return super.off(e, t);
+		let r = typeof t == `string` ? [t] : t;
+		return this._removeDelegatedListener(e, r, n), this;
+	}
+	queryRenderedFeatures(e, t) {
+		if (!this.style) return [];
+		let n, r = e instanceof l || Array.isArray(e), i = r ? e : [[0, 0], [this._camera.transform.width, this._camera.transform.height]];
+		if (t ||= (r ? {} : e) || {}, i instanceof l || typeof i[0] == `number`) n = [l.convert(i)];
+		else {
+			let e = l.convert(i[0]), t = l.convert(i[1]);
+			n = [
+				e,
+				new l(t.x, e.y),
+				t,
+				new l(e.x, t.y),
+				e
+			];
+		}
+		return this.style.queryRenderedFeatures(n, t, this._camera.transform);
+	}
+	querySourceFeatures(e, t) {
+		return this.style.querySourceFeatures(e, t);
+	}
+	setStyle(e, t) {
+		return t = Dt({}, {
+			localIdeographFontFamily: this._localIdeographFontFamily,
+			validate: this._validateStyle
+		}, t), t.diff !== !1 && t.localIdeographFontFamily === this._localIdeographFontFamily && this.style && e ? (this._diffStyle(e, t), this) : (this._localIdeographFontFamily = t.localIdeographFontFamily, this._updateStyle(e, t));
+	}
+	setTransformRequest(e) {
+		return this._requestManager.setTransformRequest(e), this;
+	}
+	_getUIString(e) {
+		let t = this._locale[e];
+		if (t == null) throw Error(`Missing UI string '${e}'`);
+		return t;
+	}
+	_updateStyle(e, t) {
+		if (this._diffStyleRequest?.abort(), this._diffStyleRequest = null, t.transformStyle && this.style && !this.style._loaded) {
+			this.style.once(`style.load`, () => this._updateStyle(e, t));
+			return;
+		}
+		let n = this.style && t.transformStyle ? this.style.serialize() : void 0;
+		if (this.style && (this.style.setEventedParent(null), this.style._remove(!e)), e) this.style = new Cc(this, t || {});
+		else return this._frameRequest &&= (this._frameRequest.abort(), null), this.style?.projection?.destroy(), delete this.style, this;
+		return this.style.setEventedParent(this, { style: this.style }), typeof e == `string` ? this.style.loadURL(e, t, n) : this.style.loadJSON(e, t, n), this;
+	}
+	_lazyInitEmptyStyle() {
+		this.style || (this.style = new Cc(this, {}), this.style.setEventedParent(this, { style: this.style }), this.style.loadEmpty());
+	}
+	async _diffStyle(e, t) {
+		if (this._diffStyleRequest?.abort(), typeof e == `string`) {
+			let n = e;
+			this._diffStyleRequest = new AbortController();
+			let r = this._diffStyleRequest;
+			try {
+				let e = await this._requestManager.transformRequest(n, `Style`);
+				if (r.signal.aborted) {
+					this._diffStyleRequest = null;
+					return;
+				}
+				let i = await Pn(e, r);
+				this._diffStyleRequest = null, this._updateDiff(i.data, t);
+			} catch (e) {
+				this._diffStyleRequest = null, xn(e) || this.fire(new Vn(it(e)));
+			}
+		} else typeof e == `object` && (this._diffStyleRequest = null, this._updateDiff(e, t));
+	}
+	_updateDiff(e, t) {
+		try {
+			this.style.setState(e, t) && this._update(!0);
+		} catch (n) {
+			Vt(`Unable to perform style diff: ${it(n).message}.  Rebuilding the style from scratch.`), this._updateStyle(e, t);
+		}
+	}
+	getStyle() {
+		if (this.style) return this.style.serialize();
+	}
+	_getStyleAndImages() {
+		return this.style ? {
+			style: this.style.serialize(),
+			images: this.style.imageManager.cloneImages()
+		} : {
+			style: null,
+			images: {}
+		};
+	}
+	isStyleLoaded() {
+		if (!this.style) {
+			Vt(`There is no style added to the map.`);
+			return;
+		}
+		return this.style.loaded();
+	}
+	addSource(e, t) {
+		return this._lazyInitEmptyStyle(), this.style.addSource(e, t), this._update(!0);
+	}
+	isSourceLoaded(e) {
+		let t = this.style?.tileManagers[e];
+		if (t === void 0) {
+			this.fire(new Vn(Error(`There is no tile manager with ID '${e}'`)));
+			return;
+		}
+		return t.loaded();
+	}
+	setTerrain(e, t = {}) {
+		if (this.style._checkLoaded(), e && jc$1(this, Ec$1.terrain, { value: e }, t)) return this;
+		if (this._terrainDataCallback && this.style.off(`data`, this._terrainDataCallback), !e) this.terrain && this.terrain.destroy(), this.terrain = null, this.painter.renderToTexture = null, this._camera.terrain = null, this._camera.transform.setMinElevationForCurrentTile(0), this.getCenterClampedToGround() && this._camera.transform.setElevation(0);
+		else {
+			let t = this.style.tileManagers[e.source];
+			if (!t) throw Error(`cannot load terrain, because there exists no source with ID: ${e.source}`);
+			this.terrain === null && t.reload();
+			for (let t in this.style._layers) {
+				let n = this.style._layers[t];
+				n.type === `hillshade` && n.source === e.source && Vt(`You are using the same source for a hillshade layer and for 3D terrain. Please consider using two separate sources to improve rendering quality.`), n.type === `color-relief` && n.source === e.source && Vt(`You are using the same source for a color-relief layer and for 3D terrain. Please consider using two separate sources to improve rendering quality.`);
+			}
+			this.terrain && this.terrain.destroy(), this.terrain = new hp(this.painter, t, e, this._terrainSkirtLength), this.painter.renderToTexture = new _p(this.painter, this.terrain), this._camera.terrain = this.terrain, this._camera.transform.setMinElevationForCurrentTile(this.terrain.getMinTileElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom)), this._camera.transform.setElevation(this.terrain.getElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom)), this._terrainDataCallback = (t) => this._handleTerrainDataEvent(t, e.source), this.style.on(`data`, this._terrainDataCallback);
+		}
+		return this.fire(new Yr({ terrain: e })), this;
+	}
+	_handleTerrainDataEvent(e, t) {
+		if (e.dataType === `style`) {
+			this.terrain.tileManager.releaseAllRTT();
+			return;
+		}
+		let n = e.sourceId === t;
+		if (n && this.terrain.resetElevationCache(), n && e.tile && !this._camera.elevationFreeze && (this._camera.transform.setMinElevationForCurrentTile(this.terrain.getMinTileElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom)), this.getCenterClampedToGround() && this._camera.transform.setElevation(this.terrain.getElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom))), e.tile) {
+			if (e.source?.type === `image`) {
+				this.terrain.tileManager.releaseAllRTT();
+				return;
+			}
+			this.terrain.tileManager.releaseRTT(e.tile.tileID);
+		}
+	}
+	getTerrain() {
+		return this.terrain?.options ?? null;
+	}
+	areTilesLoaded() {
+		let e = this.style?.tileManagers;
+		for (let t of Object.values(e)) if (!t.areTilesLoaded()) return !1;
+		return !0;
+	}
+	removeSource(e) {
+		return this.style.removeSource(e), this._update(!0);
+	}
+	getSource(e) {
+		return this.style?.getSource(e);
+	}
+	setSourceTileLodParams(e, t, n) {
+		if (n) {
+			let r = this.getSource(n);
+			if (!r) throw Error(`There is no source with ID "${n}", cannot set LOD parameters`);
+			r.calculateTileZoom = Va(Math.max(1, e), Math.max(1, t));
+		} else for (let n in this.style.tileManagers) this.style.tileManagers[n].getSource().calculateTileZoom = Va(Math.max(1, e), Math.max(1, t));
+		return this._update(!0), this;
+	}
+	refreshTiles(e, t) {
+		let n = this.style.tileManagers[e];
+		if (!n) throw Error(`There is no tile manager with ID "${e}", cannot refresh tile`);
+		t === void 0 ? n.reload(!0) : n.refreshTiles(t.map((e) => new Pv(e.z, e.x, e.y)));
+	}
+	addImage(e, t, n = {}) {
+		this._lazyInitEmptyStyle();
+		let r = this._createStyleImage(t, n);
+		return r ? (this.style.addImage(e, r), r.userImage?.onAdd && r.userImage.onAdd(this, e), this) : this;
+	}
+	setMissingStyleImageResolver(e) {
+		return this._missingStyleImageResolver = e, this.style?.setMissingImageResolver(e), this;
+	}
+	_createStyleImage(e, t = {}) {
+		let { pixelRatio: n = 1, sdf: r = !1, stretchX: i, stretchY: a, content: o, textFitWidth: s, textFitHeight: c } = t;
+		if (e instanceof HTMLImageElement || Yt(e)) {
+			let { width: t, height: l, data: u } = Fr.getImageData(e);
+			return {
+				data: new mf$1({
+					width: t,
+					height: l
+				}, u),
+				pixelRatio: n,
+				stretchX: i,
+				stretchY: a,
+				content: o,
+				textFitWidth: s,
+				textFitHeight: c,
+				sdf: r,
+				version: 0
+			};
+		}
+		if (e.width === void 0 || e.height === void 0) return this.fire(new Vn(Error("Invalid arguments to map.addImage(). The second argument must be an `HTMLImageElement`, `ImageData`, `ImageBitmap`, or object with `width`, `height`, and `data` properties with the same format as `ImageData`"))), null;
+		{
+			let { width: t, height: l, data: u } = e, d = e, f = A_(d.data);
+			return {
+				data: f ? new mf$1({
+					width: t,
+					height: l
+				}) : new mf$1({
+					width: t,
+					height: l
+				}, new Uint8Array(u)),
+				pixelRatio: n,
+				stretchX: i,
+				stretchY: a,
+				content: o,
+				textFitWidth: s,
+				textFitHeight: c,
+				sdf: r,
+				version: 0,
+				isWebGLImage: f,
+				userImage: d
+			};
+		}
+	}
+	updateImage(e, t) {
+		let n = this.style.getImage(e);
+		if (!n) return this.fire(new Vn(Error("The map has no image with that id. If you are adding a new image use `map.addImage(...)` instead.")));
+		let { width: r, height: i, data: a } = t instanceof HTMLImageElement || Yt(t) ? Fr.getImageData(t) : t;
+		if (r === void 0 || i === void 0) return this.fire(new Vn(Error("Invalid arguments to map.updateImage(). The second argument must be an `HTMLImageElement`, `ImageData`, `ImageBitmap`, or object with `width`, `height`, and `data` properties with the same format as `ImageData`")));
+		if (r !== n.data.width || i !== n.data.height) return this.fire(new Vn(Error(`The width and height of the updated image must be that same as the previous version of the image`)));
+		if (n.isWebGLImage = A_(a), n.isWebGLImage) n.userImage = t;
+		else {
+			let e = !(t instanceof HTMLImageElement || Yt(t));
+			n.data.replace(a, e);
+		}
+		return this.style.updateImage(e, n), this;
+	}
+	getImage(e) {
+		return this.style.getImage(e);
+	}
+	hasImage(e) {
+		return e ? !!this.style.getImage(e) : (this.fire(new Vn(Error(`Missing required image id`))), !1);
+	}
+	removeImage(e) {
+		this.style.removeImage(e);
+	}
+	async loadImage(e) {
+		return Br.getImage(await this._requestManager.transformRequest(e, `Image`), new AbortController());
+	}
+	listImages() {
+		return this.style?.listImages() ?? [];
+	}
+	addLayer(e, t) {
+		return this._lazyInitEmptyStyle(), this.style.addLayer(e, t), this._update(!0);
+	}
+	moveLayer(e, t) {
+		return this.style.moveLayer(e, t), this._update(!0);
+	}
+	removeLayer(e) {
+		return this.style.removeLayer(e), this._update(!0);
+	}
+	getLayer(e) {
+		return this.style?.getLayer(e);
+	}
+	getLayersOrder() {
+		return this.style?.getLayersOrder() ?? [];
+	}
+	setLayerZoomRange(e, t, n) {
+		return this.style.setLayerZoomRange(e, t, n), this._update(!0);
+	}
+	setFilter(e, t, n = {}) {
+		return this.style?.setFilter(e, t, n), this._update(!0);
+	}
+	getFilter(e) {
+		return this.style.getFilter(e);
+	}
+	setPaintProperty(e, t, n, r = {}) {
+		return this.style?.setPaintProperty(e, t, n, r), this._update(!0);
+	}
+	getPaintProperty(e, t) {
+		return this.style.getPaintProperty(e, t);
+	}
+	setLayoutProperty(e, t, n, r = {}) {
+		return this.style.setLayoutProperty(e, t, n, r), this._update(!0);
+	}
+	getLayoutProperty(e, t) {
+		return this.style.getLayoutProperty(e, t);
+	}
+	setGlyphs(e, t = {}) {
+		return this._lazyInitEmptyStyle(), this.style.setGlyphs(e, t), this._update(!0);
+	}
+	getGlyphs() {
+		return this.style.getGlyphsUrl();
+	}
+	addSprite(e, t, n = {}) {
+		return this._lazyInitEmptyStyle(), this.style.addSprite(e, t, n, (e) => {
+			e || this._update(!0);
+		}), this;
+	}
+	removeSprite(e) {
+		return this._lazyInitEmptyStyle(), this.style.removeSprite(e), this._update(!0);
+	}
+	getSprite() {
+		return this.style.getSprite();
+	}
+	setSprite(e, t = {}) {
+		return this._lazyInitEmptyStyle(), this.style.setSprite(e, t, (e) => {
+			e || this._update(!0);
+		}), this;
+	}
+	setLight(e, t = {}) {
+		return this._lazyInitEmptyStyle(), this.style.setLight(e, t), this._update(!0);
+	}
+	getLight() {
+		return this.style.getLight();
+	}
+	setSky(e, t = {}) {
+		return this._lazyInitEmptyStyle(), this.style.setSky(e, t), this._update(!0);
+	}
+	getSky() {
+		return this.style.getSky();
+	}
+	setFeatureState(e, t) {
+		return this.style.setFeatureState(e, t), this._update();
+	}
+	removeFeatureState(e, t) {
+		return this.style.removeFeatureState(e, t), this._update();
+	}
+	getFeatureState(e) {
+		return this.style.getFeatureState(e);
+	}
+	getContainer() {
+		return this._container;
+	}
+	getCanvasContainer() {
+		return this._canvasContainer;
+	}
+	getCanvas() {
+		return this._canvas;
+	}
+	_containerDimensions() {
+		let e = 0, t = 0;
+		return this._container && (e = this._container.clientWidth || 400, t = this._container.clientHeight || 300), [e, t];
+	}
+	_setupResizeObserver() {
+		let e = !1, t = af((e) => {
+			this._trackResize && !this._removed && (this.resize(e), this.redraw());
+		}, 50), n = this._ownerWindow.ResizeObserver ?? ResizeObserver;
+		this._resizeObserver = new n((n) => {
+			if (!e) {
+				e = !0;
+				return;
+			}
+			t(n);
+		}), this._resizeObserver.observe(this._container);
+	}
+	_resolveContainer(e) {
+		if (typeof e == `string`) {
+			let t = document.getElementById(e);
+			if (!t) throw Error(`Container '${e}' not found.`);
+			return t;
+		}
+		if (e instanceof HTMLElement || e && typeof e == `object` && e.nodeType === 1) return e;
+		throw Error(`Invalid type: 'container' must be a String or HTMLElement.`);
+	}
+	_setupContainer() {
+		let e = this._container;
+		e.classList.add(`maplibregl-map`);
+		let t = this._canvasContainer = W.create(`div`, `maplibregl-canvas-container`, e);
+		this._interactive && t.classList.add(`maplibregl-interactive`), this._canvas = W.create(`canvas`, `maplibregl-canvas`, t), this._canvas.addEventListener(`webglcontextlost`, this._contextLost, !1), this._canvas.addEventListener(`webglcontextrestored`, this._contextRestored, !1), this._canvas.setAttribute(`tabindex`, this._interactive ? `0` : `-1`), this._canvas.setAttribute(`aria-label`, this._getUIString(`Map.Title`)), this._canvas.setAttribute(`role`, `region`);
+		let n = this._containerDimensions(), r = this._getClampedPixelRatio(n[0], n[1]);
+		this._resizeCanvas(n[0], n[1], r);
+		let i = this._controlContainer = W.create(`div`, `maplibregl-control-container`, e), a = this._controlPositions = {};
+		for (let e of [
+			`top-left`,
+			`top-right`,
+			`bottom-left`,
+			`bottom-right`
+		]) a[e] = W.create(`div`, `maplibregl-ctrl-${e} `, i);
+		this._container.addEventListener(`scroll`, this._onMapScroll, !1);
+	}
+	_resizeCanvas(e, t, n) {
+		this._canvas.width = Math.floor(n * e), this._canvas.height = Math.floor(n * t), this._canvas.style.width = `${e}px`, this._canvas.style.height = `${t}px`;
+	}
+	_setupPainter() {
+		let e = {
+			...this._canvasContextAttributes,
+			alpha: !0,
+			depth: !0,
+			stencil: !0,
+			premultipliedAlpha: !0
+		}, t = null;
+		this._canvas.addEventListener(`webglcontextcreationerror`, (e) => {
+			t = e;
+		}, { once: !0 });
+		let n = this._canvas.getContext(`webgl2`, e);
+		if (!n) {
+			this.fire(new Vn(new rf(e, t)));
+			return;
+		}
+		this.painter = new nf(n, this._camera.transform);
+	}
+	migrateProjection(e, t) {
+		this._camera.migrateProjection(e, t), this.painter.transform = e, this.fire(new Xr({ newProjection: this.style.projection.name }));
+	}
+	loaded() {
+		return !this._styleDirty && !this._sourcesDirty && !!this.style && this.style.loaded();
+	}
+	_update(e) {
+		return this.style?._loaded ? (this._styleDirty ||= e, this._sourcesDirty = !0, this.triggerRepaint(), this) : this;
+	}
+	_requestRenderFrame(e) {
+		return this._update(), this._renderTaskQueue.add(e);
+	}
+	_cancelRenderFrame(e) {
+		this._renderTaskQueue.remove(e);
+	}
+	_render(e) {
+		let t = this._idleTriggered ? this._fadeDuration : 0, n = this.style.projection?.transitionState > 0;
+		if (this.painter.context.setDirty(), this.painter.setBaseState(), this._renderTaskQueue.run(e), this._removed) return;
+		let r = !1;
+		if (this.style && this._styleDirty) {
+			this._styleDirty = !1;
+			let e = this._camera.transform.zoom, n = U();
+			this.style.zoomHistory.update(e, n);
+			let i = new G$1(e, {
+				now: n,
+				fadeDuration: t,
+				zoomHistory: this.style.zoomHistory,
+				transition: this.style.getTransition()
+			}), a = i.crossFadingFactor();
+			(a !== 1 || a !== this._crossFadingFactor) && (r = !0, this._crossFadingFactor = a), this.style.update(i);
+		}
+		let i = this.style.projection?.transitionState > 0 !== n;
+		this._camera.transform.setTransitionState(this.style.projection?.transitionState), this.style && (this._sourcesDirty || i) && (this._sourcesDirty = !1, this.style._updateSources(this._camera.transform)), this.terrain ? (this.terrain.tileManager.update(this._camera.transform, this.terrain), this.terrain.resetElevationCache(), this._camera.transform.setMinElevationForCurrentTile(this.terrain.getMinTileElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom)), !this._camera.elevationFreeze && this.getCenterClampedToGround() && this._camera.transform.setElevation(this.terrain.getElevationForLngLatZoom(this._camera.transform.center, this._camera.transform.tileZoom))) : (this._camera.transform.setMinElevationForCurrentTile(0), this.getCenterClampedToGround() && this._camera.transform.setElevation(0)), this._placementDirty = this.style?._updatePlacement(this._camera.transform, this.showCollisionBoxes, t, this._crossSourceCollisions, i), this.painter.render(this.style, {
+			showTileBoundaries: this.showTileBoundaries,
+			showOverdrawInspector: this._showOverdrawInspector,
+			rotating: this.isRotating(),
+			zooming: this.isZooming(),
+			moving: this.isMoving(),
+			fadeDuration: t,
+			showPadding: this.showPadding,
+			anisotropicFilterPitch: this.getAnisotropicFilterPitch()
+		}), this.fire(new Hr(`render`)), this.loaded() && !this._loaded && (this._loaded = !0, this.fire(new Hr(`load`))), this.style && (this.style.hasTransitions() || r) && (this._styleDirty = !0), this.style && !this._placementDirty && this.style._releaseSymbolFadeTiles();
+		let a = this._sourcesDirty || this._styleDirty || this._placementDirty;
+		return a || this._repaint ? this.triggerRepaint() : !this.isMoving() && this.loaded() && this.fire(new Hr(`idle`)), this._loaded && !this._fullyLoaded && !a && (this._fullyLoaded = !0), this;
+	}
+	redraw() {
+		return this.style && (this._frameRequest &&= (this._frameRequest.abort(), null), this._render(0)), this;
+	}
+	remove() {
+		this._hash && this._hash.remove();
+		for (let e of this._controls) e.onRemove(this);
+		this._controls = [], this._frameRequest &&= (this._frameRequest.abort(), null), this._renderTaskQueue.clear(), this._diffStyleRequest?.abort(), this.painter.destroy(), this._handlers.destroy(), this.setStyle(null), typeof window < `u` && this._ownerWindow.removeEventListener(`online`, this._onWindowOnline, !1), Br.removeThrottleControl(this._imageQueueHandle), this._resizeObserver?.disconnect();
+		let e = this.painter.context.gl.getExtension(`WEBGL_lose_context`);
+		e?.loseContext && e.loseContext(), this._canvas.removeEventListener(`webglcontextrestored`, this._contextRestored, !1), this._canvas.removeEventListener(`webglcontextlost`, this._contextLost, !1), this._canvasContainer.remove(), this._controlContainer.remove(), this._container.removeEventListener(`scroll`, this._onMapScroll, !1), this._container.classList.remove(`maplibregl-map`), this._removed = !0, this.fire(new Hr(`remove`));
+	}
+	triggerRepaint() {
+		this.style && !this._frameRequest && (this._frameRequest = new AbortController(), Fr.frame(this._frameRequest, (e) => {
+			this._frameRequest = null;
+			try {
+				this._render(e);
+			} catch (e) {
+				if (!xn(e)) throw e;
+			}
+		}, () => {}, this._ownerWindow));
+	}
+	get showTileBoundaries() {
+		return !!this._showTileBoundaries;
+	}
+	set showTileBoundaries(e) {
+		this._showTileBoundaries !== e && (this._showTileBoundaries = e, this._update());
+	}
+	get showPadding() {
+		return !!this._showPadding;
+	}
+	set showPadding(e) {
+		this._showPadding !== e && (this._showPadding = e, this._update());
+	}
+	get showCollisionBoxes() {
+		return !!this._showCollisionBoxes;
+	}
+	set showCollisionBoxes(e) {
+		this._showCollisionBoxes !== e && (this._showCollisionBoxes = e, e ? this.style._generateCollisionBoxes() : this._update());
+	}
+	get showOverdrawInspector() {
+		return !!this._showOverdrawInspector;
+	}
+	set showOverdrawInspector(e) {
+		this._showOverdrawInspector !== e && (this._showOverdrawInspector = e, this._update());
+	}
+	get repaint() {
+		return !!this._repaint;
+	}
+	set repaint(e) {
+		this._repaint !== e && (this._repaint = e, this.triggerRepaint());
+	}
+	get vertices() {
+		return !!this._vertices;
+	}
+	set vertices(e) {
+		this._vertices = e, this._update();
+	}
+	get version() {
+		return yp;
+	}
+	getCameraTargetElevation() {
+		return this._camera.transform.elevation;
+	}
+	getProjection() {
+		return this.style.getProjection();
+	}
+	setProjection(e) {
+		return this._lazyInitEmptyStyle(), this.style.setProjection(e), this._update(!0);
+	}
+};
+var Sp = {
+	showCompass: !0,
+	showZoom: !0,
+	visualizePitch: !1,
+	visualizeRoll: !0
+};
+var Cp = class {
+	constructor(e) {
+		this._updateZoomButtons = () => {
+			let e = this._map.getZoom(), t = e === this._map.getMaxZoom(), n = e === this._map.getMinZoom();
+			this._zoomInButton.disabled = t, this._zoomOutButton.disabled = n, this._zoomInButton.setAttribute(`aria-disabled`, t.toString()), this._zoomOutButton.setAttribute(`aria-disabled`, n.toString());
+		}, this._rotateCompassArrow = () => {
+			let e = this._map.getPitch(), t = this._map.getRoll(), n = this._map.getBearing(), r = 1 / Math.cos(sn(e)) ** .5;
+			if (this.options.visualizePitch && this.options.visualizeRoll) {
+				this._compassIcon.style.transform = `scale(${r}) rotateZ(${-t}deg) rotateX(${e}deg) rotateZ(${-n}deg)`;
+				return;
+			}
+			if (this.options.visualizePitch) {
+				this._compassIcon.style.transform = `scale(${r}) rotateX(${e}deg) rotateZ(${-n}deg)`;
+				return;
+			}
+			if (this.options.visualizeRoll) {
+				this._compassIcon.style.transform = `rotate(${-n - t}deg)`;
+				return;
+			}
+			this._compassIcon.style.transform = `rotate(${-n}deg)`;
+		}, this._setButtonTitle = (e, t) => {
+			let n = this._map._getUIString(`NavigationControl.${t}`);
+			e.title = n, e.setAttribute(`aria-label`, n);
+		}, this.options = Dt({}, Sp, e), this._container = W.create(`div`, `maplibregl-ctrl maplibregl-ctrl-group`), this._container.addEventListener(`contextmenu`, (e) => e.preventDefault()), this.options.showZoom && (this._zoomInButton = this._createButton(`maplibregl-ctrl-zoom-in`, (e) => this._map.zoomIn({}, { originalEvent: e })), W.create(`span`, `maplibregl-ctrl-icon`, this._zoomInButton).setAttribute(`aria-hidden`, `true`), this._zoomOutButton = this._createButton(`maplibregl-ctrl-zoom-out`, (e) => this._map.zoomOut({}, { originalEvent: e })), W.create(`span`, `maplibregl-ctrl-icon`, this._zoomOutButton).setAttribute(`aria-hidden`, `true`)), this.options.showCompass && (this._compass = this._createButton(`maplibregl-ctrl-compass`, (e) => {
+			this.options.visualizePitch ? this._map.resetNorthPitch({}, { originalEvent: e }) : this._map.resetNorth({}, { originalEvent: e });
+		}), this._compassIcon = W.create(`span`, `maplibregl-ctrl-icon`, this._compass), this._compassIcon.setAttribute(`aria-hidden`, `true`));
+	}
+	onAdd(e) {
+		return this._map = e, this.options.showZoom && (this._setButtonTitle(this._zoomInButton, `ZoomIn`), this._setButtonTitle(this._zoomOutButton, `ZoomOut`), this._map.on(`zoom`, this._updateZoomButtons), this._updateZoomButtons()), this.options.showCompass && (this._setButtonTitle(this._compass, `ResetBearing`), this.options.visualizePitch && this._map.on(`pitch`, this._rotateCompassArrow), this.options.visualizeRoll && this._map.on(`roll`, this._rotateCompassArrow), this._map.on(`rotate`, this._rotateCompassArrow), this._rotateCompassArrow(), this._handler = new wp(this._map, this._compass, this.options.visualizePitch)), this._container;
+	}
+	onRemove() {
+		this._container.remove(), this.options.showZoom && this._map.off(`zoom`, this._updateZoomButtons), this.options.showCompass && (this.options.visualizePitch && this._map.off(`pitch`, this._rotateCompassArrow), this.options.visualizeRoll && this._map.off(`roll`, this._rotateCompassArrow), this._map.off(`rotate`, this._rotateCompassArrow), this._handler.off(), delete this._handler), delete this._map;
+	}
+	_createButton(e, t) {
+		let n = W.create(`button`, e, this._container);
+		return n.type = `button`, n.addEventListener(`click`, t), n;
+	}
+};
+var wp = class {
+	constructor(e, t, n = !1) {
+		this.mousedown = (e) => {
+			this.startMove(e, W.mousePos(this.element, e)), window.addEventListener(`mousemove`, this.mousemove), window.addEventListener(`mouseup`, this.mouseup);
+		}, this.mousemove = (e) => {
+			this.move(e, W.mousePos(this.element, e));
+		}, this.mouseup = (e) => {
+			this._rotatePitchHandler.dragEnd(e), this.offTemp();
+		}, this.touchstart = (e) => {
+			e.targetTouches.length === 1 ? (this._startPos = this._lastPos = W.touchPos(this.element, e.targetTouches)[0], this.startMove(e, this._startPos), window.addEventListener(`touchmove`, this.touchmove, { passive: !1 }), window.addEventListener(`touchend`, this.touchend)) : this.reset();
+		}, this.touchmove = (e) => {
+			e.targetTouches.length === 1 ? (this._lastPos = W.touchPos(this.element, e.targetTouches)[0], this.move(e, this._lastPos)) : this.reset();
+		}, this.touchend = (e) => {
+			e.targetTouches.length === 0 && this._startPos && this._lastPos && this._startPos.dist(this._lastPos) < this._clickTolerance && this.element.click(), delete this._startPos, delete this._lastPos, this.offTemp();
+		}, this.reset = () => {
+			this._rotatePitchHandler.reset(), delete this._startPos, delete this._lastPos, this.offTemp();
+		}, this._clickTolerance = 10, this.element = t;
+		let r = new kf();
+		this._rotatePitchHandler = new wf({
+			clickTolerance: 3,
+			move: (e, r) => {
+				let i = t.getBoundingClientRect(), a = new l((i.bottom - i.top) / 2, (i.right - i.left) / 2);
+				return {
+					bearingDelta: dn(new l(e.x, r.y), r, a),
+					pitchDelta: n ? (r.y - e.y) * -.5 : void 0
+				};
+			},
+			moveStateManager: r,
+			enable: !0,
+			assignEvents: () => {}
+		}), this.map = e, t.addEventListener(`mousedown`, this.mousedown), t.addEventListener(`touchstart`, this.touchstart, { passive: !1 }), t.addEventListener(`touchcancel`, this.reset);
+	}
+	startMove(e, t) {
+		this._rotatePitchHandler.dragStart(e, t), W.disableDrag();
+	}
+	move(e, t) {
+		let n = this.map, { bearingDelta: r, pitchDelta: i } = this._rotatePitchHandler.dragMove(e, t) || {};
+		r && n.setBearing(n.getBearing() + r), i && n.setPitch(n.getPitch() + i);
+	}
+	off() {
+		let e = this.element;
+		e.removeEventListener(`mousedown`, this.mousedown), e.removeEventListener(`touchstart`, this.touchstart), window.removeEventListener(`touchmove`, this.touchmove), window.removeEventListener(`touchend`, this.touchend), e.removeEventListener(`touchcancel`, this.reset), this.offTemp();
+	}
+	offTemp() {
+		W.enableDrag(), window.removeEventListener(`mousemove`, this.mousemove), window.removeEventListener(`mouseup`, this.mouseup), window.removeEventListener(`touchmove`, this.touchmove), window.removeEventListener(`touchend`, this.touchend);
+	}
+};
 [
 	`a[href]`,
 	`[tabindex]:not([tabindex='-1'])`,
@@ -22593,42 +32815,28 @@ function dm(e) {
 }
 var maplibre_gl_worker_default = "/assets/maplibre-gl-worker-DZ7nj4vd.js";
 /**
-* Ventana de una jornada: lo que la ola de arcos de un día tiene para
-* salir y llegar completa.
+* data/valleMunicipios.ts
+* -----------------------------------------------------------------------
+* Límites de los 42 municipios del Valle del Cauca (GeoJSON), como módulo
+* TypeScript y no como `.json`.
 *
-* Ya no hay reproducción automática (ver Timeline.tsx), así que esto no
-* dispara nada por sí solo, sigue siendo el presupuesto del que se
-* deriva la cascada, y es lo que tarda una jornada en resolverse
-* visualmente cuando alguien toca "siguiente".
-*/
-var TIMELINE_STEP_MS = 2800;
-/**
-* Techo de una reproducción completa, como red de seguridad. Con las 13
-* fechas del dataset real no hace nada. Si algún día llegan muchas más,
-* comprime el paso para que la reproducción no dure diez minutos.
-*/
-var TIMELINE_MAX_PLAYBACK_MS = 12e4;
-/** Paso real entre jornadas según cuántas fechas haya. */
-function computeTimelineStepMs(dateCount) {
-	if (dateCount <= 1) return TIMELINE_STEP_MS;
-	const comprimido = TIMELINE_MAX_PLAYBACK_MS / (dateCount - 1);
-	return Math.min(TIMELINE_STEP_MS, Math.max(450, comprimido));
-}
-/**
-* Normaliza identificadores que pueden venir en formatos ligeramente
-* distintos entre fuentes de datos (ej. GeoJSON de límites municipales vs.
-* el dataset/Excel de sedes): string vs number, ceros a la izquierda,
-* espacios. Es el único punto de comparación para IDs de municipio en
-* todo el visor — nunca comparar `===` directamente entre esas dos
-* fuentes sin pasar por acá.
+* POR QUÉ NO SE IMPORTA EL .json
 *
-* Idempotente: normId(normId(x)) === normId(x), así que es seguro
-* aplicarlo aunque el valor ya venga normalizado desde otro lado.
+* Con el servidor de desarrollo abierto por la IP de la red (por ejemplo
+* desde el celular, http://192.168.x.x:8080), Chrome no envía las
+* cabeceras `Sec-Fetch-*`, que solo manda a localhost o a HTTPS. Sin
+* ellas el servidor no reconoce el `.json` como módulo, lo manda al
+* renderizado del servidor y responde 404: el mapa no carga. Los `.ts` se
+* reconocen por su extensión y no tienen ese problema.
+*
+* El contenido es el de valle-municipios.json (que sigue ahí: lo usa el
+* script etl/build_dataset.py). Si se regenera, volver a generar este
+* archivo desde ese.
+* -----------------------------------------------------------------------
 */
-var normId = (value) => String(value ?? "").trim().replace(/^0+(?=\d)/, "");
-var valle_municipios_default = {
-	type: "FeatureCollection",
-	features: [
+var valleMunicipios = {
+	"type": "FeatureCollection",
+	"features": [
 		{
 			"type": "Feature",
 			"properties": {
@@ -23593,560 +33801,345 @@ var valle_municipios_default = {
 		}
 	]
 };
-var MESES = [
-	"enero",
-	"febrero",
-	"marzo",
-	"abril",
-	"mayo",
-	"junio",
-	"julio",
-	"agosto",
-	"septiembre",
-	"octubre",
-	"noviembre",
-	"diciembre"
-];
-/** "2026-09-03" a "03". Devuelve null si no hay fecha. */
-function dayFromIsoDate(iso) {
-	if (!iso) return null;
-	const dd = iso.slice(-2);
-	return /^\d{2}$/.test(dd) ? dd : null;
-}
-/** Acumulado hasta `day` inclusive. Con day null, el total. */
-function territoryValueAsOf(stat, day) {
-	if (!stat) return 0;
-	if (day === null) return stat.entregas;
-	const limite = Number(day);
-	return Object.entries(stat.dias ?? {}).reduce((sum, [d, v]) => Number(d) <= limite ? sum + v : sum, 0);
-}
-/** Lo que se movió exactamente ese día. Con day null, 0. */
-function territoryValueOnDay(stat, day) {
-	if (!stat || day === null) return 0;
-	return stat.dias?.[day] ?? 0;
+var MOBILE_BREAKPOINT = 768;
+function useIsMobile() {
+	const [isMobile, setIsMobile] = import_react.useState(void 0);
+	import_react.useEffect(() => {
+		const mql = window.matchMedia(`(max-width: 767px)`);
+		const onChange = () => {
+			setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+		};
+		mql.addEventListener("change", onChange);
+		setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+		return () => mql.removeEventListener("change", onChange);
+	}, []);
+	return !!isMobile;
 }
 /**
-* Punto de entrada único del mapa.
-*
-* Sin día elegido no hay jornada que mostrar, así que se cae a acumulado
-* total en vez de pintar el departamento entero en gris.
+* Detecta si es la primera vez que este navegador visita la app (según
+* localStorage) y expone una función para marcarla como vista. Es
+* puramente local al navegador — no sincroniza entre dispositivos, y eso
+* está bien para un modal de "cómo leer el mapa" que no necesita más.
 */
-function valorTemporal(stat, lens, day) {
-	if (lens === "jornada" && day !== null) return territoryValueOnDay(stat, day);
-	return territoryValueAsOf(stat, day);
-}
-/**
-* Etiqueta del estado temporal, para el HUD y los popups.
-*
-* CORRECCIÓN: el mes deja de estar escrito a mano. Decía "Solo el 03 de
-* agosto" para el 3 de septiembre, el mismo error que tenían las
-* tarjetas de jornada.
-*
-* `iso` es opcional para no romper a quien todavía llame con dos
-* argumentos. Sin ella no se inventa un mes: se dice "el día 3" y
-* listo. Quien la pase obtiene la etiqueta completa, que es lo que
-* debería hacer todo el mundo — en DashboardPage es cambiar
-* `describeLens(lens, day)` por `describeLens(lens, day, isoDate)`.
-*/
-function describeLens(lens, day, iso) {
-	if (day === null) return "Total del departamento";
-	const [, mes, dia] = (iso ?? "").split("-");
-	const nombreMes = MESES[Number(mes) - 1];
-	const cuando = nombreMes && dia ? `${Number(dia)} de ${nombreMes}` : `día ${Number(day)}`;
-	return lens === "jornada" ? `Solo el ${cuando}` : `Hasta el ${cuando}`;
-}
-dm(maplibre_gl_worker_default);
-/**
-* Municipio sin despacho documentado. NO es "el tono más bajo de la
-* rampa": es una categoría aparte. Por eso territoryToneIndex devuelve
-* null para valor 0 y no 0, ver territoryColorForTone.
-*/
-var TERRITORY_NO_DATA = "#162936";
-/**
-* Santiago de Cali: excluida del consolidado municipal por instrucción
-* expresa. Se pinta con un gris propio para que no se lea ni como "sin
-* datos" ni como un volumen bajo.
-*
-* SÍ es clickeable: recibió sus propios despachos y tiene panel, y su
-* globo lo dice. Lo único que la distingue es el color de reposo; el
-* resaltado de selección y el de paso del cursor se comportan igual que
-* en cualquier otro municipio.
-*/
-var TERRITORY_EXCLUDED = "#2A3D4A";
-function municipalityNameFromProperties(properties) {
-	if (!properties) return "";
-	const candidates = [
-		properties["name"],
-		properties["nombre"],
-		properties["municipio"],
-		properties["municipality"],
-		properties["NAME"],
-		properties["NOMBRE"]
-	];
-	return String(candidates.find((value) => value != null && String(value).trim() !== "") ?? "");
-}
-function municipalityCodeFromProperties(properties) {
-	if (!properties) return "";
-	const candidates = [
-		properties["municipalityCode"],
-		properties["codigoDane"],
-		properties["codigo_dane"],
-		properties["DANE"],
-		properties["dane"],
-		properties["code"],
-		properties["codigo"]
-	];
-	return normId(String(candidates.find((value) => value != null && String(value).trim() !== "") ?? ""));
-}
-/**
-* Centro del bounding box del anillo exterior. Sirve como ancla de
-* etiqueta: no es el centroide real (un municipio en forma de C puede
-* caer fuera del polígono) pero para los 42 del Valle, que son convexos
-* o casi, alcanza, y evita meter turf.js solo por esto.
-*/
-function ringCenter(geometry) {
-	const geo = geometry;
-	const ring = geo?.type === "Polygon" ? geo.coordinates?.[0] : geo?.type === "MultiPolygon" ? geo.coordinates?.[0]?.[0] : null;
-	if (!Array.isArray(ring) || ring.length === 0) return null;
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
-	for (const point of ring) {
-		const [x, y] = point;
-		if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-		if (x < minX) minX = x;
-		if (x > maxX) maxX = x;
-		if (y < minY) minY = y;
-		if (y > maxY) maxY = y;
-	}
-	if (!Number.isFinite(minX) || !Number.isFinite(minY)) return null;
-	return [(minX + maxX) / 2, (minY + maxY) / 2];
-}
-function normalizeBoundaries(geojson) {
-	const collection = geojson;
-	if (!collection?.features) return geojson;
+function useFirstVisit(key) {
+	const [show, setShow] = (0, import_react.useState)(false);
+	(0, import_react.useEffect)(() => {
+		try {
+			if (!localStorage.getItem(key)) setShow(true);
+		} catch {}
+	}, [key]);
+	const dismiss = () => {
+		try {
+			localStorage.setItem(key, "1");
+		} catch {}
+		setShow(false);
+	};
 	return {
-		...collection,
-		features: collection.features.map((feature) => {
-			const properties = feature.properties ?? {};
-			const code = normId(String(feature.id ?? "")) || municipalityCodeFromProperties(properties);
-			const name = municipalityNameFromProperties(properties);
-			const center = ringCenter(feature.geometry);
-			return {
-				...feature,
-				id: code || `idx-${feature.id ?? name}`,
-				properties: {
-					...properties,
-					municipalityCode: code,
-					name: name || properties["name"],
-					labelLng: center?.[0] ?? null,
-					labelLat: center?.[1] ?? null,
-					territoryToneColor: TERRITORY_NO_DATA
-				}
-			};
-		})
+		show,
+		dismiss
 	};
 }
-normalizeBoundaries(valle_municipios_default).features;
-var ORIGEN_COLOR = {
-	"ORI-CALI": "#2f6fed",
-	"ORI-CARTAGO": "#e6883c"
-};
-var ORIGEN_DIM_COLOR = {
-	"ORI-CALI": "rgba(47,111,237,0.35)",
-	"ORI-CARTAGO": "rgba(230,136,60,0.35)"
-};
-Object.fromEntries(Object.entries(ORIGEN_COLOR).map(([id, color]) => [normId(id), color]));
-Object.fromEntries(Object.entries(ORIGEN_DIM_COLOR).map(([id, color]) => [normId(id), color]));
+var ARC_BEND_RATIO = .16;
+var ARC_SAMPLES = 48;
+function controlPoint(origin, destino) {
+	const mid = [(origin[0] + destino[0]) / 2, (origin[1] + destino[1]) / 2];
+	const dx = destino[0] - origin[0];
+	const dy = destino[1] - origin[1];
+	const dist = Math.hypot(dx, dy) || 1e-9;
+	const nx = -dy / dist;
+	const ny = dx / dist;
+	return [mid[0] + nx * dist * ARC_BEND_RATIO, mid[1] + ny * dist * ARC_BEND_RATIO];
+}
+function buildArcCoordinates(origin, destino) {
+	const control = controlPoint(origin, destino);
+	const points = [];
+	for (let i = 0; i <= ARC_SAMPLES; i += 1) {
+		const t = i / ARC_SAMPLES;
+		const mt = 1 - t;
+		const x = mt * mt * origin[0] + 2 * mt * t * control[0] + t * t * destino[0];
+		const y = mt * mt * origin[1] + 2 * mt * t * control[1] + t * t * destino[1];
+		points.push([x, y]);
+	}
+	return points;
+}
+function easeOutCubic(t) {
+	return 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+}
+function toGradientExpression(stops) {
+	const sorted = [...stops].sort((a, b) => a[0] - b[0]);
+	const cleaned = [];
+	const MIN_GAP = 5e-4;
+	for (const stop of sorted) {
+		const prev = cleaned[cleaned.length - 1];
+		if (prev && stop[0] - prev[0] < MIN_GAP) cleaned[cleaned.length - 1] = stop;
+		else cleaned.push(stop);
+	}
+	const first = cleaned[0];
+	if (first && first[0] > 0) cleaned.unshift([0, first[1]]);
+	const last = cleaned[cleaned.length - 1];
+	if (last && last[0] < 1) cleaned.push([1, last[1]]);
+	const expr = [
+		"interpolate",
+		["linear"],
+		["line-progress"]
+	];
+	cleaned.forEach((s) => {
+		expr.push(s[0], s[1]);
+	});
+	return expr;
+}
+function buildPulseGradient(loopT, dimColor, brightColor, bandWidth) {
+	const center = Math.min(1, Math.max(0, loopT));
+	const start = center - bandWidth;
+	const end = center + bandWidth;
+	return toGradientExpression([
+		[0, dimColor],
+		[start, dimColor],
+		[center, brightColor],
+		[end, dimColor],
+		[1, dimColor]
+	]);
+}
 /**
-* Timeline.tsx
+* Ventana de una jornada: lo que la ola de arcos de un día tiene para
+* salir y llegar completa.
+*
+* Ya no hay reproducción automática (ver Timeline.tsx), así que esto no
+* dispara nada por sí solo, sigue siendo el presupuesto del que se
+* deriva la cascada, y es lo que tarda una jornada en resolverse
+* visualmente cuando alguien toca "siguiente".
+*/
+var TIMELINE_STEP_MS = 2800;
+/**
+* Lo que tiene la ola de arcos de una jornada para arrancar TODOS sus
+* arcos. Deriva del paso: lo que sobra después de reservar el
+* crecimiento del último. No se escribe a mano.
+*/
+var CASCADE_BUDGET_MS = Math.max(600, 1900);
+/**
+* Techo de una reproducción completa, como red de seguridad. Con las 13
+* fechas del dataset real no hace nada. Si algún día llegan muchas más,
+* comprime el paso para que la reproducción no dure diez minutos.
+*/
+var TIMELINE_MAX_PLAYBACK_MS = 12e4;
+/** Paso real entre jornadas según cuántas fechas haya. */
+function computeTimelineStepMs(dateCount) {
+	if (dateCount <= 1) return TIMELINE_STEP_MS;
+	const comprimido = TIMELINE_MAX_PLAYBACK_MS / (dateCount - 1);
+	return Math.min(TIMELINE_STEP_MS, Math.max(450, comprimido));
+}
+/**
+* arcAnimationEngine.ts
 * -----------------------------------------------------------------------
-* Control de jornadas del mapa. Componente de presentación puro: recibe
-* las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
+* Máquina de estados de la animación de arcos, sin ninguna dependencia de
+* MapLibre/React, mismo principio que arcGeometry.ts. Se testea con reloj
+* inyectado, sin navegador. MapCanvas.tsx solo llama tick() y traduce el
+* resultado a llamadas de MapLibre; nunca decide fases ahí.
 *
-* La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
-* dibujadas y solo se anima si la persona toca reproducir.
+* CASCADA (v3): el presupuesto de la ola ya no es un número propio de
+* este archivo. Antes eran 9.000 ms fijos, contra un paso de timeline de
+* 1.667 ms, el día cambiaba cinco veces antes de que el último arco de
+* la jornada llegara a arrancar, y el backlog crecía hasta reproducirse
+* después de que el timeline había terminado. Ahora sale de
+* animationTiming.ts, donde el paso del timeline y esta cascada se
+* derivan uno del otro:
 *
-* El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
-* que sale el presupuesto de la cascada de arcos. Una jornada dura lo
-* que tarda su último arco en salir y llegar, así que las líneas siempre
-* alcanzan a completarse antes de que cambie el día.
+*     paso del timeline  =  cascada  +  crecimiento del último arco
 *
-* Seek contra advance, la distinción que ya vive en viewState.ts:
-*   · Reproducir o avanzar un día llama a onAdvance, que anima.
-*   · Arrastrar varios días llama a onSeek, que salta sin animar.
-*     Animar un salto de seis días se lee como un error visual.
+* El intervalo entre entradas se sigue calculando en cada disparo
+* repartiendo ese presupuesto entre lo que quede en cola, con piso y
+* techo: así una jornada de 32 municipios y una de 3 caben ambas en su
+* ventana, sin sentirse simultáneas ni quedar arrastrándose.
 *
-* El efecto del intervalo depende solo de [playing]. Eso deja la función
-* del tick con las props del momento en que arrancó, así que dates y
-* currentDate se leen desde refs que se actualizan en cada render. Sin
-* eso, cada tick recalcula el siguiente de la misma fecha inicial y la
-* reproducción avanza una vez y se traba.
+* El arco activo sigue creciendo de forma independiente después de
+* disparar al siguiente, por eso en un momento dado puede haber más de
+* un arco en fase "growing" (el saliente terminando, el entrante
+* empezando), que es el solapamiento suave buscado, no arcos en serie.
 *
-* DOS FILAS EN CELULAR
-*
-* En una sola línea no cabía: el botón, un deslizador de 176 px, la
-* fecha de 96 y "Ver todo" suman más de 450 px, y un teléfono común
-* tiene 390 de ancho. El control se salía por la derecha y "Ver todo"
-* quedaba cortado a la mitad, o sea que la única forma de volver al
-* total quedaba fuera de la pantalla.
-*
-* En celular la fecha y "Ver todo" suben a su propia línea, y el
-* deslizador se queda con todo el ancho de la de abajo. No es solo que
-* quepa: el deslizador es el gesto principal de este control, y con 176
-* px cada día medía nueve píxeles. Con el ancho completo mide el doble.
-*
-* En escritorio nada cambia: sigue siendo una píldora de una línea.
-*
-* LA FECHA SE ESCRIBE, NO SE CODIFICA
-*
-* Decía "2026-08-16". Es una fecha ISO, que es un formato para
-* máquinas: quien lee un mapa de ayudas no tiene por qué descifrar el
-* orden de los campos ni traducir el 08. Ahora dice "16 de agosto", con
-* el mes leído del dato y no escrito a mano, que es el error que ya
-* apareció en tres sitios de este proyecto.
+* `justSettled` se puebla en el tick en que un arco individual termina de
+* crecer; `snapTo()` (seek del timeline) no lo puebla ni pasa por la cola
+*, un salto no anima ni tiene "llegada" que notificar.
 * -----------------------------------------------------------------------
 */
-function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
-	const [playing, setPlaying] = (0, import_react.useState)(false);
-	const intervalRef = (0, import_react.useRef)(null);
-	const datesRef = (0, import_react.useRef)(dates);
-	datesRef.current = dates;
-	const currentDateRef = (0, import_react.useRef)(currentDate);
-	currentDateRef.current = currentDate;
-	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
-	const activo = currentIndex >= 0;
-	const alFinal = activo && currentIndex === dates.length - 1;
-	(0, import_react.useEffect)(() => {
-		if (currentDate === null) setPlaying(false);
-	}, [currentDate]);
-	(0, import_react.useEffect)(() => {
-		if (!playing) {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
-			intervalRef.current = null;
-			return;
+var GROWTH_DURATION_MS = 900;
+var PULSE_PERIOD_MS = 3200;
+function clamp(value, min, max) {
+	return Math.min(max, Math.max(min, value));
+}
+function createArcAnimationEngine() {
+	const registry = /* @__PURE__ */ new Map();
+	/** Keys esperando su turno para entrar, en el orden en que se llamó enter(). */
+	let queue = [];
+	/** Key del arco cuyo disparo de tiempo activa la entrada del siguiente de la cola. */
+	let activeGrowingKey = null;
+	/** Timestamp en el que corresponde disparar al siguiente de la cola. */
+	let activeTriggerAt = null;
+	/**
+	* Sincroniza el registro contra las claves vivas (según los flujos del
+	* corte actual). Claves que ya no existen se eliminan del registro Y de
+	* la cola, evita fugas de memoria y evita que la cola intente arrancar
+	* un arco que el dataset actual ya no incluye.
+	*/
+	function sync(liveKeys, weights) {
+		const live = new Set(liveKeys);
+		for (const key of registry.keys()) if (!live.has(key)) registry.delete(key);
+		queue = queue.filter((key) => live.has(key));
+		if (activeGrowingKey !== null && !live.has(activeGrowingKey)) {
+			activeGrowingKey = null;
+			activeTriggerAt = null;
 		}
-		const stepMs = computeTimelineStepMs(datesRef.current.length);
-		intervalRef.current = setInterval(() => {
-			const freshDates = datesRef.current;
-			const freshCurrent = currentDateRef.current;
-			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
-			if (next === void 0) {
-				setPlaying(false);
+		for (const key of liveKeys) {
+			const existente = registry.get(key);
+			if (!existente) registry.set(key, {
+				key,
+				phase: "idle",
+				enteredAt: null,
+				weight: weights[key] ?? 0
+			});
+			else existente.weight = weights[key] ?? existente.weight;
+		}
+	}
+	/**
+	* Encola la entrada animada de un arco. Si el arco ya no está en
+	* "idle" (ya está en cola, creciendo o asentado) no hace nada, evita
+	* que un segundo `enter()` accidental lo reencole o reinicie una
+	* animación en curso.
+	*/
+	function enter(key, now, opts = {}) {
+		const record = registry.get(key);
+		if (!record || record.phase !== "idle") return;
+		if (opts.weight !== void 0) record.weight = opts.weight;
+		record.phase = "queued";
+		queue.push(key);
+	}
+	/**
+	* Saca el próximo de la cola y lo pone a crecer.
+	*
+	* El paso se recalcula en CADA disparo, no una vez por ola: si el
+	* timeline sigue metiendo jornadas más rápido de lo que la cola drena,
+	* el ritmo se acelera solo para compensar, en vez de quedar congelado
+	* al ritmo del primer día y acumular backlog sin techo.
+	*/
+	function advanceQueue(now) {
+		const stepMs = clamp(CASCADE_BUDGET_MS / Math.max(1, queue.length), 60, 450);
+		let nextKey = queue.shift();
+		while (nextKey !== void 0) {
+			const record = registry.get(nextKey);
+			if (record && record.phase === "queued") {
+				record.phase = "growing";
+				record.enteredAt = now;
+				activeGrowingKey = nextKey;
+				activeTriggerAt = now + stepMs;
 				return;
 			}
-			onAdvance(next);
-		}, stepMs);
-		return () => {
-			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+			nextKey = queue.shift();
+		}
+		activeGrowingKey = null;
+		activeTriggerAt = null;
+	}
+	/**
+	* Usado por seek/rebobinar del timeline: todo lo que corresponde a la
+	* fecha destino pasa directo a "settled", sin transición ni cola.
+	* Nunca se anima un salto, ni hacia adelante ni hacia atrás (encoger
+	* una línea ya dibujada se lee como un error visual, no como
+	* "retrocedió en el tiempo"). Por eso limpia la cola: un seek no debe
+	* dejar arranques pendientes de un estado que ya no existe.
+	*/
+	function snapTo(liveKeys, weights, now) {
+		sync(liveKeys, weights);
+		queue = [];
+		activeGrowingKey = null;
+		activeTriggerAt = null;
+		for (const key of liveKeys) {
+			const record = registry.get(key);
+			if (!record) continue;
+			record.phase = "settled";
+			record.enteredAt = now;
+		}
+	}
+	/** Sube el peso de un arco ya asentado sin reanimarlo (línea que engorda, no que vuelve a crecer). */
+	function bumpWeight(key, weight) {
+		const record = registry.get(key);
+		if (record) record.weight = weight;
+	}
+	function tick(now) {
+		if (activeGrowingKey === null && queue.length > 0) advanceQueue(now);
+		const growing = [];
+		const settled = [];
+		const justSettled = [];
+		for (const record of registry.values()) if (record.phase === "growing" && record.enteredAt !== null) {
+			if (now < record.enteredAt) continue;
+			const eased = easeOutCubic((now - record.enteredAt) / GROWTH_DURATION_MS);
+			if (record.key === activeGrowingKey && activeTriggerAt !== null && now >= activeTriggerAt) advanceQueue(now);
+			if (eased >= 1) {
+				record.phase = "settled";
+				const frame = {
+					key: record.key,
+					phase: "settled",
+					sampleFraction: 1,
+					weight: record.weight
+				};
+				settled.push(frame);
+				justSettled.push(frame);
+			} else growing.push({
+				key: record.key,
+				phase: "growing",
+				sampleFraction: eased,
+				weight: record.weight
+			});
+		} else if (record.phase === "settled") settled.push({
+			key: record.key,
+			phase: "settled",
+			sampleFraction: 1,
+			weight: record.weight
+		});
+		return {
+			growing,
+			settled,
+			justSettled,
+			pulseLoopT: now % PULSE_PERIOD_MS / PULSE_PERIOD_MS
 		};
-	}, [playing]);
-	const alternarReproduccion = () => {
-		if (!activo && dates.length > 0) {
-			const primera = dates[0];
-			if (primera !== void 0) onActivate(primera);
-		} else if (alFinal) {
-			const primera = dates[0];
-			if (primera !== void 0) onSeek(primera);
-		}
-		setPlaying((v) => !v);
+	}
+	return {
+		sync,
+		enter,
+		snapTo,
+		bumpWeight,
+		tick
 	};
-	const handleScrub = (event) => {
-		setPlaying(false);
-		const index = Number(event.target.value);
-		const date = dates[index];
-		if (date === void 0) return;
-		if (!activo) onActivate(date);
-		else if (index === currentIndex + 1) onAdvance(date);
-		else onSeek(date);
+}
+/** Vida del anillo. Corto a propósito: es un "pop" puntual, no una notificación que hay que leer — con muchos destinos "pop-eando" a la vez, uno que se queda vivo mucho tiempo empieza a leerse como acumulación otra vez. */
+var PULSE_LIFETIME_MS = 700;
+function createArrivalPulseEngine() {
+	let records = [];
+	let counter = 0;
+	/** Dispara un pulso en un destino. No agrupa ni filtra por destino repetido a propósito — cada arco que toca (o cada weight-bump) es un evento geográfico independiente; si caen varios casi juntos en el mismo punto, se ven como el mismo anillo reforzándose, no como ruido apilado (a diferencia del texto, que si necesitaba MAX_STACK_PER_DESTINO). */
+	function spawn(destinoId, now) {
+		counter += 1;
+		records.push({
+			id: `pulse-${counter}`,
+			destinoId,
+			createdAt: now
+		});
+	}
+	/** Purga los vencidos y devuelve el progreso de los vivos. Sin dispose() aparte, igual que el motor de toasts que reemplaza. */
+	function tick(now) {
+		records = records.filter((r) => now - r.createdAt < PULSE_LIFETIME_MS);
+		return records.map((r) => ({
+			id: r.id,
+			destinoId: r.destinoId,
+			progress: Math.max(0, Math.min(1, (now - r.createdAt) / PULSE_LIFETIME_MS))
+		}));
+	}
+	/** Usado al desmontar MapCanvas o al apagar/seekear el timeline — mismo criterio que dispatchToastEngine.clear(). */
+	function clear() {
+		records = [];
+	}
+	return {
+		spawn,
+		tick,
+		clear
 	};
-	if (dates.length === 0) return null;
-	const fechaMostrada = currentDate ?? dates[0] ?? null;
-	const etiqueta = fechaCorta(fechaMostrada);
-	const botonVerTodo = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-		type: "button",
-		onClick: () => {
-			setPlaying(false);
-			onExit();
-		},
-		className: "min-h-11 shrink-0 rounded-lg px-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground md:ml-1 md:min-h-0 md:px-0",
-		children: "Ver todo"
-	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto w-full max-w-[28rem] rounded-2xl border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur md:w-auto md:max-w-none md:rounded-full md:px-4 md:py-2.5",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex items-center justify-between gap-3 md:hidden",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "min-w-0 truncate text-sm font-semibold tabular-nums text-foreground",
-				"aria-live": "polite",
-				children: etiqueta
-			}), activo && botonVerTodo]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex items-center gap-3",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: alternarReproduccion,
-					"aria-label": playing ? "Pausar" : "Reproducir día por día",
-					className: "flex size-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 md:size-10",
-					children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
-						width: "14",
-						height: "14",
-						viewBox: "0 0 24 24",
-						fill: "currentColor",
-						"aria-hidden": true,
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-							x: "5",
-							y: "4",
-							width: "5",
-							height: "16",
-							rx: "1"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
-							x: "14",
-							y: "4",
-							width: "5",
-							height: "16",
-							rx: "1"
-						})]
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-						width: "14",
-						height: "14",
-						viewBox: "0 0 24 24",
-						fill: "currentColor",
-						"aria-hidden": true,
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-					type: "range",
-					min: 0,
-					max: dates.length - 1,
-					step: 1,
-					value: currentIndex >= 0 ? currentIndex : 0,
-					onChange: handleScrub,
-					"aria-label": "Día de la operación",
-					"aria-valuetext": etiqueta,
-					className: "h-11 w-full min-w-0 flex-1 cursor-pointer accent-foreground md:h-1.5 md:w-72 md:flex-none"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "hidden min-w-[7rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground md:inline",
-					"aria-live": "polite",
-					children: etiqueta
-				}),
-				activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "hidden md:inline",
-					children: botonVerTodo
-				})
-			]
-		})]
-	});
-}
-/**
-* MarcadorHUD.tsx
-* -----------------------------------------------------------------------
-* El contador del mapa, en clave de tablero de estadio: la cifra que
-* importa es cuánta ayuda se movilizó, y tiene que VERSE subir mientras
-* corre el timeline. Por eso los dígitos ruedan en vez de reemplazarse
-* de golpe, el movimiento es el dato.
-*
-* La unidad es la TONELADA. Las unidades sueltas (mercados, paquetes,
-* kilos y pacas mezclados en la misma columna del formato) no se
-* muestran acá: no son comparables entre sí y no dicen nada a esta
-* escala.
-*
-* Advertencia sobre las dos cifras, que no son divisibles entre sí:
-* Las dos cifras son municipales, para que se puedan leer juntas. La
-* hoja TONELADAS registra el peso por día y para todo el departamento,
-* así que la parte municipal se estima repartiéndolo según qué
-* proporción de las entregas llegó a un municipio.
-* -----------------------------------------------------------------------
-*/
-function MarcadorHUD({ despachos, day, lens, instant = false }) {
-	/**
-	* Las toneladas se leen acá, del mismo contexto que alimenta al resto
-	* de la página, en vez de recibirse por prop.
-	*
-	* Antes las calculaba DashboardPage y se las pasaba. Eso permitía que
-	* el marcador y la página mostraran cifras distintas si una de las dos
-	* quedaba con una versión vieja del cálculo, que fue exactamente lo que
-	* pasó: el mapa seguía estimando cuando la ruta de toneladas ya
-	* respondía el dato medido.
-	*/
-	const { jornadas, toneladasMunicipales, factorMunicipal } = useOperacion();
-	/**
-	* El mapa dibuja entregas municipales, así que muestra la tonelada
-	* municipal. La serie de jornadas trae el peso departamental, que
-	* incluye Cali y las rutas institucionales, y se reparte con el mismo
-	* factor que usa el resto del tablero.
-	*/
-	const toneladas = (() => {
-		if (!day) return toneladasMunicipales;
-		const jornada = jornadas.find((j) => j.dia === day);
-		if (!jornada) return toneladasMunicipales;
-		const departamental = lens === "jornada" ? jornada.toneladas : jornada.acumuladoToneladas;
-		return Math.round(departamental * factorMunicipal);
-	})();
-	const corte = day === null ? "Total del departamento" : lens === "jornada" ? `Solo el ${day} de agosto` : `Hasta el ${day} de agosto`;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "pointer-events-none absolute inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 select-none md:inset-x-auto md:right-4 md:top-[calc(1rem+env(safe-area-inset-top))]",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex items-center gap-4 rounded-xl border border-white/12 bg-[#0B3049]/85 px-4 py-3 shadow-lg backdrop-blur md:block md:px-6 md:py-5",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "min-w-0 flex-1 md:flex-none",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-xs font-bold uppercase tracking-[0.14em] text-[#22ABE2] md:text-[13px]",
-						children: "Ayuda entregada"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "mt-1 flex items-baseline gap-1.5 md:mt-1.5",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
-							value: toneladas,
-							instant,
-							className: "text-[34px] sm:text-[42px] md:text-[52px]"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-lg font-bold text-[#22ABE2] md:text-2xl",
-							children: "toneladas"
-						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-1.5 text-xs text-[#6B93AA] md:mt-3 md:text-sm",
-						"aria-live": "polite",
-						children: corte
-					})
-				]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex shrink-0 items-baseline gap-2 border-l border-white/12 pl-4 md:mt-3 md:border-l-0 md:border-t md:pl-0 md:pt-3",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
-					value: despachos,
-					instant,
-					className: "text-lg md:text-[24px]"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "text-xs font-semibold text-[#A8CFE2] md:text-sm",
-					children: "entregas"
-				})]
-			})]
-		})
-	});
-}
-/**
-* Un número cuyos dígitos ruedan. Cada dígito es una columna con el 0-9
-* apilado y desplazada con translateY, que es lo que hace un tablero
-* mecánico. Los separadores de miles se renderizan como texto fijo: no
-* ruedan, solo aparecen cuando el número cruza el millar.
-*
-* `instant` corta la transición en los saltos del timeline: rodar cuatro
-* dígitos a la vez cuando alguien arrastra el control es ruido, no
-* información.
-*/
-function Rodillo({ value, instant, className = "" }) {
-	const texto = Math.max(0, Math.round(value)).toLocaleString("es-CO");
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		className: `inline-flex font-extrabold leading-none tabular-nums text-white ${className}`,
-		role: "img",
-		"aria-label": texto,
-		children: texto.split("").map((char, i) => /\d/.test(char) ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Digito, {
-			digito: Number(char),
-			instant
-		}, i) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			"aria-hidden": true,
-			className: "px-[0.02em]",
-			children: char
-		}, i))
-	});
-}
-var DIGITOS = [
-	0,
-	1,
-	2,
-	3,
-	4,
-	5,
-	6,
-	7,
-	8,
-	9
-];
-function Digito({ digito, instant }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		"aria-hidden": true,
-		className: "relative inline-block h-[1em] w-[0.58em] overflow-hidden align-baseline",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: instant ? "absolute inset-x-0 top-0" : "absolute inset-x-0 top-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
-			style: { transform: `translateY(${-digito * 10}%)` },
-			children: DIGITOS.map((n) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "block h-[1em] text-center leading-[1em]",
-				children: n
-			}, n))
-		})
-	});
-}
-var VISIBLE_MS = 3200;
-/**
-* Aviso breve de entrega, al estilo de una historia: aparece, se lee en
-* dos segundos y se va. Nunca se acumula en pantalla.
-*/
-function AvisoEntrega({ frame }) {
-	const [visible, setVisible] = (0, import_react.useState)(null);
-	(0, import_react.useEffect)(() => {
-		if (!frame) {
-			setVisible(null);
-			return;
-		}
-		setVisible(frame);
-		const t = setTimeout(() => setVisible(null), VISIBLE_MS);
-		return () => clearTimeout(t);
-	}, [frame]);
-	if (!visible) return null;
-	const municipio = leerNombre(visible);
-	const entregas = leerCantidad(visible);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "pointer-events-none absolute inset-x-0 bottom-28 z-20 flex justify-center px-4",
-		"aria-live": "polite",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex items-center gap-3 rounded-full border border-white/15 bg-[#0A1822]/90 py-3 pl-4 pr-5 shadow-lg backdrop-blur",
-			style: { animation: "toast-pop 260ms cubic-bezier(0.16,1,0.3,1) both" },
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "flex size-9 shrink-0 items-center justify-center rounded-full bg-[#81C8EC]/20 text-[#81C8EC]",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PackageCheck, {
-					className: "size-5",
-					"aria-hidden": true
-				})
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-				className: "block text-base leading-tight text-white",
-				children: municipio
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "block text-sm text-[#9DB4C2]",
-				children: entregas === 1 ? "Recibió una entrega" : `Recibió ${entregas} entregas`
-			})] })]
-		}, `${municipio}-${entregas}`)
-	});
-}
-/**
-* `ActivityFrame` lo produce dispatchActivityEngine.spawn(destinoId,
-* nombre, cantidad, now). Los nombres exactos de sus campos no están a la
-* vista desde acá, así que se leen de forma tolerante en vez de asumir
-* una forma que rompería en silencio si cambia.
-*/
-function leerNombre(frame) {
-	const f = frame;
-	const encontrado = [
-		f["nombre"],
-		f["destinoNombre"],
-		f["label"]
-	].find((v) => typeof v === "string" && v.trim() !== "");
-	return typeof encontrado === "string" ? encontrado : "Nueva entrega";
-}
-function leerCantidad(frame) {
-	const f = frame;
-	const encontrado = [
-		f["cantidad"],
-		f["weight"],
-		f["despachos"],
-		f["delta"]
-	].find((v) => typeof v === "number" && v > 0);
-	return typeof encontrado === "number" ? encontrado : 1;
 }
 function ContextualPanel({ isMobile, title, subtitle, onBack, onClose, children, transitionKey }) {
 	return isMobile ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MobileSheet, {
@@ -24255,7 +34248,7 @@ function DesktopCard({ title, subtitle, onBack, onClose, children, transitionKey
 		ref,
 		className: "pointer-events-auto absolute right-4 top-[4.75rem] z-10 flex w-[23rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-xl transition-all duration-300",
 		style: {
-			maxHeight: "calc(100% - 6rem)",
+			maxHeight: "calc(100% - 10.5rem)",
 			opacity: entered ? 1 : 0,
 			transform: entered ? "translateX(0) scale(1)" : "translateX(12px) scale(0.97)",
 			transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)"
@@ -24284,7 +34277,7 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 		ref,
 		className: "pointer-events-auto absolute inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden rounded-t-2xl border-t border-border bg-surface shadow-[0_-4px_20px_rgba(0,0,0,0.35)] transition-all duration-300",
 		style: {
-			height: expanded ? "70vh" : "auto",
+			height: expanded ? "min(58dvh, 34rem)" : "auto",
 			transform: entered ? "translateY(0)" : "translateY(16px)",
 			opacity: entered ? 1 : 0,
 			transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)"
@@ -24304,1736 +34297,1393 @@ function MobileSheet({ title, subtitle, onBack, onClose, children, transitionKey
 				onClose
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: `min-h-0 flex-1 ${expanded ? "overflow-y-auto" : "hidden"}`,
+				className: `min-h-0 flex-1 ${expanded ? "overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)]" : "hidden"}`,
 				children
 			})
 		]
 	})] });
 }
 /**
-* HojaInferior.tsx
+* Timeline.tsx
 * -----------------------------------------------------------------------
-* El panel de celular: una hoja que sube desde abajo y se arrastra.
+* Control de jornadas del mapa. Componente de presentación puro: recibe
+* las fechas disponibles y la actual, y avisa hacia arriba qué pasó.
 *
-* EL PROBLEMA QUE RESUELVE
+* La reproducción NUNCA arranca sola. El mapa carga con las rutas ya
+* dibujadas y solo se anima si la persona toca reproducir.
 *
-* En celular, abrir la ficha de un municipio tapaba la pantalla entera.
-* El mapa desaparecía, y con él todo el contexto: cuál municipio se
-* había tocado, dónde queda, qué hay alrededor. La única salida era
-* cerrar, y para comparar dos municipios había que abrir, memorizar,
-* cerrar y volver a abrir.
+* El paso entre jornadas sale de animationTiming.ts, el mismo módulo del
+* que sale el presupuesto de la cascada de arcos. Una jornada dura lo
+* que tarda su último arco en salir y llegar, así que las líneas siempre
+* alcanzan a completarse antes de que cambie el día.
 *
-* Un panel a pantalla completa no es una versión móvil de un panel
-* lateral. En escritorio el panel ocupa un tercio y el mapa sigue ahí;
-* la traducción honesta de eso a un teléfono es una hoja que deja ver el
-* mapa por encima, no un reemplazo.
+* Seek contra advance, la distinción que ya vive en viewState.ts:
+*   · Reproducir o avanzar un día llama a onAdvance, que anima.
+*   · Arrastrar varios días llama a onSeek, que salta sin animar.
+*     Animar un salto de seis días se lee como un error visual.
 *
-* LOS TRES ANCLAJES
+* El efecto del intervalo depende solo de [playing]. Eso deja la función
+* del tick con las props del momento en que arrancó, así que dates y
+* currentDate se leen desde refs que se actualizan en cada render. Sin
+* eso, cada tick recalcula el siguiente de la misma fecha inicial y la
+* reproducción avanza una vez y se traba.
 *
-* · ASOMADA (32%): el título y una línea de resumen. Suficiente para
-*   saber qué se tocó sin perder el mapa. Es donde abre.
-* · MEDIA (62%): la ficha completa, con el mapa todavía visible arriba.
-* · LLENA (94%): para leer listas largas. Acá sí aparece el velo.
+* DOS FILAS EN CELULAR
 *
-* Abre en ASOMADA y no en MEDIA a propósito. El gesto de tocar un
-* municipio en un mapa suele ser exploratorio —"¿y este cuánto?"—, no
-* una decisión de ponerse a leer. Que abra bajo respeta eso: quien
-* quiera más, arrastra, y ese gesto es más barato que cerrar.
+* En una sola línea no cabía: el botón, un deslizador de 176 px, la
+* fecha de 96 y "Ver todo" suman más de 450 px, y un teléfono común
+* tiene 390 de ancho. El control se salía por la derecha y "Ver todo"
+* quedaba cortado a la mitad, o sea que la única forma de volver al
+* total quedaba fuera de la pantalla.
 *
-* POR QUÉ SOLO SE ARRASTRA DESDE EL ENCABEZADO
+* En celular la fecha y "Ver todo" suben a su propia línea, y el
+* deslizador se queda con todo el ancho de la de abajo. No es solo que
+* quepa: el deslizador es el gesto principal de este control, y con 176
+* px cada día medía nueve píxeles. Con el ancho completo mide el doble.
 *
-* El cuerpo tiene su propio desplazamiento. Si el arrastre naciera
-* también ahí, cada intento de leer hacia abajo competiría con el de
-* mover la hoja, y el resultado es el gesto ambiguo que hace que estas
-* hojas se sientan rotas. El encabezado, con su agarradera visible, es
-* la zona de arrastre; el cuerpo, la de lectura. Cada gesto en un sitio.
+* En escritorio nada cambia: sigue siendo una píldora de una línea.
 *
-* EL VELO
+* LA FECHA SE ESCRIBE, NO SE CODIFICA
 *
-* Solo en LLENA, y con opacidad proporcional a lo que subió. En los
-* otros dos anclajes el mapa TIENE que seguir siendo tocable: es la
-* mitad de para qué existe la hoja. Un velo permanente convertiría esto
-* en el mismo diálogo a pantalla completa de antes, solo que más bajo.
+* Decía "2026-08-16". Es una fecha ISO, que es un formato para
+* máquinas: quien lee un mapa de ayudas no tiene por qué descifrar el
+* orden de los campos ni traducir el 08. Ahora dice "16 de agosto", con
+* el mes leído del dato y no escrito a mano, que es el error que ya
+* apareció en tres sitios de este proyecto.
 * -----------------------------------------------------------------------
 */
-/** Fracción de la pantalla que ocupa la hoja en cada anclaje. */
-var ANCLAJES = [
-	.32,
-	.62,
-	.94
-];
-var ASOMADA = 0;
-var LLENA = ANCLAJES.length - 1;
-/**
-* Cuánto hay que arrastrar hacia abajo desde el anclaje más bajo para
-* que la hoja se cierre.
-*
-* 64 px es aproximadamente el recorrido de un pulgar sin mover la mano.
-* Más corto y la hoja se cierra sola al intentar ajustarla; más largo y
-* el gesto de descartar se siente trabado.
-*/
-var CERRAR_PX = 64;
-/** Arrastre mínimo para considerar que hubo gesto y no un toque. */
-var UMBRAL_GESTO_PX = 6;
-function HojaInferior({ abierta, onCerrar, titulo, resumen, children, onAlturaChange, anclajeInicial = ASOMADA }) {
-	const [anclaje, setAnclaje] = (0, import_react.useState)(anclajeInicial);
-	/** Desplazamiento del dedo respecto del anclaje actual. Positivo = hacia abajo. */
-	const [arrastre, setArrastre] = (0, import_react.useState)(0);
-	const [arrastrando, setArrastrando] = (0, import_react.useState)(false);
-	const [altoPantalla, setAltoPantalla] = (0, import_react.useState)(0);
-	const hojaRef = (0, import_react.useRef)(null);
-	const cuerpoRef = (0, import_react.useRef)(null);
-	const inicioRef = (0, import_react.useRef)(0);
-	(0, import_react.useLayoutEffect)(() => {
-		const medir = () => setAltoPantalla(window.innerHeight);
-		medir();
-		window.addEventListener("resize", medir);
-		window.visualViewport?.addEventListener("resize", medir);
+function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit }) {
+	const [playing, setPlaying] = (0, import_react.useState)(false);
+	const intervalRef = (0, import_react.useRef)(null);
+	const datesRef = (0, import_react.useRef)(dates);
+	datesRef.current = dates;
+	const currentDateRef = (0, import_react.useRef)(currentDate);
+	currentDateRef.current = currentDate;
+	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
+	const activo = currentIndex >= 0;
+	const alFinal = activo && currentIndex === dates.length - 1;
+	(0, import_react.useEffect)(() => {
+		if (currentDate === null) setPlaying(false);
+	}, [currentDate]);
+	(0, import_react.useEffect)(() => {
+		if (!playing) {
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+			intervalRef.current = null;
+			return;
+		}
+		const stepMs = computeTimelineStepMs(datesRef.current.length);
+		intervalRef.current = setInterval(() => {
+			const freshDates = datesRef.current;
+			const freshCurrent = currentDateRef.current;
+			const next = freshDates[(freshCurrent ? freshDates.indexOf(freshCurrent) : -1) + 1];
+			if (next === void 0) {
+				setPlaying(false);
+				return;
+			}
+			onAdvance(next);
+		}, stepMs);
 		return () => {
-			window.removeEventListener("resize", medir);
-			window.visualViewport?.removeEventListener("resize", medir);
+			if (intervalRef.current !== null) clearInterval(intervalRef.current);
+		};
+	}, [playing]);
+	const alternarReproduccion = () => {
+		if (!activo && dates.length > 0) {
+			const primera = dates[0];
+			if (primera !== void 0) onActivate(primera);
+		} else if (alFinal) {
+			const primera = dates[0];
+			if (primera !== void 0) onSeek(primera);
+		}
+		setPlaying((v) => !v);
+	};
+	const handleScrub = (event) => {
+		setPlaying(false);
+		const index = Number(event.target.value);
+		const date = dates[index];
+		if (date === void 0) return;
+		if (!activo) onActivate(date);
+		else if (index === currentIndex + 1) onAdvance(date);
+		else onSeek(date);
+	};
+	if (dates.length === 0) return null;
+	const fechaMostrada = currentDate ?? dates[0] ?? null;
+	const etiqueta = diaMes(fechaMostrada);
+	const botonVerTodo = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+		type: "button",
+		onClick: () => {
+			setPlaying(false);
+			onExit();
+		},
+		className: "min-h-11 shrink-0 rounded-lg px-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground md:ml-1 md:min-h-0 md:px-0",
+		children: "Ver todo"
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "pointer-events-auto w-full max-w-[28rem] rounded-2xl border border-border bg-surface/95 px-3 py-2 shadow-sm backdrop-blur md:w-auto md:max-w-none md:rounded-full md:px-4 md:py-2.5",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center justify-between gap-3 md:hidden",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "min-w-0 truncate text-sm font-semibold tabular-nums text-foreground",
+				"aria-live": "polite",
+				children: etiqueta
+			}), activo && botonVerTodo]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center gap-3",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: alternarReproduccion,
+					"aria-label": playing ? "Pausar" : "Reproducir día por día",
+					className: "flex size-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 md:size-10",
+					children: playing ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("svg", {
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "currentColor",
+						"aria-hidden": true,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+							x: "5",
+							y: "4",
+							width: "5",
+							height: "16",
+							rx: "1"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("rect", {
+							x: "14",
+							y: "4",
+							width: "5",
+							height: "16",
+							rx: "1"
+						})]
+					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
+						width: "14",
+						height: "14",
+						viewBox: "0 0 24 24",
+						fill: "currentColor",
+						"aria-hidden": true,
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", { d: "M6 4l14 8-14 8V4z" })
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					type: "range",
+					min: 0,
+					max: dates.length - 1,
+					step: 1,
+					value: currentIndex >= 0 ? currentIndex : 0,
+					onChange: handleScrub,
+					"aria-label": "Día de la operación",
+					"aria-valuetext": etiqueta,
+					className: "h-11 w-full min-w-0 flex-1 cursor-pointer accent-foreground md:h-1.5 md:w-72 md:flex-none"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "hidden min-w-[7rem] shrink-0 text-center text-sm font-semibold tabular-nums text-foreground md:inline",
+					"aria-live": "polite",
+					children: etiqueta
+				}),
+				activo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "hidden md:inline",
+					children: botonVerTodo
+				})
+			]
+		})]
+	});
+}
+/**
+* MapaToneladas.tsx — "Mapa de Ayudas"
+* -----------------------------------------------------------------------
+* Los 42 municipios del Valle, pintados según las toneladas aproximadas
+* que recibieron, con la línea de tiempo del mapa de siempre: se mueve el
+* deslizador (o se reproduce, día por día) y cada municipio se enciende
+* cuando le llega ayuda.
+*
+* LA IDENTIDAD ES LA DEL MAPA ORIGINAL
+*
+* Mismo tema oscuro (`theme-ayudas`), mismas píldoras arriba, mismo
+* marcador de «Ayuda entregada» con sus dígitos rodantes, mismo panel de
+* filtros, misma línea de tiempo, mismo «¿Cómo leer este mapa?» y la misma
+* rampa de azules, de menos a más volumen. Cambia el dato, no el diseño.
+*
+* QUÉ SE PUEDE MOSTRAR CON EL DATO NUEVO, Y QUÉ NO
+*
+* El consolidado trae fecha, destino y peso de cada despacho, así que todo
+* lo que depende del TIEMPO y del PESO está: línea de tiempo por día,
+* acumulado, «solo ese día», pulsos de llegada y el detalle por municipio.
+* No trae el ORIGEN de cada despacho. Por eso las líneas animadas NO dicen
+* «este despacho salió de aquí»: son un trazo ESQUEMÁTICO desde el centro de
+* acopio de Cali (el de la Gobernación) hasta cada municipio que recibe
+* ayuda, para ver cómo se va extendiendo la entrega. La leyenda y el
+* «¿Cómo leer este mapa?» lo dicen. Si algún día el Excel registra el punto
+* de salida de cada despacho, el origen de cada arco sale de ahí.
+*
+* LA ESCALA
+*
+* Seis tonos por cuantiles de lo que recibieron los municipios, calculados
+* sobre TODO el período (no sobre el día): así un municipio no cambia de
+* color porque otro dejó de recibir. Un municipio sin despachos en la
+* ventana que se mira va en gris, distinto del tono más claro: «no hay
+* registro» no es «poco».
+*
+* ACCESIBLE: un mapa no se opera con teclado ni lo lee un lector de
+* pantalla. Las mismas cifras están, municipio por municipio, en
+* «¿Cuánta ayuda recibió cada municipio?», y el mapa lo indica.
+* -----------------------------------------------------------------------
+*/
+dm(maplibre_gl_worker_default);
+/**
+* El Valle completo (de Buenaventura a Ulloa, de Jamundí a El Águila). Se
+* encuadra con fitBounds y no con centro y zoom fijos: así llena la
+* pantalla igual en un teléfono vertical que en un monitor.
+*/
+var VALLE = [[-77.55, 3.05], [-75.65, 4.95]];
+/** La rampa del mapa original, de menos a más volumen. Es diseño, no dato. */
+var RAMPA = [
+	"#0F3149",
+	"#175A80",
+	"#2181B4",
+	"#3FAEDC",
+	"#86D3F0",
+	"#C6ECFB"
+];
+var SIN_REGISTRO = "#33404B";
+var FUERA_DEL_FILTRO = "#102332";
+var SELECCIONADO = "#FFD400";
+/** El centro de acopio de la Gobernación, desde donde parten las líneas. */
+var DANE_CALI = "76001";
+var COLOR_ORIGEN = "#2f6fed";
+var COLOR_PUNTO = "#E2690E";
+var COLOR_ARCO_TENUE = "rgba(232,236,243,0.22)";
+var COLOR_ARCO_PULSO = "#e8ecf3";
+/** Grosor de la línea según las toneladas que lleva: crece despacio. */
+var anchoDeLinea = (t) => 1.4 + Math.sqrt(Math.max(0, t)) * .75;
+var ESTILO = {
+	version: 8,
+	glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+	sources: { osm: {
+		type: "raster",
+		tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+		tileSize: 256,
+		attribution: "© OpenStreetMap"
+	} },
+	layers: [{
+		id: "bg",
+		type: "background",
+		paint: { "background-color": "#33404B" }
+	}, {
+		id: "osm",
+		type: "raster",
+		source: "osm",
+		paint: {
+			"raster-opacity": .12,
+			"raster-saturation": -.7,
+			"raster-brightness-min": .25,
+			"raster-brightness-max": .8
+		}
+	}]
+};
+/** Cortes entre tonos: cuantiles de las toneladas de los municipios con despachos. */
+function cortesDe(valores) {
+	const v = valores.filter((x) => x > 0).sort((a, b) => a - b);
+	if (v.length === 0) return [];
+	const out = [];
+	for (let i = 1; i < RAMPA.length; i++) {
+		const q = v[Math.min(v.length - 1, Math.floor(i * v.length / RAMPA.length))];
+		if (out.length === 0 || q > out[out.length - 1]) out.push(q);
+	}
+	return out;
+}
+/** Toneladas de un municipio en la ventana que se mira. */
+function valorEn(m, lente, fecha) {
+	if (fecha === null) return m.toneladas;
+	let suma = 0;
+	for (const d of m.dias ?? []) if (lente === "jornada" ? d.fecha === fecha : d.fecha <= fecha) suma += d.toneladas;
+	return suma;
+}
+function MapaToneladas() {
+	const { data } = useMunicipios();
+	const municipios = data && data.disponible ? data.municipios : null;
+	if (data && !data.disponible) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "theme-ayudas flex h-full items-center justify-center bg-background px-6 text-center text-foreground/80",
+		children: "El mapa no está disponible en este momento."
+	});
+	if (!municipios) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "theme-ayudas flex h-full items-center justify-center bg-background text-sm text-foreground/70",
+		children: "Cargando mapa…"
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Mapa, { municipios });
+}
+function Mapa({ municipios }) {
+	const isMobile = useIsMobile();
+	const intro = useFirstVisit("mapa-ayudas-intro-v2");
+	const [ayuda, setAyuda] = (0, import_react.useState)(false);
+	const contenedor = (0, import_react.useRef)(null);
+	const mapaRef = (0, import_react.useRef)(null);
+	const cargado = (0, import_react.useRef)(false);
+	const pulsos = (0, import_react.useRef)(createArrivalPulseEngine());
+	const motor = (0, import_react.useRef)(createArcAnimationEngine());
+	const coordsArcos = (0, import_react.useRef)(/* @__PURE__ */ new Map());
+	const cambio = (0, import_react.useRef)("snap");
+	const vivosPrevios = (0, import_react.useRef)(/* @__PURE__ */ new Set());
+	const firmaAsentados = (0, import_react.useRef)("");
+	const [fecha, setFecha] = (0, import_react.useState)(null);
+	const [lente, setLente] = (0, import_react.useState)("acumulado");
+	const [zona, setZona] = (0, import_react.useState)("todas");
+	const [seleccion, setSeleccion] = (0, import_react.useState)(null);
+	const [rutas, setRutas] = (0, import_react.useState)("auto");
+	const [filtrosAbiertos, setFiltrosAbiertos] = (0, import_react.useState)(false);
+	const [vistaToken, setVistaToken] = (0, import_react.useState)(0);
+	const fechas = (0, import_react.useMemo)(() => {
+		const s = /* @__PURE__ */ new Set();
+		for (const m of municipios) for (const d of m.dias ?? []) s.add(d.fecha);
+		return [...s].sort();
+	}, [municipios]);
+	const porDane = (0, import_react.useMemo)(() => new Map(municipios.map((m) => [m.codigoDane, m])), [municipios]);
+	const cortes = (0, import_react.useMemo)(() => {
+		const totales = municipios.map((m) => m.toneladas);
+		const dias = [];
+		for (const m of municipios) for (const d of m.dias ?? []) dias.push(d.toneladas);
+		return {
+			acumulado: cortesDe(totales),
+			jornada: cortesDe(dias)
+		};
+	}, [municipios]);
+	const enZona = (0, import_react.useCallback)((m) => zona === "todas" || m.zona === zona, [zona]);
+	/** Lo que se ve en el marcador y en el panel de controles. */
+	const resumen = (0, import_react.useMemo)(() => {
+		let t = 0;
+		let con = 0;
+		for (const m of municipios) {
+			if (!enZona(m)) continue;
+			const v = valorEn(m, lente, fecha);
+			t += v;
+			if (v > 0) con += 1;
+		}
+		return {
+			toneladas: t,
+			municipios: con
+		};
+	}, [
+		municipios,
+		enZona,
+		lente,
+		fecha
+	]);
+	const zonas = (0, import_react.useMemo)(() => [...new Set(municipios.map((m) => m.zona))].sort((a, b) => a.localeCompare(b, "es")), [municipios]);
+	const elegido = seleccion ? porDane.get(seleccion) ?? null : null;
+	const { data: resumenApi } = useResumen();
+	const puntosPorDane = (0, import_react.useMemo)(() => {
+		const out = /* @__PURE__ */ new Map();
+		if (!resumenApi || !resumenApi.disponible) return out;
+		for (const d of resumenApi.calidad.traslados.destinos) {
+			const prefijo = d.nombre.split(/\s[–-]\s/)[0] ?? "";
+			const m = municipios.find((x) => sameMunicipality(x.nombre, prefijo));
+			if (!m) continue;
+			const lugar = d.nombre.slice(prefijo.length).replace(/^\s[–-]\s/, "").trim();
+			out.set(m.codigoDane, [...out.get(m.codigoDane) ?? [], {
+				nombre: lugar || d.nombre,
+				toneladas: d.toneladas
+			}]);
+		}
+		return out;
+	}, [resumenApi, municipios]);
+	const origen = (0, import_react.useMemo)(() => {
+		const cali = porDane.get(DANE_CALI);
+		return cali ? [cali.longitud, cali.latitud] : null;
+	}, [porDane]);
+	/** Los municipios a los que hoy llega una línea, con el peso que lleva. */
+	const arcosVivos = (0, import_react.useMemo)(() => {
+		if (!origen || rutas === "ninguna") return [];
+		if (!seleccion && fecha === null) return [];
+		return municipios.filter((m) => m.codigoDane !== DANE_CALI && enZona(m)).filter((m) => !seleccion || m.codigoDane === seleccion).map((m) => ({
+			m,
+			clave: `CALI::${m.codigoDane}`,
+			peso: valorEn(m, lente, fecha)
+		})).filter((x) => x.peso > 0);
+	}, [
+		municipios,
+		origen,
+		rutas,
+		enZona,
+		seleccion,
+		lente,
+		fecha
+	]);
+	arcosVivos.length;
+	const limites = (0, import_react.useMemo)(() => {
+		return {
+			type: "FeatureCollection",
+			features: valleMunicipios.features.map((f) => ({
+				...f,
+				properties: {
+					dane: String(f.properties["municipalityCode"] ?? ""),
+					valor: -1,
+					estado: 0
+				}
+			}))
 		};
 	}, []);
 	(0, import_react.useEffect)(() => {
-		if (abierta) {
-			setAnclaje(anclajeInicial);
-			setArrastre(0);
-		}
-	}, [abierta, anclajeInicial]);
-	const altoMaximo = altoPantalla * ANCLAJES[LLENA];
-	const altoDelAnclaje = altoPantalla * ANCLAJES[anclaje];
-	const altoVisible = Math.min(altoMaximo, Math.max(0, altoDelAnclaje - arrastre));
-	const desplazamiento = altoMaximo - altoVisible;
-	(0, import_react.useEffect)(() => {
-		onAlturaChange?.(abierta ? altoVisible : 0);
-	}, [
-		abierta,
-		altoVisible,
-		onAlturaChange
-	]);
-	(0, import_react.useEffect)(() => () => onAlturaChange?.(0), [onAlturaChange]);
-	const alPresionar = (evento) => {
-		inicioRef.current = evento.clientY;
-		setArrastrando(true);
-		evento.currentTarget.setPointerCapture(evento.pointerId);
-	};
-	const alMover = (evento) => {
-		if (!arrastrando) return;
-		setArrastre(evento.clientY - inicioRef.current);
-	};
-	const alSoltar = (evento) => {
-		if (!arrastrando) return;
-		evento.currentTarget.releasePointerCapture(evento.pointerId);
-		setArrastrando(false);
-		const recorrido = arrastre;
-		setArrastre(0);
-		if (Math.abs(recorrido) < UMBRAL_GESTO_PX) {
-			setAnclaje((actual) => actual === ASOMADA ? 1 : ASOMADA);
-			return;
-		}
-		if (anclaje === ASOMADA && recorrido > CERRAR_PX) {
-			onCerrar();
-			return;
-		}
-		const objetivo = altoDelAnclaje - recorrido;
-		let cercano = ASOMADA;
-		let menorDistancia = Infinity;
-		ANCLAJES.forEach((fraccion, i) => {
-			const distancia = Math.abs(fraccion * altoPantalla - objetivo);
-			if (distancia < menorDistancia) {
-				menorDistancia = distancia;
-				cercano = i;
+		if (!contenedor.current || mapaRef.current) return;
+		const map = new xp({
+			container: contenedor.current,
+			style: ESTILO,
+			bounds: VALLE,
+			fitBoundsOptions: { padding: {
+				top: 110,
+				bottom: 130,
+				left: 24,
+				right: 24
+			} },
+			attributionControl: { compact: true },
+			cooperativeGestures: true,
+			locale: {
+				"CooperativeGesturesHandler.WindowsHelpText": "Use Ctrl + rueda del ratón para acercar el mapa",
+				"CooperativeGesturesHandler.MacHelpText": "Use ⌘ + rueda del ratón para acercar el mapa",
+				"CooperativeGesturesHandler.MobileHelpText": "Use dos dedos para mover el mapa"
 			}
 		});
-		setAnclaje(cercano);
-	};
-	const cerrarConTeclado = (0, import_react.useCallback)((evento) => {
-		if (evento.key === "Escape") onCerrar();
-	}, [onCerrar]);
+		mapaRef.current = map;
+		map.addControl(new Cp({ showCompass: false }), "bottom-left");
+		map.on("load", () => {
+			map.addSource("municipios", {
+				type: "geojson",
+				data: limites
+			});
+			map.addLayer({
+				id: "relleno",
+				type: "fill",
+				source: "municipios",
+				paint: {
+					"fill-color": SIN_REGISTRO,
+					"fill-opacity": .86,
+					"fill-color-transition": {
+						duration: 320,
+						delay: 0
+					},
+					"fill-opacity-transition": {
+						duration: 200,
+						delay: 0
+					}
+				}
+			});
+			map.addLayer({
+				id: "borde",
+				type: "line",
+				source: "municipios",
+				paint: {
+					"line-color": "#FBF8C6",
+					"line-width": .8,
+					"line-opacity": .32
+				}
+			});
+			map.addLayer({
+				id: "borde-elegido",
+				type: "line",
+				source: "municipios",
+				filter: [
+					"==",
+					["get", "estado"],
+					2
+				],
+				paint: {
+					"line-color": SELECCIONADO,
+					"line-width": 2.4
+				}
+			});
+			map.addSource("arcos-creciendo", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "arcos-creciendo-line",
+				type: "line",
+				source: "arcos-creciendo",
+				layout: {
+					"line-cap": "round",
+					"line-join": "round"
+				},
+				paint: {
+					"line-color": COLOR_ORIGEN,
+					"line-width": ["get", "ancho"],
+					"line-opacity": .95
+				}
+			});
+			map.addSource("arcos-asentados", {
+				type: "geojson",
+				lineMetrics: true,
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "arcos-asentados-line",
+				type: "line",
+				source: "arcos-asentados",
+				layout: {
+					"line-cap": "round",
+					"line-join": "round"
+				},
+				paint: {
+					"line-width": ["get", "ancho"],
+					"line-gradient": buildPulseGradient(0, COLOR_ARCO_TENUE, COLOR_ARCO_PULSO, .06)
+				}
+			});
+			map.addSource("origen", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "origen",
+				type: "circle",
+				source: "origen",
+				paint: {
+					"circle-radius": 9,
+					"circle-color": COLOR_ORIGEN,
+					"circle-stroke-color": "#FFFFFF",
+					"circle-stroke-width": 2.4
+				}
+			});
+			map.addSource("puntos", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "puntos",
+				type: "circle",
+				source: "puntos",
+				paint: {
+					"circle-radius": 6,
+					"circle-translate": [0, -16],
+					"circle-color": COLOR_PUNTO,
+					"circle-stroke-color": "#FFFFFF",
+					"circle-stroke-width": 2.4
+				}
+			});
+			map.addSource("pulsos", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "pulsos",
+				type: "circle",
+				source: "pulsos",
+				paint: {
+					"circle-radius": ["get", "radio"],
+					"circle-color": "rgba(0,0,0,0)",
+					"circle-stroke-color": "#FFFFFF",
+					"circle-stroke-width": 2,
+					"circle-stroke-opacity": ["get", "opacidad"]
+				}
+			});
+			map.addSource("etiquetas", {
+				type: "geojson",
+				data: {
+					type: "FeatureCollection",
+					features: []
+				}
+			});
+			map.addLayer({
+				id: "etiquetas",
+				type: "symbol",
+				source: "etiquetas",
+				minzoom: 7.4,
+				layout: {
+					"text-field": ["get", "texto"],
+					"text-size": 11,
+					"text-font": ["Open Sans Semibold"],
+					"text-allow-overlap": false
+				},
+				paint: {
+					"text-color": "#FFFFFF",
+					"text-halo-color": "#0F3149",
+					"text-halo-width": 1.6
+				}
+			});
+			map.on("mouseenter", "relleno", () => map.getCanvas().style.cursor = "pointer");
+			map.on("mouseleave", "relleno", () => map.getCanvas().style.cursor = "");
+			map.on("click", "relleno", (e) => {
+				const dane = String(e.features?.[0]?.properties?.["dane"] ?? "");
+				setSeleccion((s) => s === dane ? null : dane);
+			});
+			cargado.current = true;
+			setVistaToken((n) => n + 1);
+		});
+		return () => {
+			cargado.current = false;
+			map.remove();
+			mapaRef.current = null;
+		};
+	}, [limites]);
 	(0, import_react.useEffect)(() => {
-		if (!abierta) return;
-		document.addEventListener("keydown", cerrarConTeclado);
-		return () => document.removeEventListener("keydown", cerrarConTeclado);
-	}, [abierta, cerrarConTeclado]);
-	const cuerpoDesplazable = anclaje > ASOMADA;
+		const map = mapaRef.current;
+		if (!map || !cargado.current) return;
+		const src = map.getSource("municipios");
+		if (!src) return;
+		const cortesLente = cortes[lente];
+		const feats = limites.features.map((f) => {
+			const dane = String(f.properties["dane"]);
+			const m = porDane.get(dane);
+			const valor = m ? valorEn(m, lente, fecha) : 0;
+			const filtrado = m ? !enZona(m) : false;
+			return {
+				...f,
+				properties: {
+					dane,
+					valor: valor > 0 ? valor : -1,
+					estado: dane === seleccion ? 2 : filtrado ? 1 : 0
+				}
+			};
+		});
+		src.setData({
+			type: "FeatureCollection",
+			features: feats
+		});
+		const escala = cortesLente.length === 0 ? ["literal", SIN_REGISTRO] : [
+			"step",
+			["get", "valor"],
+			RAMPA[0],
+			...cortesLente.flatMap((c, i) => [c, RAMPA[Math.min(i + 1, RAMPA.length - 1)]])
+		];
+		map.setPaintProperty("relleno", "fill-color", [
+			"case",
+			[
+				"==",
+				["get", "estado"],
+				2
+			],
+			SELECCIONADO,
+			[
+				"==",
+				["get", "estado"],
+				1
+			],
+			FUERA_DEL_FILTRO,
+			[
+				"<",
+				["get", "valor"],
+				0
+			],
+			SIN_REGISTRO,
+			escala
+		]);
+		map.setPaintProperty("relleno", "fill-opacity", [
+			"case",
+			[
+				"==",
+				["get", "estado"],
+				1
+			],
+			.12,
+			.88
+		]);
+		const et = municipios.filter((m) => enZona(m) && valorEn(m, lente, fecha) > 0).map((m) => ({
+			type: "Feature",
+			properties: { texto: `${m.nombre}\n${toneladas(valorEn(m, lente, fecha))}` },
+			geometry: {
+				type: "Point",
+				coordinates: [m.longitud, m.latitud]
+			}
+		}));
+		map.getSource("etiquetas")?.setData({
+			type: "FeatureCollection",
+			features: et
+		});
+	}, [
+		municipios,
+		porDane,
+		limites,
+		cortes,
+		lente,
+		fecha,
+		zona,
+		seleccion,
+		enZona,
+		vistaToken
+	]);
 	(0, import_react.useEffect)(() => {
-		if (!cuerpoDesplazable) cuerpoRef.current?.scrollTo({ top: 0 });
-	}, [cuerpoDesplazable]);
-	if (!abierta || altoPantalla === 0) return null;
-	const proporcionLlena = ANCLAJES[LLENA] - ANCLAJES[1];
-	const velo = altoVisible <= altoPantalla * ANCLAJES[1] ? 0 : Math.min(.5, (altoVisible / altoPantalla - ANCLAJES[1]) / proporcionLlena * .5);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		"aria-hidden": true,
-		onClick: onCerrar,
-		className: "absolute inset-0 z-30 bg-[#08202E] md:hidden",
-		style: {
-			opacity: velo,
-			pointerEvents: velo > .05 ? "auto" : "none",
-			transition: arrastrando ? "none" : "opacity 220ms ease-out"
+		const map = mapaRef.current;
+		if (!map || !cargado.current) return;
+		map.getSource("origen")?.setData({
+			type: "FeatureCollection",
+			features: origen ? [{
+				type: "Feature",
+				properties: {},
+				geometry: {
+					type: "Point",
+					coordinates: origen
+				}
+			}] : []
+		});
+	}, [origen, vistaToken]);
+	(0, import_react.useEffect)(() => {
+		const map = mapaRef.current;
+		if (!map || !cargado.current) return;
+		map.getSource("puntos")?.setData({
+			type: "FeatureCollection",
+			features: municipios.filter((m) => puntosPorDane.has(m.codigoDane)).map((m) => ({
+				type: "Feature",
+				properties: {},
+				geometry: {
+					type: "Point",
+					coordinates: [m.longitud, m.latitud]
+				}
+			}))
+		});
+	}, [
+		municipios,
+		puntosPorDane,
+		vistaToken
+	]);
+	(0, import_react.useEffect)(() => {
+		if (!origen) return;
+		const ahora = performance_default.now();
+		const claves = arcosVivos.map((x) => x.clave);
+		const pesos = {};
+		for (const x of arcosVivos) {
+			pesos[x.clave] = x.peso;
+			if (!coordsArcos.current.has(x.clave)) coordsArcos.current.set(x.clave, buildArcCoordinates(origen, [x.m.longitud, x.m.latitud]));
 		}
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		ref: hojaRef,
-		role: "dialog",
-		"aria-label": titulo,
-		className: "absolute inset-x-0 bottom-0 z-40 flex flex-col rounded-t-[1.5rem] bg-white shadow-[0_-8px_32px_rgba(8,32,46,0.28)] md:hidden",
-		style: {
-			height: altoMaximo,
-			transform: `translateY(${desplazamiento}px)`,
-			transition: arrastrando ? "none" : "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)",
-			paddingBottom: "env(safe-area-inset-bottom)"
-		},
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			onPointerDown: alPresionar,
-			onPointerMove: alMover,
-			onPointerUp: alSoltar,
-			onPointerCancel: alSoltar,
-			className: "shrink-0 cursor-grab touch-none select-none px-5 pb-3 pt-2.5 active:cursor-grabbing",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "mx-auto mb-3 h-1.5 w-11 rounded-full bg-[#123E5C]/25" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "flex items-start justify-between gap-3",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "min-w-0 flex-1",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-						className: "truncate text-xl font-bold leading-tight text-[#123E5C]",
-						children: titulo
-					}), resumen && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "mt-1 text-[15px] leading-6 text-[#35708F]",
-						children: resumen
-					})]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: onCerrar,
-					"aria-label": "Cerrar",
-					className: "-mr-2 -mt-1 grid size-11 shrink-0 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
-						className: "size-5",
-						"aria-hidden": true
+		const previos = vivosPrevios.current;
+		if (cambio.current === "advance") {
+			motor.current.sync(claves, pesos);
+			for (const x of arcosVivos) if (previos.has(x.clave)) motor.current.bumpWeight(x.clave, x.peso);
+			else motor.current.enter(x.clave, ahora, { weight: x.peso });
+		} else motor.current.snapTo(claves, pesos, ahora);
+		cambio.current = "snap";
+		vivosPrevios.current = new Set(claves);
+	}, [arcosVivos, origen]);
+	const lanzarPulsos = (0, import_react.useCallback)((dia) => {
+		const ahora = performance_default.now();
+		for (const m of municipios) {
+			if (!enZona(m)) continue;
+			if (!(m.dias ?? []).some((d) => d.fecha === dia)) continue;
+			if (!(rutas === "auto" && !seleccion && m.codigoDane !== DANE_CALI && !vivosPrevios.current.has(`CALI::${m.codigoDane}`))) pulsos.current.spawn(m.codigoDane, ahora);
+		}
+	}, [
+		municipios,
+		enZona,
+		rutas,
+		seleccion
+	]);
+	(0, import_react.useEffect)(() => {
+		let raf = 0;
+		const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		/** Traduce un cuadro del motor a las capas de MapLibre. */
+		const dibujarArcos = (map, ahora, sinMovimiento) => {
+			const cuadro = motor.current.tick(ahora);
+			const peso = (clave) => {
+				const dane = clave.split("::")[1] ?? "";
+				const m = porDane.get(dane);
+				return m ? m.toneladas : 0;
+			};
+			for (const a of cuadro.justSettled) {
+				const dane = a.key.split("::")[1];
+				if (dane) pulsos.current.spawn(dane, ahora);
+			}
+			map.getSource("arcos-creciendo")?.setData({
+				type: "FeatureCollection",
+				features: cuadro.growing.flatMap((a) => {
+					const completo = coordsArcos.current.get(a.key);
+					if (!completo || completo.length < 2) return [];
+					const corte = Math.max(2, Math.floor(completo.length * (sinMovimiento ? 1 : a.sampleFraction)));
+					return [{
+						type: "Feature",
+						properties: { ancho: anchoDeLinea(a.weight || peso(a.key)) },
+						geometry: {
+							type: "LineString",
+							coordinates: completo.slice(0, corte)
+						}
+					}];
+				})
+			});
+			const firma = cuadro.settled.map((a) => `${a.key}:${Math.round(a.weight * 10)}`).join("|");
+			if (firma !== firmaAsentados.current) {
+				firmaAsentados.current = firma;
+				map.getSource("arcos-asentados")?.setData({
+					type: "FeatureCollection",
+					features: cuadro.settled.flatMap((a) => {
+						const completo = coordsArcos.current.get(a.key);
+						if (!completo || completo.length < 2) return [];
+						return [{
+							type: "Feature",
+							properties: { ancho: anchoDeLinea(a.weight || peso(a.key)) },
+							geometry: {
+								type: "LineString",
+								coordinates: completo
+							}
+						}];
 					})
-				})]
-			})]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			ref: cuerpoRef,
-			className: `min-h-0 flex-1 px-5 pb-6 ${cuerpoDesplazable ? "overflow-y-auto overscroll-contain" : "overflow-hidden"}`,
-			children
-		})]
-	})] });
-}
-/**
-* useDestinoLogistica.ts
-* -----------------------------------------------------------------------
-* Vista SECUNDARIA de un destino (route=destino-logistica&id=), solo
-* DESPACHOS. Se dispara recién cuando la persona expande el bloque de
-* logística, no junto con el resumen.
-*
-* CAMBIO: staleTime y reintentos, igual que useDestinoResumen, para que
-* expandir y contraer el bloque no repita la petición.
-* -----------------------------------------------------------------------
-*/
-function useDestinoLogistica(destinoId, expanded) {
-	return useQuery({
-		queryKey: ["destino-logistica", destinoId],
-		queryFn: () => ayudasApiRepository.getDestinoLogistica(destinoId),
-		enabled: destinoId !== null && expanded,
-		staleTime: CATALOG_STALE_TIME_MS$1,
-		retry: 3,
-		retryDelay: REINTENTO_ESCALONADO$1
-	});
-}
-/**
-* LogisticaDrawer.tsx
-* -----------------------------------------------------------------------
-* Nivel SECUNDARIO del panel de destino: despachos individuales
-* (useDestinoLogistica, fuente DESPACHOS). Colapsado por defecto — el
-* fetch solo se dispara cuando `expanded` pasa a true (ver el `enabled`
-* dentro de useDestinoLogistica.ts). Nunca muestra ni suma un total de
-* unidades propio: el backend ya advierte que las unidades por despacho
-* son un subconjunto parcial (96 de 387) y sumarlas aquí invitaría a
-* compararlas visualmente contra el total de categorías del panel
-* principal, que es exactamente lo que el modelo de datos prohíbe.
-* -----------------------------------------------------------------------
-*/
-function LogisticaDrawer({ destinoId, expanded, onToggle }) {
-	const { data, isLoading, isError } = useDestinoLogistica(destinoId, expanded);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-		className: "border-b border-border",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-			type: "button",
-			onClick: onToggle,
-			"aria-expanded": expanded,
-			className: "flex w-full items-center justify-between p-4 text-left",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "label-caps text-[10px]",
-				children: "Información logística"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("svg", {
-				width: "14",
-				height: "14",
-				viewBox: "0 0 24 24",
-				fill: "none",
-				"aria-hidden": true,
-				className: `shrink-0 text-muted-foreground transition-transform duration-150 ${expanded ? "rotate-180" : ""}`,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("path", {
-					d: "M6 9l6 6 6-6",
-					stroke: "currentColor",
-					strokeWidth: "2",
-					strokeLinecap: "round",
-					strokeLinejoin: "round"
-				})
-			})]
-		}), expanded && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "px-4 pb-4",
-			children: [
-				isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex flex-col gap-2",
-					children: [
-						0,
-						1,
-						2
-					].map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-8 w-full animate-pulse rounded bg-surface-raised" }, i))
-				}),
-				isError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-xs text-muted-foreground",
-					children: "No se pudo cargar el detalle logístico."
-				}),
-				data && data.despachos.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-xs text-muted-foreground",
-					children: "Sin despachos individuales registrados."
-				}),
-				data && data.despachos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-					className: "flex flex-col gap-2.5",
-					children: data.despachos.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						className: "rounded-md border border-border bg-surface-raised/60 p-2.5 text-xs",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex items-baseline justify-between",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "font-mono text-[11px] text-muted-foreground",
-									children: d.fecha ?? "sin fecha"
-								}), d.unidades !== null && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "tabular-nums text-muted-foreground",
-									children: [d.unidades.toLocaleString("es-CO"), " u."]
-								})]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-0.5 text-foreground",
-								children: d.categoriaPrincipal ?? "Sin categoría"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-								className: "mt-0.5 text-[11px] text-muted-foreground",
-								children: [d.canal ?? "Canal desconocido", d.familias !== null ? ` · ${d.familias} familias` : ""]
-							}),
-							d.documento && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
-								href: d.documento.driveUrl,
-								target: "_blank",
-								rel: "noreferrer",
-								className: "mt-1 inline-block text-[11px] font-medium text-primary hover:underline",
-								children: "Ver documento"
-							})
-						]
-					}, d.id))
-				}),
-				data && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-3 text-[10px] leading-snug text-muted-foreground",
-					children: data.disclaimer
-				})
-			]
-		})]
-	});
-}
-/**
-* useDestinoResumen.ts
-* -----------------------------------------------------------------------
-* Vista PRINCIPAL de un destino (route=destino&id=). Separado de
-* useDestinoLogistica a propósito: son dos fuentes que el backend nunca
-* mezcla.
-*
-* CAMBIO: staleTime y reintentos, como el resto del tablero.
-*
-* Sin staleTime, React Query daba el dato por viejo apenas llegaba, así
-* que cerrar y volver a abrir la ficha de un municipio disparaba otra
-* petición al Web App cada vez.
-* -----------------------------------------------------------------------
-*/
-function useDestinoResumen(destinoId) {
-	return useQuery({
-		queryKey: ["destino", destinoId],
-		queryFn: () => ayudasApiRepository.getDestino(destinoId),
-		enabled: destinoId !== null,
-		staleTime: CATALOG_STALE_TIME_MS$1,
-		retry: 3,
-		retryDelay: REINTENTO_ESCALONADO$1
-	});
-}
-/**
-* DestinoPanel.tsx
-* -----------------------------------------------------------------------
-* Nivel PRINCIPAL del panel de destino: categorías entregadas
-* (useDestinoResumen, fuente ENVIOS_CATEGORIA). La logística
-* (useDestinoLogistica, fuente DESPACHOS) vive en LogisticaDrawer.tsx y
-* SOLO se monta/dispara cuando la persona expande ese bloque — el
-* `enabled: expanded` ya vive en el hook, este componente solo controla
-* el booleano de UI.
-*
-* DOS CHROMES, UN CONTENIDO
-*
-* En escritorio sigue siendo ContextualPanel, el panel lateral de
-* siempre, sin ningún cambio. En celular el mismo contenido va dentro de
-* una HojaInferior.
-*
-* El motivo es que un panel a pantalla completa no es la versión móvil
-* de un panel lateral. En escritorio el panel ocupa un tercio y el mapa
-* sigue ahí: se ve qué municipio se tocó, dónde queda, qué hay al lado.
-* En celular ese mismo panel tapaba todo, y la única salida era cerrar.
-* Comparar dos municipios exigía abrir, memorizar, cerrar y volver a
-* abrir.
-*
-* El contenido no se duplica: se arma una vez y cambia el envoltorio.
-*
-* EL TOTAL SE MUEVE AL ENCABEZADO EN CELULAR
-*
-* En la hoja, el resumen del encabezado es lo ÚNICO que se lee sin
-* arrastrar, así que ahí va la cifra que responde la pregunta que motivó
-* el toque: cuántas unidades recibió. Y por eso mismo el bloque "Total
-* recibido" no se repite en el cuerpo: mostrar el mismo número dos veces
-* a diez píxeles de distancia gasta el primer golpe de vista, que en una
-* hoja es lo más caro que hay.
-*
-* En escritorio ese bloque se queda donde estaba: ahí el encabezado solo
-* lleva el nombre y el tipo, y el total necesita su sitio.
-*
-* SOBRE LA LISTA DE CATEGORÍAS
-*
-* La barra dejó de ser un filete debajo del texto y pasó a ser el FONDO
-* de la fila. El filete tenía dos problemas: sumaba un renglón por
-* categoría, y en las chicas dibujaba doce píxeles de color en un panel
-* de casi cuatrocientos, así que la proporción no se leía. Como relleno
-* de fondo, la misma información ocupa la mitad del alto y se compara de
-* un vistazo.
-*
-* Los cuerpos subieron de 10 y 11 px a 13 y 15. Diez píxeles es más
-* chico que cualquier texto del resto de la página, y esto lo lee gente
-* en un teléfono, no un operador frente a un monitor.
-* -----------------------------------------------------------------------
-*/
-function DestinoPanel({ destinoId, isMobile, onAlturaChange, onClose }) {
-	const { data, isLoading, isError } = useDestinoResumen(destinoId);
-	const [logisticaExpanded, setLogisticaExpanded] = (0, import_react.useState)(false);
-	const transitionKey = `destino-${destinoId}`;
-	const titulo = data?.destino.nombre ?? "Cargando destino…";
-	const tipo = data ? tipoLabel(data.destino.tipo) : void 0;
-	const contenido = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-		isLoading && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelSkeleton, {}),
-		isError && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "p-4 text-sm text-muted-foreground",
-			children: "No se pudo cargar la información de este destino."
-		}),
-		data && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex flex-col",
-			children: [
-				!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-					className: "border-b border-border p-4",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "label-caps text-xs",
-							children: "Total recibido"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "font-display mt-1 text-3xl font-semibold tabular-nums",
-							children: [data.resumen.totalUnidades.toLocaleString("es-CO"), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								className: "ml-1.5 text-base font-normal text-muted-foreground",
-								children: "unidades"
-							})]
-						}),
-						data.resumen.fechaCorte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-							className: "mt-1 text-[13px] text-muted-foreground",
-							children: ["Corte al ", data.resumen.fechaCorte]
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-					className: `border-b border-border ${isMobile ? "pb-4" : "p-4"}`,
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "label-caps text-xs",
-							children: "Categorías entregadas"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							className: "mt-3 flex flex-col gap-1.5",
-							children: data.categorias.map((c) => {
-								const porcentaje = Math.round(c.porcentaje * 100);
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-									className: "relative overflow-hidden rounded-md bg-surface-raised/60",
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"aria-hidden": true,
-										className: "absolute inset-y-0 left-0 bg-primary/25",
-										style: { width: `${Math.max(2, c.porcentaje * 100)}%` }
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-										className: "relative flex items-baseline justify-between gap-3 px-3 py-2",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "min-w-0 truncate text-[15px] text-foreground",
-											children: c.nombre
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "shrink-0 tabular-nums",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-												className: "text-[15px] font-semibold text-foreground",
-												children: Math.round(c.unidades).toLocaleString("es-CO")
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												className: "ml-2 text-[13px] text-muted-foreground",
-												children: [porcentaje, "%"]
-											})]
-										})]
-									})]
-								}, c.id);
-							})
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-3 text-[13px] leading-snug text-muted-foreground",
-							children: data.disclaimer
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(LogisticaDrawer, {
-					destinoId,
-					expanded: logisticaExpanded,
-					onToggle: () => setLogisticaExpanded((v) => !v)
-				})
-			]
-		})
-	] });
-	if (isMobile) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
-		abierta: true,
-		onCerrar: onClose,
-		titulo,
-		onAlturaChange,
-		resumen: data ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-				className: "font-semibold text-[#123E5C]",
-				children: Math.round(data.resumen.totalUnidades).toLocaleString("es-CO")
-			}),
-			" ",
-			"unidades",
-			tipo ? ` · ${tipo}` : ""
-		] }) : tipo,
-		children: contenido
-	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
-		isMobile: false,
-		title: titulo,
-		subtitle: tipo,
-		onClose,
-		transitionKey,
-		children: contenido
-	});
-}
-function tipoLabel(tipo) {
-	return {
-		municipio: "Municipio",
-		centro_acopio: "Centro de acopio",
-		centro_proteccion: "Centro de protección",
-		entidad: "Entidad",
-		especial: "Destino especial",
-		departamento_externo: "Ayuda interdepartamental",
-		agregado_multiple: "Destino agregado"
-	}[tipo] ?? tipo;
-}
-function PanelSkeleton() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "flex flex-col gap-3 p-4",
+				});
+			}
+			if (map.getLayer("arcos-asentados-line")) map.setPaintProperty("arcos-asentados-line", "line-gradient", buildPulseGradient(sinMovimiento ? 0 : cuadro.pulseLoopT, COLOR_ARCO_TENUE, COLOR_ARCO_PULSO, .06));
+		};
+		const pasos = () => {
+			const map = mapaRef.current;
+			const src = map?.getSource("pulsos");
+			if (map && src && cargado.current) {
+				const ahora = performance_default.now();
+				const cuadros = quieto ? [] : pulsos.current.tick(ahora);
+				dibujarArcos(map, ahora, quieto);
+				src.setData({
+					type: "FeatureCollection",
+					features: cuadros.flatMap((c) => {
+						const m = porDane.get(c.destinoId);
+						if (!m) return [];
+						return [{
+							type: "Feature",
+							properties: {
+								radio: 6 + c.progress * 30,
+								opacidad: .85 * (1 - c.progress)
+							},
+							geometry: {
+								type: "Point",
+								coordinates: [m.longitud, m.latitud]
+							}
+						}];
+					})
+				});
+			}
+			raf = requestAnimationFrame(pasos);
+		};
+		raf = requestAnimationFrame(pasos);
+		return () => cancelAnimationFrame(raf);
+	}, [porDane]);
+	const activar = (primera) => {
+		setFecha(primera);
+		pulsos.current.clear();
+		lanzarPulsos(primera);
+	};
+	const buscar = (d) => {
+		setFecha(d);
+		pulsos.current.clear();
+	};
+	const avanzar = (d) => {
+		cambio.current = "advance";
+		setFecha(d);
+		lanzarPulsos(d);
+	};
+	const salir = () => {
+		setFecha(null);
+		setLente("acumulado");
+		pulsos.current.clear();
+	};
+	const reiniciar = () => {
+		salir();
+		setRutas("auto");
+		setZona("todas");
+		setSeleccion(null);
+		mapaRef.current?.fitBounds(VALLE, {
+			padding: {
+				top: 110,
+				bottom: 130,
+				left: 24,
+				right: 24
+			},
+			duration: 600
+		});
+	};
+	(0, import_react.useEffect)(() => {
+		const map = mapaRef.current;
+		if (!map || !cargado.current || !elegido) return;
+		map.flyTo({
+			center: [elegido.longitud, elegido.latitud],
+			zoom: Math.max(map.getZoom(), 8.6),
+			duration: 700,
+			essential: false
+		});
+	}, [elegido]);
+	const corte = fecha === null ? "Total del Valle" : lente === "jornada" ? `Solo el ${diaMes(fecha)}` : `Hasta el ${diaMes(fecha)}`;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background",
 		children: [
-			0,
-			1,
-			2,
-			3
-		].map((i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "h-3 w-full animate-pulse rounded bg-surface-raised" }, i))
-	});
-}
-/**
-* OrigenPanel.tsx
-* -----------------------------------------------------------------------
-* Equivalente a DestinoPanel pero para el punto de ORIGEN: no necesita
-* su propio hook de red porque toda la data que necesita (despachos por
-* destino alcanzado desde este origen) ya vive en `flujos`, que
-* DashboardPage arma filtrando flujosParaMapa por origenId — es el mismo
-* array que ya se le pasa a MapCanvas para dibujar los arcos, así que no
-* hay una segunda fuente de verdad ni un fetch adicional.
-*
-* DOS CHROMES, UN CONTENIDO
-*
-* En escritorio sigue siendo ContextualPanel, sin cambios. En celular el
-* mismo contenido va dentro de una HojaInferior, que deja el mapa
-* visible arriba.
-*
-* Acá el cambio pesa incluso más que en el panel de destino: la lista de
-* este panel son municipios, y cada fila abre el suyo. Con el panel a
-* pantalla completa, tocar una fila reemplazaba una pantalla llena por
-* otra y se perdía por completo dónde estaba uno. Con la hoja, el mapa
-* de atrás mueve su selección mientras la lista sigue ahí.
-*
-* LAS DOS CIFRAS SE MUEVEN AL ENCABEZADO EN CELULAR
-*
-* En la hoja, el resumen es lo único que se lee sin arrastrar. Ahí van
-* los despachos y los destinos alcanzados, y por eso el bloque de dos
-* columnas no se repite en el cuerpo: lo primero que aparece al
-* arrastrar es la lista, que es a lo que se vino.
-*
-* CADA FILA ABRE SU DESTINO
-*
-* Las cuarenta filas son destinos y todas tienen panel propio, así que
-* todas son navegables. Hacer clickeable solo a una —Cali, por ser la
-* primera— obligaría a explicar por qué las demás no lo son.
-*
-* La fila de Cali NO lleva ninguna glosa. Llegó a tener una que decía
-* "se quedó en la ciudad, sin salir a otro municipio", y era una
-* interpretación inventada: esos despachos llegaron a Cali como destino,
-* igual que los de Dagua. Que el origen esté en la misma ciudad no dice
-* nada sobre si la ayuda se entregó o se quedó guardada, y el dato no
-* distingue esas dos cosas.
-*
-* SOBRE EL TOTAL
-*
-* Los despachos de este panel son los que el MAPA puede dibujar, o sea
-* los que fueron a un destino con coordenada. Desde Cali salieron además
-* varios hacia destinos sin ubicación —entidades, casos especiales,
-* veredas sin especificar—, que no aparecen acá. La cifra es consistente
-* con lo que se ve en el mapa, no con el total de la operación.
-*
-* SOBRE LA COMPOSICIÓN
-*
-* La barra dejó de ser un filete debajo del texto y pasó a ser el fondo
-* de la fila. Con cuarenta destinos, el filete sumaba cuarenta renglones
-* y en los destinos chicos dibujaba doce píxeles de color en un panel de
-* casi cuatrocientos: la proporción no se leía y la lista era el doble de
-* larga.
-* -----------------------------------------------------------------------
-*/
-function OrigenPanel({ origenId, origenNombre, flujos, isMobile, enFechaSeleccionada = false, onSelectDestino, onAlturaChange, onClose }) {
-	const despachosTotal = flujos.reduce((sum, f) => sum + f.despachosCount, 0);
-	/**
-	* No hay toneladas por arco y no las va a haber: la hoja TONELADAS es
-	* una serie DIARIA y DEPARTAMENTAL, sin desglose por origen ni por
-	* destino. Repartirla proporcional a los despachos sería inventar un
-	* número, porque un despacho de mercados y uno de tapabocas no pesan
-	* igual. Por eso este panel cuenta despachos y no kilos.
-	*/
-	const destinosOrdenados = [...flujos].sort((a, b) => b.despachosCount - a.despachosCount);
-	const contenido = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "flex flex-col",
-		children: [!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-			className: "grid grid-cols-2 divide-x divide-border border-b border-border",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "p-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "label-caps block min-h-[2.4em] text-xs leading-tight",
-					children: "Despachos"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
-					children: despachosTotal.toLocaleString("es-CO")
-				})]
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "p-4",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "label-caps block min-h-[2.4em] text-xs leading-tight",
-					children: "Destinos alcanzados"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "font-display mt-1 text-3xl font-semibold tabular-nums text-foreground",
-					children: flujos.length.toLocaleString("es-CO")
-				})]
-			})]
-		}), flujos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-			className: `text-[15px] text-muted-foreground ${isMobile ? "py-2" : "p-4"}`,
-			children: [
-				"No hay despachos registrados desde este origen",
-				enFechaSeleccionada ? " en la fecha seleccionada" : "",
-				"."
-			]
-		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-			className: `border-b border-border ${isMobile ? "pb-4" : "p-4"}`,
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "label-caps text-xs",
-					children: "Despachos por destino"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-1 text-[15px] text-foreground",
-					children: "Selecciona un municipio para ver qué recibió."
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-2 flex gap-2 rounded-md bg-surface-raised/60 px-3 py-2",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Info, {
-						className: "mt-0.5 size-4 shrink-0 text-muted-foreground",
-						"aria-hidden": true
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "text-[13px] leading-5 text-muted-foreground",
-						children: "Cada despacho corresponde a una ruta. El porcentaje muestra la proporción de rutas que llegó a cada municipio, no la cantidad de ayuda enviada. Un municipio puede recibir más ayuda en menos rutas."
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-					className: "mt-3 flex flex-col gap-1.5",
-					children: destinosOrdenados.map((f, i) => {
-						const porcentaje = despachosTotal > 0 ? f.despachosCount / despachosTotal : 0;
-						return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							type: "button",
-							onClick: () => onSelectDestino?.(f.destino.id),
-							disabled: !onSelectDestino,
-							className: "group relative block min-h-11 w-full overflow-hidden rounded-md bg-surface-raised/60 text-left transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-default md:min-h-0",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"aria-hidden": true,
-								className: "absolute inset-y-0 left-0 origin-left bg-primary/25",
-								style: {
-									width: `${Math.max(2, porcentaje * 100)}%`,
-									animation: "bar-grow 480ms cubic-bezier(0.16, 1, 0.3, 1) both",
-									animationDelay: `${Math.min(i, 12) * 40}ms`
-								}
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "relative flex h-full items-center justify-between gap-3 px-3 py-2",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "min-w-0 truncate text-[15px] text-foreground",
-									children: f.destino.nombre
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "flex shrink-0 items-baseline gap-2 tabular-nums",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-											className: "text-[15px] font-semibold text-foreground",
-											children: f.despachosCount.toLocaleString("es-CO")
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "text-[13px] text-muted-foreground",
-											children: [Math.round(porcentaje * 100), "%"]
-										}),
-										onSelectDestino && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronRight, {
-											"aria-hidden": true,
-											className: "size-4 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none"
-										})
-									]
-								})]
-							})]
-						}) }, f.destino.id);
-					})
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				ref: contenedor,
+				className: "h-full w-full",
+				role: "img",
+				"aria-label": "Mapa del Valle del Cauca con las toneladas aproximadas recibidas por cada municipio. Las mismas cifras están en la lista de municipios."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(BarraSuperior, {
+				seleccion: elegido?.nombre ?? null,
+				onReiniciar: reiniciar,
+				onTodo: () => setSeleccion(null),
+				origenVisible: origen !== null,
+				conPuntos: puntosPorDane.size > 0,
+				onAyuda: () => setAyuda(true)
+			}),
+			!elegido && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Marcador, {
+				toneladas: resumen.toneladas,
+				municipios: resumen.municipios,
+				corte
+			}),
+			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelControles, {
+				lente,
+				setLente,
+				hayFecha: fecha !== null,
+				zona,
+				setZona,
+				zonas,
+				rutas,
+				setRutas
+			}),
+			isMobile && !elegido && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: () => setFiltrosAbiertos((v) => !v),
+				"aria-expanded": filtrosAbiertos,
+				className: "pointer-events-auto absolute bottom-[8.5rem] left-3 z-10 min-h-11 rounded-full border border-border bg-surface/95 px-4 text-sm font-semibold text-foreground shadow-sm backdrop-blur",
+				children: filtrosAbiertos ? "Cerrar filtros" : "Filtros"
+			}), filtrosAbiertos && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "pointer-events-auto absolute inset-x-3 bottom-[11.75rem] z-10 max-h-[45dvh] overflow-y-auto",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelControles, {
+					enLinea: true,
+					lente,
+					setLente,
+					hayFecha: fecha !== null,
+					zona,
+					setZona,
+					zonas,
+					rutas,
+					setRutas
 				})
-			]
-		})]
-	});
-	if (isMobile) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
-		abierta: true,
-		onCerrar: onClose,
-		titulo: origenNombre,
-		onAlturaChange,
-		resumen: flujos.length === 0 ? "Punto de despacho" : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-				className: "font-semibold text-[#123E5C]",
-				children: despachosTotal.toLocaleString("es-CO")
+			})] }),
+			elegido && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
+				isMobile,
+				title: elegido.nombre,
+				subtitle: `Zona ${elegido.zona}`,
+				onClose: () => setSeleccion(null),
+				transitionKey: elegido.codigoDane,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetalleMunicipio, {
+					municipio: elegido,
+					fecha,
+					puntos: puntosPorDane.get(elegido.codigoDane) ?? [],
+					esCali: elegido.codigoDane === DANE_CALI
+				})
 			}),
-			" ",
-			"despachos hacia",
-			" ",
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-				className: "font-semibold text-[#123E5C]",
-				children: flujos.length
+			!(isMobile && elegido) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "pointer-events-none absolute inset-x-0 bottom-3 z-10 flex justify-center px-3 [&>*]:w-full md:[&>*]:w-auto",
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
+					dates: fechas,
+					currentDate: fecha,
+					onActivate: activar,
+					onSeek: buscar,
+					onAdvance: avanzar,
+					onExit: salir
+				})
 			}),
-			" ",
-			flujos.length === 1 ? "destino" : "destinos"
-		] }),
-		children: contenido
-	});
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContextualPanel, {
-		isMobile: false,
-		title: origenNombre,
-		subtitle: "Punto de despacho",
-		onClose,
-		transitionKey: `origen-${origenId}`,
-		children: contenido
+			(intro.show || ayuda) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ComoLeer, { onCerrar: () => {
+				intro.dismiss();
+				setAyuda(false);
+			} })
+		]
 	});
 }
-function Breadcrumb({ viewState, seleccionNombre, onGoToAll }) {
-	const enAll = viewState.level === "ALL";
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
-		"aria-label": "Ubicación actual",
-		className: "pointer-events-auto flex max-w-full items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Crumb, {
-			label: "Valle del Cauca",
-			active: enAll,
-			onClick: enAll ? void 0 : onGoToAll
-		}), seleccionNombre && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Sep, {}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-			className: "max-w-[10rem] truncate text-foreground/90",
-			children: seleccionNombre
-		})] })]
-	});
-}
-function Crumb({ label, active, onClick }) {
-	const clickable = Boolean(onClick);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-		type: "button",
-		onClick,
-		disabled: !clickable,
-		className: `tap-target max-w-[10rem] truncate rounded-full px-1.5 py-0.5 transition-colors ${active ? "text-primary" : clickable ? "text-muted-foreground hover:text-foreground" : "text-foreground/90"} ${clickable ? "cursor-pointer" : "cursor-default"}`,
-		children: label
-	});
-}
-function Sep() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		className: "text-muted-foreground/60",
-		"aria-hidden": true,
-		children: "/"
-	});
-}
-function TopBar({ viewState, seleccionNombre, onGoToAll }) {
+function BarraSuperior({ seleccion, onReiniciar, onTodo, origenVisible, conPuntos, onAyuda }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex items-center gap-2 pl-[4.75rem] pr-4 md:px-4",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-			className: "pointer-events-auto hidden min-w-0 items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur sm:flex",
-			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "truncate",
-				children: "Ayudas Humanitarias"
-			})
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Breadcrumb, {
-			viewState,
-			seleccionNombre,
-			onGoToAll
-		})]
-	});
-}
-var TODAS$1 = "todas";
-/** Los mismos colores con los que MapCanvas pinta los arcos. */
-var ORIGENES_LEYENDA$1 = [{
-	nombre: "Salió de Cali",
-	color: "#2f6fed"
-}, {
-	nombre: "Salió de Cartago",
-	color: "#e6883c"
-}];
-/**
-* Qué filtros se apartan del estado de reposo.
-*
-* Se listan solo esos. Poner siempre los tres —"Todas · Todo lo
-* entregado · Ver rutas"— sería ruido constante y volvería invisible
-* justo lo que hay que notar.
-*/
-function filtrosActivos(zone, lens, routesMode) {
-	const activos = [];
-	if (zone !== TODAS$1) activos.push(zone);
-	if (lens === "jornada") activos.push("Solo ese día");
-	if (routesMode === "solo") activos.push("Solo lo elegido");
-	if (routesMode === "color") activos.push("Sin rutas");
-	return activos;
-}
-/** La barra de una línea que queda sobre el mapa. */
-function BarraMovil({ entregas, municipios, lens, day, iso, zone, routesMode, filtrosAbiertos, onAbrirFiltros, onReiniciar }) {
-	const activos = filtrosActivos(zone, lens, routesMode);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "pointer-events-auto flex items-center gap-2 rounded-xl border border-border bg-surface/95 p-2 shadow-lg backdrop-blur",
+		className: "pointer-events-none absolute inset-x-0 top-[calc(1rem+env(safe-area-inset-top))] z-10 flex flex-wrap items-center gap-2 pl-[calc(4.75rem+env(safe-area-inset-left))] pr-4 md:flex-col md:items-start md:px-4",
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "min-w-0 flex-1 px-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					className: "truncate text-[15px] leading-tight text-foreground",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-							className: "font-semibold",
-							children: entregas.toLocaleString("es-CO")
-						}),
-						" ",
-						entregas === 1 ? "entrega" : "entregas",
-						" en ",
-						municipios,
-						" ",
-						municipios === 1 ? "municipio" : "municipios"
-					]
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "truncate text-[13px] leading-tight text-muted-foreground",
-					children: describeLens(lens, day, iso)
+				className: "max-md:contents md:flex md:flex-wrap md:items-center md:gap-2",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "pointer-events-auto hidden items-center rounded-full border border-border bg-surface/95 px-3.5 py-1.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur md:flex",
+					children: "Ayudas Humanitarias"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+					"aria-label": "Ubicación actual",
+					className: "pointer-events-auto flex min-h-11 max-w-full items-center gap-1.5 rounded-full border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur md:min-h-0",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: onTodo,
+						disabled: !seleccion,
+						className: `rounded-full px-1.5 py-2 md:py-0.5 ${seleccion ? "text-muted-foreground hover:text-foreground" : "text-primary"}`,
+						children: "Valle del Cauca"
+					}), seleccion && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						"aria-hidden": true,
+						className: "text-muted-foreground",
+						children: "›"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "max-w-[10rem] truncate text-foreground/90",
+						children: seleccion
+					})] })]
 				})]
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-				type: "button",
-				onClick: onReiniciar,
-				"aria-label": "Reiniciar vista",
-				className: "grid size-11 shrink-0 place-items-center rounded-lg text-muted-foreground transition hover:bg-surface-raised hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
-					className: "size-5",
-					"aria-hidden": true
-				})
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
 				type: "button",
-				onClick: onAbrirFiltros,
-				"aria-expanded": filtrosAbiertos,
-				className: `relative flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-[14px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${activos.length > 0 ? "bg-primary text-primary-foreground" : "bg-surface-raised text-foreground"}`,
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SlidersHorizontal, {
-						className: "size-4 shrink-0",
-						"aria-hidden": true
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "max-w-[9rem] truncate",
-						children: activos.length > 0 ? activos.join(" · ") : "Filtros"
-					}),
-					activos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						"aria-hidden": true,
-						className: "size-1.5 shrink-0 rounded-full bg-[#FFD400]"
-					})
-				]
-			})
-		]
-	});
-}
-/**
-* Los nueve controles, en una hoja.
-*
-* Se monta al mismo nivel que los paneles de destino y origen, NO dentro
-* de la barra: ver la nota de cabecera.
-*/
-function HojaFiltros({ abierta, onCerrar, zonasDisponibles, lens, day, iso, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange, onReiniciar }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaInferior, {
-		abierta,
-		onCerrar,
-		titulo: "Filtros del mapa",
-		resumen: describeLens(lens, day, iso),
-		anclajeInicial: 1,
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "flex flex-col gap-5 pt-1",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Grupo, {
-					titulo: "Cómo se lee el día",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-							active: lens === "acumulado",
-							onClick: () => onLensChange("acumulado"),
-							children: "Todo lo entregado"
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-							active: lens === "jornada",
-							onClick: () => onLensChange("jornada"),
-							disabled: day === null,
-							children: "Solo ese día"
-						})]
-					}), day === null && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-2 text-[13px] leading-5 text-muted-foreground",
-						children: "Mueva la línea de tiempo para ver cómo se entregaron las ayudas día por día."
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Grupo, {
-					titulo: "Zona del Valle",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "flex flex-wrap gap-1.5",
-						children: [TODAS$1, ...zonasDisponibles].map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-							active: zone === item,
-							onClick: () => onZoneChange(item),
-							children: item === TODAS$1 ? "Todas" : item
-						}, item))
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Grupo, {
-					titulo: "Rutas",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-								active: routesMode === "visibles",
-								onClick: () => onRoutesModeChange("visibles"),
-								children: "Ver rutas"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-								active: routesMode === "solo",
-								onClick: () => onRoutesModeChange("solo"),
-								children: "Solo lo elegido"
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Toggle, {
-								active: routesMode === "color",
-								onClick: () => onRoutesModeChange("color"),
-								children: "Sin rutas"
-							})
-						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "mt-3 flex flex-col gap-2",
-						children: ORIGENES_LEYENDA$1.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-							className: "flex items-center gap-2 text-[14px] text-foreground",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-								"aria-hidden": true,
-								className: "block size-3 shrink-0 rounded-full",
-								style: { background: o.color }
-							}), o.nombre]
-						}, o.nombre))
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: () => {
-						onReiniciar();
-						onCerrar();
-					},
-					className: "min-h-11 rounded-lg border border-border text-[15px] font-semibold text-foreground transition hover:bg-surface-raised",
-					children: "Reiniciar la vista del mapa"
-				})
-			]
-		})
-	});
-}
-/**
-* Un bloque con su rótulo.
-*
-* En la barra anterior los nueve botones iban seguidos sin nada que los
-* separara, así que había que deducir qué hacía cada trío por el texto
-* de sus etiquetas. En una hoja hay sitio para decirlo.
-*/
-function Grupo({ titulo, children }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-		className: "label-caps text-xs",
-		children: titulo
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mt-2",
-		children
-	})] });
-}
-function Toggle({ active, onClick, children, disabled = false }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-		type: "button",
-		onClick,
-		disabled,
-		"aria-pressed": active,
-		className: `min-h-11 rounded px-3 text-[14px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
-		children
-	});
-}
-/**
-* Dónde arranca la columna de la esquina superior izquierda.
-*
-* Va en una constante porque tres cosas dependen del mismo número: el
-* botón de volver, la leyenda de orígenes que va debajo de él, y la
-* píldora amarilla de categoría, que en móvil tiene que bajar cuando el
-* botón está presente. Repartido a mano en tres sitios, cambiar la
-* altura significaba acordarse de los tres.
-*/
-var COLUMNA_TOP = "top-[calc(4.25rem+env(safe-area-inset-top))]";
-var COLUMNA_TOP_MD = "md:top-[calc(4rem+env(safe-area-inset-top))]";
-/**
-* Dónde cae la píldora de categoría en móvil cuando hay botón de volver.
-*
-* Es la altura de la columna más el alto del botón —unos 40 px— más aire.
-* Si cambia COLUMNA_TOP, este número se recalcula igual.
-*/
-var PILDORA_TOP_CON_BOTON = "top-[calc(7.25rem+env(safe-area-inset-top))]";
-var PILDORA_TOP_SOLA = "top-[calc(0.75rem+env(safe-area-inset-top))]";
-/**
-* A partir de qué proporción de la pantalla la hoja inferior estorba.
-*
-* Por debajo de la mitad queda espacio de sobra para el mapa y para los
-* controles, y esconderlos ahí sería quitarle a la persona el filtro de
-* zonas justo cuando está comparando municipios, que es cuando lo usa.
-*/
-var HOJA_TAPA_DESDE = .5;
-/**
-* Los dos orígenes, con el color exacto con el que MapCanvas pinta sus
-* arcos mientras crecen. Si allá cambian, acá también.
-*/
-var ORIGENES_LEYENDA = [{
-	nombre: "Cali",
-	color: "#2f6fed"
-}, {
-	nombre: "Cartago",
-	color: "#e6883c"
-}];
-/**
-* La leyenda de orígenes, reducida a lo único que hay que saber: qué
-* color salió de dónde.
-*
-* Reemplaza a FlujosLegend, que explicaba además el grosor, el pulso y
-* los estados de los puntos. Todo eso era cierto y ninguno hacía falta:
-* el mapa se entiende sin leerlo, y una leyenda larga en la esquina de
-* un mapa se convierte en un cartel que nadie lee y que tapa territorio.
-*
-* Va con `pointer-events-none`: no es interactiva y no debe robarle
-* clics al mapa que tiene debajo.
-*/
-function LeyendaOrigenes() {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-		className: "pointer-events-none flex items-center gap-3 rounded-full bg-[#123E5C]/80 px-3 py-1.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur",
-		children: ORIGENES_LEYENDA.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-			className: "flex items-center gap-1.5",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				"aria-hidden": true,
-				className: "block size-2.5 rounded-full",
-				style: { background: o.color }
-			}), o.nombre]
-		}, o.nombre))
-	});
-}
-/**
-* La guía que aparece la primera vez, encima del mapa.
-*
-* QUÉ EXPLICA Y QUÉ NO
-*
-* Solo lo que no está dicho en ninguna otra parte de la pantalla. Los
-* colores de origen ya los dice la leyenda; qué hace cada control lo dice
-* su propia etiqueta; la línea de tiempo tiene su aviso cuando está
-* quieta. Repetir todo eso convertiría la guía en un texto que se cierra
-* sin leer, y entonces tampoco se leería lo único que sí hace falta.
-*
-* Lo que falta explicar es la rampa de color del territorio, que es
-* justamente lo primero que se ve al llegar y lo único que nadie puede
-* deducir: que el color de cada municipio significa cuánta ayuda recibió,
-* y que hay dos grises que no pertenecen a esa escala.
-*
-* Y una sola acción: que los municipios se pueden tocar. Los puntos ya lo
-* dicen en su globo al pasar el mouse, pero el área no, y en celular no
-* hay globo que valga porque no existe el paso del cursor.
-*/
-function GuiaDelMapa({ raizRef, onCerrar }) {
-	const panelRef = (0, import_react.useRef)(null);
-	/**
-	* Cerrar al tocar fuera del panel PERO DENTRO DEL MAPA.
-	*
-	* La escucha va sobre el contenedor del mapa y no sobre `document`, y
-	* esa diferencia es todo: la guía se monta cuando carga la página, no
-	* cuando el mapa aparece en pantalla, así que con `document` cualquier
-	* clic del relato la cerraba sin que nadie la hubiera visto.
-	*
-	* `pointerdown` y no `click`: el mapa reacciona al arrastre, y
-	* esperando al `click` un gesto de desplazamiento la dejaría abierta
-	* mientras el mapa ya se movió debajo.
-	*
-	* Escape sí va en `document`: una tecla no tiene "dónde", y quien la
-	* presiona ya está mirando el mapa.
-	*/
-	(0, import_react.useEffect)(() => {
-		const raiz = raizRef.current;
-		if (!raiz) return;
-		const alTocarFuera = (evento) => {
-			if (panelRef.current?.contains(evento.target)) return;
-			onCerrar();
-		};
-		const alPresionar = (evento) => {
-			if (evento.key === "Escape") onCerrar();
-		};
-		raiz.addEventListener("pointerdown", alTocarFuera);
-		document.addEventListener("keydown", alPresionar);
-		return () => {
-			raiz.removeEventListener("pointerdown", alTocarFuera);
-			document.removeEventListener("keydown", alPresionar);
-		};
-	}, [onCerrar, raizRef]);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			ref: panelRef,
-			role: "dialog",
-			"aria-label": "Cómo leer este mapa",
-			className: "pointer-events-auto relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-7",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-					type: "button",
-					onClick: onCerrar,
-					"aria-label": "Cerrar",
-					className: "absolute right-3 top-3 grid size-11 place-items-center rounded-full text-[#6B93AA] transition hover:bg-[#DDF0FA] hover:text-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1]",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
-						className: "size-5",
-						"aria-hidden": true
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-					className: "vc-rotulo pr-10 text-[clamp(1.25rem,3vw,1.75rem)] text-[#0079C1]",
+				onClick: onReiniciar,
+				className: "pointer-events-auto flex size-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface/95 text-xs font-semibold text-foreground shadow-sm backdrop-blur hover:bg-surface-raised active:bg-surface-raised md:size-auto md:min-h-9 md:px-3 md:py-1.5",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
+					"aria-hidden": true,
+					className: "size-4 md:size-3.5"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "sr-only md:not-sr-only",
+					children: "Reiniciar vista"
+				})]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+				type: "button",
+				onClick: onAyuda,
+				className: "pointer-events-auto flex size-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface/95 text-xs font-semibold text-foreground shadow-sm backdrop-blur hover:bg-surface-raised active:bg-surface-raised md:size-auto md:min-h-9 md:px-3 md:py-1.5",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(CircleQuestionMark, {
+					"aria-hidden": true,
+					className: "size-4 md:size-3.5"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "sr-only md:not-sr-only",
 					children: "¿Cómo leer este mapa?"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-3 text-base leading-7 text-[#123E5C]",
-					children: "El color de cada municipio refleja la cantidad de ayudas recibidas. Los tonos más claros indican una menor cantidad y los más intensos, una mayor."
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-3 flex overflow-hidden rounded-md",
-					children: TERRITORY_BLUE_RAMP.map((color) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-						className: "block h-5 flex-1",
-						style: { background: color }
-					}, color))
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "mt-1.5 flex justify-between text-sm text-[#6B93AA]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Menor cantidad" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Mayor cantidad" })]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
-					className: "mt-5 flex flex-col gap-3",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						className: "flex items-start gap-3",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"aria-hidden": true,
-							className: "mt-1 block size-4 shrink-0 rounded-sm",
-							style: { background: TERRITORY_NO_DATA }
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-base leading-6 text-[#35708F]",
-							children: "Sin registro"
-						})]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						className: "flex items-start gap-3",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"aria-hidden": true,
-							className: "mt-1 block size-4 shrink-0 rounded-sm",
-							style: { background: TERRITORY_EXCLUDED }
-						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "text-base leading-6 text-[#35708F]",
-							children: "Cali sigue una ruta independiente y no se incluye en el conteo municipal."
-						})]
-					})]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-5 border-t border-[#0079C1]/12 pt-4 text-base leading-7 text-[#123E5C]",
-					children: "Haz clic en cualquier municipio para conocer qué recibió."
-				})
-			]
-		})
-	});
-}
-function useIsMobile(breakpointPx = 768) {
-	const [isMobile, setIsMobile] = (0, import_react.useState)(false);
-	(0, import_react.useEffect)(() => {
-		const mql = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
-		const onChange = () => setIsMobile(mql.matches);
-		onChange();
-		mql.addEventListener("change", onChange);
-		return () => mql.removeEventListener("change", onChange);
-	}, [breakpointPx]);
-	return isMobile;
-}
-/**
-* Alto de la ventana, en píxeles, o 0 mientras no se conozca.
-*
-* Va como estado y no se lee `window.innerHeight` en el render porque
-* esta página se dibuja también en el servidor, donde `window` no
-* existe. Leerlo directo tumba el render con "window is not defined".
-*/
-function useAltoPantalla() {
-	const [alto, setAlto] = (0, import_react.useState)(0);
-	(0, import_react.useEffect)(() => {
-		const medir = () => setAlto(window.innerHeight);
-		medir();
-		window.addEventListener("resize", medir);
-		window.visualViewport?.addEventListener("resize", medir);
-		return () => {
-			window.removeEventListener("resize", medir);
-			window.visualViewport?.removeEventListener("resize", medir);
-		};
-	}, []);
-	return alto;
-}
-function DashboardPage({ embedded = false }) {
-	const [viewState, setViewState] = (0, import_react.useState)(INITIAL_VIEW_STATE);
-	const [linesDismissed, setLinesDismissed] = (0, import_react.useState)(false);
-	/**
-	* `lens` es CÓMO se lee el día que marca el timeline, no un segundo
-	* reloj. Antes esto era `territoryMode` y venía con su propio slider de
-	* jornada, independiente del timeline: se podía tener los arcos en el
-	* día 14 y los polígonos pintados con el total final de la operación.
-	* Ahora hay un solo control temporal, el Timeline, y este toggle solo
-	* decide si ese día se lee como acumulado o como jornada suelta.
-	*
-	* Por defecto acumulado: mover una línea de tiempo normalmente
-	* significa "mostrame cómo iba", no "mostrame solo ese día".
-	*/
-	const [lens, setLens] = (0, import_react.useState)("acumulado");
-	const [territoryZone, setTerritoryZone] = (0, import_react.useState)("todas");
-	const [routesMode, setRoutesMode] = (0, import_react.useState)("visibles");
-	/**
-	* Cuánto ocupa la hoja inferior en celular, en píxeles. 0 si no hay
-	* ninguna abierta.
-	*
-	* Lo reporta HojaInferior en cada cuadro del arrastre, y lo consumen
-	* tres cosas: el mapa, para correr su centro hacia arriba y que el
-	* municipio tocado no quede detrás de la hoja; el timeline, para
-	* subirse encima; y los controles, para apartarse cuando ya no caben.
-	*/
-	const [altoHoja, setAltoHoja] = (0, import_react.useState)(0);
-	/**
-	* Si la hoja de filtros está abierta.
-	*
-	* El estado vive acá y no dentro de la barra porque la hoja se monta
-	* al nivel de los paneles, no dentro del bloque inferior. Ahí abajo
-	* heredaría el `pointer-events-none` del contenedor y se abriría sin
-	* responder a nada, además de quedar atrapada en su contexto de
-	* apilamiento.
-	*/
-	const [filtrosAbiertos, setFiltrosAbiertos] = (0, import_react.useState)(false);
-	/**
-	* Cada incremento le pide a MapCanvas que vuelva a encuadrar.
-	*
-	* Se hace con un contador y no con una función imperativa para no tener
-	* que exponer una ref del mapa hacia afuera: DashboardPage no necesita
-	* saber que adentro hay un MapLibre, solo declarar qué quiere.
-	*/
-	const [, setVistaGeneralToken] = (0, import_react.useState)(0);
-	/**
-	* La guía se muestra hasta que la persona toca el mapa por primera vez.
-	*
-	* No se guarda si ya se vio: el mapa vive dentro de una página que se
-	* lee de una sentada, y quien vuelve a abrirla probablemente pasó
-	* bastante tiempo desde la anterior. Recordarlo entre sesiones haría
-	* falta si esto fuera una herramienta de uso diario, y no lo es.
-	*/
-	const [mostrarGuia, setMostrarGuia] = (0, import_react.useState)(true);
-	const cerrarGuia = (0, import_react.useCallback)(() => setMostrarGuia(false), []);
-	const raizRef = (0, import_react.useRef)(null);
-	const [visibleActivity, ,] = (0, import_react.useState)(null);
-	const isMobile = useIsMobile();
-	const altoPantalla = useAltoPantalla();
-	const { data: origenes } = useOrigenes();
-	const { data: destinos } = useDestinos();
-	const { data: flujosResponse } = useFlujos();
-	const timelineDates = (0, import_react.useMemo)(() => {
-		if (!flujosResponse?.flujos) return [];
-		const set = /* @__PURE__ */ new Set();
-		flujosResponse.flujos.forEach((f) => (f.porFecha ?? []).forEach((p) => set.add(p.fecha)));
-		return [...set].sort();
-	}, [flujosResponse]);
-	/** El único reloj. Todo lo temporal del mapa se deriva de acá. */
-	const isoDate = viewState.timelineDate;
-	const territoryDay = (0, import_react.useMemo)(() => dayFromIsoDate(isoDate), [isoDate]);
-	const operacion = useOperacion();
-	const foco = useFoco();
-	const { data: ayuda } = useAyuda();
-	const flujosParaMapa = useFlujosPorLente(flujosResponse?.flujos, lens, isoDate);
-	/**
-	* Entregas por municipio, indexadas por código DANE, para que el mapa
-	* pinte con los datos de la API. El catálogo estático solo aporta la
-	* zona y el código de los municipios que todavía no registran
-	* entregas, para que aparezcan en gris y no desaparezcan del mapa.
-	*/
-	const municipiosMapa = (0, import_react.useMemo)(() => {
-		const mapa = /* @__PURE__ */ new Map();
-		for (const cat of operacion.catalogo) mapa.set(cat.codigoDane, {
-			nombre: cat.nombre,
-			entregas: 0,
-			dias: {},
-			toneladas: 0,
-			zona: cat.zona
-		});
-		for (const m of operacion.municipios) {
-			const codigo = m.codigoDane ?? getTerritoryStat(m.nombre)?.codigoDane;
-			if (!codigo) continue;
-			mapa.set(codigo, {
-				nombre: m.nombre,
-				entregas: m.entregas,
-				dias: m.dias,
-				toneladas: m.toneladas,
-				zona: m.zona ?? getTerritoryStat(m.nombre)?.zone ?? null
-			});
-		}
-		return mapa;
-	}, [operacion.catalogo, operacion.municipios]);
-	/**
-	* Municipios a resaltar cuando se llega desde una categoría.
-	*
-	* La ruta devuelve los NOMBRES, no los códigos, porque
-	* ENVIOS_CATEGORIA apunta a destinos y no todo destino tiene DANE. Se
-	* cruzan contra el catálogo con el comparador que ignora tildes y
-	* alias, el mismo que usa el mapa para la selección.
-	*/
-	const resaltados = (0, import_react.useMemo)(() => {
-		if (!foco.categoria) return null;
-		const nombres = (ayuda?.categorias.find((c) => c.nombre === foco.categoria))?.municipiosNombres;
-		if (!nombres || nombres.length === 0) return null;
-		const codigos = /* @__PURE__ */ new Set();
-		for (const cat of operacion.catalogo) if (nombres.some((n) => sameMunicipality(n, cat.nombre))) codigos.add(cat.codigoDane);
-		return codigos;
-	}, [
-		foco.categoria,
-		ayuda,
-		operacion.catalogo
-	]);
-	/**
-	* Al llegar desde una ficha de municipio, se selecciona solo. Antes
-	* había que buscarlo a mano en el mapa después del scroll.
-	*/
-	(0, import_react.useEffect)(() => {
-		if (!foco.municipio || !destinos) return;
-		const destino = destinos.find((d) => sameMunicipality(d.nombre, foco.municipio));
-		if (destino) setViewState((prev) => viewTransitions.toDestino(destino.id, prev));
-	}, [foco.municipio, destinos]);
-	const totalDespachosAsOf = (0, import_react.useMemo)(() => flujosParaMapa.reduce((sum, f) => sum + f.despachosCount, 0), [flujosParaMapa]);
-	const flujosFiltrados = (0, import_react.useMemo)(() => {
-		if (linesDismissed && !viewState.origenId && !viewState.destinoId) return [];
-		if (viewState.origenId) return flujosParaMapa.filter((f) => f.origenId === viewState.origenId);
-		if (viewState.destinoId) return flujosParaMapa.filter((f) => f.destino.id === viewState.destinoId);
-		return flujosParaMapa;
-	}, [
-		flujosParaMapa,
-		linesDismissed,
-		viewState.origenId,
-		viewState.destinoId
-	]);
-	/**
-	* Zona de cada municipio, indexada por su nombre normalizado.
-	*
-	* Existe para que el filtro de zona de los ARCOS use exactamente la
-	* misma fuente que el coloreo de los POLÍGONOS. Antes no era así: los
-	* polígonos leían la zona viva por código DANE y los arcos la leían del
-	* catálogo estático por nombre, con `getTerritoryStat(f.destino.nombre)`.
-	*
-	* Cuando ese nombre no calzaba, la función devolvía undefined, la
-	* comparación fallaba contra CUALQUIER zona, y ese municipio se
-	* quedaba sin línea en Norte, en Centro y en Sur, pero seguía pintado
-	* porque el polígono había usado el código.
-	*
-	* Y no era un caso raro: 18 de los 42 municipios del Valle llevan
-	* tilde o nombre compuesto —Riofrío, Tuluá, Calima - El Darién,
-	* Guadalajara de Buga— y todos dependían de que esa búsqueda por texto
-	* acertara.
-	*/
-	/**
-	* Las zonas que existen en los datos, no una lista escrita a mano: si
-	* el Excel reclasifica un municipio, el filtro se actualiza solo.
-	*
-	* Se calcula acá y no dentro de los controles porque ahora hay dos
-	* juegos de controles, el de escritorio y el de celular, y duplicar el
-	* cálculo es duplicar la regla.
-	*/
-	const zonasDisponibles = (0, import_react.useMemo)(() => [...new Set([...municipiosMapa.values()].map((m) => m.zona).filter((z) => typeof z === "string" && z.length > 0))].sort((a, b) => a.localeCompare(b, "es")), [municipiosMapa]);
-	/** Lo que se está mirando ahora mismo, con el lente y el día puestos. */
-	const resumenVisible = (0, import_react.useMemo)(() => {
-		const visibles = [...municipiosMapa.values()].filter((m) => territoryZone === "todas" || m.zona === territoryZone);
-		return {
-			entregas: visibles.reduce((sum, m) => sum + valorTemporal(m, lens, territoryDay), 0),
-			municipios: visibles.filter((m) => valorTemporal(m, lens, territoryDay) > 0).length
-		};
-	}, [
-		municipiosMapa,
-		territoryZone,
-		lens,
-		territoryDay
-	]);
-	const origenSeleccionado = (0, import_react.useMemo)(() => origenes?.find((o) => o.id === viewState.origenId) ?? null, [origenes, viewState.origenId]);
-	const destinoSeleccionado = (0, import_react.useMemo)(() => destinos?.find((d) => d.id === viewState.destinoId) ?? null, [destinos, viewState.destinoId]);
-	const seleccionNombre = origenSeleccionado?.nombre ?? destinoSeleccionado?.nombre ?? null;
-	/**
-	* Control de aparición de las notificaciones. El engine puede producir
-	* varios frames mientras siguen llegando despachos; si una tarjeta
-	* acaba de aparecer, no la reemplazamos durante 1200 ms.
-	*/
-	(0, import_react.useEffect)(() => {
-		if (!viewState.timelineInstant) return;
-		setViewState((prev) => viewTransitions.clearInstantFlag(prev));
-	}, [viewState.timelineInstant, viewState.timelineDate]);
-	const hayPanelAbierto = Boolean(viewState.destinoId || viewState.origenId);
-	const hayPanelAbiertoEnMobile = isMobile && hayPanelAbierto;
-	/**
-	* Cuando no hay panel, la hoja no ocupa nada.
-	*
-	* HojaInferior ya avisa al desmontarse, pero este efecto es la red de
-	* seguridad: si un panel se cierra por un camino que no desmonta la
-	* hoja, el mapa se quedaría descentrado y el timeline flotando a media
-	* pantalla, sin nada visible que explique por qué.
-	*/
-	(0, import_react.useEffect)(() => {
-		if (!hayPanelAbiertoEnMobile) setAltoHoja(0);
-	}, [hayPanelAbiertoEnMobile]);
-	/**
-	* Abrir una ficha cierra los filtros.
-	*
-	* Las dos son hojas inferiores y se montarían una encima de la otra,
-	* con la de filtros tapando justo la ficha que se acaba de pedir. Se
-	* cierra la que la persona ya no está mirando.
-	*/
-	(0, import_react.useEffect)(() => {
-		if (hayPanelAbierto) setFiltrosAbiertos(false);
-	}, [hayPanelAbierto]);
-	/**
-	* Los controles solo se esconden cuando la hoja pasa de la mitad de la
-	* pantalla.
-	*
-	* Antes desaparecían apenas se abría una ficha. Eso le quitaba a la
-	* persona el filtro de zonas y la línea de tiempo justo en el momento
-	* en que estaba comparando municipios, que es cuando los usa. Con la
-	* hoja asomada hay sitio de sobra para los tres.
-	*/
-	const hojaTapaLosControles = hayPanelAbiertoEnMobile && altoPantalla > 0 && altoHoja > altoPantalla * HOJA_TAPA_DESDE;
-	/**
-	* Volver a donde estaba la persona antes de bajar al mapa.
-	*
-	* El FocoContext guarda el `scrollTop` del relato justo antes de
-	* desplazarse hasta acá, así que `foco.volver()` devuelve al punto
-	* exacto, no al comienzo de la sección.
-	*
-	* También se resetea el viewState. Sin eso, la persona se iba con la
-	* ficha del municipio abierta y al bajar de nuevo al mapa se la
-	* encontraba abierta sin haberla pedido en ese momento.
-	*/
-	const volverAlRelato = () => {
-		setViewState((prev) => viewTransitions.toAll(prev));
-		foco.volver();
-	};
-	/**
-	* Solo hay a dónde volver si se llegó por un enlace del relato. Quien
-	* bajó con el scroll no ve el botón, porque no habría nada distinto a
-	* donde ya está.
-	*
-	* En móvil se oculta apenas hay una ficha abierta, y no solo cuando la
-	* hoja crece: queda en la esquina donde cae el pulgar al arrastrar.
-	*/
-	const puedeVolver = foco.puedeVolver && !hayPanelAbiertoEnMobile;
-	/**
-	* Devolver el mapa a como estaba al abrirlo.
-	*
-	* Incluye la CÁMARA, que es lo que faltaba: `onReset` —el clic en una
-	* zona vacía— limpia la selección, pero si alguien hizo zoom o arrastró
-	* el mapa se quedaba donde lo dejó, y no había ninguna forma de
-	* recuperar el encuadre del Valle completo salvo recargar la página.
-	*
-	* También vuelven a su valor inicial los tres controles de territorio.
-	* Con solo limpiar la selección, quien había filtrado por Norte y
-	* apagado las rutas seguía viendo un mapa que no se parecía al que
-	* encontró al llegar, y el botón habría prometido más de lo que hace.
-	*
-	* El foco por categoría se limpia pero NO el regreso al relato: si la
-	* persona llegó desde "Aseo personal", reiniciar la vista no debería
-	* borrarle el camino de vuelta.
-	*/
-	const reiniciarVista = () => {
-		setLinesDismissed(false);
-		setViewState((prev) => viewTransitions.exitTimeline(viewTransitions.toAll(prev)));
-		setLens("acumulado");
-		setTerritoryZone("todas");
-		setRoutesMode("visibles");
-		foco.limpiar();
-		setVistaGeneralToken((n) => n + 1);
-	};
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		ref: raizRef,
-		className: embedded ? "theme-ayudas relative h-full min-h-[26rem] w-full overflow-hidden bg-background" : "theme-ayudas relative h-dvh w-dvw overflow-hidden bg-background",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ClientOnly, { fallback: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: "absolute inset-0 flex items-center justify-center bg-[#0b0e14] text-xs text-muted-foreground",
-				children: "Cargando mapa…"
-			}) }),
-			mostrarGuia && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(GuiaDelMapa, {
-				raizRef,
-				onCerrar: cerrarGuia
+				})]
 			}),
-			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(MarcadorHUD, {
-				despachos: totalDespachosAsOf,
-				day: territoryDay,
-				lens,
-				instant: viewState.timelineInstant
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: `pointer-events-none absolute left-3 z-20 flex flex-col items-start gap-2 md:left-4 ${COLUMNA_TOP} ${COLUMNA_TOP_MD}`,
-				children: [puedeVolver && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-					type: "button",
-					onClick: volverAlRelato,
-					className: "pointer-events-auto inline-flex max-w-[min(18rem,calc(100vw-1.5rem))] items-center gap-2 rounded-full bg-[#FBF8C6] py-2 pl-3 pr-4 text-[15px] font-bold text-[#123E5C] shadow-lg transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ArrowLeft, {
-						className: "size-4 shrink-0",
-						"aria-hidden": true
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "min-w-0 truncate",
-						children: foco.etiquetaRegreso ? `Volver a ${foco.etiquetaRegreso}` : "Volver"
-					})]
-				}), !isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-					type: "button",
-					onClick: reiniciarVista,
-					className: "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#123E5C]/80 py-1.5 pl-2.5 pr-3.5 text-[13px] font-semibold text-white shadow-lg backdrop-blur transition hover:bg-[#0079C1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFD400]",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RotateCcw, {
-						className: "size-4 shrink-0",
-						"aria-hidden": true
-					}), "Reiniciar vista"]
-				}), !viewState.destinoId && !viewState.origenId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LeyendaOrigenes, {})] })]
-			}),
-			foco.categoria && resaltados && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-				className: `pointer-events-none absolute inset-x-3 z-20 flex justify-center md:inset-x-0 md:top-[calc(0.75rem+env(safe-area-inset-top))] ${puedeVolver ? PILDORA_TOP_CON_BOTON : PILDORA_TOP_SOLA}`,
-				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "pointer-events-auto flex items-center gap-3 rounded-full bg-[#FFD400] py-2 pl-5 pr-2 shadow-lg",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "text-base font-bold text-[#123E5C]",
-						children: [
-							resaltados.size,
-							" municipios recibieron ",
-							foco.categoria.toLowerCase()
-						]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-						type: "button",
-						onClick: foco.limpiar,
-						className: "rounded-full bg-[#123E5C] px-3 py-1 text-sm font-bold text-white transition hover:bg-[#0079C1]",
-						children: "Ver todos"
-					})]
-				})
-			}),
-			(!isMobile || isoDate !== null) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(AvisoEntrega, { frame: visibleActivity }),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(TopBar, {
-				viewState,
-				seleccionNombre,
-				onGoToAll: () => {
-					setLinesDismissed(false);
-					setViewState((prev) => viewTransitions.toAll(prev));
-				}
-			}),
-			!isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TerritoryControls, {
-				municipios: municipiosMapa,
-				lens,
-				day: territoryDay,
-				iso: isoDate,
-				zone: territoryZone,
-				routesMode,
-				onLensChange: setLens,
-				onZoneChange: setTerritoryZone,
-				onRoutesModeChange: setRoutesMode
-			}),
-			isMobile && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(HojaFiltros, {
-				abierta: filtrosAbiertos,
-				onCerrar: () => setFiltrosAbiertos(false),
-				zonasDisponibles,
-				lens,
-				day: territoryDay,
-				iso: isoDate,
-				zone: territoryZone,
-				routesMode,
-				onLensChange: setLens,
-				onZoneChange: setTerritoryZone,
-				onRoutesModeChange: setRoutesMode,
-				onReiniciar: reiniciarVista
-			}),
-			viewState.level === "DESTINO" && viewState.destinoId && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DestinoPanel, {
-				destinoId: viewState.destinoId,
-				isMobile,
-				onAlturaChange: setAltoHoja,
-				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
-			}),
-			viewState.level === "ORIGEN" && viewState.origenId && origenSeleccionado && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OrigenPanel, {
-				origenId: viewState.origenId,
-				origenNombre: origenSeleccionado.nombre,
-				flujos: flujosFiltrados,
-				isMobile,
-				enFechaSeleccionada: isoDate !== null,
-				onAlturaChange: setAltoHoja,
-				onSelectDestino: (id) => {
-					setLinesDismissed(false);
-					setViewState((prev) => viewTransitions.toDestino(id, prev));
-				},
-				onClose: () => setViewState((prev) => viewTransitions.toAll(prev))
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "pointer-events-none absolute inset-x-0 z-10 flex flex-col items-stretch gap-2 px-3 md:items-center",
-				style: {
-					bottom: `calc(0.75rem + env(safe-area-inset-bottom) + ${isMobile ? altoHoja : 0}px)`,
-					transition: "bottom 220ms cubic-bezier(0.32, 0.72, 0, 1)"
-				},
-				children: [isMobile && !hojaTapaLosControles && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(BarraMovil, {
-					entregas: resumenVisible.entregas,
-					municipios: resumenVisible.municipios,
-					lens,
-					day: territoryDay,
-					iso: isoDate,
-					zone: territoryZone,
-					routesMode,
-					filtrosAbiertos,
-					onAbrirFiltros: () => setFiltrosAbiertos(true),
-					onReiniciar: reiniciarVista
-				}), !hojaTapaLosControles && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "flex w-full justify-center [&>*]:w-full md:[&>*]:w-auto",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Timeline, {
-						dates: timelineDates,
-						currentDate: viewState.timelineDate,
-						onActivate: (first) => {
-							setLinesDismissed(false);
-							setViewState((prev) => viewTransitions.startTimeline(first, prev));
-						},
-						onSeek: (date) => {
-							setLinesDismissed(false);
-							setViewState((prev) => viewTransitions.seekTimeline(date, prev));
-						},
-						onAdvance: (date) => {
-							setLinesDismissed(false);
-							setViewState((prev) => viewTransitions.advanceTimeline(date, prev));
-						},
-						onExit: () => {
-							setLinesDismissed(false);
-							setViewState((prev) => viewTransitions.exitTimeline(prev));
-						}
-					})
+			(origenVisible || conPuntos) && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "pointer-events-auto hidden flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-border bg-surface/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur md:flex",
+				children: [origenVisible && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "flex items-center gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						"aria-hidden": true,
+						className: "block size-2.5 shrink-0 rounded-full",
+						style: { background: COLOR_ORIGEN }
+					}), "Cali: centro de acopio y punto de distribución"]
+				}), conPuntos && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+					className: "flex items-center gap-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						"aria-hidden": true,
+						className: "block size-2.5 shrink-0 rounded-full",
+						style: { background: COLOR_PUNTO }
+					}), "Punto de distribución"]
 				})]
 			})
 		]
 	});
 }
-var TODAS = "todas";
-function TerritoryControls({ municipios, lens, day, iso, zone, routesMode, onLensChange, onZoneChange, onRoutesModeChange }) {
-	const zonasDisponibles = [...new Set([...municipios.values()].map((m) => m.zona).filter((z) => typeof z === "string" && z.length > 0))].sort((a, b) => a.localeCompare(b, "es"));
-	const visibleMunicipalities = [...municipios.values()].filter((m) => zone === "todas" || m.zona === zone);
-	const totalDespachos = visibleMunicipalities.reduce((sum, m) => sum + valorTemporal(m, lens, day), 0);
-	const conEntregas = visibleMunicipalities.filter((m) => valorTemporal(m, lens, day) > 0).length;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
-		className: "pointer-events-auto absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 z-10 hidden max-h-[52dvh] w-[20rem] overflow-y-auto rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur md:block",
-		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-				className: "text-[15px] leading-tight text-foreground",
+/** El marcador de «Ayuda entregada», con dígitos que ruedan al cambiar. */
+function Marcador({ toneladas: valor, municipios, corte }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-x-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-10 select-none md:inset-x-auto md:right-4 md:top-[calc(1rem+env(safe-area-inset-top))] md:w-[19rem]",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "flex items-center gap-4 rounded-xl border border-white/12 bg-[#0B3049]/85 px-4 py-3 shadow-lg backdrop-blur md:block md:px-6 md:py-5",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "min-w-0 flex-1 md:flex-none",
 				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "font-semibold",
-						children: plural(totalDespachos, "entrega", "entregas")
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-xs font-bold uppercase tracking-[0.14em] text-[#22ABE2] md:text-[13px]",
+						children: "Ayuda entregada"
 					}),
-					" en",
-					" ",
-					plural(conEntregas, "municipio", "municipios"),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "text-muted-foreground",
-						children: [" · ", describeLens(lens, day, iso)]
+					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-1 flex items-baseline gap-1.5 md:mt-1.5",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
+							valor,
+							className: "text-[34px] sm:text-[42px] md:text-[52px]"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "text-lg font-bold text-[#22ABE2] md:text-2xl",
+							children: "toneladas"
+						})]
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-1.5 text-xs text-[#6B93AA] md:mt-3 md:text-sm",
+						"aria-live": "polite",
+						children: corte
 					})
 				]
-			}),
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+				className: "flex shrink-0 items-baseline gap-2 border-l border-white/12 pl-4 md:mt-3 md:border-l-0 md:border-t md:pl-0 md:pt-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Rodillo, {
+					valor: municipios,
+					entero: true,
+					className: "text-lg md:text-[24px]"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+					className: "text-xs font-semibold text-[#A8CFE2] md:text-sm",
+					children: "municipios"
+				})]
+			})]
+		})
+	});
+}
+function Rodillo({ valor, entero: soloEntero = false, className = "" }) {
+	const decimales = !soloEntero && valor < 10 && valor > 0 ? 1 : 0;
+	const texto = new Intl.NumberFormat("es-CO", {
+		minimumFractionDigits: decimales,
+		maximumFractionDigits: decimales
+	}).format(Math.max(0, valor));
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: `inline-flex font-extrabold leading-none tabular-nums text-white ${className}`,
+		role: "img",
+		"aria-label": texto,
+		children: texto.split("").map((c, i) => /\d/.test(c) ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Digito, { digito: Number(c) }, i) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			"aria-hidden": true,
+			className: "px-[0.02em]",
+			children: c
+		}, i))
+	});
+}
+var DIGITOS = [
+	0,
+	1,
+	2,
+	3,
+	4,
+	5,
+	6,
+	7,
+	8,
+	9
+];
+function Digito({ digito }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		"aria-hidden": true,
+		className: "relative inline-block h-[1em] w-[0.58em] overflow-hidden align-baseline",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "absolute inset-x-0 top-0 transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+			style: { transform: `translateY(${-digito * 10}%)` },
+			children: DIGITOS.map((n) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "block h-[1em] text-center leading-[1em]",
+				children: n
+			}, n))
+		})
+	});
+}
+function PanelControles({ lente, setLente, hayFecha, zona, setZona, zonas, rutas, setRutas, enLinea = false }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("aside", {
+		className: `pointer-events-auto z-10 w-[20rem] max-w-full rounded-lg border border-border bg-surface/95 p-3 shadow-lg backdrop-blur ${enLinea ? "w-full" : "absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-4 max-h-[52dvh] overflow-y-auto"}`,
+		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-2 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: lens === "acumulado",
-					onClick: () => onLensChange("acumulado"),
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+					activo: lente === "acumulado",
+					onClick: () => setLente("acumulado"),
 					children: "Todo lo entregado"
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: lens === "jornada",
-					onClick: () => onLensChange("jornada"),
-					disabled: day === null,
-					title: day === null ? "Elige una jornada en la línea de tiempo" : void 0,
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+					activo: lente === "jornada",
+					onClick: () => setLente("jornada"),
+					deshabilitado: !hayFecha,
+					titulo: !hayFecha ? "Elige un día en la línea de tiempo" : void 0,
 					children: "Solo ese día"
 				})]
 			}),
-			day === null && lens === "acumulado" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			!hayFecha && lente === "acumulado" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-2 text-sm leading-5 text-muted-foreground",
 				children: "Mueva la línea de tiempo para ver cómo se entregaron las ayudas día por día."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 				className: "mt-2 flex flex-wrap gap-1.5",
-				children: [TODAS, ...zonasDisponibles].map((item) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-					active: zone === item,
-					onClick: () => onZoneChange(item),
-					children: item === TODAS ? "Todas" : item
-				}, item))
+				role: "group",
+				"aria-label": "Filtrar por zona",
+				children: ["todas", ...zonas].map((z) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+					activo: zona === z,
+					onClick: () => setZona(z),
+					children: z === "todas" ? "Todas" : z
+				}, z))
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				className: "mt-2 grid grid-cols-3 gap-1 rounded-md bg-background/70 p-1",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "visibles",
-						onClick: () => onRoutesModeChange("visibles"),
-						children: "Ver rutas"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "solo",
-						onClick: () => onRoutesModeChange("solo"),
-						children: "Solo lo elegido"
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ToggleButton, {
-						active: routesMode === "color",
-						onClick: () => onRoutesModeChange("color"),
-						children: "Sin rutas"
-					})
-				]
+				className: "mt-2 grid grid-cols-2 gap-1 rounded-md bg-background/70 p-1",
+				role: "group",
+				"aria-label": "Líneas de entrega",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+					activo: rutas === "auto",
+					onClick: () => setRutas("auto"),
+					children: "Mostrar líneas"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+					activo: rutas === "ninguna",
+					onClick: () => setRutas("ninguna"),
+					children: "Ocultar líneas"
+				})]
 			})
 		]
 	});
 }
-/** "1 municipio" y no "1 municipios". */
-function plural(n, uno, varios) {
-	return `${n.toLocaleString("es-CO")} ${n === 1 ? uno : varios}`;
-}
-function ToggleButton({ active, onClick, children, disabled = false, title }) {
+function Boton({ activo, onClick, children, deshabilitado = false, titulo }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 		type: "button",
 		onClick,
-		disabled,
-		title,
-		"aria-pressed": active,
-		className: `min-h-11 rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
+		disabled: deshabilitado,
+		title: titulo,
+		"aria-pressed": activo,
+		className: `min-h-11 rounded px-2 py-1.5 text-[13px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0 ${activo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface-raised hover:text-foreground"}`,
 		children
 	});
 }
+/** El detalle de un municipio: lo que recibió, qué, y cuándo. */
+function DetalleMunicipio({ municipio: m, fecha, puntos, esCali }) {
+	const categorias = m.categorias.filter((c) => c.toneladas > 0);
+	const maxCat = Math.max(1, ...categorias.map((c) => c.toneladas));
+	const dias = m.dias ?? [];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "space-y-5 px-4 pb-6 pt-3 text-foreground",
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "block text-4xl font-extrabold leading-none tabular-nums text-white",
+				children: toneladas(m.toneladas)
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+				className: "mt-1 block text-sm text-[#A8CFE2]",
+				children: [
+					"toneladas aproximadas · ",
+					entero(m.diasConDespacho),
+					" ",
+					m.diasConDespacho === 1 ? "día" : "días",
+					" con entregas"
+				]
+			})] }),
+			esCali && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+				className: "rounded-lg border-l-[3px] bg-white/[0.06] px-3.5 py-3",
+				style: { borderLeftColor: COLOR_ORIGEN },
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+					className: "text-xs font-bold uppercase tracking-[0.14em] text-[#7FA8F5]",
+					children: "Centro de acopio y punto de distribución"
+				})
+			}),
+			puntos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
+				className: "rounded-lg border-l-[3px] bg-white/[0.06] px-3.5 py-3",
+				style: { borderLeftColor: COLOR_PUNTO },
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+					className: "text-xs font-bold uppercase tracking-[0.14em] text-[#F29A55]",
+					children: "Punto de distribución"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-1.5 text-sm leading-6 text-[#EAF7FC]",
+					children: [
+						toneladas(puntos.reduce((a, p) => a + p.toneladas, 0)),
+						" aproximadas llegaron además a este punto para repartirse desde aquí. No están sumadas a las ",
+						toneladas(m.toneladas),
+						" ",
+						"del municipio."
+					]
+				})]
+			}),
+			categorias.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+				className: "text-xs font-bold uppercase tracking-[0.14em] text-[#22ABE2]",
+				children: "Qué recibió"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-2 space-y-2.5",
+				children: categorias.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "flex items-baseline justify-between gap-3 text-sm",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "truncate",
+						children: c.nombre
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "shrink-0 tabular-nums",
+						children: toneladas(c.toneladas)
+					})]
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-1 h-[5px] overflow-hidden rounded-full bg-white/10",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "block h-full rounded-full",
+						style: {
+							width: `${c.toneladas / maxCat * 100}%`,
+							background: colorDeGrupo(c.nombre)
+						}
+					})
+				})] }, c.nombre))
+			})] }),
+			(m.productos ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+				className: "text-xs font-bold uppercase tracking-[0.14em] text-[#22ABE2]",
+				children: "Lo más entregado"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-2 space-y-1 text-sm",
+				children: (m.productos ?? []).map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+					className: "flex justify-between gap-3",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "truncate",
+						children: p.nombre
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "shrink-0 tabular-nums",
+						children: toneladas(p.toneladas)
+					})]
+				}, p.nombre))
+			})] }),
+			dias.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h4", {
+				className: "text-xs font-bold uppercase tracking-[0.14em] text-[#22ABE2]",
+				children: "Día por día"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-2 divide-y divide-white/10 text-sm",
+				children: dias.map((d) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+					className: `flex items-baseline justify-between gap-3 py-1.5 ${d.fecha === fecha ? "text-[#FFD400]" : ""}`,
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "tabular-nums",
+						children: diaMes(d.fecha)
+					}), d.productos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "block text-xs text-[#A8CFE2]",
+						children: d.productos.join(" · ")
+					})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "shrink-0 tabular-nums",
+						children: toneladas(d.toneladas)
+					})]
+				}, d.fecha))
+			})] })
+		]
+	});
+}
+/** «¿Cómo leer este mapa?», la primera vez que se entra. */
+function ComoLeer({ onCerrar }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+		className: "pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			role: "dialog",
+			"aria-label": "Cómo leer este mapa",
+			className: "pointer-events-auto relative w-full max-w-md rounded-2xl bg-white p-6 text-[#123E5C] shadow-2xl sm:p-7",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: onCerrar,
+					"aria-label": "Cerrar",
+					className: "absolute right-3 top-3 flex size-11 items-center justify-center rounded-full text-[#35708F] hover:bg-[#EAF7FC]",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
+						"aria-hidden": true,
+						className: "size-5"
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+					className: "vc-rotulo text-[1.7rem] text-[#0079C1]",
+					children: "¿Cómo leer este mapa?"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 text-base leading-7",
+					children: "El color de cada municipio refleja las toneladas aproximadas de ayuda recibidas. Los tonos oscuros indican una menor cantidad y los claros, una mayor."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-4 flex h-3 overflow-hidden rounded-full",
+					children: RAMPA.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "block flex-1",
+						style: { background: c }
+					}, c))
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-1.5 flex justify-between text-sm text-[#35708F]",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Menor cantidad" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Mayor cantidad" })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-4 flex items-center gap-2 text-base",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "block size-3.5 rounded-full",
+						style: { background: SIN_REGISTRO }
+					}), "Sin registro"]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-3 flex items-start gap-2 text-base leading-7",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "mt-2 block size-3.5 shrink-0 rounded-full",
+						style: { background: COLOR_ORIGEN }
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Cali: centro de acopio y punto de distribución." })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+					className: "mt-3 flex items-start gap-2 text-base leading-7",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+						className: "mt-2 block size-3.5 shrink-0 rounded-full",
+						style: { background: COLOR_PUNTO }
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Punto de distribución, en Cartago y Buenaventura." })]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-3 text-base leading-7",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Al tocar un municipio o reproducir la línea de tiempo, aparecen líneas desde el centro de acopio de Cali. Muestran hacia dónde fue la ayuda, no la ruta exacta." })
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-4 border-t border-[#123E5C]/15 pt-4 text-base leading-7",
+					children: "Toque un municipio para conocer qué recibió, y use la línea de tiempo para ver cómo llegaron las ayudas día por día."
+				})
+			]
+		})
+	});
+}
 //#endregion
-export { DashboardPage };
+export { MapaToneladas };
