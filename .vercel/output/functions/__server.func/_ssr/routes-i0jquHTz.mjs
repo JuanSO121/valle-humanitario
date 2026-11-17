@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-GEX4g-Kl.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-i0jquHTz.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -1118,7 +1118,7 @@ function QueHaceFaltaSection() {
 	const seleccionada = idx < 0 ? null : categorias[idx] ?? null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 		id: "que-hace-falta",
-		className: "vc-seccion flex min-h-dvh flex-col justify-center px-4 pb-12 pt-20 sm:px-6 sm:py-16 md:px-10",
+		className: "vc-seccion px-4 pb-12 pt-20 sm:px-6 sm:py-16 md:px-10",
 		style: { background: `radial-gradient(ellipse at center, ${CYAN_CENTRO} 0%, ${CYAN_BORDE} 80%)` },
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mx-auto w-full max-w-6xl",
@@ -1301,42 +1301,6 @@ function Detalle$1({ categoria: c }) {
 				}, e.nombre);
 			})
 		})]
-	});
-}
-function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, indice = 0 }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
-		style: { "--i": indice },
-		className: "vc-aparece rounded-lg bg-[#123E5C] p-6 sm:p-8",
-		children: [
-			rotulo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]",
-				children: rotulo
-			}),
-			acento && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-				"aria-hidden": true,
-				className: "mt-2 block h-1 w-10 rounded-full",
-				style: { background: acento }
-			}),
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-				className: `vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6] ${rotulo || acento ? "mt-3" : ""}`,
-				children: titulo
-			}),
-			texto && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-				className: "mt-2 text-base leading-7 text-[#CFEAF7]",
-				children: texto
-			}),
-			cifras && cifras.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dl", {
-				className: "mt-6 flex flex-wrap gap-x-9 gap-y-4",
-				children: cifras.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
-					className: "text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
-					children: c.valor
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
-					className: "mt-1.5 text-base text-[#C9E4F2]",
-					children: c.etiqueta
-				})] }, c.etiqueta))
-			}),
-			children
-		]
 	});
 }
 /**
@@ -1629,16 +1593,27 @@ function TarjetaDetalle({ municipio: m, onCerrar }) {
 function OtrasAyudas() {
 	const { data } = useOtras();
 	if (!data || !data.disponible) return null;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "mt-10 max-w-xl",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaPrincipal, {
-			titulo: "Otras ayudas humanitarias",
-			texto: "Ayudas entregadas a fundaciones, otros departamentos y otras entidades.",
-			cifras: [{
-				valor: toneladas(data.toneladas),
-				etiqueta: "toneladas aproximadas"
-			}]
-		})
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+		className: "vc-aparece mt-10 flex flex-col gap-5 rounded-lg bg-[#123E5C] p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-8",
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "min-w-0",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+				className: "vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6]",
+				children: "Otras ayudas humanitarias"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-2 max-w-xl text-base leading-7 text-[#CFEAF7]",
+				children: "Ayudas entregadas a fundaciones, otros departamentos y otras entidades."
+			})]
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "shrink-0 sm:text-right",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "block text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
+				children: toneladas(data.toneladas)
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+				className: "mt-1.5 block text-base text-[#C9E4F2]",
+				children: "toneladas aproximadas"
+			})]
+		})]
 	});
 }
 function CategoriasSection() {
@@ -1721,7 +1696,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-7khthfcb.mjs");
+var cargarMapa = () => import("./MapaToneladas-BIAdQw1K.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -1827,6 +1802,42 @@ function VolverArriba({ scrollRootId, mapaId }) {
 		})
 	});
 }
+function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, indice = 0, compacta = false }) {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
+		style: { "--i": indice },
+		className: `vc-aparece rounded-lg bg-[#123E5C] ${compacta ? "p-5 sm:p-6" : "p-6 sm:p-8"}`,
+		children: [
+			rotulo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]",
+				children: rotulo
+			}),
+			acento && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+				"aria-hidden": true,
+				className: "mt-2 block h-1 w-10 rounded-full",
+				style: { background: acento }
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+				className: `vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6] ${rotulo || acento ? "mt-3" : ""}`,
+				children: titulo
+			}),
+			texto && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-2 text-base leading-7 text-[#CFEAF7]",
+				children: texto
+			}),
+			cifras && cifras.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dl", {
+				className: "mt-6 flex flex-wrap gap-x-9 gap-y-4",
+				children: cifras.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+					className: "text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
+					children: c.valor
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
+					className: "mt-1.5 text-base text-[#C9E4F2]",
+					children: c.etiqueta
+				})] }, c.etiqueta))
+			}),
+			children
+		]
+	});
+}
 /**
 * PuntosDistribucionSection.tsx — "Otros puntos de distribución"
 * -----------------------------------------------------------------------
@@ -1871,9 +1882,10 @@ function PuntosDistribucionSection() {
 					" puntos de distribución."
 				] }),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-10 grid gap-4 md:grid-cols-2",
+					className: "mt-8 grid gap-3 md:grid-cols-2 md:gap-4",
 					children: PUNTOS.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaPrincipal, {
 						indice: i,
+						compacta: true,
 						rotulo: "Punto de distribución",
 						acento: p.acento,
 						titulo: p.nombre.replace("Punto de distribución ", "")
@@ -2090,7 +2102,7 @@ function ContratacionSection() {
 					children: verTodos ? "Ver menos" : `Ver los ${contratos.length} contratos`
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-10 max-w-3xl",
+					className: "mt-8",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Aviso, { children: "Valor inicial de cada contrato, sin adiciones ni modificaciones posteriores. Para ver su estado actual, consulte la publicación en SECOP." })
 				})
 			]
