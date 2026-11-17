@@ -364,6 +364,21 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
     };
     map.on("dragstart", marcarLibre);
     map.on("zoomstart", marcarLibre);
+
+    // Tocar el mapa cuando solo se ve una parte de él (la página quedó a medio
+    // camino) lo trae completo a la pantalla: la persona pasa a estar «dentro»
+    // del mapa, con su sección alineada arriba, como al llegar por el menú.
+    // Solo con un toque o clic, no con un arrastre: maplibre no emite `click`
+    // al terminar de arrastrar.
+    map.on("click", () => {
+      const seccion = contenedor.current?.closest("section");
+      const marco = seccion?.parentElement;
+      if (!seccion || !marco) return;
+      const desfase = seccion.getBoundingClientRect().top - marco.getBoundingClientRect().top;
+      if (Math.abs(desfase) < 6) return;
+      const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      seccion.scrollIntoView({ block: "start", behavior: quieto ? "auto" : "smooth" });
+    });
     let anchoPrevio = 0;
     let altoPrevio = 0;
     const observador = new ResizeObserver(([entrada]) => {
