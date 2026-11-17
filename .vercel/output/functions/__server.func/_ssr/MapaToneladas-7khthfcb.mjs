@@ -2,8 +2,8 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { o as RotateCcw, t as X, y as CircleQuestionMark } from "../_libs/lucide-react.mjs";
-import { a as entero, c as useResumen, i as diaMes, n as colorDeGrupo, o as toneladas, r as sameMunicipality, s as useMunicipios } from "./routes-D9HRA7fL.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-0IheZUTC.js
+import { a as toneladas, i as diaMes, n as colorDeGrupo, o as useMunicipios, r as sameMunicipality, s as useResumen } from "./routes-GEX4g-Kl.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-7khthfcb.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -35516,15 +35516,9 @@ function DetalleMunicipio({ municipio: m, fecha, puntos, esCali }) {
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 				className: "block text-4xl font-extrabold leading-none tabular-nums text-white",
 				children: toneladas(m.toneladas)
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 				className: "mt-1 block text-sm text-[#A8CFE2]",
-				children: [
-					"toneladas aproximadas · ",
-					entero(m.diasConDespacho),
-					" ",
-					m.diasConDespacho === 1 ? "día" : "días",
-					" con entregas"
-				]
+				children: "toneladas aproximadas"
 			})] }),
 			esCali && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
 				className: "rounded-lg border-l-[3px] bg-white/[0.06] px-3.5 py-3",

@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-D9HRA7fL.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-GEX4g-Kl.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -545,7 +545,6 @@ function toneladas(n, sufijo = true) {
 	const texto = new Intl.NumberFormat("es-CO", { maximumFractionDigits: decimales }).format(n);
 	return sufijo ? `${texto} t` : texto;
 }
-var entero = (n) => new Intl.NumberFormat("es-CO").format(n);
 /** «$1.300.000.000». Es un dato público: no se redondea. */
 function pesos(n) {
 	return new Intl.NumberFormat("es-CO", {
@@ -1309,7 +1308,7 @@ function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, ind
 		style: { "--i": indice },
 		className: "vc-aparece rounded-lg bg-[#123E5C] p-6 sm:p-8",
 		children: [
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			rotulo && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]",
 				children: rotulo
 			}),
@@ -1319,7 +1318,7 @@ function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, ind
 				style: { background: acento }
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-				className: "vc-titular mt-3 text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6]",
+				className: `vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6] ${rotulo || acento ? "mt-3" : ""}`,
 				children: titulo
 			}),
 			texto && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -1610,15 +1609,9 @@ function TarjetaDetalle({ municipio: m, onCerrar }) {
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
 					className: "text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]",
 					children: toneladas(m.toneladas)
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 					className: "text-base text-[#C9E4F2]",
-					children: [
-						"toneladas aproximadas · ",
-						entero(m.diasConDespacho),
-						" ",
-						m.diasConDespacho === 1 ? "día" : "días",
-						" con entregas"
-					]
+					children: "toneladas aproximadas"
 				})]
 			}) }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-3 text-base text-[#C9E4F2]",
@@ -1639,8 +1632,6 @@ function OtrasAyudas() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "mt-10 max-w-xl",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaPrincipal, {
-			rotulo: "Fundaciones y entidades",
-			acento: "#22ABE2",
 			titulo: "Otras ayudas humanitarias",
 			texto: "Ayudas entregadas a fundaciones, otros departamentos y otras entidades.",
 			cifras: [{
@@ -1730,7 +1721,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-0IheZUTC.mjs");
+var cargarMapa = () => import("./MapaToneladas-7khthfcb.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -2393,4 +2384,4 @@ function StoryPage() {
 var routes_exports = /* @__PURE__ */ __exportAll({ component: () => SplitComponent });
 var SplitComponent = StoryPage;
 //#endregion
-export { entero as a, useResumen as c, diaMes as i, colorDeGrupo as n, toneladas as o, sameMunicipality as r, useMunicipios as s, routes_exports as t };
+export { toneladas as a, diaMes as i, colorDeGrupo as n, useMunicipios as o, sameMunicipality as r, useResumen as s, routes_exports as t };
