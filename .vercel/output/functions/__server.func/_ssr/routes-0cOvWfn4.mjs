@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DJYLGpLZ.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-0cOvWfn4.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -1265,38 +1265,52 @@ function Detalle$1({ categoria: c }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		ref,
 		className: "rounded-xl bg-white p-5 shadow-sm sm:p-6",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-			className: "text-xl font-extrabold text-[#0079C1]",
-			children: c.nombre
-		}), c.elementos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-			className: "mt-3 text-base text-[#35708F]",
-			children: "Aún no hay información de esta categoría."
-		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-			className: "mt-4 divide-y divide-[#123E5C]/10",
-			children: c.elementos.map((e) => {
-				const est = estadoDe(e.estado);
-				return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-					className: "flex items-start justify-between gap-4 py-3",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-						className: "min-w-0",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "block text-base font-bold text-[#123E5C]",
-							children: e.nombre
-						}), e.observacion && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							className: "mt-0.5 block text-[14px] leading-5 text-[#35708F]",
-							children: e.observacion
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+				className: "text-xl font-extrabold text-[#0079C1]",
+				children: c.nombre
+			}),
+			c.incluye && c.incluye.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "mt-1.5 text-[14px] leading-5 text-[#35708F]",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "font-bold text-[#123E5C]",
+						children: "Incluye:"
+					}),
+					" ",
+					c.incluye.join(" · ")
+				]
+			}),
+			c.elementos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-3 text-base text-[#35708F]",
+				children: "Aún no hay información de esta categoría."
+			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-4 divide-y divide-[#123E5C]/10",
+				children: c.elementos.map((e) => {
+					const est = estadoDe(e.estado);
+					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+						className: "flex items-start justify-between gap-4 py-3",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
+							className: "min-w-0",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "block text-base font-bold text-[#123E5C]",
+								children: e.nombre
+							}), e.observacion && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+								className: "mt-0.5 block text-[14px] leading-5 text-[#35708F]",
+								children: e.observacion
+							})]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-extrabold",
+							style: {
+								background: est.fondo,
+								color: est.texto
+							},
+							children: est.etiqueta
 						})]
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-extrabold",
-						style: {
-							background: est.fondo,
-							color: est.texto
-						},
-						children: est.etiqueta
-					})]
-				}, e.nombre);
+					}, e.nombre);
+				})
 			})
-		})]
+		]
 	});
 }
 /**
@@ -1692,7 +1706,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-CWzMe0yG.mjs");
+var cargarMapa = () => import("./MapaToneladas-CVEZc_85.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
