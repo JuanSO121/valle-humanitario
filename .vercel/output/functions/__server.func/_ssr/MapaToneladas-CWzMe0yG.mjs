@@ -2,8 +2,8 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { o as RotateCcw, t as X, y as CircleQuestionMark } from "../_libs/lucide-react.mjs";
-import { a as toneladas, i as diaMes, n as colorDeGrupo, o as useMunicipios, r as sameMunicipality, s as useResumen } from "./routes-rF1JHIka.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-CRhIpOa7.js
+import { a as toneladas, i as diaMes, n as colorDeGrupo, o as useMunicipios, r as sameMunicipality, s as useResumen } from "./routes-DJYLGpLZ.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-CWzMe0yG.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -34767,6 +34767,18 @@ function Mapa({ municipios }) {
 		};
 		map.on("dragstart", marcarLibre);
 		map.on("zoomstart", marcarLibre);
+		map.on("click", () => {
+			const seccion = contenedor.current?.closest("section");
+			const marco = seccion?.parentElement;
+			if (!seccion || !marco) return;
+			const desfase = seccion.getBoundingClientRect().top - marco.getBoundingClientRect().top;
+			if (Math.abs(desfase) < 6) return;
+			const quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+			seccion.scrollIntoView({
+				block: "start",
+				behavior: quieto ? "auto" : "smooth"
+			});
+		});
 		let anchoPrevio = 0;
 		let altoPrevio = 0;
 		const observador = new ResizeObserver(([entrada]) => {
