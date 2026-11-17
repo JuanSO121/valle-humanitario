@@ -180,6 +180,8 @@ export interface ElementoFaltante {
 }
 export interface CategoriaFaltantes {
   nombre: string;
+  /** Qué grupos de producto abarca la categoría, según la hoja FAMILIAS. Opcional: un backend anterior no lo trae. */
+  incluye?: string[];
   elementos: ElementoFaltante[];
   total: number;
   agotados: number;

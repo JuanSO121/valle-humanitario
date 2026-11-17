@@ -90,11 +90,36 @@ function leerFaltantes_() {
   var libroId = idLibroFaltantes_();
   var nombre = CONFIG.SHEETS.FALTANTES;
   if (!libroId) return { filas: [], advertencias: ['No hay libro de plantilla configurado.'], existe: false };
-  var pestanas = leerPestanasDeLibro_(libroId, function (n) { return n === nombre; });
-  if (pestanas.length === 0) return { filas: [], advertencias: ['La hoja ' + nombre + ' no existe.'], existe: false };
-  var leido = parsearFaltantes_(pestanas[0].matriz);
+  // La plantilla y, en el mismo libro, FAMILIAS: de ahí sale qué incluye cada categoría.
+  var pestanas = leerPestanasDeLibro_(libroId, function (n) {
+    return n === nombre || n === CONFIG.SHEETS.FAMILIAS;
+  });
+  var plantilla = pestanas.filter(function (p) { return p.nombre === nombre; })[0];
+  if (!plantilla) return { filas: [], advertencias: ['La hoja ' + nombre + ' no existe.'], existe: false };
+  var leido = parsearFaltantes_(plantilla.matriz);
   leido.existe = true;
+  var hojaFamilias = pestanas.filter(function (p) { return p.nombre === CONFIG.SHEETS.FAMILIAS; })[0];
+  leido.incluye = incluyePorCategoria_(hojaFamilias ? filasAObjetos_(hojaFamilias.matriz, null) : []);
   return leido;
+}
+
+/**
+ * Qué incluye cada categoría: los grupos de producto (familias) que la hoja
+ * FAMILIAS asigna a ella, en su orden. Lo que quedó «fuera de categoría» no se
+ * lista: no pertenece a ninguna de las 7.
+ * @return {Object<string, Array<string>>} categoría -> familias
+ */
+function incluyePorCategoria_(filasFamilias) {
+  var out = Object.create(null);
+  filasFamilias.forEach(function (f) {
+    var fam = textoOrNull_(f.familia);
+    var cat = CONFIG.CATEGORIAS.filter(function (c) {
+      return normalizeText_(c) === normalizeText_(f.categoria);
+    })[0];
+    if (!fam || !cat) return;
+    (out[cat] = out[cat] || []).push(fam);
+  });
+  return out;
 }
 
 var ORDEN_ESTADO_ = { 'Agotado': 0, 'Escaso': 1, 'Buena cantidad': 2 };
@@ -122,6 +147,8 @@ function buildFaltantes_() {
       });
     return {
       nombre: nombre,
+      // Qué grupos de producto abarca la categoría (de la hoja FAMILIAS).
+      incluye: (leido.incluye && leido.incluye[nombre]) || [],
       elementos: elementos,
       total: elementos.length,
       agotados: elementos.filter(function (e) { return e.estado === 'Agotado'; }).length,

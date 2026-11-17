@@ -282,6 +282,11 @@ function Detalle({ categoria: c }: { categoria: CategoriaFaltantes }) {
   return (
     <div ref={ref} className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
       <h3 className="text-xl font-extrabold text-[#0079C1]">{c.nombre}</h3>
+      {c.incluye && c.incluye.length > 0 && (
+        <p className="mt-1.5 text-[14px] leading-5 text-[#35708F]">
+          <b className="font-bold text-[#123E5C]">Incluye:</b> {c.incluye.join(" · ")}
+        </p>
+      )}
       {c.elementos.length === 0 ? (
         <p className="mt-3 text-base text-[#35708F]">Aún no hay información de esta categoría.</p>
       ) : (
