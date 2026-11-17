@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-0cOvWfn4.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-C8tuO9jg.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -1626,8 +1626,29 @@ function OtrasAyudas() {
 		})]
 	});
 }
+/**
+* CategoriasSection.tsx — "Ayuda distribuida por categorías"
+* -----------------------------------------------------------------------
+* Las siete categorías del tablero. Cada una dice cuánto se distribuyó y, al
+* tocarla, se abre y muestra qué productos incluye, con sus toneladas.
+*
+* Antes eran siete pestañas cerradas que no hacían nada: no decían cuánto ni
+* qué, así que no servían para nada. Ahora la sección es el desglose de lo que
+* se ve en el mapa, por categoría y por producto.
+*
+* Las cifras salen de la ruta `categorias` del backend: toneladas por
+* categoría y sus productos de más peso; lo demás se junta en «otros
+* productos». Si el backend es de una versión anterior y no trae productos,
+* la categoría se muestra sin desplegar.
+*
+* Las categorías y su orden vienen del backend; si la ruta no está
+* disponible, la sección no se dibuja.
+* -----------------------------------------------------------------------
+*/
 function CategoriasSection() {
 	const { data, isPending } = useCategorias();
+	const panelId = (0, import_react.useId)();
+	const [abierta, setAbierta] = (0, import_react.useState)(null);
 	if (isPending) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cargando, {
 		id: "categorias",
 		className: "min-h-[34rem] bg-[#0B7DB1] [&_p]:text-white",
@@ -1638,7 +1659,7 @@ function CategoriasSection() {
 		id: "categorias",
 		className: "vc-seccion bg-[#0B7DB1] px-4 pb-12 pt-20 sm:px-6 sm:py-14 md:px-10",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "mx-auto w-full max-w-6xl",
+			className: "mx-auto w-full max-w-3xl",
 			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h2", {
 				className: "vc-titular mx-auto w-fit text-center text-[clamp(1.75rem,5.5vw,3.25rem)] text-[#FBF8C6]",
 				children: [
@@ -1650,31 +1671,110 @@ function CategoriasSection() {
 					})
 				]
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-				className: "mt-8 flex flex-wrap justify-center gap-3",
+				className: "mt-8 space-y-2.5",
 				"aria-label": "Categorías de ayuda",
-				children: data.categorias.map((c, i) => {
-					const Icono = iconoDeCategoria(c.nombre);
-					const color = colorDeGrupo(c.nombre);
-					return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
-						style: {
-							"--i": i,
-							borderLeftColor: color
-						},
-						className: "vc-aparece flex min-h-14 w-full items-center gap-3 sm:min-h-16 sm:w-auto sm:basis-[calc(50%-0.375rem)] lg:basis-[calc(25%-0.5625rem)] rounded-lg border-l-[4px] bg-white px-5 py-3 text-lg font-bold text-[#123E5C] shadow-sm ring-1 ring-[#123E5C]/10",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-							"aria-hidden": true,
-							className: "flex size-10 shrink-0 items-center justify-center rounded-full",
-							style: { background: `${color}22` },
-							children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icono, {
-								className: "size-6",
-								style: { color },
-								strokeWidth: 2
-							})
-						}), c.nombre]
-					}, c.nombre);
-				})
+				children: data.categorias.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Fila, {
+					categoria: c,
+					indice: i,
+					abierta: abierta === c.nombre,
+					controla: `${panelId}-${i}`,
+					onToggle: () => setAbierta((a) => a === c.nombre ? null : c.nombre)
+				}, c.nombre))
 			})]
 		})
+	});
+}
+function Fila({ categoria: c, indice, abierta, controla, onToggle }) {
+	const Icono = iconoDeCategoria(c.nombre);
+	const color = colorDeGrupo(c.nombre);
+	const productos = c.productos ?? [];
+	const desplegable = productos.length > 0;
+	const ref = (0, import_react.useRef)(null);
+	useCentrarAlAbrir(abierta ? ref : { current: null }, abierta ? c.nombre : "");
+	const contenido = /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			"aria-hidden": true,
+			className: "flex size-10 shrink-0 items-center justify-center rounded-full",
+			style: { background: `${color}22` },
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icono, {
+				className: "size-5",
+				style: { color },
+				strokeWidth: 2
+			})
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "min-w-0 flex-1 text-lg font-bold leading-tight text-[#123E5C]",
+			children: c.nombre
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "shrink-0 text-lg font-extrabold tabular-nums text-[#0079C1]",
+			children: toneladas(c.toneladas)
+		}),
+		desplegable && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
+			"aria-hidden": true,
+			className: `size-5 shrink-0 text-[#0079C1] transition-transform duration-200 motion-reduce:transition-none ${abierta ? "rotate-180" : ""}`
+		})
+	] });
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+		ref,
+		style: {
+			"--i": indice,
+			borderLeftColor: color
+		},
+		className: "vc-aparece overflow-hidden rounded-lg border-l-[4px] bg-white shadow-sm ring-1 ring-[#123E5C]/10",
+		children: [desplegable ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+			type: "button",
+			onClick: onToggle,
+			"aria-expanded": abierta,
+			"aria-controls": controla,
+			className: `flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-150 ${abierta ? "bg-[#FBF8C6]" : "hover:bg-[#F2FAFD]"}`,
+			children: contenido
+		}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+			className: "flex min-h-16 w-full items-center gap-3 px-4 py-3",
+			children: contenido
+		}), desplegable && abierta && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			id: controla,
+			role: "region",
+			"aria-label": `Productos de ${c.nombre}`,
+			className: "px-4 pb-4 pt-3",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]",
+				children: "Qué incluye"
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+				className: "mt-2 divide-y divide-[#123E5C]/10",
+				children: [productos.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+					className: "py-2",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "flex items-baseline justify-between gap-4 text-base",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "min-w-0 font-semibold text-[#123E5C]",
+							children: p.nombre
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+							className: "shrink-0 tabular-nums text-[#123E5C]",
+							children: toneladas(p.toneladas)
+						})]
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						className: "mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#123E5C]/10",
+						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+							className: "block h-full rounded-full",
+							style: {
+								width: `${Math.max(2, Math.round(p.toneladas / Math.max(c.toneladas, .001) * 100))}%`,
+								background: color
+							}
+						})
+					})]
+				}, p.nombre)), c.otros !== void 0 && c.otros > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+					className: "flex items-baseline justify-between gap-4 py-2 text-base",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+						className: "text-[#35708F]",
+						children: "Otros productos"
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+						className: "shrink-0 tabular-nums text-[#35708F]",
+						children: toneladas(c.otros)
+					})]
+				})]
+			})]
+		})]
 	});
 }
 /**
@@ -1706,7 +1806,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-CVEZc_85.mjs");
+var cargarMapa = () => import("./MapaToneladas-DjvKEpaU.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
