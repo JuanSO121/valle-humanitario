@@ -20,6 +20,7 @@ var CONFIG = {
     TOTALES: 'TOTALES',
     NUEVOS: 'NUEVOS_DESPACHOS',
     ESTIMADO: 'ESTIMADO_ANTERIOR',
+    MEZCLA: 'MEZCLA_ANTERIOR',
   },
 
   // Los días del 11 al 24 de agosto vienen del Excel anterior solo con fecha y

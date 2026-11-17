@@ -71,3 +71,12 @@ El sitio de esta rama lee su backend de `TABLERO_V2_API_URL` (servidor) / `VITE_
 `AYUDAS_API_URL`: esa sigue apuntando al backend de la versión publicada (main). Con nombres distintos pueden convivir en
 el mismo proyecto de despliegue sin pisarse. Al desplegar la rama (otro proyecto o un despliegue de vista previa), definir
 `TABLERO_V2_API_URL` con la URL `/exec` del nuevo Apps Script. Sin ella, el proxy responde error en vez de llamar al backend viejo.
+
+## Categorías de lo estimado (11–24 ago)
+El Excel viejo no trae familia, pero sí los productos (cantidades) que recibió cada destino. La hoja `MEZCLA_ANTERIOR`
+(libro oficial) reparte por categoría la parte estimada: cada producto se pesa con el kilo por unidad del producto
+parecido del consolidado real (misma categoría); si no hay parecido, con la mediana de la categoría. Se descartan
+«Sin clasificar» (5.824 u) y «Kits sin desagregar» (7.519 u). Resultado: las categorías suman el total (843 t) y las
+categorías de cada municipio suman lo suyo. Es una APROXIMACIÓN: cuando se completen los pesos reales, deja de influir.
+Un primer intento con el kilo medio por categoría sobreestimaba «Protección y seguridad» (estibas de 25 kg frente a
+tapabocas de 0,04 kg); por eso se pesa producto a producto.

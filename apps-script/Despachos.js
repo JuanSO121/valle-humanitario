@@ -40,7 +40,11 @@
  * reales. Mientras se completan, se muestra la cifra por día que ese Excel ya
  * había estimado (hoja ESTIMADO_ANTERIOR), repartida por igual entre los
  * despachos del día. Queda marcada como ESTIMADA solo en los datos
- * (`calidad.estimado`, `municipio.estimado`); el sitio público no lo avisa. Cada despacho que recibe su peso real reemplaza su
+ * (`calidad.estimado`, `municipio.estimado`); el sitio público no lo avisa.
+ *
+ * La categoría de lo estimado sale de lo que el Excel anterior sí registró: los
+ * PRODUCTOS por destino (hoja MEZCLA_ANTERIOR). Así las categorías suman el mismo
+ * total que el balance en vez de dejar 549 t sin categoría. Cada despacho que recibe su peso real reemplaza su
  * parte. Se apaga con CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL = false.
  *
  * NUEVOS_DESPACHOS: hoja de captura simple para quien no es técnico (ver
@@ -149,7 +153,7 @@ function indexarFamilias_(filas) {
  * que alguien les ponga el peso: vacío no es cero.
  * @return {{filas: Array, pendientes: Array<{fila: number, motivo: string}>}}
  */
-function convertirNuevos_(nuevas, estimados) {
+function convertirNuevos_(nuevas, estimados, mezcla) {
   var filas = [];
   var pendientes = [];
 
@@ -160,6 +164,29 @@ function convertirNuevos_(nuevas, estimados) {
   // estimada se cambia por el peso real; el resto sigue estimado.
   var estimadoPorDia = Object.create(null);
   var despachosPorDia = Object.create(null);
+
+  // Cómo se reparte por CATEGORÍA lo estimado: según los productos que el Excel
+  // anterior registró por destino (hoja MEZCLA_ANTERIOR: kilos relativos por
+  // categoría). Un destino sin mezcla usa la mezcla de todos. Sin la hoja, lo
+  // estimado queda sin categoría.
+  var mezclaPorDestino = Object.create(null);
+  var mezclaGlobal = Object.create(null);
+  (mezcla || []).forEach(function (m) {
+    var kg = toNumberOrNull_(m.peso_relativo_kg);
+    var cat = textoOrNull_(m.categoria);
+    var k = normalizeText_(m.destino);
+    if (!cat || kg === null || kg <= 0 || !k) return;
+    (mezclaPorDestino[k] = mezclaPorDestino[k] || Object.create(null))[cat] =
+      ((mezclaPorDestino[k] || {})[cat] || 0) + kg;
+    mezclaGlobal[cat] = (mezclaGlobal[cat] || 0) + kg;
+  });
+  function partesPorCategoria_(destino, kg) {
+    var m = mezclaPorDestino[normalizeText_(destino)] || mezclaGlobal;
+    var cats = Object.keys(m);
+    var total = cats.reduce(function (a, c) { return a + m[c]; }, 0);
+    if (cats.length === 0 || total <= 0) return [{ categoria: null, kg: kg }];
+    return cats.sort().map(function (c) { return { categoria: c, kg: Math.round((kg * m[c] / total) * 1000) / 1000 }; });
+  }
   if (CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL) {
     (estimados || []).forEach(function (e) {
       var d = fechaIso_(e.fecha);
@@ -193,15 +220,22 @@ function convertirNuevos_(nuevas, estimados) {
       pendientes.push({ fila: f.__row, motivo: 'falta ' + falta.join(', ') });
       // Sin peso real, pero con fecha y destino de un día estimado: entra con su parte estimada.
       if (fecha && destino && (kg === null || kg < 0) && estimadoPorDia[fecha]) {
-        filas.push({
-          fecha: f.fecha,
-          destino_original: destino,
-          familia: null,
-          peso_total_kg: Math.round((estimadoPorDia[fecha] / despachosPorDia[fecha]) * 1000) / 1000,
-          por_verificar: null,
-          peso_sin_soporte: null,
-          __estimado: true,
-          __row: 'NUEVOS_DESPACHOS ' + f.__row + ' (estimado)',
+        var parteDelDia = estimadoPorDia[fecha] / despachosPorDia[fecha];
+        partesPorCategoria_(destino, parteDelDia).forEach(function (parte, i) {
+          filas.push({
+            fecha: f.fecha,
+            destino_original: destino,
+            familia: null,
+            peso_total_kg: parte.kg,
+            por_verificar: null,
+            peso_sin_soporte: null,
+            __estimado: true,
+            __categoria: parte.categoria,
+            // Un despacho estimado se reparte en varias filas (una por categoría);
+            // solo la primera cuenta como registro.
+            __primero: i === 0,
+            __row: 'NUEVOS_DESPACHOS ' + f.__row + ' (estimado)',
+          });
         });
       }
       return;
@@ -234,7 +268,12 @@ function leerHojasDespachos_() {
 
   var nombres = [CONFIG.SHEETS.DESPACHOS, CONFIG.SHEETS.DESTINOS, CONFIG.SHEETS.FAMILIAS];
   var pestanas = leerPestanasDeLibro_(libroId, function (n) {
-    return nombres.indexOf(n) !== -1 || n === CONFIG.SHEETS.NUEVOS || n === CONFIG.SHEETS.ESTIMADO;
+    return (
+      nombres.indexOf(n) !== -1 ||
+      n === CONFIG.SHEETS.NUEVOS ||
+      n === CONFIG.SHEETS.ESTIMADO ||
+      n === CONFIG.SHEETS.MEZCLA
+    );
   });
   var porNombre = {};
   pestanas.forEach(function (p) { porNombre[p.nombre] = filasAObjetos_(p.matriz, null); });
@@ -250,7 +289,11 @@ function leerHojasDespachos_() {
   exigirColumnas_(familias, COLUMNAS_FAMILIAS_, CONFIG.SHEETS.FAMILIAS);
 
   // La hoja de captura es opcional: sin ella todo sigue como antes.
-  var nuevos = convertirNuevos_(porNombre[CONFIG.SHEETS.NUEVOS] || [], porNombre[CONFIG.SHEETS.ESTIMADO] || []);
+  var nuevos = convertirNuevos_(
+    porNombre[CONFIG.SHEETS.NUEVOS] || [],
+    porNombre[CONFIG.SHEETS.ESTIMADO] || [],
+    porNombre[CONFIG.SHEETS.MEZCLA] || [],
+  );
   return {
     filas: filas.concat(nuevos.filas),
     destinos: destinos,
@@ -337,8 +380,10 @@ function agregarDespachos_(hojas) {
     }
 
     var esEstimado = f.__estimado === true;
+    // Un despacho estimado se reparte en varias filas (una por categoría): solo la primera cuenta.
+    var cuenta = !esEstimado || f.__primero === true;
     if (esEstimado) {
-      estimado.registros += 1;
+      if (cuenta) estimado.registros += 1;
       estimado.kg += kg;
       if (!estimado.desde || fecha < estimado.desde) estimado.desde = fecha;
       if (!estimado.hasta || fecha > estimado.hasta) estimado.hasta = fecha;
@@ -356,7 +401,13 @@ function agregarDespachos_(hojas) {
     var kCat = normalizeText_(familiasIdx[normalizeText_(f.familia)]);
     var nombreCategoria = categoriaDe[kCat] || null;
     if (esEstimado) {
-      // Sin familia real todavía: no cuenta en ninguna categoría.
+      // Sin familia real todavía: la categoría sale de la mezcla de productos del
+      // Excel anterior para ese destino (ver convertirNuevos_), si la hoja existe.
+      nombreCategoria = f.__categoria && categorias[f.__categoria] ? f.__categoria : null;
+      if (nombreCategoria) {
+        categorias[nombreCategoria].registros += cuenta ? 1 : 0;
+        categorias[nombreCategoria].kg += kg;
+      }
     } else if (nombreCategoria) {
       categorias[nombreCategoria].registros += 1;
       categorias[nombreCategoria].kg += kg;
@@ -385,12 +436,12 @@ function agregarDespachos_(hojas) {
     if (municipio) {
       var x = porMunicipio[municipio.codigoDane] ||
         (porMunicipio[municipio.codigoDane] = { registros: 0, kg: 0, dias: {}, categorias: {}, productos: {} });
-      x.registros += 1;
+      x.registros += cuenta ? 1 : 0;
       x.kg += kg;
       // Lo que recibió cada día: alimenta la línea de tiempo del mapa.
       var dd = x.dias[fecha] || (x.dias[fecha] = { kg: 0, registros: 0, productos: {} });
       dd.kg += kg;
-      dd.registros += 1;
+      dd.registros += cuenta ? 1 : 0;
       var prod = textoOrNull_(f.producto_consolidado) || textoOrNull_(f.producto);
       if (prod) {
         dd.productos[prod] = (dd.productos[prod] || 0) + kg;
@@ -398,6 +449,7 @@ function agregarDespachos_(hojas) {
       }
       if (esEstimado) {
         estimado.porMunicipio[municipio.codigoDane] = (estimado.porMunicipio[municipio.codigoDane] || 0) + kg;
+        if (nombreCategoria) x.categorias[nombreCategoria] = (x.categorias[nombreCategoria] || 0) + kg;
       } else {
         var ck = nombreCategoria || (kCat === claveFuera ? CONFIG.FUERA_DE_CATEGORIA : 'Sin categoría');
         x.categorias[ck] = (x.categorias[ck] || 0) + kg;
