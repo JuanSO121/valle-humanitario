@@ -19,8 +19,8 @@ interface Cifra {
 }
 
 interface Props {
-  /** Rótulo pequeño en amarillo y mayúsculas. */
-  rotulo: string;
+  /** Rótulo pequeño en amarillo y mayúsculas. Sin él, la tarjeta lleva solo el titular. */
+  rotulo?: string;
   /** Titular en Agenda ExtraCondensed, color crema. */
   titulo: string;
   texto?: ReactNode;
@@ -47,9 +47,11 @@ export function TarjetaPrincipal({
       style={{ "--i": indice } as CSSProperties}
       className="vc-aparece rounded-lg bg-[#123E5C] p-6 sm:p-8"
     >
-      <p className="text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]">
-        {rotulo}
-      </p>
+      {rotulo && (
+        <p className="text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]">
+          {rotulo}
+        </p>
+      )}
       {acento && (
         <i
           aria-hidden
@@ -57,7 +59,9 @@ export function TarjetaPrincipal({
           style={{ background: acento }}
         />
       )}
-      <h3 className="vc-titular mt-3 text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6]">
+      <h3
+        className={`vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6] ${rotulo || acento ? "mt-3" : ""}`}
+      >
         {titulo}
       </h3>
       {texto && <p className="mt-2 text-base leading-7 text-[#CFEAF7]">{texto}</p>}

@@ -1170,10 +1170,7 @@ function DetalleMunicipio({
         <b className="block text-4xl font-extrabold leading-none tabular-nums text-white">
           {toneladas(m.toneladas)}
         </b>
-        <span className="mt-1 block text-sm text-[#A8CFE2]">
-          toneladas aproximadas · {entero(m.diasConDespacho)}{" "}
-          {m.diasConDespacho === 1 ? "día" : "días"} con entregas
-        </span>
+        <span className="mt-1 block text-sm text-[#A8CFE2]">toneladas aproximadas</span>
       </div>
 
       {esCali && (

@@ -340,10 +340,7 @@ function TarjetaDetalle({
               <b className="text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]">
                 {toneladas(m.toneladas)}
               </b>
-              <span className="text-base text-[#C9E4F2]">
-                toneladas aproximadas · {entero(m.diasConDespacho)}{" "}
-                {m.diasConDespacho === 1 ? "día" : "días"} con entregas
-              </span>
+              <span className="text-base text-[#C9E4F2]">toneladas aproximadas</span>
             </div>
           </>
         ) : (
@@ -368,8 +365,6 @@ function OtrasAyudas() {
   return (
     <div className="mt-10 max-w-xl">
       <TarjetaPrincipal
-        rotulo="Fundaciones y entidades"
-        acento="#22ABE2"
         titulo="Otras ayudas humanitarias"
         texto="Ayudas entregadas a fundaciones, otros departamentos y otras entidades."
         cifras={[{ valor: toneladas(data.toneladas), etiqueta: "toneladas aproximadas" }]}
