@@ -38,7 +38,6 @@ import type { Municipio, Zona } from "@/domain/entities";
 import { entero, toneladas } from "@/lib/formato";
 import { normMunicipalityName } from "@/lib/municipalityName";
 import { Banda, Cargando, SectionTitle } from "./storyPrimitives";
-import { MunicipioSelectorMovil } from "./MunicipioSelectorMovil";
 import { TarjetaPrincipal } from "./TarjetaPrincipal";
 
 const ZONAS: Zona[] = ["Norte", "Centro", "Sur", "Pacífico"];
@@ -136,8 +135,6 @@ function Contenido({ municipios }: { municipios: Municipio[] }) {
       ? -1
       : Math.min(visibles.length - 1, (Math.floor(idxAbierto / columnas) + 1) * columnas - 1);
   const seleccionado = idxAbierto < 0 ? null : (visibles[idxAbierto] ?? null);
-  // En el celular no hay filtros en la página: el elegido es el de la hoja, sin filtrar.
-  const movilElegido = abierto === null ? null : (municipios.find((m) => m.id === abierto) ?? null);
 
   return (
     <section id="municipios" className="vc-seccion bg-[#FBF8C6]">
@@ -152,32 +149,12 @@ function Contenido({ municipios }: { municipios: Municipio[] }) {
       <Banda tono="crema">
         {/* Filtros, buscador y contador en un mismo panel: flotando sobre el
             fondo se leían como tres elementos sin relación. */}
-        {/* Celular: un selector en una hoja a pantalla completa (la lista de
-            42 es demasiado larga para recorrerla con el dedo). */}
-        <MunicipioSelectorMovil
-          municipios={ordenados}
-          zonas={ZONAS.map((z) => ({ valor: z, color: COLOR_ZONA[z] }))}
-          colorDeZona={COLOR_ZONA}
-          elegido={movilElegido}
-          onElegir={setAbierto}
-        />
-        {movilElegido && (
-          <div className="md:hidden">
-            <DetalleMovil
-              key={movilElegido.id}
-              municipio={movilElegido}
-              onCerrar={() => setAbierto(null)}
-            />
-          </div>
-        )}
-
-        {/* Escritorio: filtros, buscador y la rejilla completa. */}
-        <div className="hidden md:block">
+        <div>
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-5">
             <div
               role="group"
               aria-label="Filtrar por zona"
-              className="flex flex-wrap items-center gap-2"
+              className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden"
             >
               {filtros.map((f) => {
                 const activo = zona === f.valor;
@@ -187,7 +164,7 @@ function Contenido({ municipios }: { municipios: Municipio[] }) {
                     type="button"
                     onClick={() => setZona(activo ? null : f.valor)}
                     aria-pressed={activo}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
+                    className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${
                       activo
                         ? "bg-[#0079C1] text-white shadow-md"
                         : "bg-[#EAF7FC] text-[#35708F] hover:bg-[#DDF0FA] hover:text-[#0079C1]"
@@ -330,17 +307,6 @@ function Detalle({ municipio: m, onCerrar }: { municipio: Municipio; onCerrar: (
     <li ref={ref} className="vc-aparece col-span-full">
       <TarjetaDetalle municipio={m} onCerrar={onCerrar} />
     </li>
-  );
-}
-
-/** El mismo detalle, bajo el botón del selector (celular). */
-function DetalleMovil({ municipio: m, onCerrar }: { municipio: Municipio; onCerrar: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useCentrarAlAbrir(ref, m.id);
-  return (
-    <div ref={ref} className="vc-aparece mt-3">
-      <TarjetaDetalle municipio={m} onCerrar={onCerrar} />
-    </div>
   );
 }
 
