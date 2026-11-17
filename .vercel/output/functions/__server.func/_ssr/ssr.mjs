@@ -198,9 +198,7 @@ function urlDelWebApp(env) {
 		"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 		"TSS_INLINE_CSS_ENABLED": "false",
 		"TSS_ROUTER_BASEPATH": "",
-		"TSS_SERVER_FN_BASE": "/_serverFn/",
-		"VITE_TABLERO_FIXTURE": "0",
-		"VITE_TABLERO_V2_API_URL": ""
+		"TSS_SERVER_FN_BASE": "/_serverFn/"
 	}["VITE_TABLERO_V2_API_URL"];
 	return typeof vite === "string" && vite ? vite : null;
 }
@@ -373,7 +371,7 @@ async function manejarTablero(request, env, ctx) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-B4_gi-me.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-sU8zpIlV.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

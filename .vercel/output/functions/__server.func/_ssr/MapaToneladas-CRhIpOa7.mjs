@@ -2,8 +2,8 @@ import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
 import { o as RotateCcw, t as X, y as CircleQuestionMark } from "../_libs/lucide-react.mjs";
-import { a as toneladas, i as diaMes, n as colorDeGrupo, o as useMunicipios, r as sameMunicipality, s as useResumen } from "./routes-i0jquHTz.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-BIAdQw1K.js
+import { a as toneladas, i as diaMes, n as colorDeGrupo, o as useMunicipios, r as sameMunicipality, s as useResumen } from "./routes-rF1JHIka.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-CRhIpOa7.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -33909,19 +33909,13 @@ function buildPulseGradient(loopT, dimColor, brightColor, bandWidth) {
 * deriva la cascada, y es lo que tarda una jornada en resolverse
 * visualmente cuando alguien toca "siguiente".
 */
-var TIMELINE_STEP_MS = 2800;
-/**
-* Lo que tiene la ola de arcos de una jornada para arrancar TODOS sus
-* arcos. Deriva del paso: lo que sobra después de reservar el
-* crecimiento del último. No se escribe a mano.
-*/
-var CASCADE_BUDGET_MS = Math.max(600, 1900);
+var TIMELINE_STEP_MS = 1800;
 /**
 * Techo de una reproducción completa, como red de seguridad. Con las 13
 * fechas del dataset real no hace nada. Si algún día llegan muchas más,
 * comprime el paso para que la reproducción no dure diez minutos.
 */
-var TIMELINE_MAX_PLAYBACK_MS = 12e4;
+var TIMELINE_MAX_PLAYBACK_MS = 15e4;
 /** Paso real entre jornadas según cuántas fechas haya. */
 function computeTimelineStepMs(dateCount) {
 	if (dateCount <= 1) return TIMELINE_STEP_MS;
@@ -34021,7 +34015,7 @@ function createArcAnimationEngine() {
 	* al ritmo del primer día y acumular backlog sin techo.
 	*/
 	function advanceQueue(now) {
-		const stepMs = clamp(CASCADE_BUDGET_MS / Math.max(1, queue.length), 60, 450);
+		const stepMs = clamp(900 / Math.max(1, queue.length), 20, 450);
 		let nextKey = queue.shift();
 		while (nextKey !== void 0) {
 			const record = registry.get(nextKey);
@@ -34359,6 +34353,8 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 	datesRef.current = dates;
 	const currentDateRef = (0, import_react.useRef)(currentDate);
 	currentDateRef.current = currentDate;
+	const onAdvanceRef = (0, import_react.useRef)(onAdvance);
+	onAdvanceRef.current = onAdvance;
 	const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
 	const activo = currentIndex >= 0;
 	const alFinal = activo && currentIndex === dates.length - 1;
@@ -34380,7 +34376,7 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 				setPlaying(false);
 				return;
 			}
-			onAdvance(next);
+			onAdvanceRef.current(next);
 		}, stepMs);
 		return () => {
 			if (intervalRef.current !== null) clearInterval(intervalRef.current);
@@ -34392,7 +34388,7 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 			if (primera !== void 0) onActivate(primera);
 		} else if (alFinal) {
 			const primera = dates[0];
-			if (primera !== void 0) onSeek(primera);
+			if (primera !== void 0) onActivate(primera);
 		}
 		setPlaying((v) => !v);
 	};
@@ -34406,8 +34402,7 @@ function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, onExit })
 		else onSeek(date);
 	};
 	if (dates.length === 0) return null;
-	const fechaMostrada = currentDate ?? dates[0] ?? null;
-	const etiqueta = diaMes(fechaMostrada);
+	const etiqueta = currentDate ? diaMes(currentDate) : "Todo el período";
 	const botonVerTodo = /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 		type: "button",
 		onClick: () => {
@@ -34534,6 +34529,23 @@ dm(maplibre_gl_worker_default);
 */
 var VALLE = [[-77.55, 3.05], [-75.65, 4.95]];
 /** La rampa del mapa original, de menos a más volumen. Es diseño, no dato. */
+/**
+* Márgenes con que se encuadra el Valle: dejan sitio a lo que flota sobre el mapa.
+* En celular son mayores: arriba van la fila de botones y la tarjeta de toneladas
+* (unos 190 px) y abajo la línea de tiempo en dos filas; con los márgenes de
+* escritorio la punta norte del Valle quedaba tapada por la tarjeta.
+*/
+var encuadre = () => typeof window !== "undefined" && window.innerWidth < 768 ? {
+	top: 195,
+	bottom: 150,
+	left: 16,
+	right: 16
+} : {
+	top: 110,
+	bottom: 130,
+	left: 24,
+	right: 24
+};
 var RAMPA = [
 	"#0F3149",
 	"#175A80",
@@ -34620,8 +34632,10 @@ function Mapa({ municipios }) {
 	const motor = (0, import_react.useRef)(createArcAnimationEngine());
 	const coordsArcos = (0, import_react.useRef)(/* @__PURE__ */ new Map());
 	const cambio = (0, import_react.useRef)("snap");
-	const vivosPrevios = (0, import_react.useRef)(/* @__PURE__ */ new Set());
 	const firmaAsentados = (0, import_react.useRef)("");
+	const vistaLibre = (0, import_react.useRef)(false);
+	const crecenVacio = (0, import_react.useRef)(true);
+	const pulsosVacio = (0, import_react.useRef)(true);
 	const [fecha, setFecha] = (0, import_react.useState)(null);
 	const [lente, setLente] = (0, import_react.useState)("acumulado");
 	const [zona, setZona] = (0, import_react.useState)("todas");
@@ -34687,14 +34701,26 @@ function Mapa({ municipios }) {
 		const cali = porDane.get(DANE_CALI);
 		return cali ? [cali.longitud, cali.latitud] : null;
 	}, [porDane]);
-	/** Los municipios a los que hoy llega una línea, con el peso que lleva. */
+	/**
+	* Las líneas del momento, con una regla única:
+	*
+	*   · con la línea de tiempo en el día X: una línea desde Cali a cada municipio
+	*     que recibió ayuda ESE día, con el peso de ese día. Las de los días
+	*     anteriores no se dibujan: el color del municipio ya guarda lo acumulado;
+	*     la línea cuenta lo que pasa hoy.
+	*   · sin línea de tiempo y con un municipio elegido: su línea, con su total.
+	*   · sin ninguna de las dos: ninguna (un mapa quieto con todas las líneas satura).
+	*
+	* La clave lleva el día: dos días seguidos al mismo municipio son dos líneas
+	* distintas, y por eso la segunda vuelve a animarse.
+	*/
 	const arcosVivos = (0, import_react.useMemo)(() => {
 		if (!origen || rutas === "ninguna") return [];
 		if (!seleccion && fecha === null) return [];
 		return municipios.filter((m) => m.codigoDane !== DANE_CALI && enZona(m)).filter((m) => !seleccion || m.codigoDane === seleccion).map((m) => ({
 			m,
-			clave: `CALI::${m.codigoDane}`,
-			peso: valorEn(m, lente, fecha)
+			clave: `CALI::${m.codigoDane}::${fecha ?? "total"}`,
+			peso: fecha === null ? m.toneladas : valorEn(m, "jornada", fecha)
 		})).filter((x) => x.peso > 0);
 	}, [
 		municipios,
@@ -34702,7 +34728,6 @@ function Mapa({ municipios }) {
 		rutas,
 		enZona,
 		seleccion,
-		lente,
 		fecha
 	]);
 	arcosVivos.length;
@@ -34714,7 +34739,8 @@ function Mapa({ municipios }) {
 				properties: {
 					dane: String(f.properties["municipalityCode"] ?? ""),
 					valor: -1,
-					estado: 0
+					estado: 0,
+					hoy: 0
 				}
 			}))
 		};
@@ -34725,12 +34751,7 @@ function Mapa({ municipios }) {
 			container: contenedor.current,
 			style: ESTILO,
 			bounds: VALLE,
-			fitBoundsOptions: { padding: {
-				top: 110,
-				bottom: 130,
-				left: 24,
-				right: 24
-			} },
+			fitBoundsOptions: { padding: encuadre() },
 			attributionControl: { compact: true },
 			cooperativeGestures: true,
 			locale: {
@@ -34741,6 +34762,26 @@ function Mapa({ municipios }) {
 		});
 		mapaRef.current = map;
 		map.addControl(new Cp({ showCompass: false }), "bottom-left");
+		const marcarLibre = (e) => {
+			if (e.originalEvent) vistaLibre.current = true;
+		};
+		map.on("dragstart", marcarLibre);
+		map.on("zoomstart", marcarLibre);
+		let anchoPrevio = 0;
+		let altoPrevio = 0;
+		const observador = new ResizeObserver(([entrada]) => {
+			const caja = entrada?.contentRect;
+			if (!caja || caja.width === 0 || caja.height === 0) return;
+			if (Math.abs(caja.width - anchoPrevio) < 1 && Math.abs(caja.height - altoPrevio) < 1) return;
+			anchoPrevio = caja.width;
+			altoPrevio = caja.height;
+			map.resize();
+			if (!vistaLibre.current) map.fitBounds(VALLE, {
+				padding: encuadre(),
+				duration: 0
+			});
+		});
+		observador.observe(contenedor.current);
 		map.on("load", () => {
 			map.addSource("municipios", {
 				type: "geojson",
@@ -34771,6 +34812,21 @@ function Mapa({ municipios }) {
 					"line-color": "#FBF8C6",
 					"line-width": .8,
 					"line-opacity": .32
+				}
+			});
+			map.addLayer({
+				id: "borde-hoy",
+				type: "line",
+				source: "municipios",
+				filter: [
+					"==",
+					["get", "hoy"],
+					1
+				],
+				paint: {
+					"line-color": "#FFFFFF",
+					"line-width": 2.2,
+					"line-opacity": .95
 				}
 			});
 			map.addLayer({
@@ -34919,6 +34975,7 @@ function Mapa({ municipios }) {
 			setVistaToken((n) => n + 1);
 		});
 		return () => {
+			observador.disconnect();
 			cargado.current = false;
 			map.remove();
 			mapaRef.current = null;
@@ -34940,7 +34997,8 @@ function Mapa({ municipios }) {
 				properties: {
 					dane,
 					valor: valor > 0 ? valor : -1,
-					estado: dane === seleccion ? 2 : filtrado ? 1 : 0
+					estado: dane === seleccion ? 2 : filtrado ? 1 : 0,
+					hoy: fecha !== null && m && !filtrado && valorEn(m, "jornada", fecha) > 0 ? 1 : 0
 				}
 			};
 		});
@@ -35053,21 +35111,18 @@ function Mapa({ municipios }) {
 			pesos[x.clave] = x.peso;
 			if (!coordsArcos.current.has(x.clave)) coordsArcos.current.set(x.clave, buildArcCoordinates(origen, [x.m.longitud, x.m.latitud]));
 		}
-		const previos = vivosPrevios.current;
 		if (cambio.current === "advance") {
 			motor.current.sync(claves, pesos);
-			for (const x of arcosVivos) if (previos.has(x.clave)) motor.current.bumpWeight(x.clave, x.peso);
-			else motor.current.enter(x.clave, ahora, { weight: x.peso });
+			for (const x of arcosVivos) motor.current.enter(x.clave, ahora, { weight: x.peso });
 		} else motor.current.snapTo(claves, pesos, ahora);
 		cambio.current = "snap";
-		vivosPrevios.current = new Set(claves);
 	}, [arcosVivos, origen]);
 	const lanzarPulsos = (0, import_react.useCallback)((dia) => {
 		const ahora = performance_default.now();
 		for (const m of municipios) {
 			if (!enZona(m)) continue;
 			if (!(m.dias ?? []).some((d) => d.fecha === dia)) continue;
-			if (!(rutas === "auto" && !seleccion && m.codigoDane !== DANE_CALI && !vivosPrevios.current.has(`CALI::${m.codigoDane}`))) pulsos.current.spawn(m.codigoDane, ahora);
+			if (!(rutas === "auto" && m.codigoDane !== DANE_CALI && (!seleccion || m.codigoDane === seleccion))) pulsos.current.spawn(m.codigoDane, ahora);
 		}
 	}, [
 		municipios,
@@ -35090,7 +35145,9 @@ function Mapa({ municipios }) {
 				const dane = a.key.split("::")[1];
 				if (dane) pulsos.current.spawn(dane, ahora);
 			}
-			map.getSource("arcos-creciendo")?.setData({
+			const crecen = map.getSource("arcos-creciendo");
+			const hayCrecen = cuadro.growing.length > 0;
+			if (hayCrecen || !crecenVacio.current) crecen?.setData({
 				type: "FeatureCollection",
 				features: cuadro.growing.flatMap((a) => {
 					const completo = coordsArcos.current.get(a.key);
@@ -35106,6 +35163,7 @@ function Mapa({ municipios }) {
 					}];
 				})
 			});
+			crecenVacio.current = !hayCrecen;
 			const firma = cuadro.settled.map((a) => `${a.key}:${Math.round(a.weight * 10)}`).join("|");
 			if (firma !== firmaAsentados.current) {
 				firmaAsentados.current = firma;
@@ -35134,7 +35192,7 @@ function Mapa({ municipios }) {
 				const ahora = performance_default.now();
 				const cuadros = quieto ? [] : pulsos.current.tick(ahora);
 				dibujarArcos(map, ahora, quieto);
-				src.setData({
+				if (cuadros.length > 0 || !pulsosVacio.current) src.setData({
 					type: "FeatureCollection",
 					features: cuadros.flatMap((c) => {
 						const m = porDane.get(c.destinoId);
@@ -35152,6 +35210,7 @@ function Mapa({ municipios }) {
 						}];
 					})
 				});
+				pulsosVacio.current = cuadros.length === 0;
 			}
 			raf = requestAnimationFrame(pasos);
 		};
@@ -35159,6 +35218,7 @@ function Mapa({ municipios }) {
 		return () => cancelAnimationFrame(raf);
 	}, [porDane]);
 	const activar = (primera) => {
+		cambio.current = "advance";
 		setFecha(primera);
 		pulsos.current.clear();
 		lanzarPulsos(primera);
@@ -35182,19 +35242,16 @@ function Mapa({ municipios }) {
 		setRutas("auto");
 		setZona("todas");
 		setSeleccion(null);
+		vistaLibre.current = false;
 		mapaRef.current?.fitBounds(VALLE, {
-			padding: {
-				top: 110,
-				bottom: 130,
-				left: 24,
-				right: 24
-			},
+			padding: encuadre(),
 			duration: 600
 		});
 	};
 	(0, import_react.useEffect)(() => {
 		const map = mapaRef.current;
 		if (!map || !cargado.current || !elegido) return;
+		vistaLibre.current = true;
 		map.flyTo({
 			center: [elegido.longitud, elegido.latitud],
 			zoom: Math.max(map.getZoom(), 8.6),
@@ -35611,24 +35668,24 @@ function DetalleMunicipio({ municipio: m, fecha, puntos, esCali }) {
 /** «¿Cómo leer este mapa?», la primera vez que se entra. */
 function ComoLeer({ onCerrar }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		className: "pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4",
+		className: "pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 pb-4 pt-[4.75rem] md:py-4",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			role: "dialog",
 			"aria-label": "Cómo leer este mapa",
-			className: "pointer-events-auto relative w-full max-w-md rounded-2xl bg-white p-6 text-[#123E5C] shadow-2xl sm:p-7",
+			className: "pointer-events-auto relative max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white p-5 text-[#123E5C] shadow-2xl sm:p-7",
 			children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 					type: "button",
 					onClick: onCerrar,
 					"aria-label": "Cerrar",
-					className: "absolute right-3 top-3 flex size-11 items-center justify-center rounded-full text-[#35708F] hover:bg-[#EAF7FC]",
+					className: "absolute right-2 top-2 flex size-11 items-center justify-center rounded-full text-[#35708F] hover:bg-[#EAF7FC]",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
 						"aria-hidden": true,
 						className: "size-5"
 					})
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-					className: "vc-rotulo text-[1.7rem] text-[#0079C1]",
+					className: "vc-rotulo pr-10 text-[1.6rem] text-[#0079C1]",
 					children: "¿Cómo leer este mapa?"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -35636,7 +35693,7 @@ function ComoLeer({ onCerrar }) {
 					children: "El color de cada municipio refleja las toneladas aproximadas de ayuda recibidas. Los tonos oscuros indican una menor cantidad y los claros, una mayor."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-4 flex h-3 overflow-hidden rounded-full",
+					className: "mt-3 flex h-3 overflow-hidden rounded-full",
 					children: RAMPA.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
 						className: "block flex-1",
 						style: { background: c }
@@ -35646,34 +35703,39 @@ function ComoLeer({ onCerrar }) {
 					className: "mt-1.5 flex justify-between text-sm text-[#35708F]",
 					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Menor cantidad" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Mayor cantidad" })]
 				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					className: "mt-4 flex items-center gap-2 text-base",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-						className: "block size-3.5 rounded-full",
-						style: { background: SIN_REGISTRO }
-					}), "Sin registro"]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					className: "mt-3 flex items-start gap-2 text-base leading-7",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-						className: "mt-2 block size-3.5 shrink-0 rounded-full",
-						style: { background: COLOR_ORIGEN }
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Cali: centro de acopio y punto de distribución." })]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
-					className: "mt-3 flex items-start gap-2 text-base leading-7",
-					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-						className: "mt-2 block size-3.5 shrink-0 rounded-full",
-						style: { background: COLOR_PUNTO }
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Punto de distribución, en Cartago y Buenaventura." })]
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+					className: "mt-3 space-y-1.5 text-[15px] leading-6",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-center gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								className: "block size-3 shrink-0 rounded-full",
+								style: { background: SIN_REGISTRO }
+							}), "Sin registro"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-start gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								className: "mt-1.5 block size-3 shrink-0 rounded-full",
+								style: { background: COLOR_ORIGEN }
+							}), "Cali: centro de acopio y punto de distribución"]
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+							className: "flex items-start gap-2",
+							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+								className: "mt-1.5 block size-3 shrink-0 rounded-full",
+								style: { background: COLOR_PUNTO }
+							}), "Punto de distribución, en Cartago y Buenaventura"]
+						})
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-3 text-base leading-7",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: "Al tocar un municipio o reproducir la línea de tiempo, aparecen líneas desde el centro de acopio de Cali. Muestran hacia dónde fue la ayuda, no la ruta exacta." })
+					children: "Con la línea de tiempo, cada día los municipios que reciben ayuda se marcan con un borde blanco y salen líneas desde Cali. Muestran hacia dónde fue la ayuda, no la ruta exacta."
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-4 border-t border-[#123E5C]/15 pt-4 text-base leading-7",
-					children: "Toque un municipio para conocer qué recibió, y use la línea de tiempo para ver cómo llegaron las ayudas día por día."
+					className: "mt-3 border-t border-[#123E5C]/15 pt-3 text-base leading-7",
+					children: "Toque un municipio para conocer qué recibió."
 				})
 			]
 		})

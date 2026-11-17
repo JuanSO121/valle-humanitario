@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-i0jquHTz.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-rF1JHIka.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -450,9 +450,7 @@ var usarProxy = {
 	"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 	"TSS_INLINE_CSS_ENABLED": "false",
 	"TSS_ROUTER_BASEPATH": "",
-	"TSS_SERVER_FN_BASE": "/_serverFn/",
-	"VITE_TABLERO_FIXTURE": "0",
-	"VITE_TABLERO_V2_API_URL": ""
+	"TSS_SERVER_FN_BASE": "/_serverFn/"
 }["VITE_AYUDAS_PROXY"] !== "0";
 var urlDirecta = {
 	"BASE_URL": "/",
@@ -466,9 +464,7 @@ var urlDirecta = {
 	"TSS_DISABLE_CSRF_MIDDLEWARE_WARNING": "false",
 	"TSS_INLINE_CSS_ENABLED": "false",
 	"TSS_ROUTER_BASEPATH": "",
-	"TSS_SERVER_FN_BASE": "/_serverFn/",
-	"VITE_TABLERO_FIXTURE": "0",
-	"VITE_TABLERO_V2_API_URL": ""
+	"TSS_SERVER_FN_BASE": "/_serverFn/"
 }["VITE_TABLERO_V2_API_URL"];
 if (!usarProxy && !urlDirecta) throw new Error("VITE_AYUDAS_PROXY=0 exige VITE_TABLERO_V2_API_URL: configurá la URL /exec del Web App en tu .env.");
 var ayudasApiRepository = new AyudasApiRepository(usarProxy ? URL_PROXY : urlDirecta);
@@ -1696,7 +1692,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-BIAdQw1K.mjs");
+var cargarMapa = () => import("./MapaToneladas-CRhIpOa7.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
