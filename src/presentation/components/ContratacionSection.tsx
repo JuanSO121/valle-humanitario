@@ -157,7 +157,7 @@ export function ContratacionSection() {
           </button>
         )}
 
-        <div className="mt-10 max-w-3xl">
+        <div className="mt-8">
           <Aviso>
             Valor inicial de cada contrato, sin adiciones ni modificaciones posteriores. Para ver su
             estado actual, consulte la publicación en SECOP.

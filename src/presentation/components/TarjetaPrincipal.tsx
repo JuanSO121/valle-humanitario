@@ -31,6 +31,8 @@ interface Props {
   children?: ReactNode;
   /** Para la entrada escalonada `vc-aparece`. */
   indice?: number;
+  /** Menos relleno: para tarjetas que solo llevan un nombre. */
+  compacta?: boolean;
 }
 
 export function TarjetaPrincipal({
@@ -41,11 +43,12 @@ export function TarjetaPrincipal({
   acento,
   children,
   indice = 0,
+  compacta = false,
 }: Props) {
   return (
     <article
       style={{ "--i": indice } as CSSProperties}
-      className="vc-aparece rounded-lg bg-[#123E5C] p-6 sm:p-8"
+      className={`vc-aparece rounded-lg bg-[#123E5C] ${compacta ? "p-5 sm:p-6" : "p-6 sm:p-8"}`}
     >
       {rotulo && (
         <p className="text-[13px] font-extrabold uppercase tracking-[0.18em] text-[#FFD400]">

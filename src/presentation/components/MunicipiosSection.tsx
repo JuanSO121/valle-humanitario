@@ -38,7 +38,6 @@ import type { Municipio, Zona } from "@/domain/entities";
 import { entero, toneladas } from "@/lib/formato";
 import { normMunicipalityName } from "@/lib/municipalityName";
 import { Banda, Cargando, SectionTitle } from "./storyPrimitives";
-import { TarjetaPrincipal } from "./TarjetaPrincipal";
 
 const ZONAS: Zona[] = ["Norte", "Centro", "Sur", "Pacífico"];
 
@@ -363,12 +362,21 @@ function OtrasAyudas() {
   const { data } = useOtras();
   if (!data || !data.disponible) return null;
   return (
-    <div className="mt-10 max-w-xl">
-      <TarjetaPrincipal
-        titulo="Otras ayudas humanitarias"
-        texto="Ayudas entregadas a fundaciones, otros departamentos y otras entidades."
-        cifras={[{ valor: toneladas(data.toneladas), etiqueta: "toneladas aproximadas" }]}
-      />
-    </div>
+    <article className="vc-aparece mt-10 flex flex-col gap-5 rounded-lg bg-[#123E5C] p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-10 sm:p-8">
+      <div className="min-w-0">
+        <h3 className="vc-titular text-[clamp(1.6rem,3.4vw,2.4rem)] leading-tight text-[#FBF8C6]">
+          Otras ayudas humanitarias
+        </h3>
+        <p className="mt-2 max-w-xl text-base leading-7 text-[#CFEAF7]">
+          Ayudas entregadas a fundaciones, otros departamentos y otras entidades.
+        </p>
+      </div>
+      <div className="shrink-0 sm:text-right">
+        <b className="block text-[clamp(1.9rem,4vw,2.9rem)] font-extrabold leading-none tabular-nums text-[#FBF8C6]">
+          {toneladas(data.toneladas)}
+        </b>
+        <span className="mt-1.5 block text-base text-[#C9E4F2]">toneladas aproximadas</span>
+      </div>
+    </article>
   );
 }

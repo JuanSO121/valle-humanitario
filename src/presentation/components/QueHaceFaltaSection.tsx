@@ -93,7 +93,7 @@ export function QueHaceFaltaSection() {
   return (
     <section
       id="que-hace-falta"
-      className="vc-seccion flex min-h-dvh flex-col justify-center px-4 pb-12 pt-20 sm:px-6 sm:py-16 md:px-10"
+      className="vc-seccion px-4 pb-12 pt-20 sm:px-6 sm:py-16 md:px-10"
       style={{
         background: `radial-gradient(ellipse at center, ${CYAN_CENTRO} 0%, ${CYAN_BORDE} 80%)`,
       }}

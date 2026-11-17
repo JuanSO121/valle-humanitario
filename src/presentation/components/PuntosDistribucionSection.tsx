@@ -39,11 +39,12 @@ export function PuntosDistribucionSection() {
           {PUNTOS.length} puntos de distribución.
         </SectionIntro>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 grid gap-3 md:grid-cols-2 md:gap-4">
           {PUNTOS.map((p, i) => (
             <TarjetaPrincipal
               key={p.nombre}
               indice={i}
+              compacta
               rotulo="Punto de distribución"
               acento={p.acento}
               titulo={p.nombre.replace("Punto de distribución ", "")}
