@@ -165,27 +165,32 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
   var estimadoPorDia = Object.create(null);
   var despachosPorDia = Object.create(null);
 
-  // Cómo se reparte por CATEGORÍA lo estimado: según los productos que el Excel
-  // anterior registró por destino (hoja MEZCLA_ANTERIOR: kilos relativos por
-  // categoría). Un destino sin mezcla usa la mezcla de todos. Sin la hoja, lo
-  // estimado queda sin categoría.
+  // Cómo se reparte por CATEGORÍA y por PRODUCTO lo estimado: según los productos
+  // que el Excel anterior registró por destino (hoja MEZCLA_ANTERIOR: kilos
+  // relativos por destino, categoría y producto). Un destino sin mezcla usa la de
+  // todos. Sin la hoja, lo estimado queda sin categoría ni producto.
   var mezclaPorDestino = Object.create(null);
   var mezclaGlobal = Object.create(null);
   (mezcla || []).forEach(function (m) {
     var kg = toNumberOrNull_(m.peso_relativo_kg);
     var cat = textoOrNull_(m.categoria);
+    var prod = textoOrNull_(m.producto) || '';
     var k = normalizeText_(m.destino);
     if (!cat || kg === null || kg <= 0 || !k) return;
-    (mezclaPorDestino[k] = mezclaPorDestino[k] || Object.create(null))[cat] =
-      ((mezclaPorDestino[k] || {})[cat] || 0) + kg;
-    mezclaGlobal[cat] = (mezclaGlobal[cat] || 0) + kg;
+    var clave = cat + '||' + prod;
+    var d = mezclaPorDestino[k] || (mezclaPorDestino[k] = Object.create(null));
+    d[clave] = (d[clave] || 0) + kg;
+    mezclaGlobal[clave] = (mezclaGlobal[clave] || 0) + kg;
   });
   function partesPorCategoria_(destino, kg) {
     var m = mezclaPorDestino[normalizeText_(destino)] || mezclaGlobal;
-    var cats = Object.keys(m);
-    var total = cats.reduce(function (a, c) { return a + m[c]; }, 0);
-    if (cats.length === 0 || total <= 0) return [{ categoria: null, kg: kg }];
-    return cats.sort().map(function (c) { return { categoria: c, kg: Math.round((kg * m[c] / total) * 1000) / 1000 }; });
+    var claves = Object.keys(m).sort();
+    var total = claves.reduce(function (a, c) { return a + m[c]; }, 0);
+    if (claves.length === 0 || total <= 0) return [{ categoria: null, producto: null, kg: kg }];
+    return claves.map(function (c) {
+      var p = c.split('||');
+      return { categoria: p[0], producto: p[1] || null, kg: Math.round((kg * m[c] / total) * 1000) / 1000 };
+    });
   }
   if (CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL) {
     (estimados || []).forEach(function (e) {
@@ -226,6 +231,7 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
             fecha: f.fecha,
             destino_original: destino,
             familia: null,
+            producto: parte.producto,
             peso_total_kg: parte.kg,
             por_verificar: null,
             peso_sin_soporte: null,
@@ -343,7 +349,13 @@ function agregarDespachos_(hojas) {
   var sinClasificar = { registros: 0, kg: 0, destinos: Object.create(null) };
 
   var categorias = Object.create(null);
-  CONFIG.CATEGORIAS.forEach(function (n) { categorias[n] = { nombre: n, registros: 0, kg: 0 }; });
+  CONFIG.CATEGORIAS.forEach(function (n) { categorias[n] = { nombre: n, registros: 0, kg: 0, productos: Object.create(null) }; });
+  function sumarProducto_(cat, nombre, kg) {
+    // «Otros productos» (lo que MEZCLA_ANTERIOR agrupa por ser poco) no es un producto:
+    // queda dentro de `otros`, que se calcula por diferencia.
+    if (!nombre || normalizeText_(nombre) === 'OTROS PRODUCTOS') return;
+    cat.productos[nombre] = (cat.productos[nombre] || 0) + kg;
+  }
   var fuera = { registros: 0, kg: 0, familias: Object.create(null) };
   var sinCategoria = { registros: 0, kg: 0, familias: Object.create(null) };
   var categoriaDe = Object.create(null);
@@ -407,10 +419,12 @@ function agregarDespachos_(hojas) {
       if (nombreCategoria) {
         categorias[nombreCategoria].registros += cuenta ? 1 : 0;
         categorias[nombreCategoria].kg += kg;
+        sumarProducto_(categorias[nombreCategoria], textoOrNull_(f.producto), kg);
       }
     } else if (nombreCategoria) {
       categorias[nombreCategoria].registros += 1;
       categorias[nombreCategoria].kg += kg;
+      sumarProducto_(categorias[nombreCategoria], textoOrNull_(f.producto_consolidado) || textoOrNull_(f.producto), kg);
     } else if (kCat === claveFuera) {
       fuera.registros += 1;
       fuera.kg += kg;
@@ -543,7 +557,18 @@ function agregarDespachos_(hojas) {
       destinos: listaOtras.map(sinKg_),
     },
     categorias: CONFIG.CATEGORIAS.map(function (n) {
-      return { nombre: n, registros: categorias[n].registros, toneladas: toneladas3_(categorias[n].kg) };
+      // Los productos de más peso de la categoría; el resto va junto en `otros`.
+      var todos = Object.keys(categorias[n].productos).map(function (k) { return { nombre: k, kg: categorias[n].productos[k] }; })
+        .sort(function (a, b) { return b.kg - a.kg || a.nombre.localeCompare(b.nombre, 'es'); });
+      var top = todos.slice(0, CONFIG.PRODUCTOS_POR_CATEGORIA);
+      var kgTop = top.reduce(function (a, p) { return a + p.kg; }, 0);
+      return {
+        nombre: n,
+        registros: categorias[n].registros,
+        toneladas: toneladas3_(categorias[n].kg),
+        productos: top.map(function (p) { return { nombre: p.nombre, toneladas: toneladas3_(p.kg) }; }),
+        otros: toneladas3_(Math.max(0, categorias[n].kg - kgTop)),
+      };
     }),
     fueraDeCategoria: {
       toneladas: toneladas3_(fuera.kg),

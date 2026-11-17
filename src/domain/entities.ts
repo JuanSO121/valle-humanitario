@@ -158,7 +158,15 @@ export type OtrasRespuesta = OtrasResponse | NoDisponible;
 /** route=categorias: las 7 categorías del tablero. */
 export interface CategoriasResponse {
   disponible: true;
-  categorias: { nombre: string; registros: number; toneladas: number }[];
+  categorias: {
+    nombre: string;
+    registros: number;
+    toneladas: number;
+    /** Los productos de más peso de la categoría. Opcional: un backend anterior no lo trae. */
+    productos?: { nombre: string; toneladas: number }[];
+    /** Toneladas de los productos que no entran en la lista. */
+    otros?: number;
+  }[];
   /** Juguetería, kits escolares y «otros»: cuentan en el total, no en las 7. */
   fueraDeCategoria: {
     toneladas: number;

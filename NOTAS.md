@@ -80,3 +80,9 @@ parecido del consolidado real (misma categoría); si no hay parecido, con la med
 categorías de cada municipio suman lo suyo. Es una APROXIMACIÓN: cuando se completen los pesos reales, deja de influir.
 Un primer intento con el kilo medio por categoría sobreestimaba «Protección y seguridad» (estibas de 25 kg frente a
 tapabocas de 0,04 kg); por eso se pesa producto a producto.
+
+## Ayuda distribuida por categorías: desglose
+La sección ya no son pestañas cerradas: cada categoría dice cuánto se distribuyó (toneladas) y, al tocarla, qué productos
+incluye con sus toneladas (los 10 de más peso; el resto en «Otros productos», `CONFIG.PRODUCTOS_POR_CATEGORIA`). Sale de la
+ruta `categorias`. La parte estimada (11–24 ago) también se reparte por producto con `MEZCLA_ANTERIOR`, que ahora trae una
+fila por destino, categoría y producto (los 6 de más peso por destino y categoría; el resto como «Otros productos»).

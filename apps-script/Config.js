@@ -30,6 +30,10 @@ var CONFIG = {
   // cambia por el peso real. Poner en false para no mostrar nada estimado.
   MOSTRAR_ESTIMADO_PROVISIONAL: true,
 
+  // Cuántos productos se listan por categoría en «Ayuda distribuida por categorías»;
+  // el resto se suma en «otros productos».
+  PRODUCTOS_POR_CATEGORIA: 10,
+
   // Libro de despachos. El id se configura en la propiedad del script
   // LIBRO_OFICIAL_ID (ver Sheetservice.js): es el libro que se sube a
   // Google Drive. No hay id por defecto a propósito: un id escrito acá
