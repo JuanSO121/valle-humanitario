@@ -76,6 +76,16 @@ const VALLE: [[number, number], [number, number]] = [
 ];
 
 /** La rampa del mapa original, de menos a más volumen. Es diseño, no dato. */
+/**
+ * Márgenes con que se encuadra el Valle: dejan sitio a lo que flota sobre el mapa.
+ * En celular son mayores: arriba van la fila de botones y la tarjeta de toneladas
+ * (unos 190 px) y abajo la línea de tiempo en dos filas; con los márgenes de
+ * escritorio la punta norte del Valle quedaba tapada por la tarjeta.
+ */
+const encuadre = () =>
+  typeof window !== "undefined" && window.innerWidth < 768
+    ? { top: 195, bottom: 150, left: 16, right: 16 }
+    : { top: 110, bottom: 130, left: 24, right: 24 };
 const RAMPA = ["#0F3149", "#175A80", "#2181B4", "#3FAEDC", "#86D3F0", "#C6ECFB"] as const;
 const SIN_REGISTRO = "#33404B";
 const FUERA_DEL_FILTRO = "#102332";
@@ -193,8 +203,13 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
   const coordsArcos = useRef(new Map<string, LngLat[]>());
   // «snap»: el cambio salta (no se anima); «advance»: avanzó un día y los arcos nuevos crecen.
   const cambio = useRef<"snap" | "advance">("snap");
-  const vivosPrevios = useRef(new Set<string>());
   const firmaAsentados = useRef("");
+  // ¿Ya movieron el mapa (arrastre, zoom, selección)? Si no, al cambiar el tamaño del
+  // contenedor se vuelve a encuadrar el Valle; si sí, se respeta su vista.
+  const vistaLibre = useRef(false);
+  // Para no reescribir cada cuadro las capas que ya están vacías.
+  const crecenVacio = useRef(true);
+  const pulsosVacio = useRef(true);
 
   const [fecha, setFecha] = useState<string | null>(null);
   const [lente, setLente] = useState<Lente>("acumulado");
@@ -270,17 +285,32 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
     return cali ? [cali.longitud, cali.latitud] : null;
   }, [porDane]);
 
-  /** Los municipios a los que hoy llega una línea, con el peso que lleva. */
+  /**
+   * Las líneas del momento, con una regla única:
+   *
+   *   · con la línea de tiempo en el día X: una línea desde Cali a cada municipio
+   *     que recibió ayuda ESE día, con el peso de ese día. Las de los días
+   *     anteriores no se dibujan: el color del municipio ya guarda lo acumulado;
+   *     la línea cuenta lo que pasa hoy.
+   *   · sin línea de tiempo y con un municipio elegido: su línea, con su total.
+   *   · sin ninguna de las dos: ninguna (un mapa quieto con todas las líneas satura).
+   *
+   * La clave lleva el día: dos días seguidos al mismo municipio son dos líneas
+   * distintas, y por eso la segunda vuelve a animarse.
+   */
   const arcosVivos = useMemo(() => {
     if (!origen || rutas === "ninguna") return [];
-    // Sin municipio elegido ni línea de tiempo activa, el mapa queda limpio.
     if (!seleccion && fecha === null) return [];
     return municipios
       .filter((m) => m.codigoDane !== DANE_CALI && enZona(m))
       .filter((m) => !seleccion || m.codigoDane === seleccion)
-      .map((m) => ({ m, clave: `CALI::${m.codigoDane}`, peso: valorEn(m, lente, fecha) }))
+      .map((m) => ({
+        m,
+        clave: `CALI::${m.codigoDane}::${fecha ?? "total"}`,
+        peso: fecha === null ? m.toneladas : valorEn(m, "jornada", fecha),
+      }))
       .filter((x) => x.peso > 0);
-  }, [municipios, origen, rutas, enZona, seleccion, lente, fecha]);
+  }, [municipios, origen, rutas, enZona, seleccion, fecha]);
 
   const hayLineas = arcosVivos.length > 0;
 
@@ -291,7 +321,12 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
       type: "FeatureCollection",
       features: base.features.map((f) => ({
         ...f,
-        properties: { dane: String(f.properties["municipalityCode"] ?? ""), valor: -1, estado: 0 },
+        properties: {
+          dane: String(f.properties["municipalityCode"] ?? ""),
+          valor: -1,
+          estado: 0,
+          hoy: 0,
+        },
       })),
     };
   }, []);
@@ -302,7 +337,7 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
       container: contenedor.current,
       style: ESTILO,
       bounds: VALLE,
-      fitBoundsOptions: { padding: { top: 110, bottom: 130, left: 24, right: 24 } },
+      fitBoundsOptions: { padding: encuadre() },
       attributionControl: { compact: true },
       // El mapa ocupa toda la pantalla: sin esto, al bajar por la página con
       // la rueda del ratón (o con un dedo en el celular) el mapa se queda con
@@ -319,6 +354,28 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
     });
     mapaRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-left");
+
+    // Si la persona mueve el mapa, su vista se respeta. Si no, al cambiar el
+    // tamaño del contenedor (la barra del navegador del celular que se esconde,
+    // girar el teléfono, un iframe que crece) se vuelve a encuadrar el Valle:
+    // sin esto el mapa quedaba descentrado o cortado («se desfasa»).
+    const marcarLibre = (e: { originalEvent?: unknown }) => {
+      if (e.originalEvent) vistaLibre.current = true;
+    };
+    map.on("dragstart", marcarLibre);
+    map.on("zoomstart", marcarLibre);
+    let anchoPrevio = 0;
+    let altoPrevio = 0;
+    const observador = new ResizeObserver(([entrada]) => {
+      const caja = entrada?.contentRect;
+      if (!caja || caja.width === 0 || caja.height === 0) return;
+      if (Math.abs(caja.width - anchoPrevio) < 1 && Math.abs(caja.height - altoPrevio) < 1) return;
+      anchoPrevio = caja.width;
+      altoPrevio = caja.height;
+      map.resize();
+      if (!vistaLibre.current) map.fitBounds(VALLE, { padding: encuadre(), duration: 0 });
+    });
+    observador.observe(contenedor.current);
 
     map.on("load", () => {
       map.addSource("municipios", {
@@ -341,6 +398,15 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
         type: "line",
         source: "municipios",
         paint: { "line-color": "#FBF8C6", "line-width": 0.8, "line-opacity": 0.32 },
+      });
+      // Los que reciben ayuda el día que se está viendo: un borde claro, para que
+      // «ese día ya sale marcado» se vea aunque el color ya venga de días anteriores.
+      map.addLayer({
+        id: "borde-hoy",
+        type: "line",
+        source: "municipios",
+        filter: ["==", ["get", "hoy"], 1],
+        paint: { "line-color": "#FFFFFF", "line-width": 2.2, "line-opacity": 0.95 },
       });
       map.addLayer({
         id: "borde-elegido",
@@ -460,6 +526,7 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
     });
 
     return () => {
+      observador.disconnect();
       cargado.current = false;
       map.remove();
       mapaRef.current = null;
@@ -485,6 +552,8 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
           dane,
           valor: valor > 0 ? valor : -1,
           estado: dane === seleccion ? 2 : filtrado ? 1 : 0,
+          // ¿Recibió ayuda ese día? Solo con la línea de tiempo en un día.
+          hoy: fecha !== null && m && !filtrado && valorEn(m, "jornada", fecha) > 0 ? 1 : 0,
         },
       };
     });
@@ -569,20 +638,15 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
         coordsArcos.current.set(x.clave, buildArcCoordinates(origen, [x.m.longitud, x.m.latitud]));
       }
     }
-    const previos = vivosPrevios.current;
     if (cambio.current === "advance") {
-      // Avanzó un día: los arcos nuevos crecen; los que ya estaban solo engordan.
+      // Empezó un día: las líneas de ese día salen en cascada desde Cali.
       motor.current.sync(claves, pesos);
-      for (const x of arcosVivos) {
-        if (previos.has(x.clave)) motor.current.bumpWeight(x.clave, x.peso);
-        else motor.current.enter(x.clave, ahora, { weight: x.peso });
-      }
+      for (const x of arcosVivos) motor.current.enter(x.clave, ahora, { weight: x.peso });
     } else {
-      // Un salto (buscar, filtrar, cambiar de modo): se asientan sin animar.
+      // Un salto (buscar, filtrar, cambiar de modo): las líneas aparecen ya asentadas.
       motor.current.snapTo(claves, pesos, ahora);
     }
     cambio.current = "snap";
-    vivosPrevios.current = new Set(claves);
   }, [arcosVivos, origen]);
 
   // --- pulsos: un anillo por municipio que recibe ayuda el día que se llega a él ---
@@ -592,13 +656,13 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
       for (const m of municipios) {
         if (!enZona(m)) continue;
         if (!(m.dias ?? []).some((d) => d.fecha === dia)) continue;
-        // Con líneas visibles, a un municipio que aún no tenía línea le pulsa
-        // al LLEGAR la línea (ver el bucle de animación); al resto, de una vez.
+        // Quien tiene línea ese día pulsa al LLEGAR la línea (ver el bucle de
+        // animación). Pulsan de una vez los que no la tienen: Cali (es el origen),
+        // todo si las líneas están ocultas, y los que no son el municipio elegido.
         const esperaLinea =
           rutas === "auto" &&
-          !seleccion &&
           m.codigoDane !== DANE_CALI &&
-          !vivosPrevios.current.has(`CALI::${m.codigoDane}`);
+          (!seleccion || m.codigoDane === seleccion);
         if (!esperaLinea) pulsos.current.spawn(m.codigoDane, ahora);
       }
     },
@@ -624,24 +688,27 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
       }
 
       const crecen = map.getSource("arcos-creciendo") as GeoJSONSource | undefined;
-      crecen?.setData({
-        type: "FeatureCollection",
-        features: cuadro.growing.flatMap((a) => {
-          const completo = coordsArcos.current.get(a.key);
-          if (!completo || completo.length < 2) return [];
-          const corte = Math.max(
-            2,
-            Math.floor(completo.length * (sinMovimiento ? 1 : a.sampleFraction)),
-          );
-          return [
-            {
-              type: "Feature" as const,
-              properties: { ancho: anchoDeLinea(a.weight || peso(a.key)) },
-              geometry: { type: "LineString" as const, coordinates: completo.slice(0, corte) },
-            },
-          ];
-        }),
-      } as never);
+      const hayCrecen = cuadro.growing.length > 0;
+      if (hayCrecen || !crecenVacio.current)
+        crecen?.setData({
+          type: "FeatureCollection",
+          features: cuadro.growing.flatMap((a) => {
+            const completo = coordsArcos.current.get(a.key);
+            if (!completo || completo.length < 2) return [];
+            const corte = Math.max(
+              2,
+              Math.floor(completo.length * (sinMovimiento ? 1 : a.sampleFraction)),
+            );
+            return [
+              {
+                type: "Feature" as const,
+                properties: { ancho: anchoDeLinea(a.weight || peso(a.key)) },
+                geometry: { type: "LineString" as const, coordinates: completo.slice(0, corte) },
+              },
+            ];
+          }),
+        } as never);
+      crecenVacio.current = !hayCrecen;
 
       // Los asentados solo se reescriben si cambia el conjunto: el pulso es
       // una propiedad de pintura, no de la fuente.
@@ -684,20 +751,22 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
         const ahora = performance.now();
         const cuadros = quieto ? [] : pulsos.current.tick(ahora);
         dibujarArcos(map, ahora, quieto);
-        src.setData({
-          type: "FeatureCollection",
-          features: cuadros.flatMap((c) => {
-            const m = porDane.get(c.destinoId);
-            if (!m) return [];
-            return [
-              {
-                type: "Feature" as const,
-                properties: { radio: 6 + c.progress * 30, opacidad: 0.85 * (1 - c.progress) },
-                geometry: { type: "Point" as const, coordinates: [m.longitud, m.latitud] },
-              },
-            ];
-          }),
-        } as never);
+        if (cuadros.length > 0 || !pulsosVacio.current)
+          src.setData({
+            type: "FeatureCollection",
+            features: cuadros.flatMap((c) => {
+              const m = porDane.get(c.destinoId);
+              if (!m) return [];
+              return [
+                {
+                  type: "Feature" as const,
+                  properties: { radio: 6 + c.progress * 30, opacidad: 0.85 * (1 - c.progress) },
+                  geometry: { type: "Point" as const, coordinates: [m.longitud, m.latitud] },
+                },
+              ];
+            }),
+          } as never);
+        pulsosVacio.current = cuadros.length === 0;
       }
       raf = requestAnimationFrame(pasos);
     };
@@ -707,6 +776,8 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
 
   // --- acciones de la línea de tiempo ---------------------------------------
   const activar = (primera: string) => {
+    // Empezar en un día también lo anima: sus líneas salen desde Cali.
+    cambio.current = "advance";
     setFecha(primera);
     pulsos.current.clear();
     lanzarPulsos(primera);
@@ -731,16 +802,15 @@ function Mapa({ municipios }: { municipios: Municipio[] }) {
     setRutas("auto");
     setZona("todas");
     setSeleccion(null);
-    mapaRef.current?.fitBounds(VALLE, {
-      padding: { top: 110, bottom: 130, left: 24, right: 24 },
-      duration: 600,
-    });
+    vistaLibre.current = false;
+    mapaRef.current?.fitBounds(VALLE, { padding: encuadre(), duration: 600 });
   };
 
   // Al elegir un municipio se acerca a él.
   useEffect(() => {
     const map = mapaRef.current;
     if (!map || !cargado.current || !elegido) return;
+    vistaLibre.current = true;
     map.flyTo({
       center: [elegido.longitud, elegido.latitud],
       zoom: Math.max(map.getZoom(), 8.6),
@@ -1273,26 +1343,28 @@ function DetalleMunicipio({
 /** «¿Cómo leer este mapa?», la primera vez que se entra. */
 function ComoLeer({ onCerrar }: { onCerrar: () => void }) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4">
+    // `py-4` + `max-h-full` + `overflow-y-auto`: en un celular bajito el cuadro es más
+    // alto que el mapa. Centrado a secas, se cortaba por arriba (el título) y por abajo.
+    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center px-4 pb-4 pt-[4.75rem] md:py-4">
       <div
         role="dialog"
         aria-label="Cómo leer este mapa"
-        className="pointer-events-auto relative w-full max-w-md rounded-2xl bg-white p-6 text-[#123E5C] shadow-2xl sm:p-7"
+        className="pointer-events-auto relative max-h-full w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white p-5 text-[#123E5C] shadow-2xl sm:p-7"
       >
         <button
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar"
-          className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-full text-[#35708F] hover:bg-[#EAF7FC]"
+          className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full text-[#35708F] hover:bg-[#EAF7FC]"
         >
           <X aria-hidden className="size-5" />
         </button>
-        <h3 className="vc-rotulo text-[1.7rem] text-[#0079C1]">¿Cómo leer este mapa?</h3>
+        <h3 className="vc-rotulo pr-10 text-[1.6rem] text-[#0079C1]">¿Cómo leer este mapa?</h3>
         <p className="mt-3 text-base leading-7">
           El color de cada municipio refleja las toneladas aproximadas de ayuda recibidas. Los tonos
           oscuros indican una menor cantidad y los claros, una mayor.
         </p>
-        <div className="mt-4 flex h-3 overflow-hidden rounded-full">
+        <div className="mt-3 flex h-3 overflow-hidden rounded-full">
           {RAMPA.map((c) => (
             <i key={c} className="block flex-1" style={{ background: c }} />
           ))}
@@ -1301,33 +1373,35 @@ function ComoLeer({ onCerrar }: { onCerrar: () => void }) {
           <span>Menor cantidad</span>
           <span>Mayor cantidad</span>
         </div>
-        <p className="mt-4 flex items-center gap-2 text-base">
-          <i className="block size-3.5 rounded-full" style={{ background: SIN_REGISTRO }} />
-          Sin registro
-        </p>
-        <p className="mt-3 flex items-start gap-2 text-base leading-7">
-          <i
-            className="mt-2 block size-3.5 shrink-0 rounded-full"
-            style={{ background: COLOR_ORIGEN }}
-          />
-          <span>Cali: centro de acopio y punto de distribución.</span>
-        </p>
-        <p className="mt-3 flex items-start gap-2 text-base leading-7">
-          <i
-            className="mt-2 block size-3.5 shrink-0 rounded-full"
-            style={{ background: COLOR_PUNTO }}
-          />
-          <span>Punto de distribución, en Cartago y Buenaventura.</span>
-        </p>
+        <ul className="mt-3 space-y-1.5 text-[15px] leading-6">
+          <li className="flex items-center gap-2">
+            <i
+              className="block size-3 shrink-0 rounded-full"
+              style={{ background: SIN_REGISTRO }}
+            />
+            Sin registro
+          </li>
+          <li className="flex items-start gap-2">
+            <i
+              className="mt-1.5 block size-3 shrink-0 rounded-full"
+              style={{ background: COLOR_ORIGEN }}
+            />
+            Cali: centro de acopio y punto de distribución
+          </li>
+          <li className="flex items-start gap-2">
+            <i
+              className="mt-1.5 block size-3 shrink-0 rounded-full"
+              style={{ background: COLOR_PUNTO }}
+            />
+            Punto de distribución, en Cartago y Buenaventura
+          </li>
+        </ul>
         <p className="mt-3 text-base leading-7">
-          <span>
-            Al tocar un municipio o reproducir la línea de tiempo, aparecen líneas desde el centro
-            de acopio de Cali. Muestran hacia dónde fue la ayuda, no la ruta exacta.
-          </span>
+          Con la línea de tiempo, cada día los municipios que reciben ayuda se marcan con un borde
+          blanco y salen líneas desde Cali. Muestran hacia dónde fue la ayuda, no la ruta exacta.
         </p>
-        <p className="mt-4 border-t border-[#123E5C]/15 pt-4 text-base leading-7">
-          Toque un municipio para conocer qué recibió, y use la línea de tiempo para ver cómo
-          llegaron las ayudas día por día.
+        <p className="mt-3 border-t border-[#123E5C]/15 pt-3 text-base leading-7">
+          Toque un municipio para conocer qué recibió.
         </p>
       </div>
     </div>

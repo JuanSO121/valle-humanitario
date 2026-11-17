@@ -70,6 +70,10 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
   datesRef.current = dates;
   const currentDateRef = useRef(currentDate);
   currentDateRef.current = currentDate;
+  // El tick del intervalo vive entre renders: sin la referencia fresca, llamaría
+  // al `onAdvance` del render en que arrancó (con los filtros de entonces).
+  const onAdvanceRef = useRef(onAdvance);
+  onAdvanceRef.current = onAdvance;
 
   const currentIndex = currentDate ? dates.indexOf(currentDate) : -1;
   const activo = currentIndex >= 0;
@@ -95,12 +99,13 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
         setPlaying(false);
         return;
       }
-      onAdvance(next);
+      onAdvanceRef.current(next);
     }, stepMs);
     return () => {
       if (intervalRef.current !== null) clearInterval(intervalRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dates y currentDate se leen frescos vía ref dentro del tick; reiniciar el intervalo en cada fecha se vería entrecortado.
+    // dates, currentDate y onAdvance se leen frescos por ref dentro del tick: reiniciar el
+    // intervalo en cada fecha se vería entrecortado.
   }, [playing]);
 
   const alternarReproduccion = () => {
@@ -108,8 +113,9 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
       const primera = dates[0];
       if (primera !== undefined) onActivate(primera);
     } else if (alFinal) {
+      // Volver a empezar: el primer día también se anima.
       const primera = dates[0];
-      if (primera !== undefined) onSeek(primera);
+      if (primera !== undefined) onActivate(primera);
     }
     setPlaying((v) => !v);
   };
@@ -126,8 +132,9 @@ export function Timeline({ dates, currentDate, onSeek, onAdvance, onActivate, on
 
   if (dates.length === 0) return null;
 
-  const fechaMostrada = currentDate ?? dates[0] ?? null;
-  const etiqueta = fechaCorta(fechaMostrada);
+  // Sin línea de tiempo activa el mapa muestra TODO el período: la etiqueta no
+  // puede decir «11 de agosto» (el primer día) mientras el mapa enseña el total.
+  const etiqueta = currentDate ? fechaCorta(currentDate) : "Todo el período";
 
   const botonVerTodo = (
     <button

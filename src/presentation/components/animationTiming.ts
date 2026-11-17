@@ -31,7 +31,7 @@ export const ARC_GROWTH_MS = 900;
  * deriva la cascada, y es lo que tarda una jornada en resolverse
  * visualmente cuando alguien toca "siguiente".
  */
-export const TIMELINE_STEP_MS = 2800;
+export const TIMELINE_STEP_MS = 1800;
 
 /**
  * Lo que tiene la ola de arcos de una jornada para arrancar TODOS sus
@@ -46,7 +46,7 @@ export const CASCADE_BUDGET_MS = Math.max(600, TIMELINE_STEP_MS - ARC_GROWTH_MS)
  * presupuesto. A 60 ms todavía se lee como cascada, no como un flash
  * simultáneo.
  */
-export const CASCADE_STEP_MIN_MS = 60;
+export const CASCADE_STEP_MIN_MS = 20;
 
 /** Techo: con pocos arcos mantiene el ritmo "entra el siguiente cuando el anterior va por la mitad". */
 export const CASCADE_STEP_MAX_MS = 450;
@@ -56,7 +56,7 @@ export const CASCADE_STEP_MAX_MS = 450;
  * fechas del dataset real no hace nada. Si algún día llegan muchas más,
  * comprime el paso para que la reproducción no dure diez minutos.
  */
-export const TIMELINE_MAX_PLAYBACK_MS = 120_000;
+export const TIMELINE_MAX_PLAYBACK_MS = 150_000;
 
 /** Paso real entre jornadas según cuántas fechas haya. */
 export function computeTimelineStepMs(dateCount: number): number {
