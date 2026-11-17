@@ -28,7 +28,6 @@ import type { CSSProperties } from "react";
 import { useResumen } from "@/application/hooks/useTablero";
 import type { ResumenResponse } from "@/domain/entities";
 import { fechaLarga, toneladas } from "@/lib/formato";
-import { RutasDeAyuda } from "./RutasDeAyuda";
 import { SectionTitle } from "./storyPrimitives";
 
 interface Cifra {
@@ -123,8 +122,6 @@ function Contenido({ resumen }: { resumen: ResumenResponse }) {
           <b className="mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg">{corte}</b>
         </div>
       )}
-
-      <RutasDeAyuda />
     </>
   );
 }
