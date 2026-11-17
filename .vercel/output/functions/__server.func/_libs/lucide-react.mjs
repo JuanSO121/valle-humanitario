@@ -165,62 +165,6 @@ var BedDouble = createLucideIcon("bed-double", [
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
-var Boxes = createLucideIcon("boxes", [
-	["path", {
-		d: "M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z",
-		key: "lc1i9w"
-	}],
-	["path", {
-		d: "m7 16.5-4.74-2.85",
-		key: "1o9zyk"
-	}],
-	["path", {
-		d: "m7 16.5 5-3",
-		key: "va8pkn"
-	}],
-	["path", {
-		d: "M7 16.5v5.17",
-		key: "jnp8gn"
-	}],
-	["path", {
-		d: "M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z",
-		key: "8zsnat"
-	}],
-	["path", {
-		d: "m17 16.5-5-3",
-		key: "8arw3v"
-	}],
-	["path", {
-		d: "m17 16.5 4.74-2.85",
-		key: "8rfmw"
-	}],
-	["path", {
-		d: "M17 16.5v5.17",
-		key: "k6z78m"
-	}],
-	["path", {
-		d: "M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z",
-		key: "1xygjf"
-	}],
-	["path", {
-		d: "M12 8 7.26 5.15",
-		key: "1vbdud"
-	}],
-	["path", {
-		d: "m12 8 4.74-2.85",
-		key: "3rx089"
-	}],
-	["path", {
-		d: "M12 13.5V8",
-		key: "1io7kd"
-	}]
-]);
-/**
-* @license lucide-react v0.575.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
 var ChevronDown = createLucideIcon("chevron-down", [["path", {
 	d: "m6 9 6 6 6-6",
 	key: "qrunsl"
@@ -390,16 +334,6 @@ var HandHeart = createLucideIcon("hand-heart", [
 		key: "1x6kdw"
 	}]
 ]);
-/**
-* @license lucide-react v0.575.0 - ISC
-*
-* This source code is licensed under the ISC license.
-* See the LICENSE file in the root directory of this source tree.
-*/
-var HeartHandshake = createLucideIcon("heart-handshake", [["path", {
-	d: "M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762",
-	key: "17lmqv"
-}]]);
 /**
 * @license lucide-react v0.575.0 - ISC
 *
@@ -611,4 +545,4 @@ var X = createLucideIcon("x", [["path", {
 	key: "d8bk6v"
 }]]);
 //#endregion
-export { Boxes as C, Apple as E, ChevronDown as S, ArrowUp as T, ExternalLink as _, Search as a, CircleQuestionMark as b, Package as c, MapPin as d, House as f, FilePenLine as g, FileText as h, ShieldCheck as i, Menu as l, HandHeart as m, Warehouse as n, RotateCcw as o, HeartHandshake as p, Shirt as r, PawPrint as s, X as t, Map as u, Droplets as v, BedDouble as w, ChevronLeft as x, CookingPot as y };
+export { ArrowUp as C, BedDouble as S, Droplets as _, Search as a, ChevronLeft as b, Package as c, MapPin as d, House as f, ExternalLink as g, FilePenLine as h, ShieldCheck as i, Menu as l, FileText as m, Warehouse as n, RotateCcw as o, HandHeart as p, Shirt as r, PawPrint as s, X as t, Map as u, CookingPot as v, Apple as w, ChevronDown as x, CircleQuestionMark as y };

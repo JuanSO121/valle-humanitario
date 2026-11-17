@@ -200,7 +200,7 @@ function urlDelWebApp(env) {
 		"TSS_ROUTER_BASEPATH": "",
 		"TSS_SERVER_FN_BASE": "/_serverFn/",
 		"VITE_TABLERO_FIXTURE": "0",
-		"VITE_TABLERO_V2_API_URL": "https://script.google.com/macros/s/AKfycbyGWIpjsiLmnDC6GPMusHJnAVi6F_ndtb_lnF_doLFti3ic2xYU72DyFqk5Yk7TsFS0/exec"
+		"VITE_TABLERO_V2_API_URL": ""
 	}["VITE_TABLERO_V2_API_URL"];
 	return typeof vite === "string" && vite ? vite : null;
 }
@@ -373,7 +373,7 @@ async function manejarTablero(request, env, ctx) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-DSxc3Kve.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-BcGNHgyH.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

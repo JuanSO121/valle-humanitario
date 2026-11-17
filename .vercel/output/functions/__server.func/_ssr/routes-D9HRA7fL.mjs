@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
-import { C as Boxes, E as Apple, S as ChevronDown, T as ArrowUp, _ as ExternalLink, a as Search, c as Package, d as MapPin, f as House, g as FilePenLine, h as FileText, i as ShieldCheck, l as Menu, m as HandHeart, n as Warehouse, p as HeartHandshake, r as Shirt, s as PawPrint, t as X, u as Map$1, v as Droplets, w as BedDouble, x as ChevronLeft, y as CookingPot } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-DDi5vCPZ.js
+import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-D9HRA7fL.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -452,7 +452,7 @@ var usarProxy = {
 	"TSS_ROUTER_BASEPATH": "",
 	"TSS_SERVER_FN_BASE": "/_serverFn/",
 	"VITE_TABLERO_FIXTURE": "0",
-	"VITE_TABLERO_V2_API_URL": "https://script.google.com/macros/s/AKfycbyGWIpjsiLmnDC6GPMusHJnAVi6F_ndtb_lnF_doLFti3ic2xYU72DyFqk5Yk7TsFS0/exec"
+	"VITE_TABLERO_V2_API_URL": ""
 }["VITE_AYUDAS_PROXY"] !== "0";
 var urlDirecta = {
 	"BASE_URL": "/",
@@ -468,7 +468,7 @@ var urlDirecta = {
 	"TSS_ROUTER_BASEPATH": "",
 	"TSS_SERVER_FN_BASE": "/_serverFn/",
 	"VITE_TABLERO_FIXTURE": "0",
-	"VITE_TABLERO_V2_API_URL": "https://script.google.com/macros/s/AKfycbyGWIpjsiLmnDC6GPMusHJnAVi6F_ndtb_lnF_doLFti3ic2xYU72DyFqk5Yk7TsFS0/exec"
+	"VITE_TABLERO_V2_API_URL": ""
 }["VITE_TABLERO_V2_API_URL"];
 if (!usarProxy && !urlDirecta) throw new Error("VITE_AYUDAS_PROXY=0 exige VITE_TABLERO_V2_API_URL: configurá la URL /exec del Web App en tu .env.");
 var ayudasApiRepository = new AyudasApiRepository(usarProxy ? URL_PROXY : urlDirecta);
@@ -568,12 +568,6 @@ function diaMes(iso) {
 	const [, mes, dia] = iso.split("-");
 	const nombre = MESES[Number(mes) - 1];
 	return nombre && dia ? `${Number(dia)} de ${nombre}` : "";
-}
-/** «1,5%», «15%»: un decimal por debajo del 10%, entero desde ahí. */
-function porcentaje(parte, total) {
-	if (total <= 0) return "0%";
-	const n = parte / total * 100;
-	return `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: n < 10 ? 1 : 0 }).format(n)}%`;
 }
 /**
 * municipalityName.ts
@@ -927,23 +921,6 @@ function Resaltado({ children, variante = "amarillo" }) {
 	});
 }
 /**
-* El rótulo de un bloque.
-*
-* En las piezas no es un eyebrow diminuto sino una línea de peso, en
-* Agenda ExtraCondensed y con una palabra resaltada en amarillo. Usa
-* `.vc-rotulo` y no `.vc-titular` porque este último fuerza mayúscula y
-* los rótulos de la campaña van en caja mixta.
-*
-* El tamaño es mayor de lo que pediría en Poppins: Agenda es extra
-* condensada y a igual cuerpo ocupa cerca de un tercio menos de ancho.
-*/
-function SectionLabel({ children, tono = "hueso" }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-		className: `vc-rotulo text-[clamp(1.5rem,3.6vw,2.5rem)] ${OSCURO[tono] ? "text-white" : "text-[#0079C1]"}`,
-		children
-	});
-}
-/**
 * El titular de una sección.
 *
 * Agenda ExtraCondensed en mayúscula, vía `.vc-titular`. El `clamp` lo
@@ -988,124 +965,6 @@ function Cargando({ id, className, texto }) {
 		})
 	});
 }
-function RutasDeAyuda() {
-	const { data: resumen } = useResumen();
-	const { data: otras } = useOtras();
-	if (!resumen || !resumen.disponible) return null;
-	const total = resumen.totales.toneladas;
-	const { multiples, traslados } = resumen.calidad;
-	const rutas = [
-		{
-			id: "multiples",
-			titulo: "Municipios múltiples",
-			descripcion: "Ruta de entrega que atendió a varios municipios sin desagregar cuál recibió qué.",
-			toneladas: multiples.toneladas,
-			color: "#2A7F42",
-			tinta: "#236B37",
-			icono: Boxes
-		},
-		{
-			id: "otras",
-			titulo: "Otras ayudas humanitarias",
-			descripcion: "Ayudas entregadas a fundaciones, otros departamentos y otras entidades.",
-			toneladas: otras && otras.disponible ? otras.toneladas : 0,
-			color: "#0C739E",
-			tinta: "#0C5F85",
-			icono: HeartHandshake
-		},
-		{
-			id: "puntos",
-			titulo: "Puntos de distribución",
-			descripcion: "Ayuda que llega primero a estos puntos y se reparte después.",
-			toneladas: traslados.toneladas,
-			color: "#B94F00",
-			tinta: "#8F3E00",
-			icono: Warehouse
-		}
-	].filter((r) => r.toneladas > 0);
-	if (rutas.length === 0) return null;
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "mt-10 md:mt-12",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionLabel, { children: "Además de los municipios, la ayuda salió por otras rutas" }), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ol", {
-			className: "relative mt-6 space-y-4 md:mt-6 md:space-y-0",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				"aria-hidden": true,
-				className: "absolute inset-y-0 left-1/2 hidden w-px -translate-x-1/2 bg-[#0079C1]/25 md:block"
-			}), rutas.map((r, i) => {
-				const Icono = r.icono;
-				return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
-					style: { "--i": i },
-					className: "vc-aparece relative md:grid md:grid-cols-[1fr_4.5rem_1fr] md:items-center md:py-2.5",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 md:contents",
-						children: [
-							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "flex flex-col items-start gap-2.5 md:flex-row md:items-center md:justify-between md:gap-4 md:pr-6",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-									className: "shrink-0 text-[clamp(1.5rem,4vw,2rem)] font-bold uppercase tracking-tight md:min-w-24",
-									style: { color: r.tinta },
-									children: ["Ruta ", i + 1]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "flex w-full items-center gap-4 rounded-[1.5rem] px-5 py-4 text-white md:max-w-[24rem] md:flex-1 md:rounded-full md:px-6 md:text-right",
-									style: { background: r.color },
-									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-										"aria-hidden": true,
-										className: "flex size-11 shrink-0 items-center justify-center rounded-full bg-white/20 md:hidden",
-										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icono, { className: "size-5" })
-									}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-										className: "min-w-0 flex-1",
-										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-											className: "block text-lg leading-tight",
-											children: r.titulo
-										}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-											className: "mt-2 flex flex-wrap gap-x-6 gap-y-1 md:justify-end",
-											children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												className: "text-[15px] font-bold text-white",
-												children: [
-													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-														className: "text-base font-extrabold text-white",
-														children: porcentaje(r.toneladas, total)
-													}),
-													" ",
-													"del total"
-												]
-											}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", {
-												className: "text-[15px] font-bold text-white",
-												children: [
-													/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-														className: "text-base font-extrabold text-white",
-														children: toneladas(r.toneladas, false)
-													}),
-													" ",
-													"toneladas"
-												]
-											})]
-										})]
-									})]
-								})]
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "hidden justify-center md:flex",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "flex size-14 items-center justify-center rounded-full text-white shadow-lg ring-4 ring-white",
-									style: { background: r.color },
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Icono, {
-										className: "size-6",
-										"aria-hidden": true
-									})
-								})
-							}),
-							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-								className: "mt-3 text-[15px] leading-6 text-[#35708F] md:mt-0 md:pl-6 md:text-base",
-								children: r.descripcion
-							})
-						]
-					})
-				}, r.id);
-			})]
-		})]
-	});
-}
 function cifrasDe(r) {
 	return [
 		{
@@ -1142,34 +1001,30 @@ function BalanceFinal() {
 function Contenido$1({ resumen }) {
 	const cifras = cifrasDe(resumen);
 	const corte = fechaLarga(resumen.corte);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dl", {
-			className: "mt-9 grid gap-2 sm:grid-cols-2 lg:grid-cols-4",
-			children: cifras.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-				style: { "--i": i },
-				className: "vc-aparece flex items-center gap-4 rounded-lg bg-[#123E5C] px-4 py-4 sm:block sm:px-5 sm:py-6 sm:text-center",
-				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
-					className: `order-first min-w-[6.5rem] shrink-0 font-extrabold leading-none tabular-nums sm:block ${c.vacio ? "text-[1.25rem] text-[#C9E4F2] sm:text-[1.5rem]" : "text-[1.75rem] text-[#FBF8C6] sm:text-[clamp(1.75rem,3.2vw,2.5rem)]"}`,
-					children: c.valor
-				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
-					className: "text-[15px] font-bold leading-tight text-white sm:mt-2 sm:text-base",
-					children: c.etiqueta
-				})]
-			}, c.etiqueta))
-		}),
-		corte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-			className: "vc-aparece mt-2 rounded-lg bg-[#FBF8C6] px-5 py-3.5 text-center",
-			style: { "--i": cifras.length },
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-				className: "block text-[13px] font-bold uppercase tracking-[0.16em] text-[#00639F]",
-				children: "Con corte al"
-			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-				className: "mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg",
-				children: corte
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dl", {
+		className: "mt-9 grid gap-2 sm:grid-cols-2 lg:grid-cols-4",
+		children: cifras.map((c, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			style: { "--i": i },
+			className: "vc-aparece flex items-center gap-4 rounded-lg bg-[#123E5C] px-4 py-4 sm:block sm:px-5 sm:py-6 sm:text-center",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("dd", {
+				className: `order-first min-w-[6.5rem] shrink-0 font-extrabold leading-none tabular-nums sm:block ${c.vacio ? "text-[1.25rem] text-[#C9E4F2] sm:text-[1.5rem]" : "text-[1.75rem] text-[#FBF8C6] sm:text-[clamp(1.75rem,3.2vw,2.5rem)]"}`,
+				children: c.valor
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("dt", {
+				className: "text-[15px] font-bold leading-tight text-white sm:mt-2 sm:text-base",
+				children: c.etiqueta
 			})]
-		}),
-		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(RutasDeAyuda, {})
-	] });
+		}, c.etiqueta))
+	}), corte && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		className: "vc-aparece mt-2 rounded-lg bg-[#FBF8C6] px-5 py-3.5 text-center",
+		style: { "--i": cifras.length },
+		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+			className: "block text-[13px] font-bold uppercase tracking-[0.16em] text-[#00639F]",
+			children: "Con corte al"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+			className: "mt-0.5 block text-base font-extrabold text-[#123E5C] sm:text-lg",
+			children: corte
+		})]
+	})] });
 }
 /**
 * Cuando algo se despliega (el detalle de un municipio, la lista de una
@@ -1449,183 +1304,6 @@ function Detalle$1({ categoria: c }) {
 		})]
 	});
 }
-/**
-* MunicipioSelectorMovil.tsx
-* -----------------------------------------------------------------------
-* El selector de municipios para el celular.
-*
-* Una lista de 42 botones en la pantalla de un teléfono son dos pantallas y
-* media de desplazamiento, y quien busca un municipio tiene que recorrerlos.
-* Aquí la lista vive en una hoja que ocupa toda la pantalla, con lo que se
-* hace en el celular con una lista larga:
-*
-*   · un botón grande «Toque para elegir un municipio» en la página;
-*   · la hoja: buscador, zonas en UNA fila que se desliza y la lista, con las
-*     toneladas de cada municipio a la derecha;
-*   · al elegir, la hoja se cierra y el detalle queda justo debajo del botón.
-*
-* La hoja es un <dialog> nativo: el teclado y los lectores de pantalla ya
-* saben qué hacer con él (foco atrapado, Esc cierra, el fondo no se toca).
-* En escritorio no se usa: allí cabe la rejilla completa.
-* -----------------------------------------------------------------------
-*/
-function MunicipioSelectorMovil({ municipios, zonas, elegido, colorDeZona, onElegir }) {
-	const hoja = (0, import_react.useRef)(null);
-	const [busqueda, setBusqueda] = (0, import_react.useState)("");
-	const [zona, setZona] = (0, import_react.useState)(null);
-	const visibles = (0, import_react.useMemo)(() => {
-		const q = normMunicipalityName(busqueda);
-		return municipios.filter((m) => (zona === null || m.zona === zona) && (q === "" || normMunicipalityName(m.nombre).includes(q)));
-	}, [
-		municipios,
-		busqueda,
-		zona
-	]);
-	const abrir = () => hoja.current?.showModal();
-	const cerrar = () => hoja.current?.close();
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-		className: "md:hidden",
-		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-			type: "button",
-			onClick: abrir,
-			"aria-haspopup": "dialog",
-			className: "flex min-h-14 w-full items-center gap-3 rounded-2xl bg-white px-4 text-left shadow-sm ring-1 ring-[#123E5C]/10 active:bg-[#EAF7FC]",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-					"aria-hidden": true,
-					className: "size-5 shrink-0 text-[#0079C1]"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-					className: "min-w-0 flex-1",
-					children: elegido ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-						className: "block text-[13px] font-semibold text-[#35708F]",
-						children: "Municipio elegido"
-					}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "block truncate text-base text-[#123E5C]",
-						children: elegido.nombre
-					})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-						className: "block text-base text-[#123E5C]",
-						children: "Toque para elegir un municipio"
-					})
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChevronDown, {
-					"aria-hidden": true,
-					className: "size-5 shrink-0 text-[#0079C1]"
-				})
-			]
-		}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dialog", {
-			ref: hoja,
-			"aria-label": "Elegir un municipio",
-			className: "fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-[#F2FAFD] p-0 text-[#123E5C] backdrop:bg-transparent open:flex open:flex-col",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-					className: "shrink-0 border-b border-[#123E5C]/10 bg-white px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "flex items-center justify-between gap-3",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
-								className: "vc-rotulo text-2xl text-[#0079C1]",
-								children: "Elija un municipio"
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
-								type: "button",
-								onClick: cerrar,
-								"aria-label": "Cerrar",
-								className: "flex size-11 shrink-0 items-center justify-center rounded-full text-[#0079C1] active:bg-[#EAF7FC]",
-								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(X, {
-									"aria-hidden": true,
-									className: "size-6"
-								})
-							})]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-							className: "relative mt-2 block",
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "sr-only",
-									children: "Buscar municipio"
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-									"aria-hidden": true,
-									className: "pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#587890]"
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-									type: "search",
-									value: busqueda,
-									onChange: (e) => setBusqueda(e.target.value),
-									placeholder: "Buscar municipio…",
-									enterKeyHint: "search",
-									autoComplete: "off",
-									className: "min-h-12 w-full rounded-xl border-2 border-transparent bg-[#F2FAFD] py-3 pl-11 pr-4 text-base text-[#123E5C] outline-none placeholder:text-[#587890] focus:border-[#0079C1]"
-								})
-							]
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-							role: "group",
-							"aria-label": "Filtrar por zona",
-							className: "-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-							children: [{
-								valor: null,
-								color: ""
-							}, ...zonas].map((z) => {
-								const activo = zona === z.valor;
-								return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-									type: "button",
-									onClick: () => setZona(activo ? null : z.valor),
-									"aria-pressed": activo,
-									className: `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 text-base font-semibold ${activo ? "bg-[#0079C1] text-white" : "bg-[#EAF7FC] text-[#35708F]"}`,
-									children: [z.valor && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-										"aria-hidden": true,
-										className: "block size-2.5 rounded-full ring-2 ring-white/70",
-										style: { background: z.color }
-									}), z.valor ?? "Todas"]
-								}, z.valor ?? "todas");
-							})
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "shrink-0 px-4 pb-1 pt-3 text-[15px] font-semibold text-[#35708F]",
-					"aria-live": "polite",
-					children: visibles.length === municipios.length ? `${municipios.length} municipios` : `${visibles.length} de ${municipios.length} municipios`
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]",
-					children: visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-						className: "mt-4 rounded-xl border-2 border-dashed border-[#0079C1]/40 p-8 text-center text-base text-[#35708F]",
-						children: "Ningún municipio coincide. Pruebe con otro nombre o quite el filtro de zona."
-					}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-						className: "divide-y divide-[#123E5C]/10 overflow-hidden rounded-xl bg-white ring-1 ring-[#123E5C]/10",
-						children: visibles.map((m) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-							type: "button",
-							onClick: () => {
-								onElegir(m.id);
-								cerrar();
-							},
-							"aria-label": `${m.nombre}, zona ${m.zona}`,
-							"aria-current": elegido?.id === m.id,
-							className: `flex min-h-14 w-full items-center gap-3 px-4 text-left active:bg-[#EAF7FC] ${elegido?.id === m.id ? "bg-[#EAF7FC]" : ""}`,
-							children: [
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-									"aria-hidden": true,
-									className: "block size-2.5 shrink-0 rounded-full",
-									style: { background: colorDeZona[m.zona] }
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: "min-w-0 flex-1 text-base font-semibold leading-tight",
-									children: m.nombre
-								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-									className: `shrink-0 text-[15px] tabular-nums ${m.atendido ? "font-bold text-[#0079C1]" : "text-[#587890]"}`,
-									children: m.atendido ? toneladas(m.toneladas) : "Sin entregas"
-								})
-							]
-						}) }, m.id))
-					})
-				})
-			]
-		})]
-	});
-}
 function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, indice = 0 }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
 		style: { "--i": indice },
@@ -1775,7 +1453,6 @@ function Contenido({ municipios }) {
 	const idxAbierto = abierto === null ? -1 : visibles.findIndex((m) => m.id === abierto);
 	const finDeFila = idxAbierto < 0 ? -1 : Math.min(visibles.length - 1, (Math.floor(idxAbierto / columnas) + 1) * columnas - 1);
 	const seleccionado = idxAbierto < 0 ? null : visibles[idxAbierto] ?? null;
-	const movilElegido = abierto === null ? null : municipios.find((m) => m.id === abierto) ?? null;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		id: "municipios",
 		className: "vc-seccion bg-[#FBF8C6]",
@@ -1794,102 +1471,79 @@ function Contenido({ municipios }) {
 			})] }),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Banda, {
 				tono: "crema",
-				children: [
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(MunicipioSelectorMovil, {
-						municipios: ordenados,
-						zonas: ZONAS.map((z) => ({
-							valor: z,
-							color: COLOR_ZONA[z]
-						})),
-						colorDeZona: COLOR_ZONA,
-						elegido: movilElegido,
-						onElegir: setAbierto
-					}),
-					movilElegido && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-						className: "md:hidden",
-						children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(DetalleMovil, {
-							municipio: movilElegido,
-							onCerrar: () => setAbierto(null)
-						}, movilElegido.id)
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-						className: "hidden md:block",
-						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-							className: "rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-5",
-							children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								role: "group",
-								"aria-label": "Filtrar por zona",
-								className: "flex flex-wrap items-center gap-2",
-								children: filtros.map((f) => {
-									const activo = zona === f.valor;
-									return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
-										type: "button",
-										onClick: () => setZona(activo ? null : f.valor),
-										"aria-pressed": activo,
-										className: `inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${activo ? "bg-[#0079C1] text-white shadow-md" : "bg-[#EAF7FC] text-[#35708F] hover:bg-[#DDF0FA] hover:text-[#0079C1]"}`,
-										children: [
-											f.valor && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
-												"aria-hidden": true,
-												className: "block size-2.5 rounded-full ring-2 ring-white/70",
-												style: { background: COLOR_ZONA[f.valor] }
-											}),
-											f.etiqueta,
-											/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-												className: `rounded-full px-2 py-0.5 text-sm font-bold ${activo ? "bg-[#005F99] text-white" : "bg-white text-[#0079C1]"}`,
-												children: f.cantidad
-											})
-										]
-									}, f.etiqueta);
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "rounded-2xl bg-white p-4 shadow-sm ring-1 ring-[#123E5C]/10 sm:p-5",
+					children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+						role: "group",
+						"aria-label": "Filtrar por zona",
+						className: "-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden",
+						children: filtros.map((f) => {
+							const activo = zona === f.valor;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", {
+								type: "button",
+								onClick: () => setZona(activo ? null : f.valor),
+								"aria-pressed": activo,
+								className: `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-4 py-2 text-base font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0079C1] ${activo ? "bg-[#0079C1] text-white shadow-md" : "bg-[#EAF7FC] text-[#35708F] hover:bg-[#DDF0FA] hover:text-[#0079C1]"}`,
+								children: [
+									f.valor && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("i", {
+										"aria-hidden": true,
+										className: "block size-2.5 rounded-full ring-2 ring-white/70",
+										style: { background: COLOR_ZONA[f.valor] }
+									}),
+									f.etiqueta,
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+										className: `rounded-full px-2 py-0.5 text-sm font-bold ${activo ? "bg-[#005F99] text-white" : "bg-white text-[#0079C1]"}`,
+										children: f.cantidad
+									})
+								]
+							}, f.etiqueta);
+						})
+					}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+						className: "mt-3 flex flex-col gap-3 sm:flex-row sm:items-center",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+							className: "relative block min-w-0 flex-1",
+							children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+									className: "sr-only",
+									children: "Buscar municipio"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
+									"aria-hidden": true,
+									className: "pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#8FAABC]"
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+									type: "search",
+									value: busqueda,
+									onChange: (e) => setBusqueda(e.target.value),
+									placeholder: "Buscar municipio…",
+									className: "min-h-11 w-full rounded-lg border-2 border-transparent bg-[#F2FAFD] py-3 pl-11 pr-4 text-base text-[#123E5C] outline-none transition placeholder:text-[#587890] focus:border-[#0079C1]"
 								})
-							}), /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-								className: "mt-3 flex flex-col gap-3 sm:flex-row sm:items-center",
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
-									className: "relative block min-w-0 flex-1",
-									children: [
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
-											className: "sr-only",
-											children: "Buscar municipio"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Search, {
-											"aria-hidden": true,
-											className: "pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-[#8FAABC]"
-										}),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-											type: "search",
-											value: busqueda,
-											onChange: (e) => setBusqueda(e.target.value),
-											placeholder: "Buscar municipio…",
-											className: "min-h-11 w-full rounded-lg border-2 border-transparent bg-[#F2FAFD] py-3 pl-11 pr-4 text-base text-[#123E5C] outline-none transition placeholder:text-[#587890] focus:border-[#0079C1]"
-										})
-									]
-								}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-									className: "shrink-0 text-base font-semibold text-[#35708F] sm:text-right",
-									"aria-live": "polite",
-									children: visibles.length === municipios.length ? "" : `${visibles.length} de ${municipios.length} municipios`
-								})]
-							})]
-						}), visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-							className: "mt-6 rounded-lg border-2 border-dashed border-[#0079C1]/40 bg-white/60 p-10 text-center text-base text-[#35708F]",
-							children: "Ningún municipio coincide. Pruebe con otro nombre o quite el filtro de zona."
-						}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
-							ref: rejilla,
-							className: "mt-4 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,9.75rem),1fr))]",
-							children: visibles.flatMap((m, i) => {
-								const fila = [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
-									municipio: m,
-									activo: abierto === m.id,
-									onToggle: setAbierto
-								}, m.id)];
-								if (i === finDeFila && seleccionado) fila.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Detalle, {
-									municipio: seleccionado,
-									onCerrar: () => setAbierto(null)
-								}, `detalle-${seleccionado.id}`));
-								return fila;
-							})
+							]
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+							className: "shrink-0 text-base font-semibold text-[#35708F] sm:text-right",
+							"aria-live": "polite",
+							children: visibles.length === municipios.length ? "" : `${visibles.length} de ${municipios.length} municipios`
 						})]
-					}),
-					/* @__PURE__ */ (0, import_jsx_runtime.jsx)(OtrasAyudas, {})
-				]
+					})]
+				}), visibles.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-6 rounded-lg border-2 border-dashed border-[#0079C1]/40 bg-white/60 p-10 text-center text-base text-[#35708F]",
+					children: "Ningún municipio coincide. Pruebe con otro nombre o quite el filtro de zona."
+				}) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+					ref: rejilla,
+					className: "mt-4 grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,9.75rem),1fr))]",
+					children: visibles.flatMap((m, i) => {
+						const fila = [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Boton, {
+							municipio: m,
+							activo: abierto === m.id,
+							onToggle: setAbierto
+						}, m.id)];
+						if (i === finDeFila && seleccionado) fila.push(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Detalle, {
+							municipio: seleccionado,
+							onCerrar: () => setAbierto(null)
+						}, `detalle-${seleccionado.id}`));
+						return fila;
+					})
+				})] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(OtrasAyudas, {})]
 			})
 		]
 	});
@@ -1923,19 +1577,6 @@ function Detalle({ municipio: m, onCerrar }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("li", {
 		ref,
 		className: "vc-aparece col-span-full",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaDetalle, {
-			municipio: m,
-			onCerrar
-		})
-	});
-}
-/** El mismo detalle, bajo el botón del selector (celular). */
-function DetalleMovil({ municipio: m, onCerrar }) {
-	const ref = (0, import_react.useRef)(null);
-	useCentrarAlAbrir(ref, m.id);
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-		ref,
-		className: "vc-aparece mt-3",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaDetalle, {
 			municipio: m,
 			onCerrar
@@ -2089,7 +1730,7 @@ function CategoriasSection() {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-Oqo_S0qM.mjs");
+var cargarMapa = () => import("./MapaToneladas-0IheZUTC.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";

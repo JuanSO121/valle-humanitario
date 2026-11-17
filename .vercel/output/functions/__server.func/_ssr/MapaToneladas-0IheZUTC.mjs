@@ -1,9 +1,9 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as performance_default } from "../_libs/h3+rou3+srvx+unenv.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-import { b as CircleQuestionMark, o as RotateCcw, t as X } from "../_libs/lucide-react.mjs";
-import { a as entero, c as useResumen, i as diaMes, n as colorDeGrupo, o as toneladas, r as sameMunicipality, s as useMunicipios } from "./routes-DDi5vCPZ.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-Oqo_S0qM.js
+import { o as RotateCcw, t as X, y as CircleQuestionMark } from "../_libs/lucide-react.mjs";
+import { a as entero, c as useResumen, i as diaMes, n as colorDeGrupo, o as toneladas, r as sameMunicipality, s as useMunicipios } from "./routes-D9HRA7fL.mjs";
+//#region node_modules/.nitro/vite/services/ssr/assets/MapaToneladas-0IheZUTC.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
