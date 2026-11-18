@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-C8tuO9jg.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-Diho0whl.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -634,6 +634,42 @@ var GRUPOS = {
 };
 var colorDeGrupo = (nombre) => GRUPOS[nombre] ?? "#0079C1";
 /**
+* Qué incluye cada categoría, con las palabras de la Gobernación, para la
+* descripción de «¿Qué hace falta hoy?». Una categoría que no esté acá usa la
+* lista que arma el backend con los grupos de producto de la hoja FAMILIAS.
+*/
+var INCLUYE = {
+	"Protección y seguridad": [
+		"Tapabocas",
+		"Gafas",
+		"Guantes",
+		"Palas",
+		"Pilas",
+		"Herramientas y materiales"
+	],
+	"Kit de aseo": [
+		"Kits de aseo e higiene",
+		"Higiene personal y primera infancia",
+		"Aseo del hogar y limpieza",
+		"Papel higiénico",
+		"Jabón",
+		"Shampoo",
+		"Pañitos",
+		"Pañales"
+	],
+	"Descanso y abrigo": [
+		"Carpas",
+		"Colchonetas",
+		"Cobijas",
+		"Colchones",
+		"Almohadas",
+		"Sábanas",
+		"Tendidos",
+		"Kits de cama"
+	]
+};
+var incluyeDeCategoria = (nombre) => INCLUYE[nombre];
+/**
 * usePrecargaDesdeSnapshot.ts
 * -----------------------------------------------------------------------
 * Siembra la caché de React Query con la última copia guardada en el
@@ -1262,6 +1298,7 @@ function Estado({ categoria: c }) {
 function Detalle$1({ categoria: c }) {
 	const ref = (0, import_react.useRef)(null);
 	useCentrarAlAbrir(ref, c.nombre);
+	const incluye = incluyeDeCategoria(c.nombre) ?? c.incluye;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 		ref,
 		className: "rounded-xl bg-white p-5 shadow-sm sm:p-6",
@@ -1270,7 +1307,7 @@ function Detalle$1({ categoria: c }) {
 				className: "text-xl font-extrabold text-[#0079C1]",
 				children: c.nombre
 			}),
-			c.incluye && c.incluye.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			incluye && incluye.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 				className: "mt-1.5 text-[14px] leading-5 text-[#35708F]",
 				children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
@@ -1278,7 +1315,7 @@ function Detalle$1({ categoria: c }) {
 						children: "Incluye:"
 					}),
 					" ",
-					c.incluye.join(" · ")
+					incluye.join(" · ")
 				]
 			}),
 			c.elementos.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
@@ -1806,7 +1843,7 @@ function Fila({ categoria: c, indice, abierta, controla, onToggle }) {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-DjvKEpaU.mjs");
+var cargarMapa = () => import("./MapaToneladas-BMTRAO_J.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -1951,9 +1988,8 @@ function TarjetaPrincipal({ rotulo, titulo, texto, cifras, acento, children, ind
 /**
 * PuntosDistribucionSection.tsx — "Otros puntos de distribución"
 * -----------------------------------------------------------------------
-* Cierra el relato diciendo que, además del centro de acopio y punto de distribución de Cali, la
-* Gobernación cuenta con otros dos puntos de distribución: Cartago y
-* Buenaventura. Usa las mismas tarjetas azul marino con rótulo amarillo que
+* Cierra el relato con los otros dos puntos de distribución de la
+* Gobernación: Cartago y Buenaventura, sin texto de introducción. Usa las mismas tarjetas azul marino con rótulo amarillo que
 * presentaban las rutas principales, para que se lea como continuación de
 * lo que ya se conocía.
 *
@@ -1983,25 +2019,16 @@ function PuntosDistribucionSection() {
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Banda, {
 			tono: "blanco",
 			primera: true,
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionTitle, { children: ["Otros puntos de ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resaltado, { children: "distribución" })] }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionIntro, { children: [
-					"Además del centro de acopio y punto de distribución de Cali, se cuenta con otros",
-					" ",
-					PUNTOS.length,
-					" puntos de distribución."
-				] }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-					className: "mt-8 grid gap-3 md:grid-cols-2 md:gap-4",
-					children: PUNTOS.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaPrincipal, {
-						indice: i,
-						compacta: true,
-						rotulo: "Punto de distribución",
-						acento: p.acento,
-						titulo: p.nombre.replace("Punto de distribución ", "")
-					}, p.nombre))
-				})
-			]
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionTitle, { children: ["Otros puntos de ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resaltado, { children: "distribución" })] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				className: "mt-8 grid gap-3 md:grid-cols-2 md:gap-4",
+				children: PUNTOS.map((p, i) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaPrincipal, {
+					indice: i,
+					compacta: true,
+					rotulo: "Punto de distribución",
+					acento: p.acento,
+					titulo: p.nombre.replace("Punto de distribución ", "")
+				}, p.nombre))
+			})]
 		})
 	});
 }
