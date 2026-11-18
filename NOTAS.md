@@ -6,9 +6,8 @@ Plan completo y reglas de datos: `apps-script/Config.js` (todas las reglas viven
 ## Pendiente del cliente (el tablero funciona con valores por defecto)
 1. Pesos del 11 al 24 de agosto. **Respuesta del cliente (15-nov): «toca rellenar con el viejo hasta el 24».**
    El Excel viejo trae 398 despachos (fecha + destino, del 11 al 24 ago; 13 días, no hay el 23) SIN producto ni
-   peso, y una serie ESTIMADA de 549 t por día para todo el departamento. Se armó
-   la hoja `NUEVOS_DESPACHOS` del libro oficial (captura simple: fecha, destino, familia, producto, cantidad, peso) con esos
-   398 despachos prellenados para que el cliente complete producto/cantidad/peso
+   peso, y una serie ESTIMADA de 549 t por día para todo el departamento. Esos
+   398 despachos van prellenados al comienzo de la hoja única `DESPACHOS` del libro oficial (fecha, destino, familia, producto, cantidad, peso) para que el cliente complete producto/cantidad/peso
    (instrucciones en `docs/04-instruccion-cliente-11-24-agosto.md`). Mientras no lo devuelvan, el tablero muestra la cifra
    ESTIMADA por día del Excel anterior (hoja `ESTIMADO_ANTERIOR`, 549 t), repartida por igual entre los despachos de cada
    día. El sitio público NO lo avisa (decisión del cliente: el aviso es solo para ellos); la marca vive en los datos

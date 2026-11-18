@@ -47,8 +47,8 @@
  * total que el balance en vez de dejar 549 t sin categoría. Cada despacho que recibe su peso real reemplaza su
  * parte. Se apaga con CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL = false.
  *
- * NUEVOS_DESPACHOS: hoja de captura simple para quien no es técnico (ver
- * convertirNuevos_). Se lee junto con DESPACHOS.
+ * Todo está en una sola hoja, DESPACHOS: los despachos ya cargados y los nuevos
+ * se escriben igual, uno debajo de otro (ver prepararFilas_).
  *
  * LO QUE EL EXCEL NO DICE, NO SE INVENTA
  *
@@ -63,9 +63,7 @@ var _despachos_ = null;
 function resetDespachos_() { _despachos_ = null; }
 
 /** Columnas sin las cuales cada hoja no se puede leer. */
-var COLUMNAS_DESPACHOS_ = [
-  'fecha', 'destino_original', 'familia', 'peso_total_kg', 'por_verificar', 'peso_sin_soporte',
-];
+var COLUMNAS_DESPACHOS_ = ['fecha', 'familia', 'peso_total_kg'];
 var COLUMNAS_DESTINOS_ = ['destino_original', 'tipo_destino', 'municipio_dane', 'regla'];
 var COLUMNAS_FAMILIAS_ = ['familia', 'categoria'];
 
@@ -142,18 +140,18 @@ function indexarFamilias_(filas) {
 }
 
 /**
- * La hoja NUEVOS_DESPACHOS: la hoja de captura para quien no es técnico.
- * Cada fila lleva fecha, destino (de la lista, o «otro_destino» si no está),
- * familia, producto, cantidad y peso. Se convierte a la forma de DESPACHOS y
- * se suma a esas filas.
+ * Una sola hoja: DESPACHOS. Cada fila es un despacho (fecha, destino, familia,
+ * producto, cantidad y peso); los ya cargados y los nuevos se escriben igual,
+ * uno debajo de otro. No hay una hoja aparte para lo nuevo.
  *
  * Solo se PUBLICA lo completo: una fila sin fecha, destino, familia o peso se
  * deja fuera y se cuenta en `calidad.pendientes`. Así los despachos de agosto
  * que vienen del Excel anterior (solo fecha y destino) no suman nada hasta
- * que alguien les ponga el peso: vacío no es cero.
+ * que alguien les ponga el peso: vacío no es cero. El peso es `peso_total_kg`
+ * o, si falta, cantidad × peso unitario.
  * @return {{filas: Array, pendientes: Array<{fila: number, motivo: string}>}}
  */
-function convertirNuevos_(nuevas, estimados, mezcla) {
+function prepararFilas_(registros, estimados, mezcla) {
   var filas = [];
   var pendientes = [];
 
@@ -192,30 +190,37 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
       return { categoria: p[0], producto: p[1] || null, kg: Math.round((kg * m[c] / total) * 1000) / 1000 };
     });
   }
-  if (CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL) {
-    (estimados || []).forEach(function (e) {
-      var d = fechaIso_(e.fecha);
-      var t = toNumberOrNull_(e.toneladas_estimadas);
-      if (d && t !== null && t > 0) estimadoPorDia[d] = t * 1000;
-    });
-    (nuevas || []).forEach(function (f) {
-      var d = fechaIso_(f.fecha);
-      if (d && estimadoPorDia[d] && (textoOrNull_(f.destino) || textoOrNull_(f.otro_destino))) {
-        despachosPorDia[d] = (despachosPorDia[d] || 0) + 1;
-      }
-    });
-  }
 
-  (nuevas || []).forEach(function (f) {
-    var destino = textoOrNull_(f.destino) || textoOrNull_(f.otro_destino);
-    var familia = textoOrNull_(f.familia);
-    var fecha = fechaIso_(f.fecha);
+  function destinoDe_(f) {
+    return textoOrNull_(f.destino) || textoOrNull_(f.destino_original) || textoOrNull_(f.otro_destino);
+  }
+  function pesoDe_(f) {
     var kg = toNumberOrNull_(f.peso_total_kg);
     if (kg === null) {
       var cant = toNumberOrNull_(f.cantidad);
       var unit = toNumberOrNull_(f.peso_unitario_kg);
       if (cant !== null && unit !== null) kg = Math.round(cant * unit * 1000) / 1000;
     }
+    return kg;
+  }
+
+  if (CONFIG.MOSTRAR_ESTIMADO_PROVISIONAL) {
+    (estimados || []).forEach(function (e) {
+      var d = fechaIso_(e.fecha);
+      var t = toNumberOrNull_(e.toneladas_estimadas);
+      if (d && t !== null && t > 0) estimadoPorDia[d] = t * 1000;
+    });
+    (registros || []).forEach(function (f) {
+      var d = fechaIso_(f.fecha);
+      if (d && estimadoPorDia[d] && destinoDe_(f)) despachosPorDia[d] = (despachosPorDia[d] || 0) + 1;
+    });
+  }
+
+  (registros || []).forEach(function (f) {
+    var destino = destinoDe_(f);
+    var familia = textoOrNull_(f.familia);
+    var fecha = fechaIso_(f.fecha);
+    var kg = pesoDe_(f);
     var falta = [];
     if (!fecha) falta.push('fecha');
     if (!destino) falta.push('destino');
@@ -224,7 +229,7 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
     if (falta.length > 0) {
       pendientes.push({ fila: f.__row, motivo: 'falta ' + falta.join(', ') });
       // Sin peso real, pero con fecha y destino de un día estimado: entra con su parte estimada.
-      if (fecha && destino && (kg === null || kg < 0) && estimadoPorDia[fecha]) {
+      if (fecha && destino && estimadoPorDia[fecha] && (kg === null || kg < 0)) {
         var parteDelDia = estimadoPorDia[fecha] / despachosPorDia[fecha];
         partesPorCategoria_(destino, parteDelDia).forEach(function (parte, i) {
           filas.push({
@@ -240,7 +245,7 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
             // Un despacho estimado se reparte en varias filas (una por categoría);
             // solo la primera cuenta como registro.
             __primero: i === 0,
-            __row: 'NUEVOS_DESPACHOS ' + f.__row + ' (estimado)',
+            __row: f.__row,
           });
         });
       }
@@ -251,21 +256,19 @@ function convertirNuevos_(nuevas, estimados, mezcla) {
       destino_original: destino,
       familia: familia,
       producto: f.producto,
-      presentacion: f.presentacion,
-      cantidad: f.cantidad,
-      peso_unitario_kg: f.peso_unitario_kg,
+      producto_consolidado: f.producto_consolidado,
       peso_total_kg: kg,
       por_verificar: f.por_verificar,
-      peso_sin_soporte: null,
-      observaciones: f.observaciones,
-      __row: 'NUEVOS_DESPACHOS ' + f.__row,
+      peso_sin_soporte: f.peso_sin_soporte,
+      __row: f.__row,
     });
   });
   return { filas: filas, pendientes: pendientes };
 }
 
 /**
- * Lee las tres hojas del libro en UNA llamada (y NUEVOS_DESPACHOS, si existe).
+ * Lee DESPACHOS, DESTINOS y FAMILIAS del libro en UNA llamada (y las hojas de
+ * apoyo de lo estimado, si existen).
  * @return {{filas: Array, destinos: Array, familias: Array, pendientes: Array}}
  */
 function leerHojasDespachos_() {
@@ -276,7 +279,6 @@ function leerHojasDespachos_() {
   var pestanas = leerPestanasDeLibro_(libroId, function (n) {
     return (
       nombres.indexOf(n) !== -1 ||
-      n === CONFIG.SHEETS.NUEVOS ||
       n === CONFIG.SHEETS.ESTIMADO ||
       n === CONFIG.SHEETS.MEZCLA
     );
@@ -287,24 +289,26 @@ function leerHojasDespachos_() {
     if (!porNombre[n]) throw new Error('No existe la hoja "' + n + '" en el libro de despachos.');
   });
 
-  var filas = porNombre[CONFIG.SHEETS.DESPACHOS];
+  var registros = porNombre[CONFIG.SHEETS.DESPACHOS];
   var destinos = porNombre[CONFIG.SHEETS.DESTINOS];
   var familias = porNombre[CONFIG.SHEETS.FAMILIAS];
-  exigirColumnas_(filas, COLUMNAS_DESPACHOS_, CONFIG.SHEETS.DESPACHOS);
+  exigirColumnas_(registros, COLUMNAS_DESPACHOS_, CONFIG.SHEETS.DESPACHOS);
+  if (!('destino' in registros[0]) && !('destino_original' in registros[0])) {
+    throw new Error('A la hoja "' + CONFIG.SHEETS.DESPACHOS + '" le falta la columna: destino.');
+  }
   exigirColumnas_(destinos, COLUMNAS_DESTINOS_, CONFIG.SHEETS.DESTINOS);
   exigirColumnas_(familias, COLUMNAS_FAMILIAS_, CONFIG.SHEETS.FAMILIAS);
 
-  // La hoja de captura es opcional: sin ella todo sigue como antes.
-  var nuevos = convertirNuevos_(
-    porNombre[CONFIG.SHEETS.NUEVOS] || [],
+  var preparadas = prepararFilas_(
+    registros,
     porNombre[CONFIG.SHEETS.ESTIMADO] || [],
     porNombre[CONFIG.SHEETS.MEZCLA] || [],
   );
   return {
-    filas: filas.concat(nuevos.filas),
+    filas: preparadas.filas,
     destinos: destinos,
     familias: familias,
-    pendientes: nuevos.pendientes,
+    pendientes: preparadas.pendientes,
   };
 }
 
@@ -414,7 +418,7 @@ function agregarDespachos_(hojas) {
     var nombreCategoria = categoriaDe[kCat] || null;
     if (esEstimado) {
       // Sin familia real todavía: la categoría sale de la mezcla de productos del
-      // Excel anterior para ese destino (ver convertirNuevos_), si la hoja existe.
+      // Excel anterior para ese destino (ver prepararFilas_), si la hoja existe.
       nombreCategoria = f.__categoria && categorias[f.__categoria] ? f.__categoria : null;
       if (nombreCategoria) {
         categorias[nombreCategoria].registros += cuenta ? 1 : 0;
@@ -588,7 +592,7 @@ function agregarDespachos_(hojas) {
         desde: estimado.desde,
         hasta: estimado.hasta,
       },
-      // Filas de NUEVOS_DESPACHOS que aún no se publican (les falta fecha,
+      // Filas de DESPACHOS que aún no se publican (les falta fecha,
       // destino, familia o peso). No suman nada: vacío no es cero.
       pendientes: {
         registros: (hojas.pendientes || []).length,
@@ -713,7 +717,7 @@ function revisarDespachos() {
     t.advertencias.length + ' advertencias de lectura:',
   ];
   t.advertencias.forEach(function (a) { lineas.push('  · ' + a); });
-  lineas.push('NUEVOS_DESPACHOS: ' + q.pendientes.registros + ' filas pendientes (no se publican hasta completarlas).');
+  lineas.push('DESPACHOS: ' + q.pendientes.registros + ' filas pendientes (no se publican hasta completarlas).');
   q.pendientes.filas.slice(0, 10).forEach(function (p) { lineas.push('  · fila ' + p.fila + ': ' + p.motivo); });
   if (q.sinClasificar.registros) {
     lineas.push('SIN CLASIFICAR (' + q.sinClasificar.toneladas + ' t): agregar a DESTINOS:');

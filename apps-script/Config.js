@@ -9,8 +9,8 @@
 
 var CONFIG = {
   SHEETS: {
-    // Una hoja por fuente: los despachos (libro oficial), los contratos y
-    // la plantilla «Qué hace falta» (cada una en su libro, con su equipo).
+    // Los despachos (todos, viejos y nuevos, en una sola hoja), los contratos y
+    // la plantilla «Qué hace falta».
     DESPACHOS: 'DESPACHOS',
     // Reglas de clasificación, en el mismo libro que DESPACHOS.
     DESTINOS: 'DESTINOS',
@@ -18,7 +18,6 @@ var CONFIG = {
     CONTRATACION: 'CONTRATACION',
     FALTANTES: 'QUE_HACE_FALTA',
     TOTALES: 'TOTALES',
-    NUEVOS: 'NUEVOS_DESPACHOS',
     ESTIMADO: 'ESTIMADO_ANTERIOR',
     MEZCLA: 'MEZCLA_ANTERIOR',
   },
