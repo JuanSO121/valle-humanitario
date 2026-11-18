@@ -48,3 +48,34 @@ const GRUPOS: Record<string, string> = {
 };
 
 export const colorDeGrupo = (nombre: string): string => GRUPOS[nombre] ?? "#0079C1";
+
+/**
+ * Qué incluye cada categoría, con las palabras de la Gobernación, para la
+ * descripción de «¿Qué hace falta hoy?». Una categoría que no esté acá usa la
+ * lista que arma el backend con los grupos de producto de la hoja FAMILIAS.
+ */
+const INCLUYE: Record<string, string[]> = {
+  "Protección y seguridad": ["Tapabocas", "Gafas", "Guantes", "Palas", "Pilas", "Herramientas y materiales"],
+  "Kit de aseo": [
+    "Kits de aseo e higiene",
+    "Higiene personal y primera infancia",
+    "Aseo del hogar y limpieza",
+    "Papel higiénico",
+    "Jabón",
+    "Shampoo",
+    "Pañitos",
+    "Pañales",
+  ],
+  "Descanso y abrigo": [
+    "Carpas",
+    "Colchonetas",
+    "Cobijas",
+    "Colchones",
+    "Almohadas",
+    "Sábanas",
+    "Tendidos",
+    "Kits de cama",
+  ],
+};
+
+export const incluyeDeCategoria = (nombre: string): string[] | undefined => INCLUYE[nombre];

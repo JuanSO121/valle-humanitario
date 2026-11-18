@@ -35,7 +35,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useFaltantes } from "@/application/hooks/useTablero";
 import type { CategoriaFaltantes, EstadoFaltante } from "@/domain/entities";
-import { colorDeGrupo, iconoDeCategoria } from "@/presentation/data/categorias";
+import { colorDeGrupo, iconoDeCategoria, incluyeDeCategoria } from "@/presentation/data/categorias";
 
 const CYAN_CENTRO = "#40BBE5";
 const CYAN_BORDE = "#0E8BB7";
@@ -279,12 +279,13 @@ function Detalle({ categoria: c }: { categoria: CategoriaFaltantes }) {
   const ref = useRef<HTMLDivElement>(null);
   // Al abrir una categoría, su lista se trae a la vista, centrada y suave.
   useCentrarAlAbrir(ref, c.nombre);
+  const incluye = incluyeDeCategoria(c.nombre) ?? c.incluye;
   return (
     <div ref={ref} className="rounded-xl bg-white p-5 shadow-sm sm:p-6">
       <h3 className="text-xl font-extrabold text-[#0079C1]">{c.nombre}</h3>
-      {c.incluye && c.incluye.length > 0 && (
+      {incluye && incluye.length > 0 && (
         <p className="mt-1.5 text-[14px] leading-5 text-[#35708F]">
-          <b className="font-bold text-[#123E5C]">Incluye:</b> {c.incluye.join(" · ")}
+          <b className="font-bold text-[#123E5C]">Incluye:</b> {incluye.join(" · ")}
         </p>
       )}
       {c.elementos.length === 0 ? (

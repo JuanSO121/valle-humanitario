@@ -1,9 +1,8 @@
 /**
  * PuntosDistribucionSection.tsx — "Otros puntos de distribución"
  * -----------------------------------------------------------------------
- * Cierra el relato diciendo que, además del centro de acopio y punto de distribución de Cali, la
- * Gobernación cuenta con otros dos puntos de distribución: Cartago y
- * Buenaventura. Usa las mismas tarjetas azul marino con rótulo amarillo que
+ * Cierra el relato con los otros dos puntos de distribución de la
+ * Gobernación: Cartago y Buenaventura, sin texto de introducción. Usa las mismas tarjetas azul marino con rótulo amarillo que
  * presentaban las rutas principales, para que se lea como continuación de
  * lo que ya se conocía.
  *
@@ -19,7 +18,7 @@
  * nombres sería una hoja que alguien puede dañar sin ganar nada.
  * -----------------------------------------------------------------------
  */
-import { Banda, SectionIntro, SectionTitle, Resaltado } from "./storyPrimitives";
+import { Banda, SectionTitle, Resaltado } from "./storyPrimitives";
 import { TarjetaPrincipal } from "./TarjetaPrincipal";
 
 const PUNTOS = [
@@ -34,11 +33,6 @@ export function PuntosDistribucionSection() {
         <SectionTitle>
           Otros puntos de <Resaltado>distribución</Resaltado>
         </SectionTitle>
-        <SectionIntro>
-          Además del centro de acopio y punto de distribución de Cali, se cuenta con otros{" "}
-          {PUNTOS.length} puntos de distribución.
-        </SectionIntro>
-
         <div className="mt-8 grid gap-3 md:grid-cols-2 md:gap-4">
           {PUNTOS.map((p, i) => (
             <TarjetaPrincipal
