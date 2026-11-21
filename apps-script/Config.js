@@ -24,6 +24,7 @@ var CONFIG = {
     CARGAS: 'CARGAS',
     // Cómo estaba cada fila antes de ser reemplazada desde /admin (hoja oculta; se crea sola).
     REEMPLAZOS: 'REEMPLAZOS',
+    REEMPLAZOS_CONTRATOS: 'REEMPLAZOS_CONTRATOS',
   },
 
   // Los días del 11 al 24 de agosto vienen del Excel anterior solo con fecha y

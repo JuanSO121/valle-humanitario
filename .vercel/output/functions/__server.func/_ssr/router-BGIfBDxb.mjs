@@ -2,8 +2,8 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { i as require_jsx_runtime, n as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-BkELTmHE.js
-var router_BkELTmHE_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-BGIfBDxb.js
+var router_BGIfBDxb_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
 var Route$2 = createRootRouteWithContext()({
 	head: () => ({
@@ -107,7 +107,7 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter$1 = () => import("./routes-B6-C6fM5.mjs").then((n) => n.t);
+var $$splitComponentImporter$1 = () => import("./routes-COtlNXNo.mjs").then((n) => n.t);
 var Route$1 = createFileRoute("/")({
 	component: lazyRouteComponent($$splitComponentImporter$1, "component"),
 	head: () => ({ meta: [
@@ -149,7 +149,7 @@ var Route$1 = createFileRoute("/")({
 * resto del sitio y pide a los buscadores que no la indexen.
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./admin-BtdlYRZV.mjs");
+var $$splitComponentImporter = () => import("./admin-35qlkzi1.mjs");
 var Route = createFileRoute("/admin")({
 	component: lazyRouteComponent($$splitComponentImporter, "component"),
 	head: () => ({ meta: [{ title: "Cargar datos · Ruta de la Solidaridad" }, {
@@ -180,4 +180,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_BkELTmHE_exports as t };
+export { getRouter, router_BGIfBDxb_exports as t };

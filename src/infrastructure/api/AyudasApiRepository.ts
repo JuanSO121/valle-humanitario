@@ -143,6 +143,10 @@ const VALIDADORES: Record<ParteBundle, Validador> = {
       if (valor !== null && (typeof valor !== "number" || !Number.isFinite(valor))) {
         return `contrato ${c["id"]} con valorInicial que no es número ni null`;
       }
+      const estado = c["estado"];
+      if (estado !== undefined && estado !== "Vigente" && estado !== "Finalizado") {
+        return `contrato ${c["id"]} con un estado que no se publica`;
+      }
       const enlace = c["enlaceSecop"];
       if (enlace !== null && (typeof enlace !== "string" || !/^https?:\/\//i.test(enlace))) {
         return `contrato ${c["id"]} con enlaceSecop que no es una URL http(s)`;

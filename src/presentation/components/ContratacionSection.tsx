@@ -140,7 +140,10 @@ export function ContratacionSection() {
               {visibles.map((c) => (
                 <tr key={c.id}>
                   <td className="break-words px-4 py-4">{c.dependencia ?? NO_INFORMADO}</td>
-                  <td className="break-words px-4 py-4">{c.objeto}</td>
+                  <td className="break-words px-4 py-4">
+                    {c.objeto}
+                    <EtiquetaEstado contrato={c} />
+                  </td>
                   <td className="px-4 py-4 font-bold tabular-nums">
                     {c.valorInicial !== null ? pesos(c.valorInicial) : NO_INFORMADO}
                   </td>
@@ -162,6 +165,7 @@ export function ContratacionSection() {
                 <Dato etiqueta="Dependencia contratante">{c.dependencia ?? NO_INFORMADO}</Dato>
                 <Dato etiqueta="Objeto">
                   <ObjetoCorto texto={c.objeto} />
+                  <EtiquetaEstado contrato={c} />
                 </Dato>
                 <Dato etiqueta="Valor inicial">
                   <b className="tabular-nums">
@@ -196,6 +200,16 @@ export function ContratacionSection() {
         </div>
       </Banda>
     </section>
+  );
+}
+
+/** Un contrato que ya terminó sigue publicado, con su etiqueta. Uno vigente no lleva ninguna. */
+function EtiquetaEstado({ contrato }: { contrato: Contrato }) {
+  if (contrato.estado !== "Finalizado") return null;
+  return (
+    <span className="mt-2 block w-fit rounded-full bg-[#E7F1FB] px-3 py-1 text-[13px] font-bold uppercase tracking-[0.08em] text-[#0A5A99]">
+      Finalizado
+    </span>
   );
 }
 

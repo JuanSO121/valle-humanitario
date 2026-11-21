@@ -19,7 +19,7 @@ import { useId, useMemo, useRef, useState } from "react";
 
 type EstadoFila = "nueva" | "completa" | "duplicada" | "error" | "conflicto";
 type Decision = "conservar" | "reemplazar" | "agregar";
-type Decisiones = Record<number, Decision>;
+type Decisiones = Record<string, Decision>;
 
 interface ExistenteConflicto {
   fila: number;
@@ -59,6 +59,28 @@ interface FilaFaltante {
   estadoFila: "ok" | "error";
   errores: string[];
 }
+interface FilaContrato {
+  n: number;
+  id: string | null;
+  dependencia: string | null;
+  objeto: string | null;
+  valorInicial: number | null;
+  contratista: string | null;
+  enlaceSecop: string | null;
+  estado: string | null;
+  estadoFila: "nueva" | "duplicada" | "conflicto" | "error";
+  filaLibro: number | null;
+  errores: string[];
+  conflicto: { campos: { campo: string; libro: string; archivo: string }[] } | null;
+}
+interface FilaDestino {
+  n: number;
+  destino: string | null;
+  tipo: string | null;
+  municipio: string | null;
+  estadoFila: "nueva" | "duplicada" | "error";
+  errores: string[];
+}
 interface Cifra {
   antes: number | null;
   despues: number | null;
@@ -78,6 +100,14 @@ interface Plan {
     filas: FilaFaltante[];
     seQuitan?: { categoria: string; elemento: string; estado: string }[];
     seQuitanTotal?: number;
+  } | null;
+  contratacion?: {
+    filas: FilaContrato[];
+    resumen: { nuevas: number; duplicadas: number; conflictos: number; conProblema: number };
+  } | null;
+  destinosNuevos?: {
+    filas: FilaDestino[];
+    resumen: { nuevos: number; duplicados: number; conProblema: number };
   } | null;
   distribucion: {
     filas: FilaDistribucion[];
@@ -101,6 +131,10 @@ interface Resultado {
     conProblema: number;
     faltantes: number;
     totales: number;
+    contratosNuevos?: number;
+    contratosCambiados?: number;
+    contratosDejados?: number;
+    destinosNuevos?: number;
   };
 }
 
@@ -120,6 +154,11 @@ const COLOR_ESTADO: Record<EstadoFila, string> = {
   duplicada: "bg-[#EEF0F2] text-[#4A5A66]",
   error: "bg-[#FBEBEB] text-[#A3261F]",
 };
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+/** «Se agregará 1 contrato» / «Se agregarán 2 contratos». */
+const seAgrega = (n: number, uno: string, varios: string, verbo = "agreg") =>
+  n === 1 ? `Se ${verbo}ará 1 ${uno}` : `Se ${verbo}arán ${n} ${varios}`;
 
 const numero = (n: number | null) =>
   n === null || n === undefined ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
@@ -392,13 +431,20 @@ function Revision({
   const secciones = useMemo(
     () =>
       [
-        (plan.distribucion?.resumen.conflictos ?? 0) > 0 && {
+        (plan.distribucion?.resumen.conflictos ?? 0) +
+          (plan.contratacion?.resumen.conflictos ?? 0) >
+          0 && {
           id: "conflictos",
-          nombre: `Conflictos (${plan.distribucion?.resumen.conflictos})`,
+          nombre: `Conflictos (${
+            (plan.distribucion?.resumen.conflictos ?? 0) +
+            (plan.contratacion?.resumen.conflictos ?? 0)
+          })`,
         },
         plan.distribucion && { id: "distribucion", nombre: "Distribución" },
         plan.queHaceFalta && { id: "faltante", nombre: "Qué hace falta" },
         plan.informacionGeneral && { id: "general", nombre: "Información general" },
+        plan.contratacion && { id: "contratos", nombre: "Contratos" },
+        plan.destinosNuevos && { id: "destinos", nombre: "Destinos nuevos" },
       ].filter(Boolean) as { id: string; nombre: string }[],
     [plan],
   );
@@ -410,7 +456,16 @@ function Revision({
     () => plan.distribucion?.filas.filter((f) => f.estado === "conflicto") ?? [],
     [plan.distribucion],
   );
-  const sinDecidir = conflictos.filter((f) => !decisiones[f.n]).length;
+  const conflictosContratos = useMemo(
+    () => plan.contratacion?.filas.filter((f) => f.estadoFila === "conflicto") ?? [],
+    [plan.contratacion],
+  );
+  const sinDecidir =
+    conflictos.filter((f) => !decisiones[f.n]).length +
+    conflictosContratos.filter((f) => !decisiones[`c${f.n}`]).length;
+  const contratosAReemplazar = conflictosContratos.filter(
+    (f) => decisiones[`c${f.n}`] === "reemplazar",
+  ).length;
   const aAgregar = conflictos.filter((f) => decisiones[f.n] === "agregar").length;
   const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
   const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
@@ -487,7 +542,12 @@ function Revision({
 
           {plan.distribucion && activa === "conflictos" && (
             <div id="panel-conflictos" role="tabpanel" aria-labelledby="pestana-conflictos">
-              <PanelConflictos filas={conflictos} decisiones={decisiones} alDecidir={alDecidir} />
+              <PanelConflictos
+                filas={conflictos}
+                contratos={conflictosContratos}
+                decisiones={decisiones}
+                alDecidir={alDecidir}
+              />
             </div>
           )}
           {plan.distribucion && activa === "distribucion" && (
@@ -498,6 +558,16 @@ function Revision({
           {plan.queHaceFalta && activa === "faltante" && (
             <div id="panel-faltante" role="tabpanel" aria-labelledby="pestana-faltante">
               <TablaFaltante datos={plan.queHaceFalta} />
+            </div>
+          )}
+          {plan.contratacion && activa === "contratos" && (
+            <div id="panel-contratos" role="tabpanel" aria-labelledby="pestana-contratos">
+              <TablaContratos datos={plan.contratacion} decisiones={decisiones} />
+            </div>
+          )}
+          {plan.destinosNuevos && activa === "destinos" && (
+            <div id="panel-destinos" role="tabpanel" aria-labelledby="pestana-destinos">
+              <TablaDestinos datos={plan.destinosNuevos} />
             </div>
           )}
           {plan.informacionGeneral && activa === "general" && (
@@ -534,14 +604,37 @@ function Revision({
               {plan.queHaceFalta?.reemplaza && (
                 <>La lista de «Qué hace falta» se reemplazará por la nueva. </>
               )}
+              {plan.contratacion && plan.contratacion.resumen.nuevas > 0 && (
+                <>
+                  <b>{seAgrega(plan.contratacion.resumen.nuevas, "contrato", "contratos")}</b>.{" "}
+                </>
+              )}
+              {contratosAReemplazar > 0 && (
+                <>
+                  <b>{seAgrega(contratosAReemplazar, "contrato", "contratos", "cambi")}</b> de los
+                  que ya estaban (el anterior queda guardado).{" "}
+                </>
+              )}
+              {plan.destinosNuevos && plan.destinosNuevos.resumen.nuevos > 0 && (
+                <>
+                  <b>
+                    {seAgrega(
+                      plan.destinosNuevos.resumen.nuevos,
+                      "destino nuevo",
+                      "destinos nuevos",
+                    )}
+                  </b>
+                  .{" "}
+                </>
+              )}
               {cifrasQueCambian.length > 0 && (
                 <>Se cambiarán las cifras generales: {cifrasQueCambian.join(" y ")}. </>
               )}
             </p>
             {sinDecidir > 0 && (
               <p role="alert" className="mt-3 font-bold text-[#8A4B00]">
-                Faltan {sinDecidir} conflictos por decidir. Vaya a la pestaña «Conflictos» y elija
-                qué hacer en cada uno.
+                {sinDecidir === 1 ? "Falta 1 conflicto" : `Faltan ${sinDecidir} conflictos`} por
+                decidir. Vaya a la pestaña «Conflictos» y elija qué hacer en cada uno.
               </p>
             )}
             <div className="mt-3 flex items-start gap-3">
@@ -797,10 +890,12 @@ const EXPLICACION_CONFLICTO = {
 
 function PanelConflictos({
   filas,
+  contratos,
   decisiones,
   alDecidir,
 }: {
   filas: FilaDistribucion[];
+  contratos: FilaContrato[];
   decisiones: Decisiones;
   alDecidir: (d: Decisiones) => void;
 }) {
@@ -809,7 +904,10 @@ function PanelConflictos({
   const paginas = Math.max(1, Math.ceil(filas.length / POR));
   const actual = Math.min(pagina, paginas - 1);
   const visibles = filas.slice(actual * POR, (actual + 1) * POR);
-  const sinDecidir = filas.filter((f) => !decisiones[f.n]).length;
+  const sinDecidir =
+    filas.filter((f) => !decisiones[f.n]).length +
+    contratos.filter((f) => !decisiones[`c${f.n}`]).length;
+  const total = filas.length + contratos.length;
 
   const decidirTodas = (d: Decision) => {
     const siguiente: Decisiones = { ...decisiones };
@@ -817,6 +915,8 @@ function PanelConflictos({
       if (d === "reemplazar" && f.conflicto?.total !== 1) continue;
       siguiente[f.n] = d;
     }
+    // Un contrato no se puede agregar dos veces: «agregar todas» no lo toca.
+    if (d !== "agregar") for (const c of contratos) siguiente[`c${c.n}`] = d;
     alDecidir(siguiente);
   };
 
@@ -824,11 +924,11 @@ function PanelConflictos({
     <div>
       <p className="mt-4 rounded-xl bg-[#FFF1DC] px-4 py-3 text-base leading-6 text-[#6B3A00]">
         <b>
-          {filas.length} envíos del archivo se parecen a uno que ya está en el libro, pero no son
-          iguales.
+          {total} {total === 1 ? "dato del archivo se parece" : "datos del archivo se parecen"} a
+          uno que ya está en el libro, pero no {total === 1 ? "es igual" : "son iguales"}.
         </b>{" "}
-        El sistema no puede saber si son el mismo envío o dos distintos. Decida qué hacer con cada
-        uno: no se carga ninguno sin su decisión.
+        El sistema no puede saber si es lo mismo o algo distinto. Decida qué hacer con cada uno: no
+        se carga ninguno sin su decisión.
         {sinDecidir > 0 ? ` Faltan ${sinDecidir} por decidir.` : " Ya decidió todos."}
       </p>
 
@@ -844,6 +944,29 @@ function PanelConflictos({
         </button>
       </div>
 
+      {contratos.length > 0 && (
+        <>
+          <h3 className="mt-5 text-lg font-extrabold text-[#0A5A99]">
+            Contratos que ya existen con otros datos
+          </h3>
+          <ul className="mt-3 space-y-4">
+            {contratos.map((c) => (
+              <TarjetaConflictoContrato
+                key={c.n}
+                fila={c}
+                decision={decisiones[`c${c.n}`]}
+                alElegir={(d) => alDecidir({ ...decisiones, [`c${c.n}`]: d })}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {filas.length > 0 && contratos.length > 0 && (
+        <h3 className="mt-6 text-lg font-extrabold text-[#0A5A99]">
+          Envíos que se parecen a otros
+        </h3>
+      )}
       <ul className="mt-4 space-y-4">
         {visibles.map((f) => (
           <TarjetaConflicto
@@ -1006,6 +1129,256 @@ function TarjetaConflicto({
   );
 }
 
+function TarjetaConflictoContrato({
+  fila: f,
+  decision,
+  alElegir,
+}: {
+  fila: FilaContrato;
+  decision: Decision | undefined;
+  alElegir: (d: Decision) => void;
+}) {
+  const nombre = useId();
+  if (!f.conflicto) return null;
+  const opciones: { valor: Decision; texto: string }[] = [
+    { valor: "conservar", texto: "Dejar el contrato del libro (no cargar el del archivo)" },
+    {
+      valor: "reemplazar",
+      texto: "Cambiar el del libro por el del archivo (el anterior queda guardado)",
+    },
+  ];
+  return (
+    <li
+      className={`rounded-xl border-2 p-4 ${decision ? "border-[#2E9E5B]/40 bg-white" : "border-[#E08A1E]/60 bg-[#FFFBF3]"}`}
+    >
+      <p className="text-base font-bold">
+        Contrato {f.id} · fila {f.n} del archivo
+        {f.filaLibro ? ` · fila ${f.filaLibro} del libro` : ""}
+      </p>
+      <p className="mt-0.5 text-[15px] text-[#6B3A00]">
+        Ese código ya está en el libro y los datos no son iguales. Así se marca un contrato como
+        «Finalizado» o se corrige un dato.
+      </p>
+      <Contenedor titulo={`Comparación del contrato ${f.id}`}>
+        <table className="w-full min-w-[560px] table-fixed border-collapse">
+          <caption className="sr-only">
+            Lo que está en el libro frente a lo que trae el archivo
+          </caption>
+          <colgroup>
+            <col className="w-[20%]" />
+            <col className="w-[40%]" />
+            <col className="w-[40%]" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col" className={cabecera}></th>
+              <th scope="col" className={cabecera}>
+                En el libro
+              </th>
+              <th scope="col" className={cabecera}>
+                En el archivo
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {f.conflicto.campos.map((x) => {
+              const distinto = x.libro !== x.archivo;
+              return (
+                <tr key={x.campo}>
+                  <th scope="row" className={`${celda} font-semibold`}>
+                    {x.campo}
+                  </th>
+                  <td
+                    className={`${celda} break-words ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`}
+                  >
+                    {x.libro}
+                  </td>
+                  <td
+                    className={`${celda} break-words ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`}
+                  >
+                    {x.archivo}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Contenedor>
+      <fieldset className="mt-3">
+        <legend className="text-base font-bold">¿Qué hacer con este contrato?</legend>
+        <div className="mt-1 space-y-1.5">
+          {opciones.map((o) => (
+            <label key={o.valor} className="flex items-start gap-3 text-base leading-6">
+              <input
+                type="radio"
+                name={nombre}
+                checked={decision === o.valor}
+                onChange={() => alElegir(o.valor)}
+                className="mt-1 size-5 shrink-0 accent-[#0079C1]"
+              />
+              <span>{o.texto}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </li>
+  );
+}
+
+const ETIQUETA_FILA_SIMPLE = {
+  nueva: ["Se agrega", "bg-[#E4F4E4] text-[#1D6B2E]"],
+  duplicada: ["Ya está, no se repite", "bg-[#EEF0F2] text-[#4A5A66]"],
+  conflicto: ["Conflicto: decida", "bg-[#FFE9CC] text-[#8A4B00]"],
+  error: ["No se carga", "bg-[#FBEBEB] text-[#A3261F]"],
+} as const;
+
+function ChipSimple({ estado }: { estado: keyof typeof ETIQUETA_FILA_SIMPLE }) {
+  const [texto, color] = ETIQUETA_FILA_SIMPLE[estado];
+  return (
+    <span
+      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold ${color}`}
+    >
+      {texto}
+    </span>
+  );
+}
+
+function TablaContratos({
+  datos,
+  decisiones,
+}: {
+  datos: NonNullable<Plan["contratacion"]>;
+  decisiones: Decisiones;
+}) {
+  const r = datos.resumen;
+  return (
+    <div>
+      <ul className="mt-4 grid gap-2 text-base sm:grid-cols-2 lg:grid-cols-4">
+        <Resumen cifra={r.nuevas} texto="se agregan" color="text-[#1D6B2E]" />
+        <Resumen cifra={r.duplicadas} texto="ya estaban" color="text-[#4A5A66]" />
+        <Resumen
+          cifra={r.conflictos}
+          texto="en conflicto, hay que decidir"
+          color="text-[#8A4B00]"
+        />
+        <Resumen cifra={r.conProblema} texto="con problema, no se cargan" color="text-[#A3261F]" />
+      </ul>
+      <p className="mt-3 text-[15px] text-[#35708F]">
+        Los contratos no se borran: uno que terminó se marca «Finalizado» (sigue visible, con su
+        etiqueta) y uno que ya no debe mostrarse se marca «Inhabilitado» (queda en la hoja, pero no
+        sale en la página).
+      </p>
+      <Contenedor titulo="Tabla de contratos">
+        <table className="w-full min-w-[820px] border-collapse">
+          <caption className="sr-only">Contratos del archivo y qué pasará con cada uno</caption>
+          <thead>
+            <tr>
+              {[
+                "N.º",
+                "Qué pasa",
+                "Código",
+                "Dependencia",
+                "Objeto",
+                "Valor",
+                "Estado",
+                "Notas",
+              ].map((x) => (
+                <th key={x} scope="col" className={cabecera}>
+                  {x}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {datos.filas.map((f) => (
+              <tr key={f.n} className={f.estadoFila === "error" ? "bg-[#FFF5F5]" : ""}>
+                <td className={celda}>{f.n}</td>
+                <td className={celda}>
+                  <ChipSimple estado={f.estadoFila} />
+                  {f.estadoFila === "conflicto" && (
+                    <div className="mt-1 text-[13px] font-semibold text-[#8A4B00]">
+                      {decisiones[`c${f.n}`]
+                        ? decisiones[`c${f.n}`] === "reemplazar"
+                          ? "Se cambia por el del archivo"
+                          : "Se deja el del libro"
+                        : "Sin decidir"}
+                    </div>
+                  )}
+                </td>
+                <td className={`${celda} whitespace-nowrap`}>{f.id ?? "—"}</td>
+                <td className={`${celda} break-words`}>{f.dependencia ?? "—"}</td>
+                <td className={`${celda} break-words`}>{f.objeto ?? "—"}</td>
+                <td className={`${celda} tabular-nums`}>{numero(f.valorInicial)}</td>
+                <td className={celda}>{f.estado ?? "—"}</td>
+                <td className={celda}>
+                  {f.errores.map((e) => (
+                    <div key={e} className="font-semibold text-[#A3261F]">
+                      {e}
+                    </div>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Contenedor>
+    </div>
+  );
+}
+
+function TablaDestinos({ datos }: { datos: NonNullable<Plan["destinosNuevos"]> }) {
+  const r = datos.resumen;
+  return (
+    <div>
+      <ul className="mt-4 grid gap-2 text-base sm:grid-cols-3">
+        <Resumen cifra={r.nuevos} texto="se agregan" color="text-[#1D6B2E]" />
+        <Resumen cifra={r.duplicados} texto="ya estaban" color="text-[#4A5A66]" />
+        <Resumen cifra={r.conProblema} texto="con problema, no se cargan" color="text-[#A3261F]" />
+      </ul>
+      <p className="mt-3 text-[15px] text-[#35708F]">
+        Un destino nuevo se agrega a la lista con su tipo y su municipio, y los envíos a ese lugar
+        quedan clasificados. Uno que ya existe con otra clasificación no se cambia desde aquí.
+      </p>
+      <Contenedor titulo="Tabla de destinos nuevos">
+        <table className="w-full min-w-[640px] border-collapse">
+          <caption className="sr-only">
+            Destinos nuevos del archivo y qué pasará con cada uno
+          </caption>
+          <thead>
+            <tr>
+              {["N.º", "Qué pasa", "Destino", "Tipo", "Municipio", "Notas"].map((x) => (
+                <th key={x} scope="col" className={cabecera}>
+                  {x}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {datos.filas.map((f) => (
+              <tr key={f.n} className={f.estadoFila === "error" ? "bg-[#FFF5F5]" : ""}>
+                <td className={celda}>{f.n}</td>
+                <td className={celda}>
+                  <ChipSimple estado={f.estadoFila} />
+                </td>
+                <td className={`${celda} break-words`}>{f.destino ?? "—"}</td>
+                <td className={celda}>{f.tipo ?? "—"}</td>
+                <td className={celda}>{f.municipio ?? "—"}</td>
+                <td className={celda}>
+                  {f.errores.map((e) => (
+                    <div key={e} className="font-semibold text-[#A3261F]">
+                      {e}
+                    </div>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Contenedor>
+    </div>
+  );
+}
+
 function Resumen({ cifra, texto, color }: { cifra: number; texto: string; color: string }) {
   return (
     <li className="rounded-lg bg-[#F2FAFD] px-3 py-2.5">
@@ -1161,6 +1534,21 @@ function Listo({ resultado, alNuevo }: { resultado: Resultado; alNuevo: () => vo
         {c.totales > 0 && (
           <li>
             Cifras generales cambiadas: <b>{c.totales}</b>
+          </li>
+        )}
+        {(c.contratosNuevos ?? 0) > 0 && (
+          <li>
+            Contratos nuevos: <b>{c.contratosNuevos}</b>
+          </li>
+        )}
+        {(c.contratosCambiados ?? 0) > 0 && (
+          <li>
+            Contratos que se cambiaron: <b>{c.contratosCambiados}</b>
+          </li>
+        )}
+        {(c.destinosNuevos ?? 0) > 0 && (
+          <li>
+            Destinos nuevos: <b>{c.destinosNuevos}</b>
           </li>
         )}
       </ul>

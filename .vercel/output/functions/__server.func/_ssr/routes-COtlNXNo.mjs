@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-B6-C6fM5.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-COtlNXNo.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -317,6 +317,8 @@ var VALIDADORES = {
 			if (typeof c["objeto"] !== "string" || !c["objeto"]) return `contrato ${c["id"]} sin objeto`;
 			const valor = c["valorInicial"];
 			if (valor !== null && (typeof valor !== "number" || !Number.isFinite(valor))) return `contrato ${c["id"]} con valorInicial que no es número ni null`;
+			const estado = c["estado"];
+			if (estado !== void 0 && estado !== "Vigente" && estado !== "Finalizado") return `contrato ${c["id"]} con un estado que no se publica`;
 			const enlace = c["enlaceSecop"];
 			if (enlace !== null && (typeof enlace !== "string" || !/^https?:\/\//i.test(enlace))) return `contrato ${c["id"]} con enlaceSecop que no es una URL http(s)`;
 		}
@@ -1843,7 +1845,7 @@ function Fila({ categoria: c, indice, abierta, controla, onToggle }) {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-DXhh6MyD.mjs");
+var cargarMapa = () => import("./MapaToneladas-qgawC9HM.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -2210,9 +2212,9 @@ function ContratacionSection() {
 										className: "break-words px-4 py-4",
 										children: c.dependencia ?? NO_INFORMADO
 									}),
-									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
 										className: "break-words px-4 py-4",
-										children: c.objeto
+										children: [c.objeto, /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EtiquetaEstado, { contrato: c })]
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
 										className: "px-4 py-4 font-bold tabular-nums",
@@ -2243,9 +2245,9 @@ function ContratacionSection() {
 									etiqueta: "Dependencia contratante",
 									children: c.dependencia ?? NO_INFORMADO
 								}),
-								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dato, {
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Dato, {
 									etiqueta: "Objeto",
-									children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ObjetoCorto, { texto: c.objeto })
+									children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ObjetoCorto, { texto: c.objeto }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(EtiquetaEstado, { contrato: c })]
 								}),
 								/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Dato, {
 									etiqueta: "Valor inicial",
@@ -2279,6 +2281,14 @@ function ContratacionSection() {
 				})
 			]
 		})]
+	});
+}
+/** Un contrato que ya terminó sigue publicado, con su etiqueta. Uno vigente no lleva ninguna. */
+function EtiquetaEstado({ contrato }) {
+	if (contrato.estado !== "Finalizado") return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: "mt-2 block w-fit rounded-full bg-[#E7F1FB] px-3 py-1 text-[13px] font-bold uppercase tracking-[0.08em] text-[#0A5A99]",
+		children: "Finalizado"
 	});
 }
 /** En el celular el objeto puede tener diez líneas: se muestra recortado y se abre con un toque. */

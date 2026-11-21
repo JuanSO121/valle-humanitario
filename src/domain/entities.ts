@@ -223,6 +223,11 @@ export interface Contrato {
   contratista: string | null;
   /** URL http(s) completa de la publicación en SECOP, ya validada en el backend. */
   enlaceSecop: string | null;
+  /**
+   * «Finalizado» lleva su etiqueta; «Vigente» (o sin dato, de un backend anterior) no.
+   * Los «Inhabilitados» no llegan: el backend los deja fuera.
+   */
+  estado?: "Vigente" | "Finalizado";
 }
 export interface ContratacionResponse {
   /** Cuándo el backend armó la respuesta. NO es la fecha de los contratos. */

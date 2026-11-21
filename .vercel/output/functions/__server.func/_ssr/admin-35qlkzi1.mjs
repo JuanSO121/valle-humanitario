@@ -1,6 +1,6 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-BtdlYRZV.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-35qlkzi1.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -36,6 +36,8 @@ var COLOR_ESTADO = {
 	duplicada: "bg-[#EEF0F2] text-[#4A5A66]",
 	error: "bg-[#FBEBEB] text-[#A3261F]"
 };
+/** «Se agregará 1 contrato» / «Se agregarán 2 contratos». */
+var seAgrega = (n, uno, varios, verbo = "agreg") => n === 1 ? `Se ${verbo}ará 1 ${uno}` : `Se ${verbo}arán ${n} ${varios}`;
 var numero = (n) => n === null || n === void 0 ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
 async function llamar(accion, clave, carga, decisiones) {
 	const respuesta = await fetch("/api/admin", {
@@ -283,9 +285,9 @@ function AdminPage() {
 }
 function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisiones, alDecidir }) {
 	const secciones = (0, import_react.useMemo)(() => [
-		(plan.distribucion?.resumen.conflictos ?? 0) > 0 && {
+		(plan.distribucion?.resumen.conflictos ?? 0) + (plan.contratacion?.resumen.conflictos ?? 0) > 0 && {
 			id: "conflictos",
-			nombre: `Conflictos (${plan.distribucion?.resumen.conflictos})`
+			nombre: `Conflictos (${(plan.distribucion?.resumen.conflictos ?? 0) + (plan.contratacion?.resumen.conflictos ?? 0)})`
 		},
 		plan.distribucion && {
 			id: "distribucion",
@@ -298,13 +300,23 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 		plan.informacionGeneral && {
 			id: "general",
 			nombre: "Información general"
+		},
+		plan.contratacion && {
+			id: "contratos",
+			nombre: "Contratos"
+		},
+		plan.destinosNuevos && {
+			id: "destinos",
+			nombre: "Destinos nuevos"
 		}
 	].filter(Boolean), [plan]);
 	const [activa, setActiva] = (0, import_react.useState)(secciones[0]?.id ?? "");
 	const idConfirmar = (0, import_react.useId)();
 	const d = plan.distribucion?.resumen;
 	const conflictos = (0, import_react.useMemo)(() => plan.distribucion?.filas.filter((f) => f.estado === "conflicto") ?? [], [plan.distribucion]);
-	const sinDecidir = conflictos.filter((f) => !decisiones[f.n]).length;
+	const conflictosContratos = (0, import_react.useMemo)(() => plan.contratacion?.filas.filter((f) => f.estadoFila === "conflicto") ?? [], [plan.contratacion]);
+	const sinDecidir = conflictos.filter((f) => !decisiones[f.n]).length + conflictosContratos.filter((f) => !decisiones[`c${f.n}`]).length;
+	const contratosAReemplazar = conflictosContratos.filter((f) => decisiones[`c${f.n}`] === "reemplazar").length;
 	const aAgregar = conflictos.filter((f) => decisiones[f.n] === "agregar").length;
 	const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
 	const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
@@ -361,6 +373,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 					"aria-labelledby": "pestana-conflictos",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelConflictos, {
 						filas: conflictos,
+						contratos: conflictosContratos,
 						decisiones,
 						alDecidir
 					})
@@ -379,6 +392,21 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 					role: "tabpanel",
 					"aria-labelledby": "pestana-faltante",
 					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TablaFaltante, { datos: plan.queHaceFalta })
+				}),
+				plan.contratacion && activa === "contratos" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					id: "panel-contratos",
+					role: "tabpanel",
+					"aria-labelledby": "pestana-contratos",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TablaContratos, {
+						datos: plan.contratacion,
+						decisiones
+					})
+				}),
+				plan.destinosNuevos && activa === "destinos" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					id: "panel-destinos",
+					role: "tabpanel",
+					"aria-labelledby": "pestana-destinos",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TablaDestinos, { datos: plan.destinosNuevos })
 				}),
 				plan.informacionGeneral && activa === "general" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					id: "panel-general",
@@ -419,6 +447,21 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 								]
 							}),
 							plan.queHaceFalta?.reemplaza && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: "La lista de «Qué hace falta» se reemplazará por la nueva. " }),
+							plan.contratacion && plan.contratacion.resumen.nuevas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: seAgrega(plan.contratacion.resumen.nuevas, "contrato", "contratos") }),
+								".",
+								" "
+							] }),
+							contratosAReemplazar > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: seAgrega(contratosAReemplazar, "contrato", "contratos", "cambi") }),
+								" de los que ya estaban (el anterior queda guardado).",
+								" "
+							] }),
+							plan.destinosNuevos && plan.destinosNuevos.resumen.nuevos > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: seAgrega(plan.destinosNuevos.resumen.nuevos, "destino nuevo", "destinos nuevos") }),
+								".",
+								" "
+							] }),
 							cifrasQueCambian.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 								"Se cambiarán las cifras generales: ",
 								cifrasQueCambian.join(" y "),
@@ -429,11 +472,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 					sinDecidir > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						role: "alert",
 						className: "mt-3 font-bold text-[#8A4B00]",
-						children: [
-							"Faltan ",
-							sinDecidir,
-							" conflictos por decidir. Vaya a la pestaña «Conflictos» y elija qué hacer en cada uno."
-						]
+						children: [sinDecidir === 1 ? "Falta 1 conflicto" : `Faltan ${sinDecidir} conflictos`, " por decidir. Vaya a la pestaña «Conflictos» y elija qué hacer en cada uno."]
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "mt-3 flex items-start gap-3",
@@ -689,28 +728,37 @@ var EXPLICACION_CONFLICTO = {
 	peso: "Mismo día, destino, tipo de ayuda y producto, pero con otro peso.",
 	nombre: "Mismo día, destino y peso, pero el producto o el tipo de ayuda está escrito distinto."
 };
-function PanelConflictos({ filas, decisiones, alDecidir }) {
+function PanelConflictos({ filas, contratos, decisiones, alDecidir }) {
 	const [pagina, setPagina] = (0, import_react.useState)(0);
 	const POR = 10;
 	const paginas = Math.max(1, Math.ceil(filas.length / POR));
 	const actual = Math.min(pagina, paginas - 1);
 	const visibles = filas.slice(actual * POR, (actual + 1) * POR);
-	const sinDecidir = filas.filter((f) => !decisiones[f.n]).length;
+	const sinDecidir = filas.filter((f) => !decisiones[f.n]).length + contratos.filter((f) => !decisiones[`c${f.n}`]).length;
+	const total = filas.length + contratos.length;
 	const decidirTodas = (d) => {
 		const siguiente = { ...decisiones };
 		for (const f of filas) {
 			if (d === "reemplazar" && f.conflicto?.total !== 1) continue;
 			siguiente[f.n] = d;
 		}
+		if (d !== "agregar") for (const c of contratos) siguiente[`c${c.n}`] = d;
 		alDecidir(siguiente);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 			className: "mt-4 rounded-xl bg-[#FFF1DC] px-4 py-3 text-base leading-6 text-[#6B3A00]",
 			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: [filas.length, " envíos del archivo se parecen a uno que ya está en el libro, pero no son iguales."] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: [
+					total,
+					" ",
+					total === 1 ? "dato del archivo se parece" : "datos del archivo se parecen",
+					" a uno que ya está en el libro, pero no ",
+					total === 1 ? "es igual" : "son iguales",
+					"."
+				] }),
 				" ",
-				"El sistema no puede saber si son el mismo envío o dos distintos. Decida qué hacer con cada uno: no se carga ninguno sin su decisión.",
+				"El sistema no puede saber si es lo mismo o algo distinto. Decida qué hacer con cada uno: no se carga ninguno sin su decisión.",
 				sinDecidir > 0 ? ` Faltan ${sinDecidir} por decidir.` : " Ya decidió todos."
 			]
 		}),
@@ -738,6 +786,24 @@ function PanelConflictos({ filas, decisiones, alDecidir }) {
 					children: "Son todos distintos: agregar todas"
 				})
 			]
+		}),
+		contratos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+			className: "mt-5 text-lg font-extrabold text-[#0A5A99]",
+			children: "Contratos que ya existen con otros datos"
+		}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+			className: "mt-3 space-y-4",
+			children: contratos.map((c) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaConflictoContrato, {
+				fila: c,
+				decision: decisiones[`c${c.n}`],
+				alElegir: (d) => alDecidir({
+					...decisiones,
+					[`c${c.n}`]: d
+				})
+			}, c.n))
+		})] }),
+		filas.length > 0 && contratos.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", {
+			className: "mt-6 text-lg font-extrabold text-[#0A5A99]",
+			children: "Envíos que se parecen a otros"
 		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 			className: "mt-4 space-y-4",
@@ -925,6 +991,307 @@ function TarjetaConflicto({ fila: f, decision, alElegir }) {
 		]
 	});
 }
+function TarjetaConflictoContrato({ fila: f, decision, alElegir }) {
+	const nombre = (0, import_react.useId)();
+	if (!f.conflicto) return null;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+		className: `rounded-xl border-2 p-4 ${decision ? "border-[#2E9E5B]/40 bg-white" : "border-[#E08A1E]/60 bg-[#FFFBF3]"}`,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "text-base font-bold",
+				children: [
+					"Contrato ",
+					f.id,
+					" · fila ",
+					f.n,
+					" del archivo",
+					f.filaLibro ? ` · fila ${f.filaLibro} del libro` : ""
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-0.5 text-[15px] text-[#6B3A00]",
+				children: "Ese código ya está en el libro y los datos no son iguales. Así se marca un contrato como «Finalizado» o se corrige un dato."
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
+				titulo: `Comparación del contrato ${f.id}`,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full min-w-[560px] table-fixed border-collapse",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
+							className: "sr-only",
+							children: "Lo que está en el libro frente a lo que trae el archivo"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("colgroup", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("col", { className: "w-[20%]" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("col", { className: "w-[40%]" }),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("col", { className: "w-[40%]" })
+						] }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera,
+								children: "En el libro"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera,
+								children: "En el archivo"
+							})
+						] }) }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: f.conflicto.campos.map((x) => {
+							const distinto = x.libro !== x.archivo;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									scope: "row",
+									className: `${celda} font-semibold`,
+									children: x.campo
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: `${celda} break-words ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`,
+									children: x.libro
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: `${celda} break-words ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`,
+									children: x.archivo
+								})
+							] }, x.campo);
+						}) })
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("fieldset", {
+				className: "mt-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("legend", {
+					className: "text-base font-bold",
+					children: "¿Qué hacer con este contrato?"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-1 space-y-1.5",
+					children: [{
+						valor: "conservar",
+						texto: "Dejar el contrato del libro (no cargar el del archivo)"
+					}, {
+						valor: "reemplazar",
+						texto: "Cambiar el del libro por el del archivo (el anterior queda guardado)"
+					}].map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: "flex items-start gap-3 text-base leading-6",
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "radio",
+							name: nombre,
+							checked: decision === o.valor,
+							onChange: () => alElegir(o.valor),
+							className: "mt-1 size-5 shrink-0 accent-[#0079C1]"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: o.texto })]
+					}, o.valor))
+				})]
+			})
+		]
+	});
+}
+var ETIQUETA_FILA_SIMPLE = {
+	nueva: ["Se agrega", "bg-[#E4F4E4] text-[#1D6B2E]"],
+	duplicada: ["Ya está, no se repite", "bg-[#EEF0F2] text-[#4A5A66]"],
+	conflicto: ["Conflicto: decida", "bg-[#FFE9CC] text-[#8A4B00]"],
+	error: ["No se carga", "bg-[#FBEBEB] text-[#A3261F]"]
+};
+function ChipSimple({ estado }) {
+	const [texto, color] = ETIQUETA_FILA_SIMPLE[estado];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+		className: `inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold ${color}`,
+		children: texto
+	});
+}
+function TablaContratos({ datos, decisiones }) {
+	const r = datos.resumen;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+			className: "mt-4 grid gap-2 text-base sm:grid-cols-2 lg:grid-cols-4",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.nuevas,
+					texto: "se agregan",
+					color: "text-[#1D6B2E]"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.duplicadas,
+					texto: "ya estaban",
+					color: "text-[#4A5A66]"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.conflictos,
+					texto: "en conflicto, hay que decidir",
+					color: "text-[#8A4B00]"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.conProblema,
+					texto: "con problema, no se cargan",
+					color: "text-[#A3261F]"
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-3 text-[15px] text-[#35708F]",
+			children: "Los contratos no se borran: uno que terminó se marca «Finalizado» (sigue visible, con su etiqueta) y uno que ya no debe mostrarse se marca «Inhabilitado» (queda en la hoja, pero no sale en la página)."
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
+			titulo: "Tabla de contratos",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+				className: "w-full min-w-[820px] border-collapse",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
+						className: "sr-only",
+						children: "Contratos del archivo y qué pasará con cada uno"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: [
+						"N.º",
+						"Qué pasa",
+						"Código",
+						"Dependencia",
+						"Objeto",
+						"Valor",
+						"Estado",
+						"Notas"
+					].map((x) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						scope: "col",
+						className: cabecera,
+						children: x
+					}, x)) }) }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: datos.filas.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: f.estadoFila === "error" ? "bg-[#FFF5F5]" : "",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.n
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+								className: celda,
+								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChipSimple, { estado: f.estadoFila }), f.estadoFila === "conflicto" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "mt-1 text-[13px] font-semibold text-[#8A4B00]",
+									children: decisiones[`c${f.n}`] ? decisiones[`c${f.n}`] === "reemplazar" ? "Se cambia por el del archivo" : "Se deja el del libro" : "Sin decidir"
+								})]
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: `${celda} whitespace-nowrap`,
+								children: f.id ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: `${celda} break-words`,
+								children: f.dependencia ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: `${celda} break-words`,
+								children: f.objeto ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: `${celda} tabular-nums`,
+								children: numero(f.valorInicial)
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.estado ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.errores.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "font-semibold text-[#A3261F]",
+									children: e
+								}, e))
+							})
+						]
+					}, f.n)) })
+				]
+			})
+		})
+	] });
+}
+function TablaDestinos({ datos }) {
+	const r = datos.resumen;
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
+			className: "mt-4 grid gap-2 text-base sm:grid-cols-3",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.nuevos,
+					texto: "se agregan",
+					color: "text-[#1D6B2E]"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.duplicados,
+					texto: "ya estaban",
+					color: "text-[#4A5A66]"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.conProblema,
+					texto: "con problema, no se cargan",
+					color: "text-[#A3261F]"
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-3 text-[15px] text-[#35708F]",
+			children: "Un destino nuevo se agrega a la lista con su tipo y su municipio, y los envíos a ese lugar quedan clasificados. Uno que ya existe con otra clasificación no se cambia desde aquí."
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
+			titulo: "Tabla de destinos nuevos",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+				className: "w-full min-w-[640px] border-collapse",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
+						className: "sr-only",
+						children: "Destinos nuevos del archivo y qué pasará con cada uno"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: [
+						"N.º",
+						"Qué pasa",
+						"Destino",
+						"Tipo",
+						"Municipio",
+						"Notas"
+					].map((x) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						scope: "col",
+						className: cabecera,
+						children: x
+					}, x)) }) }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: datos.filas.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: f.estadoFila === "error" ? "bg-[#FFF5F5]" : "",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.n
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ChipSimple, { estado: f.estadoFila })
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: `${celda} break-words`,
+								children: f.destino ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.tipo ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.municipio ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.errores.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "font-semibold text-[#A3261F]",
+									children: e
+								}, e))
+							})
+						]
+					}, f.n)) })
+				]
+			})
+		})
+	] });
+}
 function Resumen({ cifra, texto, color }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
 		className: "rounded-lg bg-[#F2FAFD] px-3 py-2.5",
@@ -1111,7 +1478,10 @@ function Listo({ resultado, alNuevo }) {
 					c.repetidas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Filas que ya estaban y no se repitieron: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.repetidas })] }),
 					c.conProblema > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Filas con problema que no se cargaron: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.conProblema })] }),
 					c.faltantes > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Elementos de «Qué hace falta»: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.faltantes })] }),
-					c.totales > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Cifras generales cambiadas: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.totales })] })
+					c.totales > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Cifras generales cambiadas: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.totales })] }),
+					(c.contratosNuevos ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Contratos nuevos: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.contratosNuevos })] }),
+					(c.contratosCambiados ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Contratos que se cambiaron: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.contratosCambiados })] }),
+					(c.destinosNuevos ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: ["Destinos nuevos: ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: c.destinosNuevos })] })
 				]
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {

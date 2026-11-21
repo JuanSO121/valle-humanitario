@@ -162,7 +162,7 @@ export async function manejarAdmin(request: Request, env: unknown): Promise<Resp
     const entradas = Object.entries(d as Record<string, unknown>);
     if (
       entradas.length > 5000 ||
-      entradas.some(([k, v]) => !/^\d{1,5}$/.test(k) || typeof v !== "string")
+      entradas.some(([k, v]) => !/^c?\d{1,5}$/.test(k) || typeof v !== "string")
     ) {
       return error("Las decisiones no tienen el formato esperado.", 400);
     }

@@ -25,6 +25,9 @@ Plan completo y reglas de datos: `apps-script/Config.js` (todas las reglas viven
 
 ## Libros generados (`docs/excel/`, no se suben a git)
 - `OFICIAL_despachos_consolidado.xlsx` — base plana `DESPACHOS` (1.906 filas) + reglas `DESTINOS`/`FAMILIAS`.
+- Contratos: la hoja `CONTRATACION` tiene una columna `estado` (Vigente / Finalizado / Inhabilitado). Vigente se muestra,
+  Finalizado se muestra con etiqueta e Inhabilitado se conserva pero no se muestra: los contratos no se borran.
+- Carga de datos `/admin`: despachos, qué hace falta, totales, contratos y destinos nuevos (ver `docs/07`).
 - `CONTRATACION_contratos.xlsx` — libro antiguo de contratos: su hoja `CONTRATACION` ya está DENTRO del libro oficial (decisión del cliente).
 - `QUE_HACE_FALTA` y `TOTALES` viven DENTRO de `OFICIAL_despachos_consolidado.xlsx` (decisión del cliente: un solo libro
   de datos; los contratos también, hoja `CONTRATACION`). Riesgo: quien edita la plantilla podría tocar `DESPACHOS`; se protegen las demás hojas.

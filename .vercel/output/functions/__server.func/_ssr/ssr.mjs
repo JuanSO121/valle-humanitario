@@ -499,7 +499,7 @@ async function manejarAdmin(request, env) {
 		const d = pedido.decisiones;
 		if (typeof d !== "object" || Array.isArray(d)) return error("Las decisiones no tienen el formato esperado.", 400);
 		const entradas = Object.entries(d);
-		if (entradas.length > 5e3 || entradas.some(([k, v]) => !/^\d{1,5}$/.test(k) || typeof v !== "string")) return error("Las decisiones no tienen el formato esperado.", 400);
+		if (entradas.length > 5e3 || entradas.some(([k, v]) => !/^c?\d{1,5}$/.test(k) || typeof v !== "string")) return error("Las decisiones no tienen el formato esperado.", 400);
 		decisiones = Object.fromEntries(entradas);
 	}
 	const controlador = new AbortController();
@@ -543,7 +543,7 @@ async function manejarAdmin(request, env) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-Bo-2z3aN.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-Bg9uqPFS.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

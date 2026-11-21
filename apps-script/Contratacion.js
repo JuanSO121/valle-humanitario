@@ -35,6 +35,15 @@
  * -----------------------------------------------------------------------
  */
 
+/**
+ * Estado de un contrato en la hoja. Sirve para CONSERVAR los contratos que ya hubo sin borrar filas:
+ *   Vigente       se publica (también si la celda está vacía).
+ *   Finalizado    se publica, con la etiqueta «Finalizado».
+ *   Inhabilitado  NO se publica: queda en la hoja, pero fuera de la página.
+ * Cualquier otro texto no se adivina: la fila no se publica y se avisa.
+ */
+var ESTADOS_CONTRATO_ = { 'VIGENTE': 'Vigente', 'FINALIZADO': 'Finalizado', 'INHABILITADO': 'Inhabilitado' };
+
 /** Solo http(s): un esquema como javascript: nunca debe llegar a un href. */
 var RE_URL_SECOP_ = /^https?:\/\/[^\s]+$/i;
 
@@ -95,6 +104,14 @@ function leerContratacion_() {
     }
     vistos[id] = f.__row;
 
+    var estado = isBlank_(f.estado) ? 'Vigente' : ESTADOS_CONTRATO_[normalizeText_(f.estado)];
+    if (!estado) {
+      advertencias.push(donde + id + ' con estado "' + f.estado + '" (debe ser Vigente, Finalizado o Inhabilitado). Fila omitida.');
+      return;
+    }
+    // Inhabilitado: se conserva en la hoja, pero no se publica. No es un error.
+    if (estado === 'Inhabilitado') return;
+
     contratos.push({
       id: id,
       dependencia: textoOrNull_(f.dependencia),
@@ -102,6 +119,7 @@ function leerContratacion_() {
       valorInicial: valorInicial_(f.valor_inicial, donde + id + ': ', advertencias),
       contratista: textoOrNull_(f.contratista),
       enlaceSecop: enlaceSecop_(f.enlace_secop, donde + id + ': ', advertencias),
+      estado: estado,
     });
   });
 

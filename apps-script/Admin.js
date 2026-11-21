@@ -148,9 +148,15 @@ function leerContextoCarga_() {
       return n === CONFIG.SHEETS.FALTANTES || n === CONFIG.SHEETS.TOTALES;
     }).forEach(function (p) { otras[p.nombre] = p.matriz; });
   }
+  var libroC = idLibroContratacion_();
+  var contratos = null;
+  if (libroC) {
+    var pc = leerPestanasDeLibro_(libroC, function (n) { return n === CONFIG.SHEETS.CONTRATACION; });
+    contratos = pc.length > 0 ? pc[0].matriz : null;
+  }
   return construirContexto_(
     porNombre[CONFIG.SHEETS.DESPACHOS], porNombre[CONFIG.SHEETS.DESTINOS], porNombre[CONFIG.SHEETS.FAMILIAS],
-    otras[CONFIG.SHEETS.FALTANTES] || null, otras[CONFIG.SHEETS.TOTALES] || null, hoyIso_());
+    otras[CONFIG.SHEETS.FALTANTES] || null, otras[CONFIG.SHEETS.TOTALES] || null, hoyIso_(), contratos);
 }
 
 function claveDespacho_(fecha, destino, familia, producto, kg) {
@@ -215,8 +221,18 @@ function analizarDespachosExistentes_(matriz) {
   };
 }
 
-function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotales, hoy) {
-  var destinosIdx = indexarDestinos_(filasAObjetos_(mDestinos, null), []);
+function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotales, hoy, mContratos) {
+  var filasDestinos = filasAObjetos_(mDestinos, null);
+  var destinosIdx = indexarDestinos_(filasDestinos, []);
+  var destinosCompactos = Object.create(null);
+  var ultimaFilaDestinos = 1;
+  filasDestinos.forEach(function (d) {
+    var nombre = textoOrNull_(d.destino_original);
+    if (nombre) {
+      destinosCompactos[compactoDestino_(nombre)] = nombre;
+      if (d.__row > ultimaFilaDestinos) ultimaFilaDestinos = d.__row;
+    }
+  });
   var familiasIdx = indexarFamilias_(filasAObjetos_(mFamilias, null));
   var analisis = analizarDespachosExistentes_(mDespachos);
   var filasFaltantes = mFaltantes ? parsearFaltantes_(mFaltantes).filas : null;
@@ -237,7 +253,318 @@ function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotal
     totalesActual: totalesActual,
     matrizFaltantes: mFaltantes,
     matrizTotales: mTotales,
+    matrizContratos: mContratos || null,
+    destinosCompactos: destinosCompactos,
+    ultimaFilaDestinos: ultimaFilaDestinos,
   };
+}
+
+
+// --- contratos y destinos nuevos ----------------------------------------
+//
+// CONTRATACION  Un contrato se identifica por su código (CTR0001). Uno nuevo se agrega; uno que ya está
+//               igual se salta; uno que ya está con otros datos es un CONFLICTO (dejar o cambiar; un
+//               contrato no se agrega dos veces). Así se marca un contrato como «Finalizado»: se sube con
+//               su estado nuevo y se elige «cambiar». Nada se borra.
+// DESTINOS      Un destino que no existe se agrega con su tipo y su municipio. Uno que ya existe igual se
+//               salta. Uno que ya existe con OTRA clasificación no se cambia desde aquí: se corrige a mano.
+
+var CARGA_MAX_OBJETO_ = 2000;
+var CARGA_MAX_ENLACE_ = 1000;
+var CONTRATOS_COLUMNAS_ = ['contratacion_id', 'dependencia', 'objeto', 'valor_inicial', 'contratista', 'enlace_secop', 'estado'];
+var TIPOS_DESTINO_ = { 'MUNICIPIO': 'municipio', 'OTRA': 'otra', 'TRASLADO': 'traslado', 'MULTIPLE': 'multiple' };
+var DESTINOS_FILA_MAXIMA_ = 600;
+var ALIAS_MUNICIPIO_ = {
+  'CALI': 'Santiago de Cali', 'BUGA': 'Guadalajara de Buga',
+  'CALIMA': 'Calima - El Darién', 'CALIMA DARIEN': 'Calima - El Darién', 'CALIMA EL DARIEN': 'Calima - El Darién',
+};
+
+function compactoDestino_(s) {
+  return normalizeText_(s).replace(/[^A-Z0-9]/g, '');
+}
+
+function resolverMunicipio_(texto) {
+  var n = normalizeText_(texto);
+  if (!n) return null;
+  var nombre = ALIAS_MUNICIPIO_[n] ? normalizeText_(ALIAS_MUNICIPIO_[n]) : n;
+  var lista = catalogo42_().municipios;
+  for (var i = 0; i < lista.length; i++) {
+    if (normalizeText_(lista[i].nombre) === nombre) return lista[i];
+  }
+  return null;
+}
+
+// -- contratos ---------------------------------------------------------
+
+function estadoContratoCarga_(v) {
+  if (v === null || v === undefined || v === '') return 'Vigente';
+  return ESTADOS_CONTRATO_[normalizeText_(v)] || null;
+}
+
+/** Lo que ya hay en CONTRATACION, por código. Falla con un mensaje claro si falta una columna (p. ej. «estado»). */
+function analizarContratosExistentes_(matriz) {
+  if (!matriz) throw amistoso_('No se encontró la hoja ' + CONFIG.SHEETS.CONTRATACION + ' en el libro.');
+  var enc = (matriz[0] || []).slice(0, CONTRATOS_COLUMNAS_.length).map(function (h) {
+    return String(h === null || h === undefined ? '' : h).trim().toLowerCase();
+  });
+  if (enc.join('|') !== CONTRATOS_COLUMNAS_.join('|')) {
+    throw amistoso_('La hoja CONTRATACION no tiene las columnas esperadas (' + CONTRATOS_COLUMNAS_.join(', ') +
+      '). ¿Falta la columna «estado»?');
+  }
+  var porId = Object.create(null);
+  var ultimaFila = 1;
+  for (var i = 1; i < matriz.length; i++) {
+    var f = matriz[i] || [];
+    var id = textoOrNull_(f[0]);
+    if (!id) continue;
+    ultimaFila = i + 1;
+    var estado = estadoContratoCarga_(f[6]);
+    porId[normalizeText_(id)] = {
+      fila: i + 1, id: id, dependencia: textoOrNull_(f[1]), objeto: textoOrNull_(f[2]),
+      valorInicial: toNumberOrNull_(f[3]), contratista: textoOrNull_(f[4]), enlaceSecop: textoOrNull_(f[5]),
+      estado: estado || textoOrNull_(f[6]),
+    };
+  }
+  return { porId: porId, ultimaFila: ultimaFila };
+}
+
+function camposContrato_(libro, archivo) {
+  function t(v) { return v === null || v === undefined ? '—' : String(v); }
+  return [
+    { campo: 'Código', libro: t(libro.id), archivo: t(archivo.id) },
+    { campo: 'Dependencia', libro: t(libro.dependencia), archivo: t(archivo.dependencia) },
+    { campo: 'Objeto', libro: t(libro.objeto), archivo: t(archivo.objeto) },
+    { campo: 'Valor inicial', libro: t(libro.valorInicial), archivo: t(archivo.valorInicial) },
+    { campo: 'Contratista', libro: t(libro.contratista), archivo: t(archivo.contratista) },
+    { campo: 'Enlace de SECOP', libro: t(libro.enlaceSecop), archivo: t(archivo.enlaceSecop) },
+    { campo: 'Estado', libro: t(libro.estado), archivo: t(archivo.estado) },
+  ];
+}
+
+function planificarContratos_(filas, ctx) {
+  var analisis = analizarContratosExistentes_(ctx.matrizContratos);
+  ctx.ultimaFilaContratos = analisis.ultimaFila;
+  var existentes = analisis.porId;
+  var vistos = Object.create(null);
+  var salida = [];
+  filas.forEach(function (r, i) {
+    r = r && typeof r === 'object' ? r : {};
+    var errores = [];
+    var tId = textoCarga_(r.id, 60);
+    if (!tId.valor) errores.push('Falta el código del contrato.');
+    else if (tId.largo || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(tId.valor)) {
+      errores.push('El código solo puede llevar letras, números, punto, guion y guion bajo (máximo 60).');
+    }
+    var tObjeto = textoCarga_(r.objeto, CARGA_MAX_OBJETO_);
+    if (!tObjeto.valor) errores.push('Falta el objeto del contrato.');
+    else if (tObjeto.largo) errores.push('El objeto es demasiado largo.');
+    var tDep = textoCarga_(r.dependencia, CARGA_MAX_TEXTO_);
+    if (tDep.largo) errores.push('La dependencia es demasiado larga.');
+    var tContr = textoCarga_(r.contratista, CARGA_MAX_TEXTO_);
+    if (tContr.largo) errores.push('El contratista es demasiado largo.');
+    var valor = numeroCarga_(r.valorInicial);
+    if (valor.malo || (valor.valor !== null && valor.valor < 0)) errores.push('El valor inicial debe ser un número sin «$» ni puntos de miles.');
+    var tEnlace = textoCarga_(r.enlaceSecop, CARGA_MAX_ENLACE_);
+    if (tEnlace.valor && (tEnlace.largo || !RE_URL_SECOP_.test(tEnlace.valor))) {
+      errores.push('El enlace de SECOP debe ser una dirección completa que empiece por https://');
+    }
+    var estado = estadoContratoCarga_(r.estado);
+    if (!estado) errores.push('El estado debe ser Vigente, Finalizado o Inhabilitado.');
+
+    var clave = tId.valor ? normalizeText_(tId.valor) : null;
+    if (clave && vistos[clave]) errores.push('El código ' + tId.valor + ' está repetido en el archivo (fila ' + vistos[clave] + ').');
+    if (clave && !vistos[clave]) vistos[clave] = i + 1;
+
+    var fila = {
+      n: i + 1, id: tId.valor, dependencia: tDep.valor, objeto: tObjeto.valor,
+      valorInicial: valor.valor, contratista: tContr.valor, enlaceSecop: tEnlace.valor, estado: estado,
+      estadoFila: 'nueva', filaLibro: null, errores: errores, conflicto: null,
+    };
+    if (errores.length > 0) {
+      fila.estadoFila = 'error';
+    } else {
+      var ex = existentes[clave];
+      if (ex) {
+        var igual = (ex.dependencia || null) === fila.dependencia && (ex.objeto || null) === fila.objeto &&
+          (ex.valorInicial === null ? null : ex.valorInicial) === fila.valorInicial &&
+          (ex.contratista || null) === fila.contratista && (ex.enlaceSecop || null) === fila.enlaceSecop &&
+          ex.estado === fila.estado;
+        if (igual) {
+          fila.estadoFila = 'duplicada';
+        } else {
+          fila.estadoFila = 'conflicto';
+          fila.filaLibro = ex.fila;
+          fila.conflicto = { campos: camposContrato_(ex, fila), existente: ex };
+        }
+      }
+    }
+    salida.push(fila);
+  });
+  return salida;
+}
+
+function resumenContratos_(filas) {
+  var r = { nuevas: 0, duplicadas: 0, conflictos: 0, conProblema: 0, reemplazan: 0, conservadas: 0 };
+  filas.forEach(function (f) {
+    if (f.estadoFila === 'nueva') r.nuevas += 1;
+    else if (f.estadoFila === 'duplicada') r.duplicadas += 1;
+    else if (f.estadoFila === 'conflicto') r.conflictos += 1;
+    else if (f.estadoFila === 'error') r.conProblema += 1;
+  });
+  return r;
+}
+
+/** Decisiones sobre los conflictos de contratos (claves «c1», «c2»…): solo «conservar» o «reemplazar». */
+function aplicarDecisionesContratos_(plan, decisiones) {
+  var d = decisiones && typeof decisiones === 'object' && !Array.isArray(decisiones) ? decisiones : {};
+  plan.contratacion.filas.forEach(function (f) {
+    if (f.estadoFila !== 'conflicto') return;
+    var eleccion = d['c' + f.n];
+    if (eleccion === 'agregar') {
+      throw amistoso_('El contrato ' + f.id + ' ya existe: un contrato no se agrega dos veces. Elija «dejar» o «cambiar».');
+    }
+    if (eleccion !== 'conservar' && eleccion !== 'reemplazar') {
+      throw amistoso_('Falta decidir qué hacer con el conflicto del contrato ' + f.id + '.');
+    }
+    f.estadoFila = eleccion === 'conservar' ? 'conservada' : 'reemplaza';
+    f.previo = f.conflicto.existente;
+  });
+  var r = plan.contratacion.resumen;
+  r.conflictos = 0;
+  r.reemplazan = plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'reemplaza'; }).length;
+  r.conservadas = plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'conservada'; }).length;
+  r.nuevas = plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'nueva'; }).length;
+}
+
+function valoresDeContrato_(f) {
+  return [f.id, f.dependencia || '', f.objeto, f.valorInicial === null ? '' : f.valorInicial,
+    f.contratista || '', f.enlaceSecop || '', f.estado];
+}
+
+function escribirContratos_(plan, ctx, libroC) {
+  var datos = [];
+  var nuevas = [];
+  plan.contratacion.filas.forEach(function (f) {
+    if (f.estadoFila === 'reemplaza') {
+      datos.push({ range: rangoA1_(CONFIG.SHEETS.CONTRATACION, 'A', f.filaLibro, 'G', f.filaLibro), values: [valoresDeContrato_(f)] });
+    } else if (f.estadoFila === 'nueva') {
+      nuevas.push(valoresDeContrato_(f));
+    }
+  });
+  if (nuevas.length > 0) {
+    var inicio = ctx.ultimaFilaContratos + 1;
+    var fin = inicio + nuevas.length - 1;
+    asegurarFilas_(libroC, CONFIG.SHEETS.CONTRATACION, fin);
+    datos.push({ range: rangoA1_(CONFIG.SHEETS.CONTRATACION, 'A', inicio, 'G', fin), values: nuevas });
+  }
+  if (datos.length > 0) Sheets.Spreadsheets.Values.batchUpdate({ valueInputOption: 'RAW', data: datos }, libroC);
+  return nuevas.length;
+}
+
+/** Guarda cómo estaba cada contrato antes de cambiarlo. */
+function registrarReemplazosContratos_(libroId, previos) {
+  if (!previos || previos.length === 0) return;
+  var nombre = CONFIG.SHEETS.REEMPLAZOS_CONTRATOS;
+  var ss = SpreadsheetApp.openById(libroId);
+  var hoja = ss.getSheetByName(nombre);
+  if (!hoja) {
+    hoja = ss.insertSheet(nombre);
+    hoja.appendRow(['cuando', 'fila_del_libro', 'contratacion_id', 'dependencia', 'objeto', 'valor_inicial', 'contratista', 'enlace_secop', 'estado']);
+    hoja.hideSheet();
+  }
+  var cuando = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  previos.forEach(function (p) {
+    hoja.appendRow([cuando, p.fila, p.id, p.dependencia || '', p.objeto || '', p.valorInicial === null ? '' : p.valorInicial,
+      p.contratista || '', p.enlaceSecop || '', p.estado || '']);
+  });
+}
+
+// -- destinos nuevos ---------------------------------------------------
+
+function planificarDestinosNuevos_(filas, ctx) {
+  var salida = [];
+  var vistos = Object.create(null);
+  var compactosVistos = Object.create(null);
+  filas.forEach(function (r, i) {
+    r = r && typeof r === 'object' ? r : {};
+    var errores = [];
+    var tDestino = textoCarga_(r.destino, CARGA_MAX_TEXTO_);
+    if (!tDestino.valor) errores.push('Falta el nombre del destino.');
+    else if (tDestino.largo) errores.push('El nombre del destino es demasiado largo.');
+
+    var tipo = TIPOS_DESTINO_[normalizeText_(r.tipo)];
+    if (!tipo) errores.push('El tipo debe ser municipio, otra, traslado o multiple.');
+
+    var muni = null;
+    var tMuni = textoCarga_(r.municipio, CARGA_MAX_TEXTO_);
+    if (tipo === 'municipio') {
+      muni = resolverMunicipio_(tMuni.valor);
+      if (!muni) errores.push('Falta el municipio, o «' + (tMuni.valor || '') + '» no es uno de los 42 del Valle.');
+    } else if (tipo && tMuni.valor) {
+      errores.push('Solo los destinos de tipo «municipio» llevan municipio.');
+    }
+
+    var fila = {
+      n: i + 1, destino: tDestino.valor, tipo: tipo || textoCarga_(r.tipo, 40).valor,
+      municipio: muni ? muni.nombre : null, dane: muni ? muni.codigoDane : null,
+      estadoFila: 'nueva', errores: errores, avisos: [],
+    };
+    if (errores.length === 0) {
+      var clave = normalizeText_(tDestino.valor);
+      var compacto = compactoDestino_(tDestino.valor);
+      var ex = ctx.destinosIdx[clave];
+      if (vistos[clave]) {
+        var mismo = vistos[clave].tipo === tipo && vistos[clave].dane === fila.dane;
+        if (mismo) fila.estadoFila = 'duplicada';
+        else fila.errores.push('Está repetido en el archivo con otra clasificación (fila ' + vistos[clave].n + ').');
+      } else if (ex) {
+        var igual = ex.tipo === tipo.toUpperCase() && (tipo !== 'municipio' || ex.dane === fila.dane);
+        if (igual) fila.estadoFila = 'duplicada';
+        else {
+          fila.errores.push('Ya existe en DESTINOS con otra clasificación (' + String(ex.tipo).toLowerCase() +
+            '). No se cambia desde aquí: corríjalo a mano en la hoja DESTINOS.');
+        }
+      } else {
+        var parecido = ctx.destinosCompactos[compacto] || compactosVistos[compacto];
+        if (parecido) {
+          fila.errores.push('Se parece mucho a «' + parecido + '», que ya existe. Si es el mismo lugar, use ese nombre en los envíos y no lo agregue de nuevo.');
+        }
+      }
+      if (fila.errores.length === 0 && !vistos[clave]) vistos[clave] = fila;
+      if (fila.errores.length === 0 && fila.estadoFila === 'nueva') compactosVistos[compacto] = tDestino.valor;
+    }
+    if (fila.errores.length > 0) fila.estadoFila = 'error';
+    salida.push(fila);
+  });
+  return salida;
+}
+
+function resumenDestinos_(filas) {
+  var r = { nuevos: 0, duplicados: 0, conProblema: 0 };
+  filas.forEach(function (f) {
+    if (f.estadoFila === 'nueva') r.nuevos += 1;
+    else if (f.estadoFila === 'duplicada') r.duplicados += 1;
+    else r.conProblema += 1;
+  });
+  return r;
+}
+
+function escribirDestinos_(plan, ctx, libroId) {
+  var nuevos = plan.destinosNuevos.filas.filter(function (f) { return f.estadoFila === 'nueva'; });
+  if (nuevos.length === 0) return 0;
+  var inicio = ctx.ultimaFilaDestinos + 1;
+  var fin = inicio + nuevos.length - 1;
+  if (fin > DESTINOS_FILA_MAXIMA_) {
+    throw amistoso_('La hoja DESTINOS llegó a su límite de filas (' + DESTINOS_FILA_MAXIMA_ + '). Avise al encargado.');
+  }
+  var valores = nuevos.map(function (f) {
+    return [f.destino, f.tipo, f.dane || '', f.municipio || '', 'carga /admin'];
+  });
+  Sheets.Spreadsheets.Values.batchUpdate({
+    valueInputOption: 'RAW',
+    data: [{ range: rangoA1_(CONFIG.SHEETS.DESTINOS, 'A', inicio, 'E', fin), values: valores }],
+  }, libroId);
+  return nuevos.length;
 }
 
 // --- validación (pura: no toca el libro) --------------------------------
@@ -471,7 +798,10 @@ function planificarFaltantes_(filas, ctx) {
 }
 
 function planificarCarga_(carga, ctx) {
-  var plan = { errores: [], avisos: [], informacionGeneral: null, queHaceFalta: null, distribucion: null };
+  var plan = {
+    errores: [], avisos: [], informacionGeneral: null, queHaceFalta: null, distribucion: null,
+    contratacion: null, destinosNuevos: null,
+  };
   if (!carga || typeof carga !== 'object' || Array.isArray(carga)) {
     plan.errores.push('El archivo no tiene el formato esperado.');
     return plan;
@@ -523,6 +853,40 @@ function planificarCarga_(carga, ctx) {
     }
   }
 
+  var ctxDistribucion = ctx;
+  if (carga.destinosNuevos !== undefined && carga.destinosNuevos !== null) {
+    hay = true;
+    if (!Array.isArray(carga.destinosNuevos)) {
+      plan.errores.push('«destinosNuevos» debe ser una lista.');
+    } else if (carga.destinosNuevos.length > CARGA_MAX_FILAS_) {
+      plan.errores.push('«destinosNuevos» tiene demasiadas filas.');
+    } else {
+      var dn = planificarDestinosNuevos_(carga.destinosNuevos, ctx);
+      plan.destinosNuevos = { filas: dn, resumen: resumenDestinos_(dn) };
+      // Los envíos del mismo archivo pueden usar un destino que se agrega en esta carga.
+      var ampliado = Object.create(null);
+      Object.keys(ctx.destinosIdx).forEach(function (k) { ampliado[k] = ctx.destinosIdx[k]; });
+      dn.forEach(function (f) {
+        if (f.estadoFila === 'nueva') ampliado[normalizeText_(f.destino)] = { tipo: f.tipo.toUpperCase(), dane: f.dane || '', regla: '' };
+      });
+      ctxDistribucion = {};
+      Object.keys(ctx).forEach(function (k) { ctxDistribucion[k] = ctx[k]; });
+      ctxDistribucion.destinosIdx = ampliado;
+    }
+  }
+
+  if (carga.contratacion !== undefined && carga.contratacion !== null) {
+    hay = true;
+    if (!Array.isArray(carga.contratacion)) {
+      plan.errores.push('«contratacion» debe ser una lista.');
+    } else if (carga.contratacion.length > CARGA_MAX_FILAS_) {
+      plan.errores.push('«contratacion» tiene demasiadas filas.');
+    } else {
+      var cc = planificarContratos_(carga.contratacion, ctx);
+      plan.contratacion = { filas: cc, resumen: resumenContratos_(cc) };
+    }
+  }
+
   if (carga.distribucion !== undefined && carga.distribucion !== null) {
     hay = true;
     if (!Array.isArray(carga.distribucion)) {
@@ -530,7 +894,7 @@ function planificarCarga_(carga, ctx) {
     } else if (carga.distribucion.length > CARGA_MAX_FILAS_) {
       plan.errores.push('«distribucion» tiene más de ' + CARGA_MAX_FILAS_ + ' filas. Divida el archivo.');
     } else {
-      var dd = planificarDistribucion_(carga.distribucion, ctx);
+      var dd = planificarDistribucion_(carga.distribucion, ctxDistribucion);
       var cuenta = { nueva: 0, completa: 0, duplicada: 0, error: 0, conflicto: 0 };
       var conAviso = 0;
       var posiblesRepetidas = 0;
@@ -571,6 +935,11 @@ function cargaTieneAlgoParaEscribir_(plan) {
     var r = plan.distribucion.resumen;
     if (r.nuevas + r.completan + (r.reemplazan || 0) > 0) return true;
   }
+  if (plan.contratacion) {
+    var rc = plan.contratacion.resumen;
+    if (rc.nuevas + (rc.reemplazan || 0) > 0) return true;
+  }
+  if (plan.destinosNuevos && plan.destinosNuevos.resumen.nuevos > 0) return true;
   return false;
 }
 
@@ -646,6 +1015,51 @@ function verificarSinCambios_(plan, ctx, libroId) {
   });
 }
 
+function hayCambioError_() {
+  return amistoso_('El libro cambió mientras se preparaba la carga (alguien escribió, completó o borró filas). ' +
+    'No se cargó nada. Vuelva a revisar el archivo y cárguelo de nuevo.');
+}
+
+function estaVacio_(valores) {
+  return !(valores || []).some(function (r) {
+    return r.some(function (c) { return c !== '' && c !== null && c !== undefined; });
+  });
+}
+
+/** Antes de escribir: las filas donde van los destinos nuevos siguen vacías. */
+function verificarDestinos_(plan, ctx, libroId) {
+  var n = plan.destinosNuevos.filas.filter(function (f) { return f.estadoFila === 'nueva'; }).length;
+  if (n === 0) return;
+  var inicio = ctx.ultimaFilaDestinos + 1;
+  var resp = Sheets.Spreadsheets.Values.batchGet(libroId, {
+    ranges: [rangoA1_(CONFIG.SHEETS.DESTINOS, 'A', inicio, 'A', inicio + n - 1)],
+    valueRenderOption: 'UNFORMATTED_VALUE', majorDimension: 'ROWS',
+  });
+  if (!estaVacio_(((resp.valueRanges || [])[0] || {}).values)) throw hayCambioError_();
+}
+
+/** Antes de escribir: los contratos a cambiar siguen siendo los que se vieron, y las filas nuevas siguen vacías. */
+function verificarContratos_(plan, ctx, libroC) {
+  var nuevas = plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'nueva'; }).length;
+  var cambios = plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'reemplaza'; });
+  var rangos = [];
+  if (nuevas > 0) rangos.push(rangoA1_(CONFIG.SHEETS.CONTRATACION, 'A', ctx.ultimaFilaContratos + 1, 'A', ctx.ultimaFilaContratos + nuevas));
+  cambios.forEach(function (f) { rangos.push(rangoA1_(CONFIG.SHEETS.CONTRATACION, 'A', f.filaLibro, 'G', f.filaLibro)); });
+  if (rangos.length === 0) return;
+  var rs = (Sheets.Spreadsheets.Values.batchGet(libroC, {
+    ranges: rangos, valueRenderOption: 'UNFORMATTED_VALUE', majorDimension: 'ROWS',
+  }) || {}).valueRanges || [];
+  var i = 0;
+  if (nuevas > 0 && !estaVacio_((rs[i++] || {}).values)) throw hayCambioError_();
+  cambios.forEach(function (f) {
+    var v = ((rs[i++] || {}).values || [[]])[0] || [];
+    var p = f.previo;
+    var igual = normalizeText_(v[0]) === normalizeText_(p.id) && (textoOrNull_(v[2]) || null) === (p.objeto || null) &&
+      (estadoContratoCarga_(v[6]) || textoOrNull_(v[6])) === p.estado;
+    if (!igual) throw hayCambioError_();
+  });
+}
+
 function escribirDistribucion_(plan, ctx, libroId) {
   var datos = [];
   var nuevas = [];
@@ -707,13 +1121,14 @@ function registrarCarga_(libroId, resumen) {
   var hoja = ss.getSheetByName(nombre);
   if (!hoja) {
     hoja = ss.insertSheet(nombre);
-    hoja.appendRow(['cuando', 'filas_nuevas', 'filas_completadas', 'filas_repetidas', 'filas_con_problema', 'que_hace_falta', 'totales', 'fuente', 'filas_reemplazadas', 'conflictos_dejados']);
+    hoja.appendRow(['cuando', 'filas_nuevas', 'filas_completadas', 'filas_repetidas', 'filas_con_problema', 'que_hace_falta', 'totales', 'fuente', 'filas_reemplazadas', 'conflictos_dejados', 'contratos_nuevos', 'contratos_cambiados', 'destinos_nuevos']);
     hoja.hideSheet();
   }
   hoja.appendRow([
     Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
     resumen.nuevas, resumen.completadas, resumen.repetidas, resumen.conProblema, resumen.faltantes, resumen.totales, resumen.fuente || '',
     resumen.reemplazadas || 0, resumen.conservadas || 0,
+    resumen.contratosNuevos || 0, resumen.contratosCambiados || 0, resumen.destinosNuevos || 0,
   ]);
 }
 
@@ -808,16 +1223,34 @@ function aplicarCarga_(carga, decisiones) {
     var plan = planificarCarga_(carga, ctx);
     if (plan.errores.length > 0) throw amistoso_(plan.errores[0]);
     if (plan.distribucion) aplicarDecisiones_(plan, decisiones);
+    if (plan.contratacion) aplicarDecisionesContratos_(plan, decisiones);
     if (!cargaTieneAlgoParaEscribir_(plan)) throw amistoso_('No hay nada nuevo para cargar. Lo que se dejó como «conservar» queda como está en el libro.');
 
     var libroId = idLibroOficial_();
     var libroF = idLibroFaltantes_();
     var res = {
       nuevas: 0, completadas: 0, repetidas: 0, conProblema: 0, faltantes: 0, totales: 0, reemplazadas: 0, conservadas: 0,
+      contratosNuevos: 0, contratosCambiados: 0, contratosDejados: 0, destinosNuevos: 0,
       fuente: carga.fuente,
     };
+    var libroC = idLibroContratacion_();
 
+    // Primero se comprueba todo; solo si el libro sigue como se vio, se escribe.
     if (plan.distribucion) verificarSinCambios_(plan, ctx, libroId);
+    if (plan.destinosNuevos) verificarDestinos_(plan, ctx, libroId);
+    if (plan.contratacion) verificarContratos_(plan, ctx, libroC);
+
+    // Los destinos van primero: los envíos de esta carga ya se clasifican con ellos.
+    if (plan.destinosNuevos) res.destinosNuevos = escribirDestinos_(plan, ctx, libroId);
+    if (plan.contratacion) {
+      res.contratosNuevos = escribirContratos_(plan, ctx, libroC);
+      res.contratosCambiados = plan.contratacion.resumen.reemplazan || 0;
+      res.contratosDejados = plan.contratacion.resumen.conservadas || 0;
+      try {
+        registrarReemplazosContratos_(libroC, plan.contratacion.filas.filter(function (f) { return f.estadoFila === 'reemplaza'; })
+          .map(function (f) { return f.previo; }));
+      } catch (e) { Logger.log('No se pudo guardar lo reemplazado de contratos: ' + e); }
+    }
     if (plan.distribucion) {
       res.completadas = plan.distribucion.resumen.completan;
       res.repetidas = plan.distribucion.resumen.duplicadas;
