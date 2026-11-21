@@ -1,7 +1,7 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime, r as useQueryClient, t as useQuery } from "../_libs/react+tanstack__react-query.mjs";
 import { C as ArrowUp, S as BedDouble, _ as Droplets, a as Search, b as ChevronLeft, c as Package, d as MapPin, f as House, g as ExternalLink, h as FilePenLine, i as ShieldCheck, l as Menu, m as FileText, n as Warehouse, p as HandHeart, r as Shirt, s as PawPrint, t as X, u as Map$1, v as CookingPot, w as Apple, x as ChevronDown } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-Diho0whl.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-B6-C6fM5.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var __defProp = Object.defineProperty;
@@ -1843,7 +1843,7 @@ function Fila({ categoria: c, indice, abierta, controla, onToggle }) {
 * cliente dibujan los dos el marcador de carga.
 * -----------------------------------------------------------------------
 */
-var cargarMapa = () => import("./MapaToneladas-BMTRAO_J.mjs");
+var cargarMapa = () => import("./MapaToneladas-DXhh6MyD.mjs");
 var Mapa = (0, import_react.lazy)(() => cargarMapa().then((modulo) => ({ default: modulo.MapaToneladas })));
 /** Cuánto antes de llegar se monta. Un poco más de una pantalla. */
 var MARGEN_ANTICIPADO = "800px 0px";
@@ -2082,16 +2082,51 @@ function useContratacion() {
 *   el backend armó la respuesta, no la de los contratos.
 *
 * Sin contratos (hoja vacía o aún no creada) o con la consulta caída, la
-* sección no se dibuja.
+* sección NO desaparece: dice «Próximamente». El menú lleva a esta sección, y
+* una sección que aparece y desaparece según los datos deja un enlace roto.
+* Mientras llegan los datos, ocupa su lugar para que nada salte.
 * -----------------------------------------------------------------------
 */
 /** Cuántos contratos se ven antes de pedir «Ver todos». */
 var VISIBLES = 8;
 var NO_INFORMADO = "No informado";
+/** Lo que se ve mientras no haya contratos publicados: la sección sigue ahí, con su lugar en el menú. */
+function ContratosProximamente() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("section", {
+		id: "contratacion",
+		className: "vc-seccion bg-[#F2FAFD]",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(Banda, {
+			tono: "cyan",
+			primera: true,
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)(SectionTitle, {
+					tono: "cyan",
+					children: ["Contratos de la ", /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resaltado, {
+						variante: "crema",
+						children: "emergencia"
+					})]
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "mt-6 inline-block rounded-full bg-[#FBF8C6] px-5 py-2 text-lg font-extrabold uppercase tracking-[0.08em] text-[#0079C1]",
+					children: "Próximamente"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(SectionIntro, {
+					tono: "cyan",
+					children: "Aquí se publicarán los contratos celebrados para atender la emergencia, cada uno con su enlace a SECOP."
+				})
+			]
+		})
+	});
+}
 function ContratacionSection() {
-	const { data } = useContratacion();
+	const { data, isPending } = useContratacion();
 	const [verTodos, setVerTodos] = (0, import_react.useState)(false);
-	if (!data || data.contratos.length === 0) return null;
+	if (isPending) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cargando, {
+		id: "contratacion",
+		className: "min-h-[24rem] bg-[#F2FAFD]",
+		texto: "Cargando los contratos…"
+	});
+	if (!data || data.contratos.length === 0) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ContratosProximamente, {});
 	const { contratos, totalContratos, valorTotalInformado, sinValorInformado } = data;
 	const visibles = verTodos ? contratos : contratos.slice(0, VISIBLES);
 	const conValor = totalContratos - sinValorInformado;

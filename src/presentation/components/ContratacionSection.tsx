@@ -28,7 +28,9 @@
  *   el backend armó la respuesta, no la de los contratos.
  *
  * Sin contratos (hoja vacía o aún no creada) o con la consulta caída, la
- * sección no se dibuja.
+ * sección NO desaparece: dice «Próximamente». El menú lleva a esta sección, y
+ * una sección que aparece y desaparece según los datos deja un enlace roto.
+ * Mientras llegan los datos, ocupa su lugar para que nada salte.
  * -----------------------------------------------------------------------
  */
 import { useState } from "react";
@@ -36,18 +38,47 @@ import { ExternalLink } from "lucide-react";
 import { useContratacion } from "@/application/hooks/useContratacion";
 import type { Contrato } from "@/domain/entities";
 import { pesos } from "@/lib/formato";
-import { Aviso, Banda, Resaltado, SectionIntro, SectionTitle } from "./storyPrimitives";
+import { Aviso, Banda, Cargando, Resaltado, SectionIntro, SectionTitle } from "./storyPrimitives";
 
 /** Cuántos contratos se ven antes de pedir «Ver todos». */
 const VISIBLES = 8;
 
 const NO_INFORMADO = "No informado";
 
+/** Lo que se ve mientras no haya contratos publicados: la sección sigue ahí, con su lugar en el menú. */
+function ContratosProximamente() {
+  return (
+    <section id="contratacion" className="vc-seccion bg-[#F2FAFD]">
+      <Banda tono="cyan" primera>
+        <SectionTitle tono="cyan">
+          Contratos de la <Resaltado variante="crema">emergencia</Resaltado>
+        </SectionTitle>
+        <p className="mt-6 inline-block rounded-full bg-[#FBF8C6] px-5 py-2 text-lg font-extrabold uppercase tracking-[0.08em] text-[#0079C1]">
+          Próximamente
+        </p>
+        <SectionIntro tono="cyan">
+          Aquí se publicarán los contratos celebrados para atender la emergencia, cada uno con su
+          enlace a SECOP.
+        </SectionIntro>
+      </Banda>
+    </section>
+  );
+}
+
 export function ContratacionSection() {
-  const { data } = useContratacion();
+  const { data, isPending } = useContratacion();
   const [verTodos, setVerTodos] = useState(false);
 
-  if (!data || data.contratos.length === 0) return null;
+  if (isPending) {
+    return (
+      <Cargando
+        id="contratacion"
+        className="min-h-[24rem] bg-[#F2FAFD]"
+        texto="Cargando los contratos…"
+      />
+    );
+  }
+  if (!data || data.contratos.length === 0) return <ContratosProximamente />;
 
   const { contratos, totalContratos, valorTotalInformado, sinValorInformado } = data;
   const visibles = verTodos ? contratos : contratos.slice(0, VISIBLES);
