@@ -38,8 +38,8 @@ var _spreadsheetId_ = null;
  *   LIBRO_BASE_ID          el libro enlazado al script. Si no está, se usa
  *                          el que el script tiene abierto (producción).
  *   LIBRO_OFICIAL_ID       el libro de despachos (hoja DESPACHOS). Obligatoria.
- *   LIBRO_CONTRATACION_ID  el libro con la hoja CONTRATACION. Si no está,
- *                          la hoja se busca en el libro base.
+ *   LIBRO_CONTRATACION_ID  OPCIONAL. La hoja CONTRATACION está en el libro oficial;
+ *                          solo se pone si se separa en otro libro.
  *   LIBRO_FALTANTES_ID     OPCIONAL. Las hojas QUE_HACE_FALTA y TOTALES están
  *                          en el libro oficial; solo se pone si se separan.
  */
@@ -68,9 +68,13 @@ function idLibroFaltantes_() {
   return propiedadDelScript_(PROP_LIBRO_FALTANTES_) || idLibroOficial_() || spreadsheetId_();
 }
 
-/** La propiedad, o el libro base. null si no hay ninguno: la hoja no se puede leer. */
+/**
+ * La hoja CONTRATACION vive en el libro OFICIAL, con los despachos. Si algún día se
+ * separa, la propiedad LIBRO_CONTRATACION_ID apunta al otro libro. null si no hay
+ * ninguno: la hoja no se puede leer.
+ */
 function idLibroContratacion_() {
-  return propiedadDelScript_(PROP_LIBRO_CONTRATACION_) || spreadsheetId_();
+  return propiedadDelScript_(PROP_LIBRO_CONTRATACION_) || idLibroOficial_() || spreadsheetId_();
 }
 
 /**

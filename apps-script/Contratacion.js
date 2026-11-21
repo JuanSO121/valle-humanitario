@@ -39,17 +39,17 @@
 var RE_URL_SECOP_ = /^https?:\/\/[^\s]+$/i;
 
 /**
- * Las filas de la hoja CONTRATACION, esté donde esté: en su propio libro
- * (propiedad LIBRO_CONTRATACION_ID) o en el libro base. El resto de este
+ * Las filas de la hoja CONTRATACION, esté donde esté: en el libro oficial (lo
+ * normal) o en uno aparte (propiedad LIBRO_CONTRATACION_ID). El resto de este
  * archivo no sabe de dónde vienen las filas.
  */
 function filasDeContratacion_() {
   var libroId = idLibroContratacion_();
   var nombre = CONFIG.SHEETS.CONTRATACION;
-  if (!libroId) throw new Error('No existe la hoja "' + nombre + '": no hay libro de contratación configurado.');
+  if (!libroId) throw new Error('No existe la hoja "' + nombre + '": no hay libro configurado.');
 
   var pestanas = leerPestanasDeLibro_(libroId, function (n) { return n === nombre; });
-  if (pestanas.length === 0) throw new Error('No existe la hoja "' + nombre + '" en el libro de contratación.');
+  if (pestanas.length === 0) throw new Error('No existe la hoja "' + nombre + '" en el libro de despachos (o en el de contratación, si se separó).');
   return filasAObjetos_(pestanas[0].matriz, null);
 }
 

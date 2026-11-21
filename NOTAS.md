@@ -1,6 +1,6 @@
 # Notas del tablero v2
 
-Dos bases: **Excel oficial de despachos** y **hoja CONTRATACION** (más la plantilla QUE_HACE_FALTA).
+Una sola base: el **Excel oficial de despachos**, con las hojas DESPACHOS, QUE_HACE_FALTA, TOTALES y CONTRATACION.
 Plan completo y reglas de datos: `apps-script/Config.js` (todas las reglas viven ahí) y `docs/`.
 
 ## Pendiente del cliente (el tablero funciona con valores por defecto)
@@ -25,9 +25,9 @@ Plan completo y reglas de datos: `apps-script/Config.js` (todas las reglas viven
 
 ## Libros generados (`docs/excel/`, no se suben a git)
 - `OFICIAL_despachos_consolidado.xlsx` — base plana `DESPACHOS` (1.906 filas) + reglas `DESTINOS`/`FAMILIAS`.
-- `CONTRATACION_contratos.xlsx` — hoja `CONTRATACION`.
+- `CONTRATACION_contratos.xlsx` — libro antiguo de contratos: su hoja `CONTRATACION` ya está DENTRO del libro oficial (decisión del cliente).
 - `QUE_HACE_FALTA` y `TOTALES` viven DENTRO de `OFICIAL_despachos_consolidado.xlsx` (decisión del cliente: un solo libro
-  de datos; contratos aparte). Riesgo: quien edita la plantilla podría tocar `DESPACHOS`; se protegen las demás hojas.
+  de datos; los contratos también, hoja `CONTRATACION`). Riesgo: quien edita la plantilla podría tocar `DESPACHOS`; se protegen las demás hojas.
   No volver a generar el archivo entero al recargar: se agregan filas. La plantilla suelta quedó en `docs/excel/otros/`.
 - `ANTERIOR_excel_viejo_hasta_24ago.xlsx` — solo consulta, advertencia en rojo en cada hoja; no suma al total.
 
