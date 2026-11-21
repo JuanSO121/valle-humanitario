@@ -102,7 +102,7 @@ export function esRutaDelTablero(url: URL): boolean {
   return url.pathname === RUTA_PUBLICA;
 }
 
-function urlDelWebApp(env: unknown): string | null {
+export function urlDelWebApp(env: unknown): string | null {
   if (env && typeof env === "object") {
     const valor = (env as Record<string, unknown>)["TABLERO_V2_API_URL"];
     if (typeof valor === "string" && valor) return valor;

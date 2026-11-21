@@ -20,6 +20,8 @@ var CONFIG = {
     TOTALES: 'TOTALES',
     ESTIMADO: 'ESTIMADO_ANTERIOR',
     MEZCLA: 'MEZCLA_ANTERIOR',
+    // Registro de cada carga hecha desde /admin (hoja oculta; se crea sola).
+    CARGAS: 'CARGAS',
   },
 
   // Los días del 11 al 24 de agosto vienen del Excel anterior solo con fecha y

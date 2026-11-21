@@ -90,15 +90,28 @@ function leerFaltantes_() {
   var libroId = idLibroFaltantes_();
   var nombre = CONFIG.SHEETS.FALTANTES;
   if (!libroId) return { filas: [], advertencias: ['No hay libro de plantilla configurado.'], existe: false };
-  // La plantilla y, en el mismo libro, FAMILIAS: de ahí sale qué incluye cada categoría.
+  // La plantilla y FAMILIAS: de FAMILIAS sale qué incluye cada categoría. FAMILIAS
+  // está en el libro de despachos; la plantilla puede estar en el mismo libro o
+  // en uno aparte (LIBRO_FALTANTES_ID).
+  var libroOficial = idLibroOficial_();
+  var aparte = !!libroOficial && libroOficial !== libroId;
   var pestanas = leerPestanasDeLibro_(libroId, function (n) {
-    return n === nombre || n === CONFIG.SHEETS.FAMILIAS;
+    return n === nombre || (!aparte && n === CONFIG.SHEETS.FAMILIAS);
   });
   var plantilla = pestanas.filter(function (p) { return p.nombre === nombre; })[0];
   if (!plantilla) return { filas: [], advertencias: ['La hoja ' + nombre + ' no existe.'], existe: false };
   var leido = parsearFaltantes_(plantilla.matriz);
   leido.existe = true;
-  var hojaFamilias = pestanas.filter(function (p) { return p.nombre === CONFIG.SHEETS.FAMILIAS; })[0];
+  var hojaFamilias = null;
+  try {
+    var deFamilias = aparte
+      ? leerPestanasDeLibro_(libroOficial, function (n) { return n === CONFIG.SHEETS.FAMILIAS; })
+      : pestanas;
+    hojaFamilias = deFamilias.filter(function (p) { return p.nombre === CONFIG.SHEETS.FAMILIAS; })[0] || null;
+  } catch (err) {
+    // Sin FAMILIAS la sección sigue: solo faltan las listas de «Incluye».
+    Logger.log('Faltantes: no se pudo leer FAMILIAS: ' + err);
+  }
   leido.incluye = incluyePorCategoria_(hojaFamilias ? filasAObjetos_(hojaFamilias.matriz, null) : []);
   return leido;
 }

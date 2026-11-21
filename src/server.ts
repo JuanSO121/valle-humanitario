@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { esRutaAdmin, manejarAdmin } from "./lib/proxyAdmin";
 import { esRutaDelTablero, manejarTablero } from "./lib/proxyTablero";
 
 type ServerEntry = {
@@ -55,6 +56,21 @@ export default {
      * personas, y el repositorio del frontend no sabría leerla.
      */
     const url = new URL(request.url);
+    // La carga de datos (/api/admin) también se atiende antes del render.
+    if (esRutaAdmin(url)) {
+      try {
+        return await manejarAdmin(request, env);
+      } catch (error) {
+        console.error("[admin] Error inesperado:", error instanceof Error ? error.name : "error");
+        return new Response(
+          JSON.stringify({ error: true, status: 500, message: "Error interno." }),
+          {
+            status: 500,
+            headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+          },
+        );
+      }
+    }
     if (esRutaDelTablero(url)) {
       try {
         return await manejarTablero(request, env, ctx);
