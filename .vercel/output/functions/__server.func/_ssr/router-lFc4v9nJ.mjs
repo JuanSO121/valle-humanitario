@@ -2,10 +2,10 @@ import { n as __exportAll } from "../_runtime.mjs";
 import { i as require_jsx_runtime, n as QueryClientProvider } from "../_libs/react+tanstack__react-query.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
 import { c as HeadContent, d as Outlet, f as lazyRouteComponent, m as createRootRouteWithContext, p as createFileRoute, s as Scripts, u as createRouter } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-MFr4QbVh.js
-var router_MFr4QbVh_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
+//#region node_modules/.nitro/vite/services/ssr/assets/router-lFc4v9nJ.js
+var router_lFc4v9nJ_exports = /* @__PURE__ */ __exportAll({ getRouter: () => getRouter });
 var import_jsx_runtime = require_jsx_runtime();
-var Route$1 = createRootRouteWithContext()({
+var Route$2 = createRootRouteWithContext()({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
@@ -81,7 +81,7 @@ function PaginaNoEncontrada() {
 	});
 }
 function RootComponent() {
-	const { queryClient } = Route$1.useRouteContext();
+	const { queryClient } = Route$2.useRouteContext();
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(QueryClientProvider, {
 		client: queryClient,
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("html", {
@@ -107,9 +107,9 @@ function RootComponent() {
 * <head> final).
 * -----------------------------------------------------------------------
 */
-var $$splitComponentImporter = () => import("./routes-Diho0whl.mjs").then((n) => n.t);
-var rootRouteChildren = { IndexRoute: createFileRoute("/")({
-	component: lazyRouteComponent($$splitComponentImporter, "component"),
+var $$splitComponentImporter$1 = () => import("./routes-Diho0whl.mjs").then((n) => n.t);
+var Route$1 = createFileRoute("/")({
+	component: lazyRouteComponent($$splitComponentImporter$1, "component"),
 	head: () => ({ meta: [
 		{ title: "Ayudas Humanitarias — Terremoto Valle del Cauca | Gobernación del Valle" },
 		{
@@ -141,12 +141,35 @@ var rootRouteChildren = { IndexRoute: createFileRoute("/")({
 			content: "summary"
 		}
 	] })
-}).update({
-	id: "/",
-	path: "/",
-	getParentRoute: () => Route$1
-}) };
-var routeTree = Route$1._addFileChildren(rootRouteChildren)._addFileTypes();
+});
+/**
+* routes/admin.tsx
+* -----------------------------------------------------------------------
+* /admin — carga de datos protegida por clave. No tiene enlaces desde el
+* resto del sitio y pide a los buscadores que no la indexen.
+* -----------------------------------------------------------------------
+*/
+var $$splitComponentImporter = () => import("./admin-B5uEBjej.mjs");
+var Route = createFileRoute("/admin")({
+	component: lazyRouteComponent($$splitComponentImporter, "component"),
+	head: () => ({ meta: [{ title: "Cargar datos · Ruta de la Solidaridad" }, {
+		name: "robots",
+		content: "noindex, nofollow"
+	}] })
+});
+var rootRouteChildren = {
+	IndexRoute: Route$1.update({
+		id: "/",
+		path: "/",
+		getParentRoute: () => Route$2
+	}),
+	AdminRoute: Route.update({
+		id: "/admin",
+		path: "/admin",
+		getParentRoute: () => Route$2
+	})
+};
+var routeTree = Route$2._addFileChildren(rootRouteChildren)._addFileTypes();
 var getRouter = () => {
 	const queryClient = new QueryClient();
 	return createRouter({
@@ -157,4 +180,4 @@ var getRouter = () => {
 	});
 };
 //#endregion
-export { getRouter, router_MFr4QbVh_exports as t };
+export { getRouter, router_lFc4v9nJ_exports as t };
