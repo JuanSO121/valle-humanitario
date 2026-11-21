@@ -415,6 +415,18 @@ function Revision({
   const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
   const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
   const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0) + aAgregar;
+  const general = plan.informacionGeneral;
+  const cifrasQueCambian =
+    general && general.errores.length === 0
+      ? [
+          general.recibidas.cambia && general.recibidas.despues !== null
+            ? `toneladas recibidas ${numero(general.recibidas.despues)}`
+            : null,
+          general.inventario.cambia && general.inventario.despues !== null
+            ? `toneladas en inventario ${numero(general.inventario.despues)}`
+            : null,
+        ].filter((x): x is string => x !== null)
+      : [];
 
   return (
     <section aria-labelledby="paso3" className="mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6">
@@ -521,6 +533,9 @@ function Revision({
               )}
               {plan.queHaceFalta?.reemplaza && (
                 <>La lista de «Qué hace falta» se reemplazará por la nueva. </>
+              )}
+              {cifrasQueCambian.length > 0 && (
+                <>Se cambiarán las cifras generales: {cifrasQueCambian.join(" y ")}. </>
               )}
             </p>
             {sinDecidir > 0 && (

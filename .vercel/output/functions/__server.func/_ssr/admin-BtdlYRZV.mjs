@@ -1,6 +1,6 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-W2kFnzSO.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-BtdlYRZV.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -309,6 +309,8 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 	const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
 	const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
 	const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0) + aAgregar;
+	const general = plan.informacionGeneral;
+	const cifrasQueCambian = general && general.errores.length === 0 ? [general.recibidas.cambia && general.recibidas.despues !== null ? `toneladas recibidas ${numero(general.recibidas.despues)}` : null, general.inventario.cambia && general.inventario.despues !== null ? `toneladas en inventario ${numero(general.inventario.despues)}` : null].filter((x) => x !== null) : [];
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		"aria-labelledby": "paso3",
 		className: "mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6",
@@ -416,7 +418,12 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 									" "
 								]
 							}),
-							plan.queHaceFalta?.reemplaza && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: "La lista de «Qué hace falta» se reemplazará por la nueva. " })
+							plan.queHaceFalta?.reemplaza && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: "La lista de «Qué hace falta» se reemplazará por la nueva. " }),
+							cifrasQueCambian.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								"Se cambiarán las cifras generales: ",
+								cifrasQueCambian.join(" y "),
+								". "
+							] })
 						]
 					}),
 					sinDecidir > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
