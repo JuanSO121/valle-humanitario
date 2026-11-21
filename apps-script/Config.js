@@ -22,6 +22,8 @@ var CONFIG = {
     MEZCLA: 'MEZCLA_ANTERIOR',
     // Registro de cada carga hecha desde /admin (hoja oculta; se crea sola).
     CARGAS: 'CARGAS',
+    // Cómo estaba cada fila antes de ser reemplazada desde /admin (hoja oculta; se crea sola).
+    REEMPLAZOS: 'REEMPLAZOS',
   },
 
   // Los días del 11 al 24 de agosto vienen del Excel anterior solo con fecha y

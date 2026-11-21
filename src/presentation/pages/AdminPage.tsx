@@ -17,7 +17,21 @@
  */
 import { useId, useMemo, useRef, useState } from "react";
 
-type EstadoFila = "nueva" | "completa" | "duplicada" | "error";
+type EstadoFila = "nueva" | "completa" | "duplicada" | "error" | "conflicto";
+type Decision = "conservar" | "reemplazar" | "agregar";
+type Decisiones = Record<number, Decision>;
+
+interface ExistenteConflicto {
+  fila: number;
+  fecha: string;
+  destino: string;
+  familia: string;
+  producto: string | null;
+  presentacion: string | null;
+  cantidad: number | null;
+  kilosUnitario: number | null;
+  kilosTotal: number;
+}
 
 interface FilaDistribucion {
   n: number;
@@ -26,10 +40,12 @@ interface FilaDistribucion {
   familia: string | null;
   producto: string | null;
   cantidad: number | null;
+  kilosUnitario?: number | null;
   kilosTotal: number | null;
   dudas: boolean;
   observaciones: string | null;
   estado: EstadoFila;
+  conflicto?: { tipo: "peso" | "nombre"; existentes: ExistenteConflicto[]; total: number };
   filaLibro: number | null;
   avisos: string[];
   errores: string[];
@@ -72,6 +88,7 @@ interface Plan {
       conProblema: number;
       conAviso: number;
       posiblesRepetidas?: number;
+      conflictos?: number;
     };
   } | null;
 }
@@ -91,12 +108,14 @@ const MAX_BYTES = 2_500_000;
 const POR_PAGINA = 25;
 const ETIQUETA_ESTADO: Record<EstadoFila, string> = {
   nueva: "Se agrega",
+  conflicto: "Conflicto: decida",
   completa: "Completa una fila pendiente",
   duplicada: "Ya está, no se repite",
   error: "No se carga",
 };
 const COLOR_ESTADO: Record<EstadoFila, string> = {
   nueva: "bg-[#E4F4E4] text-[#1D6B2E]",
+  conflicto: "bg-[#FFE9CC] text-[#8A4B00]",
   completa: "bg-[#E7F1FB] text-[#0A5A99]",
   duplicada: "bg-[#EEF0F2] text-[#4A5A66]",
   error: "bg-[#FBEBEB] text-[#A3261F]",
@@ -105,11 +124,16 @@ const COLOR_ESTADO: Record<EstadoFila, string> = {
 const numero = (n: number | null) =>
   n === null || n === undefined ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
 
-async function llamar(accion: "revisar" | "aplicar", clave: string, carga: unknown) {
+async function llamar(
+  accion: "revisar" | "aplicar",
+  clave: string,
+  carga: unknown,
+  decisiones?: Decisiones,
+) {
   const respuesta = await fetch("/api/admin", {
     method: "POST",
     headers: { "content-type": "application/json", "x-admin-clave": clave },
-    body: JSON.stringify({ accion, carga }),
+    body: JSON.stringify({ accion, carga, decisiones }),
   });
   let datos: { error?: boolean; message?: string } | null = null;
   try {
@@ -137,6 +161,7 @@ export function AdminPage() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [confirmado, setConfirmado] = useState(false);
+  const [decisiones, setDecisiones] = useState<Decisiones>({});
   const entradaArchivo = useRef<HTMLInputElement>(null);
 
   const ocupado = fase === "revisando" || fase === "cargando";
@@ -148,6 +173,7 @@ export function AdminPage() {
     setPlan(null);
     setResultado(null);
     setConfirmado(false);
+    setDecisiones({});
     setProblema(null);
     setFase("inicio");
     if (entradaArchivo.current) entradaArchivo.current.value = "";
@@ -199,6 +225,7 @@ export function AdminPage() {
       const datos = (await llamar("revisar", clave, carga)) as unknown as Plan;
       setPlan(datos);
       setConfirmado(false);
+      setDecisiones({});
       setFase("revisado");
     } catch (e) {
       setProblema(e instanceof Error ? e.message : "No se pudo revisar el archivo.");
@@ -211,7 +238,7 @@ export function AdminPage() {
     setProblema(null);
     setFase("cargando");
     try {
-      const datos = (await llamar("aplicar", clave, carga)) as unknown as Resultado;
+      const datos = (await llamar("aplicar", clave, carga, decisiones)) as unknown as Resultado;
       setResultado(datos);
       setFase("listo");
     } catch (e) {
@@ -332,6 +359,8 @@ export function AdminPage() {
                 alConfirmar={setConfirmado}
                 cargando={fase === "cargando"}
                 alCargar={cargar}
+                decisiones={decisiones}
+                alDecidir={setDecisiones}
               />
             )}
           </>
@@ -349,16 +378,24 @@ function Revision({
   alConfirmar,
   cargando,
   alCargar,
+  decisiones,
+  alDecidir,
 }: {
   plan: Plan;
   confirmado: boolean;
   alConfirmar: (v: boolean) => void;
   cargando: boolean;
   alCargar: () => void;
+  decisiones: Decisiones;
+  alDecidir: (d: Decisiones) => void;
 }) {
   const secciones = useMemo(
     () =>
       [
+        (plan.distribucion?.resumen.conflictos ?? 0) > 0 && {
+          id: "conflictos",
+          nombre: `Conflictos (${plan.distribucion?.resumen.conflictos})`,
+        },
         plan.distribucion && { id: "distribucion", nombre: "Distribución" },
         plan.queHaceFalta && { id: "faltante", nombre: "Qué hace falta" },
         plan.informacionGeneral && { id: "general", nombre: "Información general" },
@@ -369,7 +406,15 @@ function Revision({
   const idConfirmar = useId();
 
   const d = plan.distribucion?.resumen;
-  const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0);
+  const conflictos = useMemo(
+    () => plan.distribucion?.filas.filter((f) => f.estado === "conflicto") ?? [],
+    [plan.distribucion],
+  );
+  const sinDecidir = conflictos.filter((f) => !decisiones[f.n]).length;
+  const aAgregar = conflictos.filter((f) => decisiones[f.n] === "agregar").length;
+  const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
+  const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
+  const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0) + aAgregar;
 
   return (
     <section aria-labelledby="paso3" className="mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6">
@@ -428,9 +473,14 @@ function Revision({
             ))}
           </div>
 
+          {plan.distribucion && activa === "conflictos" && (
+            <div id="panel-conflictos" role="tabpanel" aria-labelledby="pestana-conflictos">
+              <PanelConflictos filas={conflictos} decisiones={decisiones} alDecidir={alDecidir} />
+            </div>
+          )}
           {plan.distribucion && activa === "distribucion" && (
             <div id="panel-distribucion" role="tabpanel" aria-labelledby="pestana-distribucion">
-              <TablaDistribucion datos={plan.distribucion} />
+              <TablaDistribucion datos={plan.distribucion} decisiones={decisiones} />
             </div>
           )}
           {plan.queHaceFalta && activa === "faltante" && (
@@ -456,6 +506,13 @@ function Revision({
                   Se cargarán <b>{cuantas}</b> filas de distribución.{" "}
                 </>
               )}
+              {aReemplazar > 0 && (
+                <>
+                  Se <b>reemplazarán {aReemplazar}</b> filas que ya estaban en el libro (la anterior
+                  queda guardada).{" "}
+                </>
+              )}
+              {aDejar > 0 && <>{aDejar} conflictos se dejan como están en el libro. </>}
               {d && d.duplicadas > 0 && <>{d.duplicadas} ya estaban y no se repetirán. </>}
               {d && d.conProblema > 0 && (
                 <b className="text-[#A3261F]">
@@ -466,13 +523,19 @@ function Revision({
                 <>La lista de «Qué hace falta» se reemplazará por la nueva. </>
               )}
             </p>
+            {sinDecidir > 0 && (
+              <p role="alert" className="mt-3 font-bold text-[#8A4B00]">
+                Faltan {sinDecidir} conflictos por decidir. Vaya a la pestaña «Conflictos» y elija
+                qué hacer en cada uno.
+              </p>
+            )}
             <div className="mt-3 flex items-start gap-3">
               <input
                 id={idConfirmar}
                 type="checkbox"
                 checked={confirmado}
                 onChange={(e) => alConfirmar(e.target.checked)}
-                disabled={cargando}
+                disabled={cargando || sinDecidir > 0}
                 className="mt-1 size-5 shrink-0 accent-[#0079C1]"
               />
               <label htmlFor={idConfirmar} className="text-base leading-6">
@@ -482,7 +545,7 @@ function Revision({
             <button
               type="button"
               onClick={alCargar}
-              disabled={!confirmado || cargando}
+              disabled={!confirmado || cargando || sinDecidir > 0}
               className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#2E9E5B] px-6 py-2.5 text-base font-bold text-white transition-colors hover:bg-[#237A46] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {cargando ? "Cargando… no cierre esta página" : "Cargar al libro"}
@@ -529,14 +592,28 @@ const celda = "border-b border-[#123E5C]/10 px-3 py-2.5 text-left align-top text
 const cabecera =
   "bg-[#0079C1] px-3 py-2.5 text-left text-[13px] font-bold uppercase tracking-wide text-white";
 
-function TablaDistribucion({ datos }: { datos: NonNullable<Plan["distribucion"]> }) {
+const TEXTO_DECISION: Record<Decision, string> = {
+  conservar: "Se deja la del libro",
+  reemplazar: "Se cambia por la del archivo",
+  agregar: "Se agrega también",
+};
+
+function TablaDistribucion({
+  datos,
+  decisiones,
+}: {
+  datos: NonNullable<Plan["distribucion"]>;
+  decisiones: Decisiones;
+}) {
   const [soloAtencion, setSoloAtencion] = useState(false);
   const [pagina, setPagina] = useState(0);
   const idFiltro = useId();
   const filas = useMemo(
     () =>
       soloAtencion
-        ? datos.filas.filter((f) => f.estado === "error" || f.avisos.length > 0)
+        ? datos.filas.filter(
+            (f) => f.estado === "error" || f.estado === "conflicto" || f.avisos.length > 0,
+          )
         : datos.filas,
     [datos.filas, soloAtencion],
   );
@@ -558,6 +635,13 @@ function TablaDistribucion({ datos }: { datos: NonNullable<Plan["distribucion"]>
       <ul className="mt-4 grid gap-2 text-base sm:grid-cols-2 lg:grid-cols-4">
         <Resumen cifra={r.nuevas} texto="se agregan" color="text-[#1D6B2E]" />
         <Resumen cifra={r.completan} texto="completan una fila pendiente" color="text-[#0A5A99]" />
+        {(r.conflictos ?? 0) > 0 && (
+          <Resumen
+            cifra={r.conflictos ?? 0}
+            texto="en conflicto, hay que decidir"
+            color="text-[#8A4B00]"
+          />
+        )}
         <Resumen cifra={r.duplicadas} texto="ya estaban" color="text-[#4A5A66]" />
         <Resumen cifra={r.conProblema} texto="con problema, no se cargan" color="text-[#A3261F]" />
       </ul>
@@ -618,6 +702,11 @@ function TablaDistribucion({ datos }: { datos: NonNullable<Plan["distribucion"]>
                 <td className={celda}>{f.n}</td>
                 <td className={celda}>
                   <Chip estado={f.estado} />
+                  {f.estado === "conflicto" && (
+                    <div className="mt-1 text-[13px] font-semibold text-[#8A4B00]">
+                      {decisiones[f.n] ? TEXTO_DECISION[decisiones[f.n]!] : "Sin decidir"}
+                    </div>
+                  )}
                   {f.filaLibro && (
                     <div className="mt-1 text-[13px] text-[#35708F]">
                       fila {f.filaLibro} del libro
@@ -681,6 +770,224 @@ function TablaDistribucion({ datos }: { datos: NonNullable<Plan["distribucion"]>
         </nav>
       )}
     </div>
+  );
+}
+
+// --- conflictos ----------------------------------------------------------------
+
+const EXPLICACION_CONFLICTO = {
+  peso: "Mismo día, destino, tipo de ayuda y producto, pero con otro peso.",
+  nombre: "Mismo día, destino y peso, pero el producto o el tipo de ayuda está escrito distinto.",
+} as const;
+
+function PanelConflictos({
+  filas,
+  decisiones,
+  alDecidir,
+}: {
+  filas: FilaDistribucion[];
+  decisiones: Decisiones;
+  alDecidir: (d: Decisiones) => void;
+}) {
+  const [pagina, setPagina] = useState(0);
+  const POR = 10;
+  const paginas = Math.max(1, Math.ceil(filas.length / POR));
+  const actual = Math.min(pagina, paginas - 1);
+  const visibles = filas.slice(actual * POR, (actual + 1) * POR);
+  const sinDecidir = filas.filter((f) => !decisiones[f.n]).length;
+
+  const decidirTodas = (d: Decision) => {
+    const siguiente: Decisiones = { ...decisiones };
+    for (const f of filas) {
+      if (d === "reemplazar" && f.conflicto?.total !== 1) continue;
+      siguiente[f.n] = d;
+    }
+    alDecidir(siguiente);
+  };
+
+  return (
+    <div>
+      <p className="mt-4 rounded-xl bg-[#FFF1DC] px-4 py-3 text-base leading-6 text-[#6B3A00]">
+        <b>
+          {filas.length} envíos del archivo se parecen a uno que ya está en el libro, pero no son
+          iguales.
+        </b>{" "}
+        El sistema no puede saber si son el mismo envío o dos distintos. Decida qué hacer con cada
+        uno: no se carga ninguno sin su decisión.
+        {sinDecidir > 0 ? ` Faltan ${sinDecidir} por decidir.` : " Ya decidió todos."}
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Decidir todos a la vez">
+        <button type="button" onClick={() => decidirTodas("conservar")} className={botonSuave}>
+          Dejar todas las del libro
+        </button>
+        <button type="button" onClick={() => decidirTodas("reemplazar")} className={botonSuave}>
+          Cambiar todas por las del archivo
+        </button>
+        <button type="button" onClick={() => decidirTodas("agregar")} className={botonSuave}>
+          Son todos distintos: agregar todas
+        </button>
+      </div>
+
+      <ul className="mt-4 space-y-4">
+        {visibles.map((f) => (
+          <TarjetaConflicto
+            key={f.n}
+            fila={f}
+            decision={decisiones[f.n]}
+            alElegir={(d) => alDecidir({ ...decisiones, [f.n]: d })}
+          />
+        ))}
+      </ul>
+
+      {paginas > 1 && (
+        <nav
+          aria-label="Páginas de conflictos"
+          className="mt-3 flex items-center justify-between gap-3 text-base"
+        >
+          <button
+            type="button"
+            onClick={() => setPagina(Math.max(0, actual - 1))}
+            disabled={actual === 0}
+            className={botonSuave}
+          >
+            Anterior
+          </button>
+          <span>
+            Página {actual + 1} de {paginas}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPagina(Math.min(paginas - 1, actual + 1))}
+            disabled={actual >= paginas - 1}
+            className={botonSuave}
+          >
+            Siguiente
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}
+
+const botonSuave =
+  "min-h-11 rounded-lg bg-[#E7F1FB] px-4 text-[15px] font-bold text-[#0A5A99] transition-colors hover:bg-[#D3E7F8] disabled:opacity-40";
+
+function TarjetaConflicto({
+  fila: f,
+  decision,
+  alElegir,
+}: {
+  fila: FilaDistribucion;
+  decision: Decision | undefined;
+  alElegir: (d: Decision) => void;
+}) {
+  const nombre = useId();
+  const c = f.conflicto;
+  if (!c) return null;
+  const e = c.existentes[0];
+  const unica = c.total === 1;
+  const opciones: { valor: Decision; texto: string; permitida: boolean }[] = [
+    { valor: "conservar", texto: "Dejar la del libro (no cargar la del archivo)", permitida: true },
+    {
+      valor: "reemplazar",
+      texto: unica
+        ? "Cambiar la del libro por la del archivo (la anterior queda guardada)"
+        : "Cambiar la del libro por la del archivo (no disponible: se parece a varias filas)",
+      permitida: unica,
+    },
+    {
+      valor: "agregar",
+      texto: "Son dos envíos distintos: agregar también la del archivo",
+      permitida: true,
+    },
+  ];
+
+  const filasComparacion: { campo: string; libro: string; archivo: string }[] = e
+    ? [
+        { campo: "Fecha", libro: e.fecha, archivo: f.fecha ?? "—" },
+        { campo: "A dónde", libro: e.destino, archivo: f.destino ?? "—" },
+        { campo: "Tipo de ayuda", libro: e.familia, archivo: f.familia ?? "—" },
+        { campo: "Producto", libro: e.producto ?? "—", archivo: f.producto ?? "—" },
+        { campo: "Cantidad", libro: numero(e.cantidad), archivo: numero(f.cantidad) },
+        {
+          campo: "Kilos de cada uno",
+          libro: numero(e.kilosUnitario),
+          archivo: numero(f.kilosUnitario ?? null),
+        },
+        { campo: "Kilos en total", libro: numero(e.kilosTotal), archivo: numero(f.kilosTotal) },
+      ]
+    : [];
+
+  return (
+    <li
+      className={`rounded-xl border-2 p-4 ${decision ? "border-[#2E9E5B]/40 bg-white" : "border-[#E08A1E]/60 bg-[#FFFBF3]"}`}
+    >
+      <p className="text-base font-bold">
+        Fila {f.n} del archivo{e ? ` · fila ${e.fila} del libro` : ""}
+        {!unica && ` (y ${c.total - 1} más parecidas)`}
+      </p>
+      <p className="mt-0.5 text-[15px] text-[#6B3A00]">{EXPLICACION_CONFLICTO[c.tipo]}</p>
+
+      <Contenedor titulo={`Comparación de la fila ${f.n}`}>
+        <table className="w-full min-w-[420px] border-collapse">
+          <caption className="sr-only">
+            Lo que está en el libro frente a lo que trae el archivo
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" className={cabecera}></th>
+              <th scope="col" className={cabecera}>
+                En el libro
+              </th>
+              <th scope="col" className={cabecera}>
+                En el archivo
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filasComparacion.map((x) => {
+              const distinto = x.libro !== x.archivo;
+              return (
+                <tr key={x.campo}>
+                  <th scope="row" className={`${celda} font-semibold`}>
+                    {x.campo}
+                  </th>
+                  <td className={`${celda} ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`}>
+                    {x.libro}
+                  </td>
+                  <td className={`${celda} ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`}>
+                    {x.archivo}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Contenedor>
+
+      <fieldset className="mt-3">
+        <legend className="text-base font-bold">¿Qué hacer con esta fila?</legend>
+        <div className="mt-1 space-y-1.5">
+          {opciones.map((o) => (
+            <label
+              key={o.valor}
+              className={`flex items-start gap-3 text-base leading-6 ${o.permitida ? "" : "opacity-50"}`}
+            >
+              <input
+                type="radio"
+                name={nombre}
+                checked={decision === o.valor}
+                disabled={!o.permitida}
+                onChange={() => alElegir(o.valor)}
+                className="mt-1 size-5 shrink-0 accent-[#0079C1]"
+              />
+              <span>{o.texto}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    </li>
   );
 }
 

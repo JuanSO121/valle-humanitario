@@ -494,6 +494,14 @@ async function manejarAdmin(request, env) {
 	}
 	if (typeof pedido.accion !== "string" || !ACCIONES.has(pedido.accion)) return error("Acción no permitida.", 400);
 	if (!pedido.carga || typeof pedido.carga !== "object" || Array.isArray(pedido.carga)) return error("El archivo no tiene el formato esperado.", 400);
+	let decisiones = {};
+	if (pedido.decisiones !== void 0 && pedido.decisiones !== null) {
+		const d = pedido.decisiones;
+		if (typeof d !== "object" || Array.isArray(d)) return error("Las decisiones no tienen el formato esperado.", 400);
+		const entradas = Object.entries(d);
+		if (entradas.length > 5e3 || entradas.some(([k, v]) => !/^\d{1,5}$/.test(k) || typeof v !== "string")) return error("Las decisiones no tienen el formato esperado.", 400);
+		decisiones = Object.fromEntries(entradas);
+	}
 	const controlador = new AbortController();
 	const limite = setTimeout(() => controlador.abort(), TIEMPO_LIMITE_MS);
 	try {
@@ -505,7 +513,8 @@ async function manejarAdmin(request, env) {
 			body: JSON.stringify({
 				token,
 				accion: pedido.accion,
-				carga: pedido.carga
+				carga: pedido.carga,
+				decisiones
 			})
 		});
 		const crudo = await respuesta.text();
@@ -534,7 +543,7 @@ async function manejarAdmin(request, env) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-lhsCiU5Y.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-D_aB8D0E.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

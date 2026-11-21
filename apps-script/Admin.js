@@ -104,7 +104,7 @@ function doPost(e) {
     }
     resetSheetCache_();
     if (pedido.accion === 'revisar') return jsonResponse_(revisarCarga_(pedido.carga));
-    if (pedido.accion === 'aplicar') return jsonResponse_(aplicarCarga_(pedido.carga));
+    if (pedido.accion === 'aplicar') return jsonResponse_(aplicarCarga_(pedido.carga, pedido.decisiones));
     return errorResponse_('Acción desconocida.', 400);
   } catch (err) {
     if (err && err.amistoso) return errorResponse_(err.amistoso, 400);
@@ -163,6 +163,11 @@ function claveParecida_(fecha, destino, familia, producto) {
   return [fecha, normalizeText_(destino), normalizeText_(familia), normalizeText_(producto || '')].join('|');
 }
 
+/** Mismo día, destino y peso: para detectar un envío que se volvió a escribir con otro nombre de producto. */
+function claveDePeso_(fecha, destino, kg) {
+  return [fecha, normalizeText_(destino), (Math.round(kg * 1000) / 1000).toFixed(3)].join('|');
+}
+
 /** Lo que ya hay en DESPACHOS: para no repetir filas y para completar las pendientes. */
 function analizarDespachosExistentes_(matriz) {
   var enc = (matriz[0] || []).slice(0, 10).map(function (h) {
@@ -176,6 +181,7 @@ function analizarDespachosExistentes_(matriz) {
   var pendientes = Object.create(null);
   var porDia = Object.create(null);
   var parecidas = Object.create(null);
+  var porPeso = Object.create(null);
   var ultimaFila = 1;
   for (var i = 1; i < matriz.length; i++) {
     var f = matriz[i] || [];
@@ -192,12 +198,20 @@ function analizarDespachosExistentes_(matriz) {
       var k = claveDespacho_(fecha, destino, familia, textoOrNull_(f[3]), kg);
       existentes[k] = (existentes[k] || 0) + 1;
       porDia[fecha] = (porDia[fecha] || 0) + 1;
-      var kq = claveParecida_(fecha, destino, familia, textoOrNull_(f[3]));
-      (parecidas[kq] = parecidas[kq] || []).push(kg);
+      var existente = {
+        fila: i + 1, fecha: fecha, destino: destino, familia: familia, producto: textoOrNull_(f[3]),
+        presentacion: textoOrNull_(f[4]), cantidad: toNumberOrNull_(f[5]), kilosUnitario: toNumberOrNull_(f[6]),
+        kg: kg, observaciones: textoOrNull_(f[9]),
+      };
+      var kq = claveParecida_(fecha, destino, familia, existente.producto);
+      (parecidas[kq] = parecidas[kq] || []).push(existente);
+      var kw = claveDePeso_(fecha, destino, kg);
+      (porPeso[kw] = porPeso[kw] || []).push(existente);
     }
   }
   return {
-    existentes: existentes, pendientes: pendientes, porDia: porDia, parecidas: parecidas, ultimaFila: ultimaFila,
+    existentes: existentes, pendientes: pendientes, porDia: porDia, parecidas: parecidas, porPeso: porPeso,
+    ultimaFila: ultimaFila,
   };
 }
 
@@ -216,6 +230,7 @@ function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotal
     pendientes: analisis.pendientes,
     porDia: analisis.porDia,
     parecidas: analisis.parecidas,
+    porPeso: analisis.porPeso,
     ultimaFila: analisis.ultimaFila,
     faltantesActual: faltantesActual,
     faltantesFilas: filasFaltantes,
@@ -283,6 +298,33 @@ function planificarDistribucion_(filas, ctx) {
   var pendientes = {};
   Object.keys(ctx.pendientes).forEach(function (k) { pendientes[k] = ctx.pendientes[k].slice(); });
   var manana = sumarUnDia_(ctx.hoy);
+  // Filas del libro que todavía pueden entrar en un conflicto: las que ya se reconocieron como
+  // el mismo envío (duplicada exacta) salen de la lista para no chocar con ellas.
+  var restos = { parecidas: {}, porPeso: {} };
+  function disponibles_(indice, copia, clave) {
+    if (!(clave in copia)) copia[clave] = (indice[clave] || []).slice();
+    return copia[clave];
+  }
+  function consumir_(fecha, destino, familia, producto, kg) {
+    [[ctx.parecidas, restos.parecidas, claveParecida_(fecha, destino, familia, producto)],
+     [ctx.porPeso, restos.porPeso, claveDePeso_(fecha, destino, kg)]].forEach(function (par) {
+      var lista = disponibles_(par[0], par[1], par[2]);
+      for (var q = 0; q < lista.length; q++) {
+        if (lista[q].kg === kg && normalizeText_(lista[q].producto || '') === normalizeText_(producto || '') &&
+            normalizeText_(lista[q].familia) === normalizeText_(familia)) {
+          lista.splice(q, 1);
+          break;
+        }
+      }
+    });
+  }
+  function resumenExistente_(o) {
+    return {
+      fila: o.fila, fecha: o.fecha, destino: o.destino, familia: o.familia, producto: o.producto,
+      presentacion: o.presentacion, cantidad: o.cantidad, kilosUnitario: o.kilosUnitario, kilosTotal: o.kg,
+      observaciones: o.observaciones,
+    };
+  }
 
   filas.forEach(function (r, i) {
     r = r && typeof r === 'object' ? r : {};
@@ -358,6 +400,7 @@ function planificarDistribucion_(filas, ctx) {
       var k = claveDespacho_(fecha, tDestino.valor, tFamilia.valor, tProducto.valor, kg);
       if (existentes[k] > 0) {
         existentes[k] -= 1;
+        consumir_(fecha, tDestino.valor, tFamilia.valor, tProducto.valor, kg);
         fila.estado = 'duplicada';
       } else {
         var kp = fecha + '|' + normalizeText_(tDestino.valor);
@@ -368,18 +411,29 @@ function planificarDistribucion_(filas, ctx) {
           fila.filaLibro = p.fila;
           fila.observacionesPrevias = p.observaciones;
         } else {
-          // Va como fila nueva: avisar si puede estar repitiendo algo que ya se cargó.
-          var otras = ctx.parecidas[claveParecida_(fecha, tDestino.valor, tFamilia.valor, tProducto.valor)];
-          if (otras && otras.length > 0) {
-            fila.posibleRepeticion = true;
-            fila.avisos.push('Ya hay en el libro una fila igual (mismo día, destino, tipo de ayuda y producto) con otro peso: ' +
-              otras.slice(0, 3).join(', ') + ' kg. Si es la misma, quedaría repetida.');
-          } else if (ctx.porDia[fecha] > 0) {
-            fila.posibleRepeticion = true;
-            fila.avisos.push('Ese día ya tiene ' + ctx.porDia[fecha] + ' filas en el libro. Si este envío ya estaba cargado con otros datos, quedaría repetido.');
+          // ¿Se parece a algo que ya está pero no es igual? Eso no lo puede decidir el sistema: es un CONFLICTO.
+          var mismos = disponibles_(ctx.parecidas, restos.parecidas, claveParecida_(fecha, tDestino.valor, tFamilia.valor, tProducto.valor))
+            .filter(function (o) { return o.kg !== kg; });
+          var tipo = 'peso';
+          if (mismos.length === 0) {
+            tipo = 'nombre';
+            mismos = disponibles_(ctx.porPeso, restos.porPeso, claveDePeso_(fecha, tDestino.valor, kg));
           }
-          if (quedanPendientesDelDia_(pendientes, fecha)) {
-            fila.avisos.push('Ese día tiene despachos pendientes (del Excel anterior) que no coinciden con este destino: su cifra estimada seguirá contando además de este envío.');
+          if (mismos.length > 0) {
+            fila.estado = 'conflicto';
+            fila.conflicto = {
+              tipo: tipo,
+              existentes: mismos.slice(0, 3).map(resumenExistente_),
+              total: mismos.length,
+            };
+          } else {
+            if (ctx.porDia[fecha] > 0) {
+              fila.posibleRepeticion = true;
+              fila.avisos.push('Ese día ya tiene ' + ctx.porDia[fecha] + ' filas en el libro. Si este envío ya estaba cargado con otros datos, quedaría repetido.');
+            }
+            if (quedanPendientesDelDia_(pendientes, fecha)) {
+              fila.avisos.push('Ese día tiene despachos pendientes (del Excel anterior) que no coinciden con este destino: su cifra estimada seguirá contando además de este envío.');
+            }
           }
         }
       }
@@ -477,7 +531,7 @@ function planificarCarga_(carga, ctx) {
       plan.errores.push('«distribucion» tiene más de ' + CARGA_MAX_FILAS_ + ' filas. Divida el archivo.');
     } else {
       var dd = planificarDistribucion_(carga.distribucion, ctx);
-      var cuenta = { nueva: 0, completa: 0, duplicada: 0, error: 0 };
+      var cuenta = { nueva: 0, completa: 0, duplicada: 0, error: 0, conflicto: 0 };
       var conAviso = 0;
       var posiblesRepetidas = 0;
       dd.forEach(function (f) {
@@ -487,7 +541,8 @@ function planificarCarga_(carga, ctx) {
       });
       plan.distribucion = {
         filas: dd,
-        resumen: { nuevas: cuenta.nueva, completan: cuenta.completa, duplicadas: cuenta.duplicada, conProblema: cuenta.error, conAviso: conAviso, posiblesRepetidas: posiblesRepetidas },
+        resumen: { nuevas: cuenta.nueva, completan: cuenta.completa, duplicadas: cuenta.duplicada, conProblema: cuenta.error, conAviso: conAviso,
+          posiblesRepetidas: posiblesRepetidas, conflictos: cuenta.conflicto },
       };
     }
   }
@@ -514,7 +569,7 @@ function cargaTieneAlgoParaEscribir_(plan) {
   if (plan.queHaceFalta && plan.queHaceFalta.reemplaza) return true;
   if (plan.distribucion) {
     var r = plan.distribucion.resumen;
-    if (r.nuevas + r.completan > 0) return true;
+    if (r.nuevas + r.completan + (r.reemplazan || 0) > 0) return true;
   }
   return false;
 }
@@ -559,6 +614,8 @@ function verificarSinCambios_(plan, ctx, libroId) {
   var inicio = ctx.ultimaFila + 1;
   if (nuevas > 0) rangos.push(rangoA1_(CONFIG.SHEETS.DESPACHOS, 'A', inicio, 'A', inicio + nuevas - 1));
   completas.forEach(function (f) { rangos.push(rangoA1_(CONFIG.SHEETS.DESPACHOS, 'B', f.filaLibro, 'H', f.filaLibro)); });
+  var reemplazos = plan.distribucion.filas.filter(function (f) { return f.estado === 'reemplaza'; });
+  reemplazos.forEach(function (f) { rangos.push(rangoA1_(CONFIG.SHEETS.DESPACHOS, 'B', f.filaLibro, 'H', f.filaLibro)); });
   if (rangos.length === 0) return;
 
   var mensaje = 'El libro cambió mientras se preparaba la carga (alguien escribió, completó o borró filas). ' +
@@ -579,6 +636,14 @@ function verificarSinCambios_(plan, ctx, libroId) {
     // B..H: destino, familia, producto, presentación, cantidad, kilos de cada uno, kilos en total.
     if (!textoOrNull_(v[0]) || textoOrNull_(v[1]) || toNumberOrNull_(v[6]) !== null) throw amistoso_(mensaje);
   });
+  // Una fila que se va a reemplazar debe seguir siendo exactamente la que se vio en la revisión.
+  reemplazos.forEach(function (f) {
+    var v = ((rs[i++] || {}).values || [[]])[0] || [];
+    var p = f.previo;
+    var igual = normalizeText_(v[0]) === normalizeText_(p.destino) && normalizeText_(v[1]) === normalizeText_(p.familia) &&
+      toNumberOrNull_(v[6]) === p.kg;
+    if (!igual) throw amistoso_(mensaje);
+  });
 }
 
 function escribirDistribucion_(plan, ctx, libroId) {
@@ -588,6 +653,9 @@ function escribirDistribucion_(plan, ctx, libroId) {
     if (f.estado === 'completa') {
       var obs = f.observaciones || f.observacionesPrevias || '';
       datos.push({ range: rangoA1_(CONFIG.SHEETS.DESPACHOS, 'A', f.filaLibro, 'J', f.filaLibro), values: [valoresDeFila_(f, obs)] });
+    } else if (f.estado === 'reemplaza') {
+      var obsR = f.observaciones || f.previo.observaciones || '';
+      datos.push({ range: rangoA1_(CONFIG.SHEETS.DESPACHOS, 'A', f.filaLibro, 'J', f.filaLibro), values: [valoresDeFila_(f, obsR)] });
     } else if (f.estado === 'nueva') {
       nuevas.push(valoresDeFila_(f, f.observaciones));
     }
@@ -639,13 +707,80 @@ function registrarCarga_(libroId, resumen) {
   var hoja = ss.getSheetByName(nombre);
   if (!hoja) {
     hoja = ss.insertSheet(nombre);
-    hoja.appendRow(['cuando', 'filas_nuevas', 'filas_completadas', 'filas_repetidas', 'filas_con_problema', 'que_hace_falta', 'totales', 'fuente']);
+    hoja.appendRow(['cuando', 'filas_nuevas', 'filas_completadas', 'filas_repetidas', 'filas_con_problema', 'que_hace_falta', 'totales', 'fuente', 'filas_reemplazadas', 'conflictos_dejados']);
     hoja.hideSheet();
   }
   hoja.appendRow([
     Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'),
     resumen.nuevas, resumen.completadas, resumen.repetidas, resumen.conProblema, resumen.faltantes, resumen.totales, resumen.fuente || '',
+    resumen.reemplazadas || 0, resumen.conservadas || 0,
   ]);
+}
+
+/** Guarda cómo estaba cada fila antes de reemplazarla: así nada se pierde. */
+function registrarReemplazos_(libroId, previos) {
+  if (!previos || previos.length === 0) return;
+  var nombre = CONFIG.SHEETS.REEMPLAZOS;
+  var ss = SpreadsheetApp.openById(libroId);
+  var hoja = ss.getSheetByName(nombre);
+  if (!hoja) {
+    hoja = ss.insertSheet(nombre);
+    hoja.appendRow(['cuando', 'fila_del_libro', 'fecha', 'destino', 'familia', 'producto', 'presentacion', 'cantidad', 'kilos_de_cada_uno', 'kilos_en_total', 'observaciones']);
+    hoja.hideSheet();
+  }
+  var cuando = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  previos.forEach(function (p) {
+    hoja.appendRow([cuando, p.fila, p.fecha, p.destino, p.familia, p.producto || '', p.presentacion || '',
+      p.cantidad === null ? '' : p.cantidad, p.kilosUnitario === null ? '' : p.kilosUnitario, p.kg, p.observaciones || '']);
+  });
+}
+
+/**
+ * Aplica lo que la persona decidió en cada conflicto. Sin decisión, no se carga: nada se resuelve solo.
+ *   conservar   se deja la fila del libro y la del archivo no se carga
+ *   reemplazar  la fila del libro se cambia por la del archivo (la anterior queda guardada en REEMPLAZOS)
+ *   agregar     son envíos distintos: la del archivo se agrega también
+ */
+function aplicarDecisiones_(plan, decisiones) {
+  var d = decisiones && typeof decisiones === 'object' && !Array.isArray(decisiones) ? decisiones : {};
+  var cuenta = { reemplazan: 0, conservadas: 0 };
+  var reemplazadas = {};
+  plan.distribucion.filas.forEach(function (f) {
+    if (f.estado !== 'conflicto') return;
+    var eleccion = d[String(f.n)];
+    if (eleccion !== 'conservar' && eleccion !== 'reemplazar' && eleccion !== 'agregar') {
+      throw amistoso_('Falta decidir qué hacer con el conflicto de la fila ' + f.n + ' del archivo.');
+    }
+    if (eleccion === 'conservar') {
+      f.estado = 'conservada';
+      cuenta.conservadas += 1;
+    } else if (eleccion === 'agregar') {
+      f.estado = 'nueva';
+    } else {
+      if (f.conflicto.total !== 1) throw amistoso_('La fila ' + f.n + ' se parece a varias filas del libro: elija «agregar» o «conservar».');
+      var destinoFila = f.conflicto.existentes[0].fila;
+      if (reemplazadas[destinoFila]) {
+        throw amistoso_('Las filas ' + reemplazadas[destinoFila] + ' y ' + f.n + ' del archivo quieren reemplazar la misma fila del libro (la ' +
+          destinoFila + '). Elija «reemplazar» solo para una de las dos.');
+      }
+      reemplazadas[destinoFila] = f.n;
+      f.estado = 'reemplaza';
+      f.filaLibro = destinoFila;
+      f.previo = {
+        fila: f.filaLibro, fecha: f.conflicto.existentes[0].fecha, destino: f.conflicto.existentes[0].destino,
+        familia: f.conflicto.existentes[0].familia, producto: f.conflicto.existentes[0].producto,
+        presentacion: f.conflicto.existentes[0].presentacion, cantidad: f.conflicto.existentes[0].cantidad,
+        kilosUnitario: f.conflicto.existentes[0].kilosUnitario, kg: f.conflicto.existentes[0].kilosTotal,
+        observaciones: f.conflicto.existentes[0].observaciones,
+      };
+      cuenta.reemplazan += 1;
+    }
+  });
+  var r = plan.distribucion.resumen;
+  r.conflictos = 0;
+  r.reemplazan = cuenta.reemplazan;
+  r.conservadas = cuenta.conservadas;
+  r.nuevas = plan.distribucion.filas.filter(function (f) { return f.estado === 'nueva'; }).length;
 }
 
 /** Programa UNA publicación para el minuto siguiente: el tablero muestra lo cargado sin esperar a los 5 minutos. */
@@ -665,25 +800,35 @@ function publicarTrasCarga() {
   return precalentarAhora();
 }
 
-function aplicarCarga_(carga) {
+function aplicarCarga_(carga, decisiones) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(25000)) throw amistoso_('Hay otra carga en curso. Espere un momento y vuelva a intentar.');
   try {
     var ctx = leerContextoCarga_();
     var plan = planificarCarga_(carga, ctx);
     if (plan.errores.length > 0) throw amistoso_(plan.errores[0]);
-    if (!cargaTieneAlgoParaEscribir_(plan)) throw amistoso_('No hay nada nuevo para cargar.');
+    if (plan.distribucion) aplicarDecisiones_(plan, decisiones);
+    if (!cargaTieneAlgoParaEscribir_(plan)) throw amistoso_('No hay nada nuevo para cargar. Lo que se dejó como «conservar» queda como está en el libro.');
 
     var libroId = idLibroOficial_();
     var libroF = idLibroFaltantes_();
-    var res = { nuevas: 0, completadas: 0, repetidas: 0, conProblema: 0, faltantes: 0, totales: 0, fuente: carga.fuente };
+    var res = {
+      nuevas: 0, completadas: 0, repetidas: 0, conProblema: 0, faltantes: 0, totales: 0, reemplazadas: 0, conservadas: 0,
+      fuente: carga.fuente,
+    };
 
     if (plan.distribucion) verificarSinCambios_(plan, ctx, libroId);
     if (plan.distribucion) {
       res.completadas = plan.distribucion.resumen.completan;
       res.repetidas = plan.distribucion.resumen.duplicadas;
       res.conProblema = plan.distribucion.resumen.conProblema;
+      res.reemplazadas = plan.distribucion.resumen.reemplazan || 0;
+      res.conservadas = plan.distribucion.resumen.conservadas || 0;
       res.nuevas = escribirDistribucion_(plan, ctx, libroId);
+      try {
+        registrarReemplazos_(libroId, plan.distribucion.filas.filter(function (f) { return f.estado === 'reemplaza'; })
+          .map(function (f) { return f.previo; }));
+      } catch (e) { Logger.log('No se pudo guardar lo reemplazado: ' + e); }
     }
     if (plan.queHaceFalta && plan.queHaceFalta.reemplaza) res.faltantes = escribirFaltantes_(plan, ctx, libroF);
     if (plan.informacionGeneral && plan.informacionGeneral.errores.length === 0) res.totales = escribirTotales_(plan, ctx, libroF);

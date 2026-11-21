@@ -140,7 +140,7 @@ export async function manejarAdmin(request: Request, env: unknown): Promise<Resp
   const texto = await leerCuerpo(request);
   if (texto === null) return error("El archivo es demasiado grande.", 413);
 
-  let pedido: { accion?: unknown; carga?: unknown };
+  let pedido: { accion?: unknown; carga?: unknown; decisiones?: unknown };
   try {
     pedido = JSON.parse(texto);
   } catch {
@@ -153,6 +153,22 @@ export async function manejarAdmin(request: Request, env: unknown): Promise<Resp
     return error("El archivo no tiene el formato esperado.", 400);
   }
 
+  // Las decisiones sobre los conflictos (fila del archivo -> «conservar», «reemplazar» o «agregar»).
+  let decisiones: Record<string, string> = {};
+  if (pedido.decisiones !== undefined && pedido.decisiones !== null) {
+    const d = pedido.decisiones;
+    if (typeof d !== "object" || Array.isArray(d))
+      return error("Las decisiones no tienen el formato esperado.", 400);
+    const entradas = Object.entries(d as Record<string, unknown>);
+    if (
+      entradas.length > 5000 ||
+      entradas.some(([k, v]) => !/^\d{1,5}$/.test(k) || typeof v !== "string")
+    ) {
+      return error("Las decisiones no tienen el formato esperado.", 400);
+    }
+    decisiones = Object.fromEntries(entradas as [string, string][]);
+  }
+
   const controlador = new AbortController();
   const limite = setTimeout(() => controlador.abort(), TIEMPO_LIMITE_MS);
   try {
@@ -162,7 +178,7 @@ export async function manejarAdmin(request: Request, env: unknown): Promise<Resp
       signal: controlador.signal,
       // text/plain: Apps Script lee el cuerpo tal cual y no hace falta preflight.
       headers: { "content-type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ token, accion: pedido.accion, carga: pedido.carga }),
+      body: JSON.stringify({ token, accion: pedido.accion, carga: pedido.carga, decisiones }),
     });
     const crudo = await respuesta.text();
     let datos: { error?: boolean; status?: number; message?: string } & Record<string, unknown>;

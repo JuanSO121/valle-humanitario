@@ -1,6 +1,6 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-B4YVjH7-.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-W2kFnzSO.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -24,18 +24,20 @@ var MAX_BYTES = 25e5;
 var POR_PAGINA = 25;
 var ETIQUETA_ESTADO = {
 	nueva: "Se agrega",
+	conflicto: "Conflicto: decida",
 	completa: "Completa una fila pendiente",
 	duplicada: "Ya está, no se repite",
 	error: "No se carga"
 };
 var COLOR_ESTADO = {
 	nueva: "bg-[#E4F4E4] text-[#1D6B2E]",
+	conflicto: "bg-[#FFE9CC] text-[#8A4B00]",
 	completa: "bg-[#E7F1FB] text-[#0A5A99]",
 	duplicada: "bg-[#EEF0F2] text-[#4A5A66]",
 	error: "bg-[#FBEBEB] text-[#A3261F]"
 };
 var numero = (n) => n === null || n === void 0 ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
-async function llamar(accion, clave, carga) {
+async function llamar(accion, clave, carga, decisiones) {
 	const respuesta = await fetch("/api/admin", {
 		method: "POST",
 		headers: {
@@ -44,7 +46,8 @@ async function llamar(accion, clave, carga) {
 		},
 		body: JSON.stringify({
 			accion,
-			carga
+			carga,
+			decisiones
 		})
 	});
 	let datos = null;
@@ -68,6 +71,7 @@ function AdminPage() {
 	const [plan, setPlan] = (0, import_react.useState)(null);
 	const [resultado, setResultado] = (0, import_react.useState)(null);
 	const [confirmado, setConfirmado] = (0, import_react.useState)(false);
+	const [decisiones, setDecisiones] = (0, import_react.useState)({});
 	const entradaArchivo = (0, import_react.useRef)(null);
 	const ocupado = fase === "revisando" || fase === "cargando";
 	function reiniciar() {
@@ -77,6 +81,7 @@ function AdminPage() {
 		setPlan(null);
 		setResultado(null);
 		setConfirmado(false);
+		setDecisiones({});
 		setProblema(null);
 		setFase("inicio");
 		if (entradaArchivo.current) entradaArchivo.current.value = "";
@@ -124,6 +129,7 @@ function AdminPage() {
 			const datos = await llamar("revisar", clave, carga);
 			setPlan(datos);
 			setConfirmado(false);
+			setDecisiones({});
 			setFase("revisado");
 		} catch (e) {
 			setProblema(e instanceof Error ? e.message : "No se pudo revisar el archivo.");
@@ -135,7 +141,7 @@ function AdminPage() {
 		setProblema(null);
 		setFase("cargando");
 		try {
-			const datos = await llamar("aplicar", clave, carga);
+			const datos = await llamar("aplicar", clave, carga, decisiones);
 			setResultado(datos);
 			setFase("listo");
 		} catch (e) {
@@ -267,14 +273,20 @@ function AdminPage() {
 					confirmado,
 					alConfirmar: setConfirmado,
 					cargando: fase === "cargando",
-					alCargar: cargar
+					alCargar: cargar,
+					decisiones,
+					alDecidir: setDecisiones
 				})
 			] })]
 		})
 	});
 }
-function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
+function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisiones, alDecidir }) {
 	const secciones = (0, import_react.useMemo)(() => [
+		(plan.distribucion?.resumen.conflictos ?? 0) > 0 && {
+			id: "conflictos",
+			nombre: `Conflictos (${plan.distribucion?.resumen.conflictos})`
+		},
 		plan.distribucion && {
 			id: "distribucion",
 			nombre: "Distribución"
@@ -291,7 +303,12 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 	const [activa, setActiva] = (0, import_react.useState)(secciones[0]?.id ?? "");
 	const idConfirmar = (0, import_react.useId)();
 	const d = plan.distribucion?.resumen;
-	const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0);
+	const conflictos = (0, import_react.useMemo)(() => plan.distribucion?.filas.filter((f) => f.estado === "conflicto") ?? [], [plan.distribucion]);
+	const sinDecidir = conflictos.filter((f) => !decisiones[f.n]).length;
+	const aAgregar = conflictos.filter((f) => decisiones[f.n] === "agregar").length;
+	const aReemplazar = conflictos.filter((f) => decisiones[f.n] === "reemplazar").length;
+	const aDejar = conflictos.filter((f) => decisiones[f.n] === "conservar").length;
+	const cuantas = (d?.nuevas ?? 0) + (d?.completan ?? 0) + aAgregar;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 		"aria-labelledby": "paso3",
 		className: "mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6",
@@ -336,11 +353,24 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 						children: s.nombre
 					}, s.id))
 				}),
+				plan.distribucion && activa === "conflictos" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					id: "panel-conflictos",
+					role: "tabpanel",
+					"aria-labelledby": "pestana-conflictos",
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PanelConflictos, {
+						filas: conflictos,
+						decisiones,
+						alDecidir
+					})
+				}),
 				plan.distribucion && activa === "distribucion" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					id: "panel-distribucion",
 					role: "tabpanel",
 					"aria-labelledby": "pestana-distribucion",
-					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TablaDistribucion, { datos: plan.distribucion })
+					children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TablaDistribucion, {
+						datos: plan.distribucion,
+						decisiones
+					})
 				}),
 				plan.queHaceFalta && activa === "faltante" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					id: "panel-faltante",
@@ -370,6 +400,13 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 								" filas de distribución.",
 								" "
 							] }),
+							aReemplazar > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+								"Se ",
+								/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: ["reemplazarán ", aReemplazar] }),
+								" filas que ya estaban en el libro (la anterior queda guardada).",
+								" "
+							] }),
+							aDejar > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [aDejar, " conflictos se dejan como están en el libro. "] }),
 							d && d.duplicadas > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [d.duplicadas, " ya estaban y no se repetirán. "] }),
 							d && d.conProblema > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", {
 								className: "text-[#A3261F]",
@@ -382,6 +419,15 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 							plan.queHaceFalta?.reemplaza && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_jsx_runtime.Fragment, { children: "La lista de «Qué hace falta» se reemplazará por la nueva. " })
 						]
 					}),
+					sinDecidir > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+						role: "alert",
+						className: "mt-3 font-bold text-[#8A4B00]",
+						children: [
+							"Faltan ",
+							sinDecidir,
+							" conflictos por decidir. Vaya a la pestaña «Conflictos» y elija qué hacer en cada uno."
+						]
+					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 						className: "mt-3 flex items-start gap-3",
 						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
@@ -389,7 +435,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 							type: "checkbox",
 							checked: confirmado,
 							onChange: (e) => alConfirmar(e.target.checked),
-							disabled: cargando,
+							disabled: cargando || sinDecidir > 0,
 							className: "mt-1 size-5 shrink-0 accent-[#0079C1]"
 						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
 							htmlFor: idConfirmar,
@@ -400,7 +446,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar }) {
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 						type: "button",
 						onClick: alCargar,
-						disabled: !confirmado || cargando,
+						disabled: !confirmado || cargando || sinDecidir > 0,
 						className: "mt-4 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#2E9E5B] px-6 py-2.5 text-base font-bold text-white transition-colors hover:bg-[#237A46] disabled:cursor-not-allowed disabled:opacity-50",
 						children: cargando ? "Cargando… no cierre esta página" : "Cargar al libro"
 					})
@@ -429,11 +475,16 @@ function Contenedor({ titulo, children }) {
 }
 var celda = "border-b border-[#123E5C]/10 px-3 py-2.5 text-left align-top text-[15px]";
 var cabecera = "bg-[#0079C1] px-3 py-2.5 text-left text-[13px] font-bold uppercase tracking-wide text-white";
-function TablaDistribucion({ datos }) {
+var TEXTO_DECISION = {
+	conservar: "Se deja la del libro",
+	reemplazar: "Se cambia por la del archivo",
+	agregar: "Se agrega también"
+};
+function TablaDistribucion({ datos, decisiones }) {
 	const [soloAtencion, setSoloAtencion] = (0, import_react.useState)(false);
 	const [pagina, setPagina] = (0, import_react.useState)(0);
 	const idFiltro = (0, import_react.useId)();
-	const filas = (0, import_react.useMemo)(() => soloAtencion ? datos.filas.filter((f) => f.estado === "error" || f.avisos.length > 0) : datos.filas, [datos.filas, soloAtencion]);
+	const filas = (0, import_react.useMemo)(() => soloAtencion ? datos.filas.filter((f) => f.estado === "error" || f.estado === "conflicto" || f.avisos.length > 0) : datos.filas, [datos.filas, soloAtencion]);
 	const paginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
 	const actual = Math.min(pagina, paginas - 1);
 	const visibles = filas.slice(actual * POR_PAGINA, (actual + 1) * POR_PAGINA);
@@ -459,6 +510,11 @@ function TablaDistribucion({ datos }) {
 					cifra: r.completan,
 					texto: "completan una fila pendiente",
 					color: "text-[#0A5A99]"
+				}),
+				(r.conflictos ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
+					cifra: r.conflictos ?? 0,
+					texto: "en conflicto, hay que decidir",
+					color: "text-[#8A4B00]"
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Resumen, {
 					cifra: r.duplicadas,
@@ -529,14 +585,21 @@ function TablaDistribucion({ datos }) {
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
 								className: celda,
-								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Chip, { estado: f.estado }), f.filaLibro && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
-									className: "mt-1 text-[13px] text-[#35708F]",
-									children: [
-										"fila ",
-										f.filaLibro,
-										" del libro"
-									]
-								})]
+								children: [
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Chip, { estado: f.estado }),
+									f.estado === "conflicto" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-1 text-[13px] font-semibold text-[#8A4B00]",
+										children: decisiones[f.n] ? TEXTO_DECISION[decisiones[f.n]] : "Sin decidir"
+									}),
+									f.filaLibro && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mt-1 text-[13px] text-[#35708F]",
+										children: [
+											"fila ",
+											f.filaLibro,
+											" del libro"
+										]
+									})
+								]
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
 								className: `${celda} whitespace-nowrap`,
@@ -614,6 +677,246 @@ function TablaDistribucion({ datos }) {
 			]
 		})
 	] });
+}
+var EXPLICACION_CONFLICTO = {
+	peso: "Mismo día, destino, tipo de ayuda y producto, pero con otro peso.",
+	nombre: "Mismo día, destino y peso, pero el producto o el tipo de ayuda está escrito distinto."
+};
+function PanelConflictos({ filas, decisiones, alDecidir }) {
+	const [pagina, setPagina] = (0, import_react.useState)(0);
+	const POR = 10;
+	const paginas = Math.max(1, Math.ceil(filas.length / POR));
+	const actual = Math.min(pagina, paginas - 1);
+	const visibles = filas.slice(actual * POR, (actual + 1) * POR);
+	const sinDecidir = filas.filter((f) => !decisiones[f.n]).length;
+	const decidirTodas = (d) => {
+		const siguiente = { ...decisiones };
+		for (const f of filas) {
+			if (d === "reemplazar" && f.conflicto?.total !== 1) continue;
+			siguiente[f.n] = d;
+		}
+		alDecidir(siguiente);
+	};
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: "mt-4 rounded-xl bg-[#FFF1DC] px-4 py-3 text-base leading-6 text-[#6B3A00]",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: [filas.length, " envíos del archivo se parecen a uno que ya está en el libro, pero no son iguales."] }),
+				" ",
+				"El sistema no puede saber si son el mismo envío o dos distintos. Decida qué hacer con cada uno: no se carga ninguno sin su decisión.",
+				sinDecidir > 0 ? ` Faltan ${sinDecidir} por decidir.` : " Ya decidió todos."
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mt-3 flex flex-wrap gap-2",
+			role: "group",
+			"aria-label": "Decidir todos a la vez",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => decidirTodas("conservar"),
+					className: botonSuave,
+					children: "Dejar todas las del libro"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => decidirTodas("reemplazar"),
+					className: botonSuave,
+					children: "Cambiar todas por las del archivo"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => decidirTodas("agregar"),
+					className: botonSuave,
+					children: "Son todos distintos: agregar todas"
+				})
+			]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+			className: "mt-4 space-y-4",
+			children: visibles.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)(TarjetaConflicto, {
+				fila: f,
+				decision: decisiones[f.n],
+				alElegir: (d) => alDecidir({
+					...decisiones,
+					[f.n]: d
+				})
+			}, f.n))
+		}),
+		paginas > 1 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("nav", {
+			"aria-label": "Páginas de conflictos",
+			className: "mt-3 flex items-center justify-between gap-3 text-base",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => setPagina(Math.max(0, actual - 1)),
+					disabled: actual === 0,
+					className: botonSuave,
+					children: "Anterior"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+					"Página ",
+					actual + 1,
+					" de ",
+					paginas
+				] }),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: () => setPagina(Math.min(paginas - 1, actual + 1)),
+					disabled: actual >= paginas - 1,
+					className: botonSuave,
+					children: "Siguiente"
+				})
+			]
+		})
+	] });
+}
+var botonSuave = "min-h-11 rounded-lg bg-[#E7F1FB] px-4 text-[15px] font-bold text-[#0A5A99] transition-colors hover:bg-[#D3E7F8] disabled:opacity-40";
+function TarjetaConflicto({ fila: f, decision, alElegir }) {
+	const nombre = (0, import_react.useId)();
+	const c = f.conflicto;
+	if (!c) return null;
+	const e = c.existentes[0];
+	const unica = c.total === 1;
+	const opciones = [
+		{
+			valor: "conservar",
+			texto: "Dejar la del libro (no cargar la del archivo)",
+			permitida: true
+		},
+		{
+			valor: "reemplazar",
+			texto: unica ? "Cambiar la del libro por la del archivo (la anterior queda guardada)" : "Cambiar la del libro por la del archivo (no disponible: se parece a varias filas)",
+			permitida: unica
+		},
+		{
+			valor: "agregar",
+			texto: "Son dos envíos distintos: agregar también la del archivo",
+			permitida: true
+		}
+	];
+	const filasComparacion = e ? [
+		{
+			campo: "Fecha",
+			libro: e.fecha,
+			archivo: f.fecha ?? "—"
+		},
+		{
+			campo: "A dónde",
+			libro: e.destino,
+			archivo: f.destino ?? "—"
+		},
+		{
+			campo: "Tipo de ayuda",
+			libro: e.familia,
+			archivo: f.familia ?? "—"
+		},
+		{
+			campo: "Producto",
+			libro: e.producto ?? "—",
+			archivo: f.producto ?? "—"
+		},
+		{
+			campo: "Cantidad",
+			libro: numero(e.cantidad),
+			archivo: numero(f.cantidad)
+		},
+		{
+			campo: "Kilos de cada uno",
+			libro: numero(e.kilosUnitario),
+			archivo: numero(f.kilosUnitario ?? null)
+		},
+		{
+			campo: "Kilos en total",
+			libro: numero(e.kilosTotal),
+			archivo: numero(f.kilosTotal)
+		}
+	] : [];
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
+		className: `rounded-xl border-2 p-4 ${decision ? "border-[#2E9E5B]/40 bg-white" : "border-[#E08A1E]/60 bg-[#FFFBF3]"}`,
+		children: [
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "text-base font-bold",
+				children: [
+					"Fila ",
+					f.n,
+					" del archivo",
+					e ? ` · fila ${e.fila} del libro` : "",
+					!unica && ` (y ${c.total - 1} más parecidas)`
+				]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+				className: "mt-0.5 text-[15px] text-[#6B3A00]",
+				children: EXPLICACION_CONFLICTO[c.tipo]
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
+				titulo: `Comparación de la fila ${f.n}`,
+				children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+					className: "w-full min-w-[420px] border-collapse",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
+							className: "sr-only",
+							children: "Lo que está en el libro frente a lo que trae el archivo"
+						}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera,
+								children: "En el libro"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+								scope: "col",
+								className: cabecera,
+								children: "En el archivo"
+							})
+						] }) }),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: filasComparacion.map((x) => {
+							const distinto = x.libro !== x.archivo;
+							return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", { children: [
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+									scope: "row",
+									className: `${celda} font-semibold`,
+									children: x.campo
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: `${celda} ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`,
+									children: x.libro
+								}),
+								/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+									className: `${celda} ${distinto ? "bg-[#FFE9CC] font-bold" : ""}`,
+									children: x.archivo
+								})
+							] }, x.campo);
+						}) })
+					]
+				})
+			}),
+			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("fieldset", {
+				className: "mt-3",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("legend", {
+					className: "text-base font-bold",
+					children: "¿Qué hacer con esta fila?"
+				}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					className: "mt-1 space-y-1.5",
+					children: opciones.map((o) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("label", {
+						className: `flex items-start gap-3 text-base leading-6 ${o.permitida ? "" : "opacity-50"}`,
+						children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+							type: "radio",
+							name: nombre,
+							checked: decision === o.valor,
+							disabled: !o.permitida,
+							onChange: () => alElegir(o.valor),
+							className: "mt-1 size-5 shrink-0 accent-[#0079C1]"
+						}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: o.texto })]
+					}, o.valor))
+				})]
+			})
+		]
+	});
 }
 function Resumen({ cifra, texto, color }) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", {
