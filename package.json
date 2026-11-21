@@ -10,7 +10,11 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:admin": "node --test tests/admin/",
+    "test:admin:backend": "node --test tests/admin/backend.test.mjs",
+    "test:admin:servidor": "node --test tests/admin/servidor.test.mjs",
+    "test:admin:interfaz": "node --test tests/admin/interfaz.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

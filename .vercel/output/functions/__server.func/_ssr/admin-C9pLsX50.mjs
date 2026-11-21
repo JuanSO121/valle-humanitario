@@ -1,6 +1,6 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-35qlkzi1.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-C9pLsX50.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -20,7 +20,7 @@ var import_jsx_runtime = require_jsx_runtime();
 * Los textos están escritos para quien no sabe de bases de datos.
 * -----------------------------------------------------------------------
 */
-var MAX_BYTES = 25e5;
+var MAX_BYTES = 24e5;
 var POR_PAGINA = 25;
 var ETIQUETA_ESTADO = {
 	nueva: "Se agrega",
@@ -39,6 +39,8 @@ var COLOR_ESTADO = {
 /** «Se agregará 1 contrato» / «Se agregarán 2 contratos». */
 var seAgrega = (n, uno, varios, verbo = "agreg") => n === 1 ? `Se ${verbo}ará 1 ${uno}` : `Se ${verbo}arán ${n} ${varios}`;
 var numero = (n) => n === null || n === void 0 ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
+/** La clave ya no sirve (por ejemplo, se cambió): hay que volver a la pantalla de entrada. */
+var ClaveError = class extends Error {};
 async function llamar(accion, clave, carga, decisiones) {
 	const respuesta = await fetch("/api/admin", {
 		method: "POST",
@@ -58,13 +60,124 @@ async function llamar(accion, clave, carga, decisiones) {
 	} catch {
 		datos = null;
 	}
+	if (respuesta.status === 401) throw new ClaveError(datos?.message ?? "La clave no es correcta.");
 	if (!respuesta.ok || datos?.error) throw new Error(datos?.message ?? "No se pudo completar la solicitud. Intente de nuevo.");
 	return datos;
 }
+/** Minutos sin tocar nada antes de cerrar la sesión. En desarrollo se puede acortar para probar. */
+function minutosDeInactividad() {
+	globalThis.__ADMIN_IDLE_MS__;
+	return 9e5;
+}
+/**
+* /admin: primero la pantalla de entrada. Hasta que la clave sea correcta no se muestra nada de la
+* carga. La clave vive solo en la memoria de esta página: no se guarda en el navegador, y al salir
+* (o al cerrar la pestaña) desaparece.
+*/
 function AdminPage() {
+	const [clave, setClave] = (0, import_react.useState)(null);
+	const [aviso, setAviso] = (0, import_react.useState)(null);
+	if (clave === null) return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Entrada, {
+		aviso,
+		alEntrar: (c) => {
+			setAviso(null);
+			setClave(c);
+		}
+	});
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Cargador, {
+		clave,
+		alSalir: () => {
+			setClave(null);
+			window.location.replace("/");
+		},
+		alExpirar: (mensaje) => {
+			setClave(null);
+			setAviso(mensaje);
+		}
+	});
+}
+function Entrada({ aviso, alEntrar }) {
 	const idClave = (0, import_react.useId)();
+	const [valor, setValor] = (0, import_react.useState)("");
+	const [problema, setProblema] = (0, import_react.useState)(null);
+	const [comprobando, setComprobando] = (0, import_react.useState)(false);
+	async function enviar(evento) {
+		evento.preventDefault();
+		if (!valor || comprobando) return;
+		setProblema(null);
+		setComprobando(true);
+		try {
+			await llamar("entrar", valor);
+			const clave = valor;
+			setValor("");
+			alEntrar(clave);
+		} catch (e) {
+			setValor("");
+			setProblema(e instanceof Error ? e.message : "No se pudo comprobar la clave.");
+			setComprobando(false);
+		}
+	}
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
+		className: "grid min-h-dvh place-items-center bg-[#F2FAFD] px-4 py-10 text-[#123E5C]",
+		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
+			onSubmit: enviar,
+			autoComplete: "off",
+			"aria-labelledby": "titulo-entrada",
+			className: "w-full max-w-md rounded-xl bg-white p-6 shadow-sm sm:p-8",
+			children: [
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+					className: "text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]",
+					children: "Ruta de la Solidaridad · Solo para quien administra"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+					id: "titulo-entrada",
+					className: "mt-1 text-2xl font-extrabold text-[#0079C1]",
+					children: "Cargar datos al tablero"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
+					htmlFor: idClave,
+					className: "mt-5 block text-base font-semibold",
+					children: "Ingrese la clave"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
+					id: idClave,
+					type: "password",
+					autoComplete: "off",
+					autoCapitalize: "off",
+					autoCorrect: "off",
+					spellCheck: false,
+					autoFocus: true,
+					value: valor,
+					onChange: (e) => setValor(e.target.value),
+					disabled: comprobando,
+					className: "mt-1.5 block w-full rounded-lg border border-[#123E5C]/30 bg-white px-3 py-2.5 text-base focus:border-[#0079C1] focus:outline-none focus:ring-2 focus:ring-[#0079C1]/30"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+					"aria-live": "polite",
+					className: "mt-3 min-h-6",
+					children: (problema ?? aviso) && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						role: "alert",
+						className: `text-base font-semibold ${problema ? "text-[#A3261F]" : "text-[#7A5A00]"}`,
+						children: problema ?? aviso
+					})
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "submit",
+					disabled: !valor || comprobando,
+					className: "mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#0079C1] px-6 py-2.5 text-base font-bold text-white transition-colors hover:bg-[#0A5A99] disabled:cursor-not-allowed disabled:opacity-50",
+					children: comprobando ? "Comprobando…" : "Entrar"
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("a", {
+					href: "/",
+					className: "mt-4 block text-center text-base font-semibold text-[#0079C1] underline underline-offset-4",
+					children: "Volver al tablero"
+				})
+			]
+		})
+	});
+}
+function Cargador({ clave, alSalir, alExpirar }) {
 	const idTexto = (0, import_react.useId)();
-	const [clave, setClave] = (0, import_react.useState)("");
 	const [nombreArchivo, setNombreArchivo] = (0, import_react.useState)(null);
 	const [texto, setTexto] = (0, import_react.useState)("");
 	const [carga, setCarga] = (0, import_react.useState)(null);
@@ -76,6 +189,39 @@ function AdminPage() {
 	const [decisiones, setDecisiones] = (0, import_react.useState)({});
 	const entradaArchivo = (0, import_react.useRef)(null);
 	const ocupado = fase === "revisando" || fase === "cargando";
+	const ocupadoRef = (0, import_react.useRef)(ocupado);
+	ocupadoRef.current = ocupado;
+	const enCursoRef = (0, import_react.useRef)(false);
+	(0, import_react.useEffect)(() => {
+		const limite = minutosDeInactividad();
+		let reloj;
+		const armar = () => {
+			clearTimeout(reloj);
+			reloj = setTimeout(function revisar() {
+				if (ocupadoRef.current) reloj = setTimeout(revisar, 5e3);
+				else alExpirar("Por seguridad, la sesión se cerró por inactividad. Ingrese la clave de nuevo.");
+			}, limite);
+		};
+		const eventos = [
+			"pointerdown",
+			"keydown",
+			"touchstart",
+			"scroll"
+		];
+		eventos.forEach((e) => window.addEventListener(e, armar, { passive: true }));
+		armar();
+		return () => {
+			clearTimeout(reloj);
+			eventos.forEach((e) => window.removeEventListener(e, armar));
+		};
+	}, [alExpirar]);
+	function fallo(e, porDefecto) {
+		if (e instanceof ClaveError) {
+			alExpirar("La clave ya no es válida. Ingrésela de nuevo.");
+			return null;
+		}
+		return e instanceof Error ? e.message : porDefecto;
+	}
 	function reiniciar() {
 		setCarga(null);
 		setNombreArchivo(null);
@@ -124,7 +270,8 @@ function AdminPage() {
 		leerJson(valor);
 	}
 	async function revisar() {
-		if (!carga) return;
+		if (!carga || enCursoRef.current) return;
+		enCursoRef.current = true;
 		setProblema(null);
 		setFase("revisando");
 		try {
@@ -134,12 +281,15 @@ function AdminPage() {
 			setDecisiones({});
 			setFase("revisado");
 		} catch (e) {
-			setProblema(e instanceof Error ? e.message : "No se pudo revisar el archivo.");
+			setProblema(fallo(e, "No se pudo revisar el archivo."));
 			setFase("inicio");
+		} finally {
+			enCursoRef.current = false;
 		}
 	}
 	async function cargar() {
-		if (!carga || !plan?.puedeCargar || !confirmado) return;
+		if (!carga || !plan?.puedeCargar || !confirmado || enCursoRef.current) return;
+		enCursoRef.current = true;
 		setProblema(null);
 		setFase("cargando");
 		try {
@@ -147,65 +297,49 @@ function AdminPage() {
 			setResultado(datos);
 			setFase("listo");
 		} catch (e) {
-			setProblema(e instanceof Error ? e.message : "No se pudo cargar. No se cambió nada.");
+			setProblema(fallo(e, "No se pudo cargar. No se cambió nada."));
 			setFase("revisado");
+		} finally {
+			enCursoRef.current = false;
 		}
 	}
-	const puedeRevisar = !!carga && clave.length > 0 && !ocupado;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("main", {
 		className: "min-h-dvh bg-[#F2FAFD] px-4 py-8 text-[#123E5C] sm:px-6 sm:py-12",
 		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "mx-auto w-full max-w-5xl",
-			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", { children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]",
-					children: "Ruta de la Solidaridad · Solo para quien administra"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
-					className: "mt-1 text-3xl font-extrabold leading-tight text-[#0079C1] sm:text-4xl",
-					children: "Cargar datos al tablero"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-					className: "mt-2 max-w-2xl text-base leading-6",
-					children: "Suba el archivo de la carga, revise la tabla y, si todo está bien, cárguela. Antes de que usted confirme, no se escribe nada en el libro."
-				})
-			] }), fase === "listo" && resultado ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Listo, {
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
+				className: "flex flex-wrap items-start justify-between gap-4",
+				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]",
+						children: "Ruta de la Solidaridad · Solo para quien administra"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
+						className: "mt-1 text-3xl font-extrabold leading-tight text-[#0079C1] sm:text-4xl",
+						children: "Cargar datos al tablero"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+						className: "mt-2 max-w-2xl text-base leading-6",
+						children: "Suba el archivo de la carga, revise la tabla y, si todo está bien, cárguela. Antes de que usted confirme, no se escribe nada en el libro."
+					})
+				] }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: alSalir,
+					className: "inline-flex min-h-11 items-center rounded-lg border-2 border-[#0079C1] bg-white px-5 py-2 text-base font-bold text-[#0079C1] transition-colors hover:bg-[#E7F1FB]",
+					children: "Dejar de cargar"
+				})]
+			}), fase === "listo" && resultado ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Listo, {
 				resultado,
 				alNuevo: reiniciar
 			}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
 					"aria-labelledby": "paso1",
-					className: "mt-8 rounded-xl bg-white p-5 shadow-sm sm:p-6",
+					className: "mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6",
 					children: [
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 							id: "paso1",
 							className: "text-xl font-extrabold text-[#0079C1]",
-							children: "1. Clave"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("label", {
-							htmlFor: idClave,
-							className: "mt-3 block text-base font-semibold",
-							children: "Escriba la clave de administración"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("input", {
-							id: idClave,
-							type: "password",
-							autoComplete: "current-password",
-							value: clave,
-							onChange: (e) => setClave(e.target.value),
-							disabled: ocupado,
-							className: "mt-1.5 block w-full max-w-sm rounded-lg border border-[#123E5C]/30 bg-white px-3 py-2.5 text-base focus:border-[#0079C1] focus:outline-none focus:ring-2 focus:ring-[#0079C1]/30"
-						})
-					]
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("section", {
-					"aria-labelledby": "paso2",
-					className: "mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
-							id: "paso2",
-							className: "text-xl font-extrabold text-[#0079C1]",
-							children: "2. Archivo de la carga"
+							children: "1. Archivo de la carga"
 						}),
 						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 							className: "mt-2 text-base leading-6",
@@ -255,7 +389,7 @@ function AdminPage() {
 						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 							type: "button",
 							onClick: revisar,
-							disabled: !puedeRevisar,
+							disabled: !(!!carga && !ocupado),
 							className: "mt-5 inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0079C1] px-6 py-2.5 text-base font-bold text-white transition-colors hover:bg-[#0A5A99] disabled:cursor-not-allowed disabled:opacity-50",
 							children: fase === "revisando" ? "Revisando…" : "Revisar los datos"
 						})
@@ -330,7 +464,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 				id: "paso3",
 				className: "text-xl font-extrabold text-[#0079C1]",
-				children: "3. Revise la tabla"
+				children: "2. Revise la tabla"
 			}),
 			plan.errores.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
 				role: "alert",
@@ -367,7 +501,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 						children: s.nombre
 					}, s.id))
 				}),
-				plan.distribucion && activa === "conflictos" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+				(conflictos.length > 0 || conflictosContratos.length > 0) && activa === "conflictos" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 					id: "panel-conflictos",
 					role: "tabpanel",
 					"aria-labelledby": "pestana-conflictos",
@@ -419,7 +553,7 @@ function Revision({ plan, confirmado, alConfirmar, cargando, alCargar, decisione
 				className: "mt-6 border-t border-[#123E5C]/10 pt-5",
 				children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 					className: "text-xl font-extrabold text-[#0079C1]",
-					children: "4. Cargar al libro"
+					children: "3. Cargar al libro"
 				}), plan.puedeCargar ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
 					/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
 						className: "mt-2 text-base leading-6",

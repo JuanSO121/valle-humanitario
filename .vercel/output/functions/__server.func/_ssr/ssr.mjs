@@ -406,7 +406,11 @@ var MAX_BYTES = 25e5;
 var TIEMPO_LIMITE_MS = 55e3;
 var MAX_FALLOS = 5;
 var BLOQUEO_MS = 9e5;
-var ACCIONES = /* @__PURE__ */ new Set(["revisar", "aplicar"]);
+var ACCIONES = /* @__PURE__ */ new Set([
+	"entrar",
+	"revisar",
+	"aplicar"
+]);
 var intentos = /* @__PURE__ */ new Map();
 function esRutaAdmin(url) {
 	return url.pathname === RUTA;
@@ -449,8 +453,32 @@ function direccionDe(request) {
 	return (request.headers.get("x-forwarded-for")?.split(",")[0] ?? "").trim() || "desconocida";
 }
 var esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
+/**
+* Termina de recibir (sin guardar) un cuerpo que ya se sabe demasiado grande. Si se responde sin recibirlo,
+* el navegador a veces ve una conexión cortada en lugar del mensaje. Con un tope, para que nadie nos haga
+* leer sin fin.
+*/
+async function descartar(request) {
+	try {
+		const lector = request.body?.getReader();
+		if (!lector) return;
+		let total = 0;
+		for (;;) {
+			const { done, value } = await lector.read();
+			if (done) return;
+			total += value?.byteLength ?? 0;
+			if (total > 2e7) {
+				await lector.cancel();
+				return;
+			}
+		}
+	} catch {}
+}
 async function leerCuerpo(request) {
-	if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) return null;
+	if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) {
+		await descartar(request);
+		return null;
+	}
 	const texto = await request.text();
 	return new TextEncoder().encode(texto).length > MAX_BYTES ? null : texto;
 }
@@ -493,6 +521,7 @@ async function manejarAdmin(request, env) {
 		return error("La petición no se pudo leer.", 400);
 	}
 	if (typeof pedido.accion !== "string" || !ACCIONES.has(pedido.accion)) return error("Acción no permitida.", 400);
+	if (pedido.accion === "entrar") return responder({ ok: true });
 	if (!pedido.carga || typeof pedido.carga !== "object" || Array.isArray(pedido.carga)) return error("El archivo no tiene el formato esperado.", 400);
 	let decisiones = {};
 	if (pedido.decisiones !== void 0 && pedido.decisiones !== null) {
@@ -543,7 +572,7 @@ async function manejarAdmin(request, env) {
 }
 var serverEntryPromise;
 async function getServerEntry() {
-	if (!serverEntryPromise) serverEntryPromise = import("./server-Bg9uqPFS.mjs").then((n) => n.t).then((m) => m.default ?? m);
+	if (!serverEntryPromise) serverEntryPromise = import("./server-DLCrEPS1.mjs").then((n) => n.t).then((m) => m.default ?? m);
 	return serverEntryPromise;
 }
 async function normalizeCatastrophicSsrResponse(response) {

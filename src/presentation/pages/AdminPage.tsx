@@ -15,7 +15,7 @@
  * Los textos están escritos para quien no sabe de bases de datos.
  * -----------------------------------------------------------------------
  */
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 type EstadoFila = "nueva" | "completa" | "duplicada" | "error" | "conflicto";
 type Decision = "conservar" | "reemplazar" | "agregar";
@@ -138,7 +138,8 @@ interface Resultado {
   };
 }
 
-const MAX_BYTES = 2_500_000;
+// El servidor acepta 2,5 MB en total; se deja margen para lo que la página agrega al archivo.
+const MAX_BYTES = 2_400_000;
 const POR_PAGINA = 25;
 const ETIQUETA_ESTADO: Record<EstadoFila, string> = {
   nueva: "Se agrega",
@@ -163,10 +164,13 @@ const seAgrega = (n: number, uno: string, varios: string, verbo = "agreg") =>
 const numero = (n: number | null) =>
   n === null || n === undefined ? "—" : n.toLocaleString("es-CO", { maximumFractionDigits: 3 });
 
+/** La clave ya no sirve (por ejemplo, se cambió): hay que volver a la pantalla de entrada. */
+class ClaveError extends Error {}
+
 async function llamar(
-  accion: "revisar" | "aplicar",
+  accion: "entrar" | "revisar" | "aplicar",
   clave: string,
-  carga: unknown,
+  carga?: unknown,
   decisiones?: Decisiones,
 ) {
   const respuesta = await fetch("/api/admin", {
@@ -180,16 +184,148 @@ async function llamar(
   } catch {
     datos = null;
   }
+  if (respuesta.status === 401) {
+    throw new ClaveError(datos?.message ?? "La clave no es correcta.");
+  }
   if (!respuesta.ok || datos?.error) {
     throw new Error(datos?.message ?? "No se pudo completar la solicitud. Intente de nuevo.");
   }
   return datos;
 }
 
+/** Minutos sin tocar nada antes de cerrar la sesión. En desarrollo se puede acortar para probar. */
+function minutosDeInactividad(): number {
+  const prueba = (globalThis as { __ADMIN_IDLE_MS__?: number }).__ADMIN_IDLE_MS__;
+  return import.meta.env.DEV && typeof prueba === "number" ? prueba : 15 * 60 * 1000;
+}
+
+/**
+ * /admin: primero la pantalla de entrada. Hasta que la clave sea correcta no se muestra nada de la
+ * carga. La clave vive solo en la memoria de esta página: no se guarda en el navegador, y al salir
+ * (o al cerrar la pestaña) desaparece.
+ */
 export function AdminPage() {
+  const [clave, setClave] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+
+  if (clave === null) {
+    return (
+      <Entrada
+        aviso={aviso}
+        alEntrar={(c) => {
+          setAviso(null);
+          setClave(c);
+        }}
+      />
+    );
+  }
+  return (
+    <Cargador
+      clave={clave}
+      alSalir={() => {
+        setClave(null);
+        // replace: la página de carga no queda en el historial del navegador.
+        window.location.replace("/");
+      }}
+      alExpirar={(mensaje) => {
+        setClave(null);
+        setAviso(mensaje);
+      }}
+    />
+  );
+}
+
+function Entrada({ aviso, alEntrar }: { aviso: string | null; alEntrar: (clave: string) => void }) {
   const idClave = useId();
+  const [valor, setValor] = useState("");
+  const [problema, setProblema] = useState<string | null>(null);
+  const [comprobando, setComprobando] = useState(false);
+
+  async function enviar(evento: React.FormEvent) {
+    evento.preventDefault();
+    if (!valor || comprobando) return;
+    setProblema(null);
+    setComprobando(true);
+    try {
+      await llamar("entrar", valor);
+      const clave = valor;
+      setValor("");
+      alEntrar(clave);
+    } catch (e) {
+      setValor("");
+      setProblema(e instanceof Error ? e.message : "No se pudo comprobar la clave.");
+      setComprobando(false);
+    }
+  }
+
+  return (
+    <main className="grid min-h-dvh place-items-center bg-[#F2FAFD] px-4 py-10 text-[#123E5C]">
+      <form
+        onSubmit={enviar}
+        autoComplete="off"
+        aria-labelledby="titulo-entrada"
+        className="w-full max-w-md rounded-xl bg-white p-6 shadow-sm sm:p-8"
+      >
+        <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]">
+          Ruta de la Solidaridad · Solo para quien administra
+        </p>
+        <h1 id="titulo-entrada" className="mt-1 text-2xl font-extrabold text-[#0079C1]">
+          Cargar datos al tablero
+        </h1>
+        <label htmlFor={idClave} className="mt-5 block text-base font-semibold">
+          Ingrese la clave
+        </label>
+        <input
+          id={idClave}
+          type="password"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          autoFocus
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          disabled={comprobando}
+          className="mt-1.5 block w-full rounded-lg border border-[#123E5C]/30 bg-white px-3 py-2.5 text-base focus:border-[#0079C1] focus:outline-none focus:ring-2 focus:ring-[#0079C1]/30"
+        />
+        <div aria-live="polite" className="mt-3 min-h-6">
+          {(problema ?? aviso) && (
+            <p
+              role="alert"
+              className={`text-base font-semibold ${problema ? "text-[#A3261F]" : "text-[#7A5A00]"}`}
+            >
+              {problema ?? aviso}
+            </p>
+          )}
+        </div>
+        <button
+          type="submit"
+          disabled={!valor || comprobando}
+          className="mt-2 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-[#0079C1] px-6 py-2.5 text-base font-bold text-white transition-colors hover:bg-[#0A5A99] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {comprobando ? "Comprobando…" : "Entrar"}
+        </button>
+        <a
+          href="/"
+          className="mt-4 block text-center text-base font-semibold text-[#0079C1] underline underline-offset-4"
+        >
+          Volver al tablero
+        </a>
+      </form>
+    </main>
+  );
+}
+
+function Cargador({
+  clave,
+  alSalir,
+  alExpirar,
+}: {
+  clave: string;
+  alSalir: () => void;
+  alExpirar: (mensaje: string) => void;
+}) {
   const idTexto = useId();
-  const [clave, setClave] = useState("");
   const [nombreArchivo, setNombreArchivo] = useState<string | null>(null);
   const [texto, setTexto] = useState("");
   const [carga, setCarga] = useState<unknown>(null);
@@ -204,6 +340,41 @@ export function AdminPage() {
   const entradaArchivo = useRef<HTMLInputElement>(null);
 
   const ocupado = fase === "revisando" || fase === "cargando";
+
+  // Por seguridad, sin actividad la sesión se cierra (la clave se olvida). Nunca a mitad de una petición.
+  const ocupadoRef = useRef(ocupado);
+  ocupadoRef.current = ocupado;
+  // Varios clics seguidos llegan antes de que la pantalla se bloquee: esta marca los frena.
+  const enCursoRef = useRef(false);
+  useEffect(() => {
+    const limite = minutosDeInactividad();
+    let reloj: ReturnType<typeof setTimeout>;
+    const armar = () => {
+      clearTimeout(reloj);
+      reloj = setTimeout(function revisar() {
+        if (ocupadoRef.current) reloj = setTimeout(revisar, 5000);
+        else
+          alExpirar(
+            "Por seguridad, la sesión se cerró por inactividad. Ingrese la clave de nuevo.",
+          );
+      }, limite);
+    };
+    const eventos = ["pointerdown", "keydown", "touchstart", "scroll"] as const;
+    eventos.forEach((e) => window.addEventListener(e, armar, { passive: true }));
+    armar();
+    return () => {
+      clearTimeout(reloj);
+      eventos.forEach((e) => window.removeEventListener(e, armar));
+    };
+  }, [alExpirar]);
+
+  function fallo(e: unknown, porDefecto: string): string | null {
+    if (e instanceof ClaveError) {
+      alExpirar("La clave ya no es válida. Ingrésela de nuevo.");
+      return null;
+    }
+    return e instanceof Error ? e.message : porDefecto;
+  }
 
   function reiniciar() {
     setCarga(null);
@@ -257,7 +428,8 @@ export function AdminPage() {
   }
 
   async function revisar() {
-    if (!carga) return;
+    if (!carga || enCursoRef.current) return;
+    enCursoRef.current = true;
     setProblema(null);
     setFase("revisando");
     try {
@@ -267,13 +439,16 @@ export function AdminPage() {
       setDecisiones({});
       setFase("revisado");
     } catch (e) {
-      setProblema(e instanceof Error ? e.message : "No se pudo revisar el archivo.");
+      setProblema(fallo(e, "No se pudo revisar el archivo."));
       setFase("inicio");
+    } finally {
+      enCursoRef.current = false;
     }
   }
 
   async function cargar() {
-    if (!carga || !plan?.puedeCargar || !confirmado) return;
+    if (!carga || !plan?.puedeCargar || !confirmado || enCursoRef.current) return;
+    enCursoRef.current = true;
     setProblema(null);
     setFase("cargando");
     try {
@@ -281,27 +456,38 @@ export function AdminPage() {
       setResultado(datos);
       setFase("listo");
     } catch (e) {
-      setProblema(e instanceof Error ? e.message : "No se pudo cargar. No se cambió nada.");
+      setProblema(fallo(e, "No se pudo cargar. No se cambió nada."));
       setFase("revisado");
+    } finally {
+      enCursoRef.current = false;
     }
   }
 
-  const puedeRevisar = !!carga && clave.length > 0 && !ocupado;
+  const puedeRevisar = !!carga && !ocupado;
 
   return (
     <main className="min-h-dvh bg-[#F2FAFD] px-4 py-8 text-[#123E5C] sm:px-6 sm:py-12">
       <div className="mx-auto w-full max-w-5xl">
-        <header>
-          <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]">
-            Ruta de la Solidaridad · Solo para quien administra
-          </p>
-          <h1 className="mt-1 text-3xl font-extrabold leading-tight text-[#0079C1] sm:text-4xl">
-            Cargar datos al tablero
-          </h1>
-          <p className="mt-2 max-w-2xl text-base leading-6">
-            Suba el archivo de la carga, revise la tabla y, si todo está bien, cárguela. Antes de
-            que usted confirme, no se escribe nada en el libro.
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.12em] text-[#35708F]">
+              Ruta de la Solidaridad · Solo para quien administra
+            </p>
+            <h1 className="mt-1 text-3xl font-extrabold leading-tight text-[#0079C1] sm:text-4xl">
+              Cargar datos al tablero
+            </h1>
+            <p className="mt-2 max-w-2xl text-base leading-6">
+              Suba el archivo de la carga, revise la tabla y, si todo está bien, cárguela. Antes de
+              que usted confirme, no se escribe nada en el libro.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={alSalir}
+            className="inline-flex min-h-11 items-center rounded-lg border-2 border-[#0079C1] bg-white px-5 py-2 text-base font-bold text-[#0079C1] transition-colors hover:bg-[#E7F1FB]"
+          >
+            Dejar de cargar
+          </button>
         </header>
 
         {fase === "listo" && resultado ? (
@@ -310,31 +496,10 @@ export function AdminPage() {
           <>
             <section
               aria-labelledby="paso1"
-              className="mt-8 rounded-xl bg-white p-5 shadow-sm sm:p-6"
-            >
-              <h2 id="paso1" className="text-xl font-extrabold text-[#0079C1]">
-                1. Clave
-              </h2>
-              <label htmlFor={idClave} className="mt-3 block text-base font-semibold">
-                Escriba la clave de administración
-              </label>
-              <input
-                id={idClave}
-                type="password"
-                autoComplete="current-password"
-                value={clave}
-                onChange={(e) => setClave(e.target.value)}
-                disabled={ocupado}
-                className="mt-1.5 block w-full max-w-sm rounded-lg border border-[#123E5C]/30 bg-white px-3 py-2.5 text-base focus:border-[#0079C1] focus:outline-none focus:ring-2 focus:ring-[#0079C1]/30"
-              />
-            </section>
-
-            <section
-              aria-labelledby="paso2"
               className="mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6"
             >
-              <h2 id="paso2" className="text-xl font-extrabold text-[#0079C1]">
-                2. Archivo de la carga
+              <h2 id="paso1" className="text-xl font-extrabold text-[#0079C1]">
+                1. Archivo de la carga
               </h2>
               <p className="mt-2 text-base leading-6">
                 Es el archivo que preparó la IA con la información de la plantilla. Termina en{" "}
@@ -486,7 +651,7 @@ function Revision({
   return (
     <section aria-labelledby="paso3" className="mt-4 rounded-xl bg-white p-5 shadow-sm sm:p-6">
       <h2 id="paso3" className="text-xl font-extrabold text-[#0079C1]">
-        3. Revise la tabla
+        2. Revise la tabla
       </h2>
 
       {plan.errores.length > 0 && (
@@ -540,7 +705,7 @@ function Revision({
             ))}
           </div>
 
-          {plan.distribucion && activa === "conflictos" && (
+          {(conflictos.length > 0 || conflictosContratos.length > 0) && activa === "conflictos" && (
             <div id="panel-conflictos" role="tabpanel" aria-labelledby="pestana-conflictos">
               <PanelConflictos
                 filas={conflictos}
@@ -579,7 +744,7 @@ function Revision({
       )}
 
       <div className="mt-6 border-t border-[#123E5C]/10 pt-5">
-        <h2 className="text-xl font-extrabold text-[#0079C1]">4. Cargar al libro</h2>
+        <h2 className="text-xl font-extrabold text-[#0079C1]">3. Cargar al libro</h2>
         {plan.puedeCargar ? (
           <>
             <p className="mt-2 text-base leading-6">

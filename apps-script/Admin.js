@@ -513,17 +513,17 @@ function planificarDestinosNuevos_(filas, ctx) {
       var clave = normalizeText_(tDestino.valor);
       var compacto = compactoDestino_(tDestino.valor);
       var ex = ctx.destinosIdx[clave];
-      if (vistos[clave]) {
-        var mismo = vistos[clave].tipo === tipo && vistos[clave].dane === fila.dane;
-        if (mismo) fila.estadoFila = 'duplicada';
-        else fila.errores.push('Está repetido en el archivo con otra clasificación (fila ' + vistos[clave].n + ').');
-      } else if (ex) {
+      if (ex) {
         var igual = ex.tipo === tipo.toUpperCase() && (tipo !== 'municipio' || ex.dane === fila.dane);
         if (igual) fila.estadoFila = 'duplicada';
         else {
           fila.errores.push('Ya existe en DESTINOS con otra clasificación (' + String(ex.tipo).toLowerCase() +
             '). No se cambia desde aquí: corríjalo a mano en la hoja DESTINOS.');
         }
+      } else if (vistos[clave]) {
+        var mismo = vistos[clave].tipo === tipo && vistos[clave].dane === fila.dane;
+        if (mismo) fila.estadoFila = 'duplicada';
+        else fila.errores.push('Está repetido en el archivo con otra clasificación (fila ' + vistos[clave].n + ').');
       } else {
         var parecido = ctx.destinosCompactos[compacto] || compactosVistos[compacto];
         if (parecido) {
@@ -594,8 +594,9 @@ function esSiCarga_(v) {
 
 /** Fecha del archivo: solo texto «2026-10-31» y que exista en el calendario. null si no. */
 function fechaCarga_(v) {
-  if (typeof v !== 'string') return null;
-  var iso = fechaIso_(v);
+  // Solo «aaaa-mm-dd»: otros formatos (03/04/2026) se pueden leer de dos maneras y no se adivinan.
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return null;
+  var iso = fechaIso_(v.trim());
   if (!iso) return null;
   var p = iso.split('-');
   var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
@@ -922,9 +923,15 @@ function planificarCarga_(carga, ctx) {
 function revisarCarga_(carga) {
   var ctx = leerContextoCarga_();
   var plan = planificarCarga_(carga, ctx);
-  plan.puedeCargar = plan.errores.length === 0 && cargaTieneAlgoParaEscribir_(plan);
+  // Un archivo que solo trae conflictos todavía no tiene nada «escribible», pero sí algo que decidir.
+  plan.puedeCargar = plan.errores.length === 0 && (cargaTieneAlgoParaEscribir_(plan) || hayConflictos_(plan));
   plan.fuente = carga && typeof carga.fuente === 'string' ? textoCarga_(carga.fuente, 120).valor : null;
   return plan;
+}
+
+function hayConflictos_(plan) {
+  return ((plan.distribucion && plan.distribucion.resumen.conflictos) || 0) +
+    ((plan.contratacion && plan.contratacion.resumen.conflictos) || 0) > 0;
 }
 
 function cargaTieneAlgoParaEscribir_(plan) {

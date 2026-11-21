@@ -37,7 +37,8 @@ const MAX_BYTES = 2_500_000;
 const TIEMPO_LIMITE_MS = 55_000;
 const MAX_FALLOS = 5;
 const BLOQUEO_MS = 15 * 60 * 1000;
-const ACCIONES = new Set(["revisar", "aplicar"]);
+// «entrar» solo comprueba la clave (no toca el Apps Script): es la pantalla de entrada de /admin.
+const ACCIONES = new Set(["entrar", "revisar", "aplicar"]);
 
 const intentos = new Map<string, { fallos: number; desde: number; hasta: number }>();
 
@@ -90,9 +91,36 @@ function direccionDe(request: Request): string {
 
 const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
 
+/**
+ * Termina de recibir (sin guardar) un cuerpo que ya se sabe demasiado grande. Si se responde sin recibirlo,
+ * el navegador a veces ve una conexión cortada en lugar del mensaje. Con un tope, para que nadie nos haga
+ * leer sin fin.
+ */
+async function descartar(request: Request): Promise<void> {
+  try {
+    const lector = request.body?.getReader();
+    if (!lector) return;
+    let total = 0;
+    for (;;) {
+      const { done, value } = await lector.read();
+      if (done) return;
+      total += value?.byteLength ?? 0;
+      if (total > 20_000_000) {
+        await lector.cancel();
+        return;
+      }
+    }
+  } catch {
+    /* el cliente ya se fue */
+  }
+}
+
 async function leerCuerpo(request: Request): Promise<string | null> {
   const declarado = Number(request.headers.get("content-length") ?? 0);
-  if (declarado > MAX_BYTES) return null;
+  if (declarado > MAX_BYTES) {
+    await descartar(request);
+    return null;
+  }
   const texto = await request.text();
   return new TextEncoder().encode(texto).length > MAX_BYTES ? null : texto;
 }
@@ -149,6 +177,7 @@ export async function manejarAdmin(request: Request, env: unknown): Promise<Resp
   if (typeof pedido.accion !== "string" || !ACCIONES.has(pedido.accion)) {
     return error("Acción no permitida.", 400);
   }
+  if (pedido.accion === "entrar") return responder({ ok: true });
   if (!pedido.carga || typeof pedido.carga !== "object" || Array.isArray(pedido.carga)) {
     return error("El archivo no tiene el formato esperado.", 400);
   }
