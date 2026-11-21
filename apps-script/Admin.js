@@ -158,6 +158,11 @@ function claveDespacho_(fecha, destino, familia, producto, kg) {
     (Math.round(kg * 1000) / 1000).toFixed(3)].join('|');
 }
 
+/** Igual que claveDespacho_ pero sin el peso: para avisar de una fila «casi igual» con otro peso. */
+function claveParecida_(fecha, destino, familia, producto) {
+  return [fecha, normalizeText_(destino), normalizeText_(familia), normalizeText_(producto || '')].join('|');
+}
+
 /** Lo que ya hay en DESPACHOS: para no repetir filas y para completar las pendientes. */
 function analizarDespachosExistentes_(matriz) {
   var enc = (matriz[0] || []).slice(0, 10).map(function (h) {
@@ -169,6 +174,8 @@ function analizarDespachosExistentes_(matriz) {
   }
   var existentes = Object.create(null);
   var pendientes = Object.create(null);
+  var porDia = Object.create(null);
+  var parecidas = Object.create(null);
   var ultimaFila = 1;
   for (var i = 1; i < matriz.length; i++) {
     var f = matriz[i] || [];
@@ -184,16 +191,22 @@ function analizarDespachosExistentes_(matriz) {
     } else if (destino && familia && kg !== null) {
       var k = claveDespacho_(fecha, destino, familia, textoOrNull_(f[3]), kg);
       existentes[k] = (existentes[k] || 0) + 1;
+      porDia[fecha] = (porDia[fecha] || 0) + 1;
+      var kq = claveParecida_(fecha, destino, familia, textoOrNull_(f[3]));
+      (parecidas[kq] = parecidas[kq] || []).push(kg);
     }
   }
-  return { existentes: existentes, pendientes: pendientes, ultimaFila: ultimaFila };
+  return {
+    existentes: existentes, pendientes: pendientes, porDia: porDia, parecidas: parecidas, ultimaFila: ultimaFila,
+  };
 }
 
 function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotales, hoy) {
   var destinosIdx = indexarDestinos_(filasAObjetos_(mDestinos, null), []);
   var familiasIdx = indexarFamilias_(filasAObjetos_(mFamilias, null));
   var analisis = analizarDespachosExistentes_(mDespachos);
-  var faltantesActual = mFaltantes ? parsearFaltantes_(mFaltantes).filas.length : null;
+  var filasFaltantes = mFaltantes ? parsearFaltantes_(mFaltantes).filas : null;
+  var faltantesActual = filasFaltantes ? filasFaltantes.length : null;
   var totalesActual = mTotales ? parsearTotales_(mTotales) : { recibidas: null, inventario: null };
   return {
     hoy: hoy,
@@ -201,8 +214,11 @@ function construirContexto_(mDespachos, mDestinos, mFamilias, mFaltantes, mTotal
     familiasIdx: familiasIdx,
     existentes: analisis.existentes,
     pendientes: analisis.pendientes,
+    porDia: analisis.porDia,
+    parecidas: analisis.parecidas,
     ultimaFila: analisis.ultimaFila,
     faltantesActual: faltantesActual,
+    faltantesFilas: filasFaltantes,
     totalesActual: totalesActual,
     matrizFaltantes: mFaltantes,
     matrizTotales: mTotales,
@@ -252,6 +268,11 @@ function serialDeFecha_(iso) {
 function sumarUnDia_(iso) {
   var p = iso.split('-');
   return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + 1)).toISOString().slice(0, 10);
+}
+
+function quedanPendientesDelDia_(pendientes, fecha) {
+  var prefijo = fecha + '|';
+  return Object.keys(pendientes).some(function (k) { return k.indexOf(prefijo) === 0 && pendientes[k].length > 0; });
 }
 
 function planificarDistribucion_(filas, ctx) {
@@ -346,6 +367,20 @@ function planificarDistribucion_(filas, ctx) {
           fila.estado = 'completa';
           fila.filaLibro = p.fila;
           fila.observacionesPrevias = p.observaciones;
+        } else {
+          // Va como fila nueva: avisar si puede estar repitiendo algo que ya se cargó.
+          var otras = ctx.parecidas[claveParecida_(fecha, tDestino.valor, tFamilia.valor, tProducto.valor)];
+          if (otras && otras.length > 0) {
+            fila.posibleRepeticion = true;
+            fila.avisos.push('Ya hay en el libro una fila igual (mismo día, destino, tipo de ayuda y producto) con otro peso: ' +
+              otras.slice(0, 3).join(', ') + ' kg. Si es la misma, quedaría repetida.');
+          } else if (ctx.porDia[fecha] > 0) {
+            fila.posibleRepeticion = true;
+            fila.avisos.push('Ese día ya tiene ' + ctx.porDia[fecha] + ' filas en el libro. Si este envío ya estaba cargado con otros datos, quedaría repetido.');
+          }
+          if (quedanPendientesDelDia_(pendientes, fecha)) {
+            fila.avisos.push('Ese día tiene despachos pendientes (del Excel anterior) que no coinciden con este destino: su cifra estimada seguirá contando además de este envío.');
+          }
         }
       }
     }
@@ -417,9 +452,18 @@ function planificarCarga_(carga, ctx) {
     } else {
       var ff = planificarFaltantes_(carga.queHaceFalta, ctx);
       var buenas = ff.filter(function (f) { return f.estadoFila === 'ok'; }).length;
+      var nuevasClaves = {};
+      ff.forEach(function (f) {
+        if (f.estadoFila === 'ok') nuevasClaves[normalizeText_(f.categoria) + '|' + normalizeText_(f.elemento)] = true;
+      });
+      var seQuitan = (ctx.faltantesFilas || []).filter(function (a) {
+        return !nuevasClaves[normalizeText_(a.categoria) + '|' + normalizeText_(a.nombre)];
+      }).map(function (a) { return { categoria: a.categoria, elemento: a.nombre, estado: a.estado }; });
       plan.queHaceFalta = {
         antes: ctx.faltantesActual, despues: buenas, filas: ff,
         reemplaza: buenas > 0,
+        seQuitan: buenas > 0 ? seQuitan.slice(0, 100) : [],
+        seQuitanTotal: buenas > 0 ? seQuitan.length : 0,
       };
       if (buenas === 0) plan.avisos.push('«Qué hace falta» no tiene ninguna fila válida: la lista actual no se cambia.');
     }
@@ -435,10 +479,15 @@ function planificarCarga_(carga, ctx) {
       var dd = planificarDistribucion_(carga.distribucion, ctx);
       var cuenta = { nueva: 0, completa: 0, duplicada: 0, error: 0 };
       var conAviso = 0;
-      dd.forEach(function (f) { cuenta[f.estado] += 1; if (f.avisos.length) conAviso += 1; });
+      var posiblesRepetidas = 0;
+      dd.forEach(function (f) {
+        cuenta[f.estado] += 1;
+        if (f.avisos.length) conAviso += 1;
+        if (f.posibleRepeticion) posiblesRepetidas += 1;
+      });
       plan.distribucion = {
         filas: dd,
-        resumen: { nuevas: cuenta.nueva, completan: cuenta.completa, duplicadas: cuenta.duplicada, conProblema: cuenta.error, conAviso: conAviso },
+        resumen: { nuevas: cuenta.nueva, completan: cuenta.completa, duplicadas: cuenta.duplicada, conProblema: cuenta.error, conAviso: conAviso, posiblesRepetidas: posiblesRepetidas },
       };
     }
   }
@@ -498,6 +547,40 @@ function asegurarFilas_(libroId, hoja, hastaFila) {
   sh.getRange(total, 1, 1, cols).copyTo(sh.getRange(total + 1, 1, extra, cols));
 }
 
+/**
+ * Justo antes de escribir: ¿alguien tocó el libro desde que se leyó? Si las filas donde se iba a
+ * escribir ya no están como se esperaba (alguien escribió al final, o completó/borró una pendiente),
+ * NO se escribe nada: es mejor repetir la revisión que pisar el trabajo de otra persona.
+ */
+function verificarSinCambios_(plan, ctx, libroId) {
+  var nuevas = plan.distribucion.filas.filter(function (f) { return f.estado === 'nueva'; }).length;
+  var completas = plan.distribucion.filas.filter(function (f) { return f.estado === 'completa'; });
+  var rangos = [];
+  var inicio = ctx.ultimaFila + 1;
+  if (nuevas > 0) rangos.push(rangoA1_(CONFIG.SHEETS.DESPACHOS, 'A', inicio, 'A', inicio + nuevas - 1));
+  completas.forEach(function (f) { rangos.push(rangoA1_(CONFIG.SHEETS.DESPACHOS, 'B', f.filaLibro, 'H', f.filaLibro)); });
+  if (rangos.length === 0) return;
+
+  var mensaje = 'El libro cambió mientras se preparaba la carga (alguien escribió, completó o borró filas). ' +
+    'No se cargó nada. Vuelva a revisar el archivo y cárguelo de nuevo.';
+  var resp = Sheets.Spreadsheets.Values.batchGet(libroId, {
+    ranges: rangos, valueRenderOption: 'UNFORMATTED_VALUE', majorDimension: 'ROWS',
+  });
+  var rs = (resp && resp.valueRanges) || [];
+  var i = 0;
+  if (nuevas > 0) {
+    var ocupadas = (rs[i++].values || []).some(function (r) {
+      return r.some(function (c) { return c !== '' && c !== null && c !== undefined; });
+    });
+    if (ocupadas) throw amistoso_(mensaje);
+  }
+  completas.forEach(function (f) {
+    var v = ((rs[i++] || {}).values || [[]])[0] || [];
+    // B..H: destino, familia, producto, presentación, cantidad, kilos de cada uno, kilos en total.
+    if (!textoOrNull_(v[0]) || textoOrNull_(v[1]) || toNumberOrNull_(v[6]) !== null) throw amistoso_(mensaje);
+  });
+}
+
 function escribirDistribucion_(plan, ctx, libroId) {
   var datos = [];
   var nuevas = [];
@@ -527,11 +610,14 @@ function escribirFaltantes_(plan, ctx, libroF) {
   var primera = ini + 2; // fila del libro de la primera fila de datos
   var filas = plan.queHaceFalta.filas.filter(function (f) { return f.estadoFila === 'ok'; })
     .map(function (f) { return [f.categoria, f.elemento, f.estado, f.observaciones || '']; });
-  Sheets.Spreadsheets.Values.clear({}, libroF, rangoA1_(CONFIG.SHEETS.FALTANTES, 'A', primera, 'D'));
-  asegurarFilas_(libroF, CONFIG.SHEETS.FALTANTES, primera + filas.length);
+  var fin = primera + filas.length - 1;
+  asegurarFilas_(libroF, CONFIG.SHEETS.FALTANTES, fin);
+  // Primero se escribe la lista nueva y después se limpia lo que sobra: si algo falla a la mitad,
+  // la lista nunca queda vacía.
   Sheets.Spreadsheets.Values.update(
-    { values: filas }, libroF, rangoA1_(CONFIG.SHEETS.FALTANTES, 'A', primera, 'D', primera + filas.length - 1),
+    { values: filas }, libroF, rangoA1_(CONFIG.SHEETS.FALTANTES, 'A', primera, 'D', fin),
     { valueInputOption: 'RAW' });
+  Sheets.Spreadsheets.Values.clear({}, libroF, rangoA1_(CONFIG.SHEETS.FALTANTES, 'A', fin + 1, 'D'));
   return filas.length;
 }
 
@@ -592,6 +678,7 @@ function aplicarCarga_(carga) {
     var libroF = idLibroFaltantes_();
     var res = { nuevas: 0, completadas: 0, repetidas: 0, conProblema: 0, faltantes: 0, totales: 0, fuente: carga.fuente };
 
+    if (plan.distribucion) verificarSinCambios_(plan, ctx, libroId);
     if (plan.distribucion) {
       res.completadas = plan.distribucion.resumen.completan;
       res.repetidas = plan.distribucion.resumen.duplicadas;

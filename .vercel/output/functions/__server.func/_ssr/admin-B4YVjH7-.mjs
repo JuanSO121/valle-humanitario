@@ -1,6 +1,6 @@
 import { r as __toESM } from "../_runtime.mjs";
 import { a as require_react, i as require_jsx_runtime } from "../_libs/react+tanstack__react-query.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/admin-B5uEBjej.js
+//#region node_modules/.nitro/vite/services/ssr/assets/admin-B4YVjH7-.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 /**
@@ -439,6 +439,14 @@ function TablaDistribucion({ datos }) {
 	const visibles = filas.slice(actual * POR_PAGINA, (actual + 1) * POR_PAGINA);
 	const r = datos.resumen;
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		(r.posiblesRepetidas ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+			className: "mt-4 rounded-xl bg-[#FFF6DA] px-4 py-3 text-base leading-6 text-[#7A5A00]",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("b", { children: [
+				"Cuidado: ",
+				r.posiblesRepetidas,
+				" filas pueden estar repetidas."
+			] }), " Son de días que ya tienen envíos en el libro, o se parecen a una fila que ya está. Si ya estaban cargadas con otros datos, quedarían dos veces. Búsquelas en la tabla (las que dicen «Ya hay en el libro…» o «Ese día ya tiene…») antes de cargar."]
+		}),
 		/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("ul", {
 			className: "mt-4 grid gap-2 text-base sm:grid-cols-2 lg:grid-cols-4",
 			children: [
@@ -621,75 +629,99 @@ function Resumen({ cifra, texto, color }) {
 	});
 }
 function TablaFaltante({ datos }) {
-	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-		className: "mt-4 text-base leading-6",
-		children: datos.reemplaza ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
-			"La lista de «Qué hace falta» se ",
-			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "reemplazará" }),
-			": hoy tiene ",
-			datos.antes ?? "—",
-			" ",
-			"elementos y quedará con ",
-			datos.despues,
-			"."
-		] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
-			className: "text-[#A3261F]",
-			children: "No hay ninguna fila válida: la lista actual no se cambia."
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+			className: "mt-4 text-base leading-6",
+			children: datos.reemplaza ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [
+				"La lista de «Qué hace falta» se ",
+				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: "reemplazará" }),
+				": hoy tiene ",
+				datos.antes ?? "—",
+				" ",
+				"elementos y quedará con ",
+				datos.despues,
+				"."
+			] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", {
+				className: "text-[#A3261F]",
+				children: "No hay ninguna fila válida: la lista actual no se cambia."
+			})
+		}),
+		datos.reemplaza && (datos.seQuitan?.length ?? 0) > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+			className: "mt-3 rounded-xl bg-[#FFF6DA] px-4 py-3 text-base leading-6 text-[#7A5A00]",
+			children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", {
+				className: "font-bold",
+				children: [
+					"Estos ",
+					datos.seQuitanTotal,
+					" elementos están hoy en la lista y NO vienen en el archivo, así que se quitarán:"
+				]
+			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("ul", {
+				className: "mt-1 list-disc space-y-0.5 pl-5",
+				children: datos.seQuitan?.map((q) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("li", { children: [
+					q.elemento,
+					" (",
+					q.categoria,
+					", ",
+					q.estado,
+					")"
+				] }, `${q.categoria}|${q.elemento}`))
+			})]
+		}),
+		/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
+			titulo: "Tabla de qué hace falta",
+			children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
+				className: "w-full min-w-[640px] border-collapse",
+				children: [
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
+						className: "sr-only",
+						children: "Elementos de «Qué hace falta» del archivo"
+					}),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: [
+						"N.º",
+						"Categoría",
+						"Qué es",
+						"¿Cómo está?",
+						"Notas"
+					].map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
+						scope: "col",
+						className: cabecera,
+						children: t
+					}, t)) }) }),
+					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: datos.filas.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
+						className: f.estadoFila === "error" ? "bg-[#FFF5F5]" : "",
+						children: [
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.n
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.categoria ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.elemento ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
+								className: celda,
+								children: f.estado ?? "—"
+							}),
+							/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
+								className: celda,
+								children: [f.errores.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "font-semibold text-[#A3261F]",
+									children: e
+								}, e)), f.observaciones && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+									className: "text-[#35708F]",
+									children: f.observaciones
+								})]
+							})
+						]
+					}, f.n)) })
+				]
+			})
 		})
-	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Contenedor, {
-		titulo: "Tabla de qué hace falta",
-		children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("table", {
-			className: "w-full min-w-[640px] border-collapse",
-			children: [
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("caption", {
-					className: "sr-only",
-					children: "Elementos de «Qué hace falta» del archivo"
-				}),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("tr", { children: [
-					"N.º",
-					"Categoría",
-					"Qué es",
-					"¿Cómo está?",
-					"Notas"
-				].map((t) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("th", {
-					scope: "col",
-					className: cabecera,
-					children: t
-				}, t)) }) }),
-				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("tbody", { children: datos.filas.map((f) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("tr", {
-					className: f.estadoFila === "error" ? "bg-[#FFF5F5]" : "",
-					children: [
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-							className: celda,
-							children: f.n
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-							className: celda,
-							children: f.categoria ?? "—"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-							className: celda,
-							children: f.elemento ?? "—"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("td", {
-							className: celda,
-							children: f.estado ?? "—"
-						}),
-						/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("td", {
-							className: celda,
-							children: [f.errores.map((e) => /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "font-semibold text-[#A3261F]",
-								children: e
-							}, e)), f.observaciones && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
-								className: "text-[#35708F]",
-								children: f.observaciones
-							})]
-						})
-					]
-				}, f.n)) })
-			]
-		})
-	})] });
+	] });
 }
 function TablaGeneral({ datos }) {
 	const filas = [{

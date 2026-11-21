@@ -60,6 +60,8 @@ interface Plan {
     despues: number;
     reemplaza: boolean;
     filas: FilaFaltante[];
+    seQuitan?: { categoria: string; elemento: string; estado: string }[];
+    seQuitanTotal?: number;
   } | null;
   distribucion: {
     filas: FilaDistribucion[];
@@ -69,6 +71,7 @@ interface Plan {
       duplicadas: number;
       conProblema: number;
       conAviso: number;
+      posiblesRepetidas?: number;
     };
   } | null;
 }
@@ -544,6 +547,14 @@ function TablaDistribucion({ datos }: { datos: NonNullable<Plan["distribucion"]>
 
   return (
     <div>
+      {(r.posiblesRepetidas ?? 0) > 0 && (
+        <p className="mt-4 rounded-xl bg-[#FFF6DA] px-4 py-3 text-base leading-6 text-[#7A5A00]">
+          <b>Cuidado: {r.posiblesRepetidas} filas pueden estar repetidas.</b> Son de días que ya
+          tienen envíos en el libro, o se parecen a una fila que ya está. Si ya estaban cargadas con
+          otros datos, quedarían dos veces. Búsquelas en la tabla (las que dicen «Ya hay en el
+          libro…» o «Ese día ya tiene…») antes de cargar.
+        </p>
+      )}
       <ul className="mt-4 grid gap-2 text-base sm:grid-cols-2 lg:grid-cols-4">
         <Resumen cifra={r.nuevas} texto="se agregan" color="text-[#1D6B2E]" />
         <Resumen cifra={r.completan} texto="completan una fila pendiente" color="text-[#0A5A99]" />
@@ -696,6 +707,21 @@ function TablaFaltante({ datos }: { datos: NonNullable<Plan["queHaceFalta"]> }) 
           </b>
         )}
       </p>
+      {datos.reemplaza && (datos.seQuitan?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-xl bg-[#FFF6DA] px-4 py-3 text-base leading-6 text-[#7A5A00]">
+          <p className="font-bold">
+            Estos {datos.seQuitanTotal} elementos están hoy en la lista y NO vienen en el archivo,
+            así que se quitarán:
+          </p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {datos.seQuitan?.map((q) => (
+              <li key={`${q.categoria}|${q.elemento}`}>
+                {q.elemento} ({q.categoria}, {q.estado})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <Contenedor titulo="Tabla de qué hace falta">
         <table className="w-full min-w-[640px] border-collapse">
           <caption className="sr-only">Elementos de «Qué hace falta» del archivo</caption>
